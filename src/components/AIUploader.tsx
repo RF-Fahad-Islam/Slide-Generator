@@ -46,6 +46,10 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
     }
   };
 
+  const [stage1Text, setStage1Text] = useState<string | null>(null);
+  const [showStage1Preview, setShowStage1Preview] = useState<boolean>(false);
+  const [processingStage, setProcessingStage] = useState<'idle' | 'stage1_ocr' | 'stage2_structure'>('idle');
+
   const handleRunAI = async () => {
     if (!promptText.trim() && !fileBase64) {
       setErrorMsg('Please paste text or attach a file/PDF to parse.');
@@ -55,14 +59,31 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
     setIsLoading(true);
     setErrorMsg(null);
     setParsedResult(null);
+    setStage1Text(null);
+    setProcessingStage(fileBase64 ? 'stage1_ocr' : 'stage2_structure');
 
     try {
+      const activeProvider = (localStorage.getItem('mcqgen.provider') as 'gemini' | 'openrouter') || 'gemini';
+      const storedGeminiKey = localStorage.getItem('mcqgen.geminiKey') || geminiApiKey;
+      const storedOpenrouterKey = localStorage.getItem('mcqgen.openrouterKey') || '';
+      const storedOpenrouterModel = localStorage.getItem('mcqgen.openrouterModel') || 'google/gemini-2.5-flash';
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'x-ai-provider': activeProvider,
       };
 
-      if (geminiApiKey.trim()) {
-        headers['x-gemini-key'] = geminiApiKey.trim();
+      if (activeProvider === 'gemini') {
+        if (!storedGeminiKey.trim()) {
+          throw new Error('Gemini API Key is missing. Please enter your API key in Settings.');
+        }
+        headers['x-gemini-key'] = storedGeminiKey.trim();
+      } else {
+        if (!storedOpenrouterKey.trim()) {
+          throw new Error('OpenRouter API Key is missing. Please enter your API key in Settings.');
+        }
+        headers['x-openrouter-key'] = storedOpenrouterKey.trim();
+        headers['x-openrouter-model'] = storedOpenrouterModel;
       }
 
       const response = await fetch('/api/ai/parse-mcqs', {
@@ -78,14 +99,18 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to parse questions with Gemini AI.');
+        throw new Error(data.error || 'Failed to parse questions with AI.');
       }
 
       setParsedResult(data.items);
+      if (data.stage1Text) {
+        setStage1Text(data.stage1Text);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'An unexpected error occurred during AI parsing.');
     } finally {
       setIsLoading(false);
+      setProcessingStage('idle');
     }
   };
 
@@ -273,12 +298,34 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
             )}
 
             {isLoading && (
-              <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-amber-500">
-                <Loader2 className="w-10 h-10 animate-spin mb-3 text-amber-500" />
-                <p className="text-sm font-bold">Analyzing document & normalizing Bangla numerals...</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Structuring options, roman items, and board tags...
-                </p>
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-amber-500 space-y-3">
+                <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
+                <div>
+                  <p className="text-sm font-bold text-amber-400">
+                    {processingStage === 'stage1_ocr'
+                      ? 'Stage 1/2: Extracting Text & LaTeX Formulas via Vision OCR...'
+                      : 'Stage 2/2: Structuring MCQs & Normalizing Bangla Numerals...'}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Multi-column layout alignment & Zod schema validation...
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {stage1Text && (
+              <div className="mb-4">
+                <button
+                  onClick={() => setShowStage1Preview(!showStage1Preview)}
+                  className="text-xs text-amber-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer mb-2"
+                >
+                  {showStage1Preview ? 'Hide Stage 1 Vision OCR Text' : 'Inspect Stage 1 Vision OCR Text ↗'}
+                </button>
+                {showStage1Preview && (
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 max-h-40 overflow-y-auto whitespace-pre-wrap">
+                    {stage1Text}
+                  </div>
+                )}
               </div>
             )}
 

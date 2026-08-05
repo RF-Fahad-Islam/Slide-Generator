@@ -74,6 +74,11 @@
 - Purpose: KaTeX inline formula parser component converting LaTeX delimiters `\(...\)` and `$...$` to math typography.
 - Built: 2026-08-05.
 
+### `SettingsView` — `src/components/SettingsView.tsx`
+- Purpose: Multi-provider AI settings panel for Google Gemini & OpenRouter API key BYOK configuration, model selection, and API diagnostic test connection.
+- Built: 2026-08-05.
+- Tokens used: `bg-slate-900`, `border-slate-800`, `text-amber-400`, `text-blue-400`.
+
 ---
 
 ## Planned components

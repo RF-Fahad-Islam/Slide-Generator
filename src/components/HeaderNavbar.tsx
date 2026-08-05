@@ -193,14 +193,12 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                       : isAppLight ? 'hover:bg-slate-100' : 'hover:bg-slate-800'
                   }`}
                 >
-                  <Edit3 className="w-4 h-4 text-amber-500" />
+                  <Edit3 className="w-4 h-4 text-emerald-400" />
                   <div>
-                    <div className="font-extrabold">Bulk MCQ Paste</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Manual Input & Editor</div>
+                    <div className="font-extrabold">Manual Question Editor</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Bulk Text & Hand Entry</div>
                   </div>
                 </button>
-
-                <div className="my-1 border-t border-slate-800/80" />
 
                 <button
                   onClick={() => handleToolSelect('settings')}

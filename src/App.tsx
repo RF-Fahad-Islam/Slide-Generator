@@ -12,6 +12,7 @@ import { ExportModal } from './components/ExportModal';
 import { QuestionBankView } from './components/QuestionBankView';
 import { SlideDecksHome } from './components/SlideDecksHome';
 import { SocialPostGenerator } from './components/SocialPostGenerator';
+import { SettingsView } from './components/SettingsView';
 import { MathText } from './components/MathText';
 import { getTemplateById } from './templates/registry';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon } from 'lucide-react';
@@ -245,6 +246,11 @@ export default function App() {
             config={config}
             appTheme={appTheme}
           />
+        )}
+
+        {/* TAB 0.6: SETTINGS VIEW */}
+        {activeTab === 'settings' && (
+          <SettingsView appTheme={appTheme} />
         )}
 
         {/* TAB 1: SLIDE PREVIEW & DECK MANAGER */}
