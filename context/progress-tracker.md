@@ -39,8 +39,8 @@
 ## Phase 2 — AI Spine (Gemini Ingestion)
 - [x] 2026-08-05 — `AIUploader.tsx`: Raw text paste & file/PDF upload interface
 - [x] 2026-08-05 — `server.ts`: `/api/ai/parse-mcqs` Express route handler using `@google/genai` structured outputs
-- [!] Update server proxy to accept BYOK `x-gemini-key` header (instead of server env variable)
-- [!] Implement hybrid KaTeX rasterization to PNG for embedded PPTX formulas (Decision D4/D5)
+- [x] 2026-08-05 — BYOK Header Proxying: `x-gemini-key` client header passing, browser `localStorage` key persistence, and API key error sanitization
+- [x] 2026-08-05 — Hybrid PPTX export with embedded KaTeX canvas snapshots & raw LaTeX in speaker notes (Decision D4/D5)
 
 ## Phase 3 — Editor Depth & Manual Mode
 - [x] 2026-08-05 — `ManualEditor.tsx`: Full per-question form (standard, bohupodi statement, passage stem)
@@ -52,8 +52,8 @@
 ## Phase 4 — Export Breadth
 - [x] 2026-08-05 — `ExportModal.tsx`: PPTX presentation export, multi-slide PNG image download, and PDF export (`jspdf`)
 - [x] 2026-08-05 — `SocialPostGenerator.tsx`: Multi-aspect ratio templates (1:1, 4:5, 9:16, 16:9)
+- [x] 2026-08-05 — ZIP archive download (`jszip`) with dual question (`01_q.png`) and answer reveal (`01_ans.png`) slide PNG packaging
 - [ ] Paginated standalone answer-key slides (`answerKeyList`)
-- [ ] ZIP archive download (`jszip`) for bulk PNG exports
 
 ## Phase 5 — Template Management
 - [x] 2026-08-05 — `DeckSettings.tsx`: Custom branding, logo positioning, background overlays, and typography presets

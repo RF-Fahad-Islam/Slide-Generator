@@ -27,20 +27,31 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // AI MCQ Parser Endpoint
+  // AI MCQ Parser Endpoint (BYOK Header Enabled)
   app.post('/api/ai/parse-mcqs', async (req, res) => {
     try {
       const { promptText, mimeType, fileBase64 } = req.body;
+      const userApiKey = (req.headers['x-gemini-key'] as string) || req.body.geminiKey || process.env.GEMINI_API_KEY;
 
       if (!promptText && !fileBase64) {
         return res.status(400).json({ error: 'Please provide either text or a file to parse.' });
       }
 
-      if (!process.env.GEMINI_API_KEY) {
-        return res.status(500).json({
-          error: 'GEMINI_API_KEY is not configured in server secrets. Please add it in AI Studio Secrets.',
+      if (!userApiKey) {
+        return res.status(401).json({
+          error: 'Gemini API Key is missing. Please enter your API key in the AI Uploader or Settings.',
         });
       }
+
+      // Initialize Gemini AI Client dynamically per request (BYOK)
+      const ai = new GoogleGenAI({
+        apiKey: userApiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
 
       const systemInstruction = `You are an expert EdTech exam question parser specializing in Multiple Choice Questions (MCQs) for Bengali and English coaching centers, school board exams, and admission tests.
 
@@ -159,9 +170,12 @@ Return a valid JSON array of question objects.`;
 
       res.json({ success: true, count: sanitized.length, items: sanitized });
     } catch (err: any) {
-      console.error('Gemini MCQ Parsing Error:', err);
+      const rawErrorMsg = err?.message || 'Failed to parse MCQs using Gemini AI.';
+      // Strip potential key fragments from error string
+      const sanitizedError = rawErrorMsg.replace(/AIzaSy[A-Za-z0-9_-]{33}/g, '[REDACTED_API_KEY]');
+      console.error('Gemini MCQ Parsing Error:', sanitizedError);
       res.status(500).json({
-        error: err.message || 'Failed to parse MCQs using Gemini AI.',
+        error: sanitizedError,
       });
     }
   });

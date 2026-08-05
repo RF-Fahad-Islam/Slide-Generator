@@ -347,13 +347,14 @@ export const exportDeckToPPTX = async (
       });
     }
 
-    // Always attach Speaker Notes with clean structured text
+    // Always attach Speaker Notes with clean structured text & raw LaTeX source
     const notesLines = [
       `Question Stem: ${cleanLatex(item.stem)}`,
+      item.stem !== cleanLatex(item.stem) ? `Raw LaTeX Stem: ${item.stem}` : '',
       ...(item.romanItems?.length ? [`Statements:\n${item.romanItems.map((r, i) => `  ${i+1}. ${cleanLatex(r)}`).join('\n')}`] : []),
       ...(item.prompt ? [`Prompt: ${cleanLatex(item.prompt)}`] : []),
-      `Options:\n${item.options.map(o => `  [${o.key}] ${cleanLatex(o.text)} ${o.isCorrect ? '(Correct)' : ''}`).join('\n')}`,
-      item.answer ? `Correct Answer: ${item.answer}` : '',
+      `Options:\n${item.options.map(o => `  [${o.key}] ${cleanLatex(o.text)} ${o.isCorrect ? '(Correct Answer)' : ''}`).join('\n')}`,
+      item.answer ? `Correct Answer Key: ${item.answer}` : '',
       item.explanation ? `Explanation: ${cleanLatex(item.explanation)}` : '',
     ].filter(Boolean).join('\n\n');
 

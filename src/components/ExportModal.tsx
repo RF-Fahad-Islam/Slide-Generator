@@ -118,6 +118,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
   };
 
+  const [renderAnswerRevealState, setRenderAnswerRevealState] = useState<boolean>(false);
+  const [includeAnswerSlides, setIncludeAnswerSlides] = useState<boolean>(true);
+
   // Bulk Export All Slides to ZIP with exact template applied to every slide
   const downloadBulkZip = async () => {
     if (items.length === 0) return;
@@ -129,20 +132,38 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
       for (let i = 0; i < items.length; i++) {
         setBulkRenderIndex(i);
+        const padIndex = (i + 1).toString().padStart(2, '0');
+
+        // 1. Render Question Slide (Unanswered)
+        setRenderAnswerRevealState(false);
         setProgressMsg(`Rendering Question Slide ${i + 1} of ${items.length}...`);
         await new Promise(r => setTimeout(r, 150));
 
         const targetEl = exportCanvasRef.current || slideRef.current;
-        if (!targetEl) continue;
+        if (targetEl) {
+          const qDataUrl = await toPng(targetEl, {
+            pixelRatio: 2,
+            cacheBust: true,
+          });
+          const qBase64 = qDataUrl.replace(/^data:image\/png;base64,/, '');
+          folder?.file(`${padIndex}_q.png`, qBase64, { base64: true });
+        }
 
-        const dataUrl = await toPng(targetEl, {
-          pixelRatio: 2,
-          cacheBust: true,
-        });
+        // 2. Render Answer Reveal Slide (if enabled)
+        if (includeAnswerSlides) {
+          setRenderAnswerRevealState(true);
+          setProgressMsg(`Rendering Answer Slide ${i + 1} of ${items.length}...`);
+          await new Promise(r => setTimeout(r, 150));
 
-        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-        const padIndex = (i + 1).toString().padStart(2, '0');
-        folder?.file(`${padIndex}_question.png`, base64Data, { base64: true });
+          if (targetEl) {
+            const ansDataUrl = await toPng(targetEl, {
+              pixelRatio: 2,
+              cacheBust: true,
+            });
+            const ansBase64 = ansDataUrl.replace(/^data:image\/png;base64,/, '');
+            folder?.file(`${padIndex}_ans.png`, ansBase64, { base64: true });
+          }
+        }
       }
 
       setProgressMsg('Packaging ZIP file...');
@@ -154,6 +175,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
+      setRenderAnswerRevealState(false);
       setBulkRenderIndex(currentIndex);
     }
   };
@@ -423,7 +445,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             config={config}
             currentIndex={bulkRenderIndex}
             totalCount={items.length}
-            isAnswerRevealMode={config.showAnswerInSlide}
+            isAnswerRevealMode={renderAnswerRevealState || config.showAnswerInSlide}
           />
         )}
       </div>

@@ -14,12 +14,20 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
   appTheme = 'dark',
 }) => {
   const isAppLight = appTheme === 'light';
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
+    return localStorage.getItem('mcqgen.geminiKey') || '';
+  });
   const [promptText, setPromptText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [fileBase64, setFileBase64] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [parsedResult, setParsedResult] = useState<MCQItem[] | null>(null);
+
+  const handleApiKeyChange = (key: string) => {
+    setGeminiApiKey(key);
+    localStorage.setItem('mcqgen.geminiKey', key);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -49,9 +57,17 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
     setParsedResult(null);
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (geminiApiKey.trim()) {
+        headers['x-gemini-key'] = geminiApiKey.trim();
+      }
+
       const response = await fetch('/api/ai/parse-mcqs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           promptText: promptText || undefined,
           mimeType: file?.type || undefined,
@@ -122,6 +138,32 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column: Input Form */}
         <div className="flex flex-col gap-6">
+          {/* Gemini API Key BYOK Input */}
+          <div>
+            <label className="block text-sm font-bold mb-2 text-slate-400 flex items-center justify-between">
+              <span>Gemini API Key (BYOK - Stored locally in browser):</span>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-amber-500 hover:underline"
+              >
+                Get Free API Key ↗
+              </a>
+            </label>
+            <input
+              type="password"
+              value={geminiApiKey}
+              onChange={(e) => handleApiKeyChange(e.target.value)}
+              placeholder="Paste your Gemini API Key (e.g. AIzaSy...)"
+              className={`w-full px-4 py-3 rounded-2xl border focus:outline-none focus:border-amber-500 text-sm ${
+                isAppLight
+                  ? 'bg-slate-50 border-slate-300 text-slate-900'
+                  : 'bg-slate-950 border-slate-800 text-slate-100'
+              }`}
+            />
+          </div>
+
           {/* Text Input */}
           <div>
             <label className="block text-sm font-bold mb-2 text-slate-400">
