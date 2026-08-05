@@ -50,73 +50,73 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   };
 
   return (
-    <header className={`sticky top-0 z-40 backdrop-blur-xl border-b px-4 lg:px-8 py-2.5 transition-all ${
-      isAppLight ? 'bg-white/95 border-slate-200 text-slate-900 shadow-sm' : 'bg-slate-900/90 border-slate-800 text-slate-100'
+    <header className={`sticky top-0 z-40 backdrop-blur-2xl border-b px-4 lg:px-8 py-3.5 transition-all ${
+      isAppLight ? 'bg-white/95 border-slate-200 text-slate-900 shadow-md' : 'bg-slate-950/85 border-slate-800/80 text-slate-100 shadow-xl'
     }`}>
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         {/* Brand Logo & Name */}
         <div
           onClick={() => setActiveTab('home')}
-          className="flex items-center gap-2.5 cursor-pointer group shrink-0"
+          className="flex items-center gap-3 cursor-pointer group shrink-0"
         >
-          <div className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform flex items-center justify-center">
-            <Presentation className="w-5 h-5 stroke-[2.5]" />
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform flex items-center justify-center">
+            <Presentation className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
-            <h1 className={`text-base font-extrabold tracking-tight flex items-center gap-1.5 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+            <h1 className={`text-lg font-black tracking-tight flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
               EdTech Studio
-              <span className="text-[10px] px-2 py-0.2 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 font-mono font-bold">
-                MCQ
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30 font-mono font-black tracking-wide">
+                MCQ PRO
               </span>
             </h1>
             {/* Sync Status Subtext */}
-            <div className="flex items-center gap-1 text-[10px] text-slate-400">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
               {isSyncing ? (
                 <>
-                  <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
-                  <span className="text-amber-600 font-semibold">Syncing...</span>
+                  <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+                  <span className="text-amber-500 font-bold">Auto-Syncing...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                  <span className={isAppLight ? 'text-slate-600 font-medium' : 'text-slate-400'}>Auto-Synced</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className={isAppLight ? 'text-slate-600 font-semibold' : 'text-slate-400 font-medium'}>Auto-Synced</span>
                 </>
               )}
             </div>
           </div>
         </div>
 
-        {/* Compact Navigation Bar */}
-        <nav className={`flex items-center gap-1 p-1 rounded-2xl border ${
-          isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950/80 border-slate-800'
+        {/* Fatty Navigation Bar */}
+        <nav className={`flex items-center gap-1.5 p-1.5 rounded-2xl border ${
+          isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900/90 border-slate-800/80 shadow-inner'
         }`}>
           {/* 1. Home (Dashboard Hub) */}
           <button
             onClick={() => setActiveTab('home')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer ${
               activeTab === 'home'
-                ? 'bg-amber-500 text-slate-950 shadow font-black'
-                : isAppLight ? 'text-slate-700 hover:bg-white' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.02]'
+                : isAppLight ? 'text-slate-700 hover:bg-white' : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
             }`}
           >
-            <LayoutGrid className="w-3.5 h-3.5" />
+            <LayoutGrid className="w-4 h-4" />
             <span>Home</span>
           </button>
 
           {/* 2. Slide Studio (16:9 Presentation Preview) */}
           <button
             onClick={() => setActiveTab('preview')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all relative ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer relative ${
               activeTab === 'preview'
-                ? 'bg-amber-500 text-slate-950 shadow font-black'
-                : isAppLight ? 'text-slate-700 hover:bg-white' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.02]'
+                : isAppLight ? 'text-slate-700 hover:bg-white' : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
+            <Layers className="w-4 h-4" />
             <span>Slide Studio</span>
             {questionCount > 0 && (
-              <span className={`px-1.5 py-0.1 rounded-full text-[10px] font-mono font-extrabold ${
-                activeTab === 'preview' ? 'bg-slate-950 text-amber-300' : 'bg-amber-500/30 text-amber-600 dark:text-amber-300'
+              <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-black ${
+                activeTab === 'preview' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500/25 text-amber-400 border border-amber-500/30'
               }`}>
                 {questionCount}
               </span>
@@ -126,13 +126,13 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           {/* 3. Social Posts (Facebook & Instagram Generator) */}
           <button
             onClick={() => setActiveTab('social')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer ${
               activeTab === 'social'
-                ? 'bg-amber-500 text-slate-950 shadow font-black'
-                : isAppLight ? 'text-slate-700 hover:bg-white' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.02]'
+                : isAppLight ? 'text-slate-700 hover:bg-white' : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
             }`}
           >
-            <Share2 className="w-3.5 h-3.5" />
+            <Share2 className="w-4 h-4" />
             <span>Social Posts</span>
           </button>
 

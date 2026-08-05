@@ -108,57 +108,59 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
 
   return (
     <div
-      className={`border rounded-3xl p-6 lg:p-8 shadow-2xl space-y-8 max-w-4xl mx-auto ${
-        isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+      className={`glass-card-fatty p-8 lg:p-10 space-y-10 max-w-4xl mx-auto ${
+        isAppLight ? 'bg-white/95 border-slate-200 text-slate-900 shadow-xl' : 'bg-slate-950/85 border-slate-800/80 text-white'
       }`}
     >
       {/* Header */}
-      <div className="flex items-center gap-4 pb-6 border-b border-slate-700/50">
-        <div className="p-3.5 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-          <Settings className="w-7 h-7" />
+      <div className="flex items-center gap-4 pb-6 border-b border-slate-800/80">
+        <div className="p-4 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/20">
+          <Settings className="w-8 h-8" />
         </div>
         <div>
-          <h2 className="text-2xl font-black flex items-center gap-2">
-            AI Provider & API Key Settings
+          <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
+            AI Provider & Key Settings
           </h2>
-          <p className="text-xs text-slate-400">
-            Bring Your Own Key (BYOK) for Google Gemini or OpenRouter. Keys are stored locally in your browser.
+          <p className="text-sm text-slate-400 mt-1">
+            Bring Your Own Key (BYOK) for Google Gemini or OpenRouter. Keys are encrypted & saved locally.
           </p>
         </div>
       </div>
 
       {/* Security Banner */}
-      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-3">
-        <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-400" />
+      <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm font-semibold flex items-center gap-3.5">
+        <ShieldCheck className="w-6 h-6 shrink-0 text-emerald-400" />
         <span>
-          <strong>Local Privacy Guarantee:</strong> API keys are never stored on any server or logged. They are sent directly from your browser to AI provider endpoints.
+          <strong>Local Privacy Guarantee:</strong> API keys are never saved on any cloud server. They are sent directly from your browser to AI provider endpoints.
         </span>
       </div>
 
       {/* Provider Selector */}
       <div className="space-y-4">
-        <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider">
-          Choose Active AI Provider:
+        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">
+          Select Active AI Provider Engine:
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Gemini Option */}
           <div
             onClick={() => saveProvider('gemini')}
-            className={`p-5 rounded-2xl border cursor-pointer transition-all flex items-start gap-4 ${
+            className={`p-6 rounded-3xl border cursor-pointer transition-all flex items-start gap-4 ${
               provider === 'gemini'
-                ? 'bg-amber-500/10 border-amber-500 text-white ring-2 ring-amber-500/50'
+                ? 'bg-amber-500/15 border-amber-500 text-white ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10'
                 : isAppLight
                 ? 'bg-slate-50 border-slate-200 hover:border-slate-400'
-                : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                : 'bg-slate-900 border-slate-800 hover:border-slate-700'
             }`}
           >
-            <Sparkles className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400">
+              <Sparkles className="w-6 h-6" />
+            </div>
             <div>
-              <h3 className="font-bold text-base flex items-center gap-2">
+              <h3 className="font-black text-lg flex items-center gap-2">
                 Google Gemini API
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Direct connection to Google AI Studio. Native support for multimodal vision & PDFs.
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Direct connection to Google AI Studio. Native 2-stage vision support for PDFs & photos.
               </p>
             </div>
           </div>
@@ -166,21 +168,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
           {/* OpenRouter Option */}
           <div
             onClick={() => saveProvider('openrouter')}
-            className={`p-5 rounded-2xl border cursor-pointer transition-all flex items-start gap-4 ${
+            className={`p-6 rounded-3xl border cursor-pointer transition-all flex items-start gap-4 ${
               provider === 'openrouter'
-                ? 'bg-blue-500/10 border-blue-500 text-white ring-2 ring-blue-500/50'
+                ? 'bg-blue-500/15 border-blue-500 text-white ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
                 : isAppLight
                 ? 'bg-slate-50 border-slate-200 hover:border-slate-400'
-                : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                : 'bg-slate-900 border-slate-800 hover:border-slate-700'
             }`}
           >
-            <Cpu className="w-6 h-6 text-blue-400 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400">
+              <Cpu className="w-6 h-6" />
+            </div>
             <div>
-              <h3 className="font-bold text-base flex items-center gap-2">
+              <h3 className="font-black text-lg flex items-center gap-2">
                 OpenRouter API
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Unified API gateway supporting Claude 3.5, Gemini 2.5, Llama 3.3, and DeepSeek R1.
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Access Gemini, Claude 3.5, Llama 3.3, & DeepSeek R1 via OpenRouter proxying.
               </p>
             </div>
           </div>

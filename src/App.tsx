@@ -204,9 +204,9 @@ export default function App() {
   const isAppLight = appTheme === 'light';
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${
-      isAppLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100'
-    } flex flex-col font-['Hind_Siliguri',sans-serif]`}>
+    <div className={`min-h-screen transition-colors duration-300 ${
+      isAppLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
+    } flex flex-col font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}>
       {/* Top Header Navbar */}
       <HeaderNavbar
         activeTab={activeTab}
@@ -223,7 +223,7 @@ export default function App() {
       />
 
       {/* Main Content View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-10">
         {/* TAB 0: HOME - SLIDE DECKS LIST & TOOL SELECTOR */}
         {activeTab === 'home' && (
           <SlideDecksHome

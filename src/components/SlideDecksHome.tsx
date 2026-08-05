@@ -77,67 +77,67 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
   ];
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-10 animate-fadeIn">
       {/* SECTION 1: HERO DASHBOARD HEADER HUB */}
       <div
-        className={`p-6 lg:p-8 rounded-3xl border shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 ${
+        className={`glass-card-fatty p-8 lg:p-10 relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 ${
           isAppLight
-            ? 'bg-gradient-to-r from-amber-500/10 via-amber-100/40 to-white border-amber-200 text-slate-900'
-            : 'bg-gradient-to-r from-amber-500/20 via-slate-900 to-slate-950 border-amber-500/30 text-white'
+            ? 'bg-gradient-to-r from-amber-500/15 via-amber-100/50 to-white border-amber-200 text-slate-900 shadow-xl'
+            : 'bg-gradient-to-r from-amber-500/20 via-slate-950 to-slate-900 border-amber-500/30 text-white'
         }`}
       >
-        <div className="space-y-2 max-w-2xl z-10">
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-xs font-black font-mono bg-amber-500 text-slate-950 uppercase tracking-wider shadow">
+        <div className="space-y-4 max-w-2xl z-10">
+          <div className="flex items-center gap-3">
+            <span className="px-3.5 py-1 rounded-full text-xs font-black font-mono bg-amber-500 text-slate-950 uppercase tracking-wider shadow-md">
               EdTech Studio Central Hub
             </span>
-            <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
-              <Zap className="w-3.5 h-3.5 fill-amber-500" />
-              All-In-One Dashboard
+            <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <Zap className="w-4 h-4 fill-amber-400" />
+              All-In-One Slide Generator
             </span>
           </div>
 
-          <h1 className="text-2xl lg:text-3xl font-black tracking-tight leading-tight">
-            Create Presentation Slides & Social Graphics
+          <h1 className="text-3xl lg:text-4xl font-black tracking-tight leading-tight">
+            Create HD Presentation Slides & Social Media Graphics
           </h1>
-          <p className={`text-xs lg:text-sm ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
-            Welcome! Select any tool below or choose a slide deck to start. Convert questions into 16:9 HD slides, social media cards, or parse exam PDFs with AI!
+          <p className={`text-sm lg:text-base leading-relaxed ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+            Welcome! Convert raw question papers into 16:9 HD presentation slides, social media graphics, or parse Board exam PDFs with 2-Stage Vision AI!
           </p>
 
           {/* Quick Preset Sample Loaders */}
           {onLoadSample && (
-            <div className="flex flex-wrap items-center gap-2 pt-2">
-              <span className="text-xs font-extrabold text-amber-500 uppercase tracking-wider">
-                Load Sample MCQs:
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">
+                Quick Samples:
               </span>
               <button
                 type="button"
                 onClick={() => onLoadSample(0)}
-                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-black transition-all cursor-pointer flex items-center gap-2 shadow-sm"
               >
                 <span>🧬 Biology Sample</span>
               </button>
               <button
                 type="button"
                 onClick={() => onLoadSample(1)}
-                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-black transition-all cursor-pointer flex items-center gap-2 shadow-sm"
               >
-                <span>📐 Math/Physics LaTeX</span>
+                <span>📐 Math / Physics LaTeX</span>
               </button>
             </div>
           )}
         </div>
 
         {/* Quick Active Deck Stats Box */}
-        <div className={`p-5 rounded-2xl border shrink-0 space-y-3 z-10 min-w-[220px] ${
-          isAppLight ? 'bg-white border-amber-300 shadow-md' : 'bg-slate-950/80 border-slate-800'
+        <div className={`p-6 rounded-3xl border shrink-0 space-y-4 z-10 min-w-[240px] ${
+          isAppLight ? 'bg-white border-amber-300 shadow-xl' : 'bg-slate-950 border-slate-800 shadow-2xl'
         }`}>
           <div className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
             Active Workspace Deck
           </div>
-          <div className="text-2xl font-black text-amber-500 flex items-baseline gap-2">
+          <div className="text-3xl font-black text-amber-400 flex items-baseline gap-2">
             <span>{currentItems.length}</span>
-            <span className="text-xs font-normal text-slate-400">Questions</span>
+            <span className="text-sm font-semibold text-slate-400">Questions</span>
           </div>
           <button
             onClick={() => onNavigateTab('preview')}
@@ -150,76 +150,78 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
       </div>
 
       {/* SECTION 2: MAIN STUDIO TOOL MODULES (ALL TOOLS DIRECTLY ACCESSIBLE) */}
-      <div className="space-y-4">
-        <h2 className="text-base font-extrabold flex items-center gap-2">
-          <Zap className="w-5 h-5 text-amber-500" />
-          <span>Main Studio Tools & Features</span>
+      <div className="space-y-6">
+        <h2 className="text-xl font-black flex items-center gap-2.5">
+          <Zap className="w-6 h-6 text-amber-400" />
+          <span>Main Studio Tools & Modules</span>
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Tool 1: 16:9 Slide Presentation Generator */}
           <div
             onClick={() => onNavigateTab('preview')}
-            className={`p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 group ${
+            className={`glass-card-fatty p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
               isAppLight
-                ? 'bg-white border-slate-200 hover:border-amber-400 hover:shadow-xl'
-                : 'bg-slate-900 border-slate-800 hover:border-amber-500 shadow-xl'
+                ? 'bg-white/95 border-slate-200 hover:border-amber-400 shadow-lg'
+                : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-amber-500 text-slate-950 font-black shadow-md group-hover:scale-105 transition-transform">
-                  <Presentation className="w-6 h-6 stroke-[2.5]" />
+                <div className="p-3.5 rounded-2xl bg-amber-500 text-slate-950 font-black shadow-lg group-hover:scale-110 transition-transform">
+                  <Presentation className="w-7 h-7 stroke-[2.5]" />
                 </div>
-                <span className="text-[10px] font-mono font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
                   16:9 HD Slides
                 </span>
               </div>
               <div>
-                <h3 className={`text-base font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                   <span>16:9 Slide Studio</span>
-                  <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
                 </h3>
-                <p className={`text-xs mt-1 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                   Full-screen 1920x1080 slide deck generator with answer reveal, live writing classroom mode, LaTeX math, and PNG export.
                 </p>
               </div>
             </div>
-            <div className="text-xs font-bold text-amber-500 group-hover:underline pt-2 border-t border-slate-800/80">
-              Open Slide Studio →
+            <div className="text-sm font-black text-amber-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
+              <span>Open Slide Studio</span>
+              <ArrowRight className="w-4 h-4" />
             </div>
           </div>
 
           {/* Tool 2: Social Media Posting Card Generator */}
           <div
             onClick={() => onNavigateTab('social')}
-            className={`p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 group ${
+            className={`glass-card-fatty p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
               isAppLight
-                ? 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-xl'
-                : 'bg-slate-900 border-slate-800 hover:border-indigo-500 shadow-xl'
+                ? 'bg-white/95 border-slate-200 hover:border-indigo-400 shadow-lg'
+                : 'bg-slate-900/80 border-slate-800 hover:border-indigo-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-indigo-600 text-white font-black shadow-md group-hover:scale-105 transition-transform">
-                  <Share2 className="w-6 h-6 stroke-[2.5]" />
+                <div className="p-3.5 rounded-2xl bg-indigo-600 text-white font-black shadow-lg group-hover:scale-110 transition-transform">
+                  <Share2 className="w-7 h-7 stroke-[2.5]" />
                 </div>
-                <span className="text-[10px] font-mono font-black px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                   1:1 / 4:5 / 9:16
                 </span>
               </div>
               <div>
-                <h3 className={`text-base font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                   <span>Social Posts Generator</span>
-                  <ArrowRight className="w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-5 h-5 text-indigo-400 group-hover:translate-x-1 transition-transform" />
                 </h3>
-                <p className={`text-xs mt-1 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                   Create viral Facebook, Instagram feed cards & 9:16 Story graphics with custom watermarks, branding & explanations.
                 </p>
               </div>
             </div>
-            <div className="text-xs font-bold text-indigo-400 group-hover:underline pt-2 border-t border-slate-800/80">
-              Open Social Generator →
+            <div className="text-sm font-black text-indigo-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
+              <span>Open Social Generator</span>
+              <ArrowRight className="w-4 h-4" />
             </div>
           </div>
 

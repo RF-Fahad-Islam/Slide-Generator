@@ -140,82 +140,85 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
 
   return (
     <div
-      className={`border rounded-3xl p-6 lg:p-8 shadow-2xl ${
+      className={`glass-card-fatty p-8 lg:p-10 ${
         isAppLight
-          ? 'bg-white border-slate-200 text-slate-900'
-          : 'bg-slate-900 border-slate-800 text-white'
+          ? 'bg-white/95 border-slate-200 text-slate-900 shadow-xl'
+          : 'bg-slate-950/80 border-slate-800/80 text-white'
       }`}
     >
-      <div className="flex items-center gap-3 pb-6 border-b border-slate-700/50 mb-6">
-        <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-500 border border-amber-500/30">
-          <Sparkles className="w-6 h-6" />
+      <div className="flex items-center gap-4 pb-6 border-b border-slate-800/80 mb-8">
+        <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/20">
+          <Sparkles className="w-7 h-7" />
         </div>
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            Gemini AI Automated MCQ Ingestion
+          <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
+            AI Automated MCQ Ingestion
+            <span className="text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono font-extrabold uppercase">
+              2-Stage Vision OCR
+            </span>
           </h2>
-          <p className="text-xs text-slate-400">
-            Upload question paper PDFs, DOCX, image scans, or raw text to extract structured MCQ slides
+          <p className="text-sm text-slate-400 mt-0.5">
+            Upload SSC/HSC Board Exam PDFs, DOCX, image scans, or raw text to extract structured MCQ slides.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Left Column: Input Form */}
         <div className="flex flex-col gap-6">
           {/* Gemini API Key BYOK Input */}
           <div>
-            <label className="block text-sm font-bold mb-2 text-slate-400 flex items-center justify-between">
-              <span>Gemini API Key (BYOK - Stored locally in browser):</span>
+            <label className="block text-sm font-extrabold mb-2.5 text-slate-300 flex items-center justify-between">
+              <span>Gemini / OpenRouter API Key (BYOK):</span>
               <a
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-amber-500 hover:underline"
+                className="text-xs font-bold text-amber-400 hover:underline"
               >
-                Get Free API Key ↗
+                Get Free Key ↗
               </a>
             </label>
             <input
               type="password"
               value={geminiApiKey}
               onChange={(e) => handleApiKeyChange(e.target.value)}
-              placeholder="Paste your Gemini API Key (e.g. AIzaSy...)"
-              className={`w-full px-4 py-3 rounded-2xl border focus:outline-none focus:border-amber-500 text-sm ${
+              placeholder="Paste your API Key (e.g. AIzaSy...)"
+              className={`w-full px-4 py-3.5 rounded-2xl border focus:outline-none focus:border-amber-500 font-mono text-sm font-semibold transition-all ${
                 isAppLight
                   ? 'bg-slate-50 border-slate-300 text-slate-900'
-                  : 'bg-slate-950 border-slate-800 text-slate-100'
+                  : 'bg-slate-900 border-slate-800 text-slate-100'
               }`}
             />
           </div>
 
           {/* Text Input */}
           <div>
-            <label className="block text-sm font-bold mb-2 text-slate-400">
-              Paste Raw Question Text or Unstructured Exam Content:
+            <label className="block text-sm font-extrabold mb-2.5 text-slate-300">
+              Paste Raw Question Text or Exam Content:
             </label>
             <textarea
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
-              placeholder="Paste raw unformatted exam paper content or notes here..."
-              className={`w-full h-44 p-4 rounded-2xl border focus:outline-none focus:border-amber-500 text-sm leading-relaxed resize-none ${
+              placeholder="Paste raw unformatted exam text, notes, or math formulas here..."
+              className={`w-full h-48 p-4 rounded-2xl border focus:outline-none focus:border-amber-500 text-sm leading-relaxed resize-none transition-all ${
                 isAppLight
                   ? 'bg-slate-50 border-slate-300 text-slate-900'
-                  : 'bg-slate-950 border-slate-800 text-slate-100'
+                  : 'bg-slate-900 border-slate-800 text-slate-100'
               }`}
             />
           </div>
 
-          {/* File Upload Zone */}
+          {/* Fatty File Upload Zone */}
           <div>
-            <label className="block text-sm font-bold mb-2 text-slate-400">
-              Or Attach Question Document (PDF, PNG, JPG):
+            <label className="block text-sm font-extrabold mb-2.5 text-slate-300">
+              Or Attach Question Paper (PDF, PNG, JPG, DOCX):
             </label>
             <div
-              className={`relative border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center gap-3 transition-colors text-center cursor-pointer ${
+              className={`relative border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center gap-3 transition-all text-center cursor-pointer group ${
                 isAppLight
-                  ? 'bg-slate-50 border-slate-300 hover:border-amber-500'
-                  : 'bg-slate-950 border-slate-800 hover:border-amber-500/50'
+                  ? 'bg-slate-50 border-slate-300 hover:border-amber-500 hover:bg-amber-50/50'
+                  : 'bg-slate-900/60 border-slate-800 hover:border-amber-500/50 hover:bg-slate-900'
               }`}
             >
               <input
@@ -224,19 +227,21 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
                 onChange={handleFileChange}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
-              <Upload className="w-8 h-8 text-amber-500" />
+              <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
+                <Upload className="w-8 h-8" />
+              </div>
               {file ? (
                 <div>
-                  <p className="text-sm font-bold text-amber-500">{file.name}</p>
-                  <p className="text-xs text-slate-400 font-mono">
+                  <p className="text-base font-black text-amber-400">{file.name}</p>
+                  <p className="text-xs text-slate-400 font-mono mt-1">
                     {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type || 'Document'}
                   </p>
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm font-semibold">Click to browse or drag & drop file</p>
-                  <p className="text-xs text-slate-400 font-mono mt-1">
-                    Supports Board exam PDFs, handwritten scan photos, & DOCX
+                  <p className="text-base font-black text-white">Click to browse or drag & drop file</p>
+                  <p className="text-xs text-slate-400 font-medium mt-1">
+                    Supports 2-Stage Vision OCR for Board Exam PDFs & scanned photo test papers
                   </p>
                 </div>
               )}
@@ -244,8 +249,8 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
           </div>
 
           {errorMsg && (
-            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-sm flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0" />
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm font-semibold flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -253,17 +258,17 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
           <button
             onClick={handleRunAI}
             disabled={isLoading}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-extrabold text-base flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 hover:brightness-110 transition-all cursor-pointer disabled:opacity-50"
+            className="btn-fatty-primary w-full py-4 text-base rounded-2xl"
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Extracting & Validating MCQs with Gemini AI...</span>
+                <span>Processing 2-Stage AI Extraction...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-5 h-5 fill-slate-950" />
-                <span>Process with Gemini AI</span>
+                <span>Process Document with AI</span>
               </>
             )}
           </button>
@@ -271,10 +276,10 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
 
         {/* Right Column: AI Extraction Results */}
         <div
-          className={`p-6 rounded-2xl border flex flex-col justify-between ${
+          className={`p-8 rounded-3xl border flex flex-col justify-between ${
             isAppLight
               ? 'bg-slate-50 border-slate-200 text-slate-900'
-              : 'bg-slate-950 border-slate-800 text-slate-100'
+              : 'bg-slate-900/60 border-slate-800 text-slate-100'
           }`}
         >
           <div>
