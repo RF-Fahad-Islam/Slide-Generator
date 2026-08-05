@@ -140,24 +140,24 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
 
   return (
     <div
-      className={`glass-card-fatty p-8 lg:p-10 ${
+      className={`p-8 lg:p-10 rounded-3xl border shadow-2xl transition-all ${
         isAppLight
-          ? 'bg-white/95 border-slate-200 text-slate-900 shadow-xl'
-          : 'bg-slate-950/80 border-slate-800/80 text-white'
+          ? 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
+          : 'bg-slate-900/90 border-slate-800 text-white shadow-black/50'
       }`}
     >
-      <div className="flex items-center gap-4 pb-6 border-b border-slate-800/80 mb-8">
+      <div className={`flex items-center gap-4 pb-6 border-b mb-8 ${isAppLight ? 'border-slate-200' : 'border-slate-800/80'}`}>
         <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/20">
           <Sparkles className="w-7 h-7" />
         </div>
         <div>
           <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
             AI Automated MCQ Ingestion
-            <span className="text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono font-extrabold uppercase">
+            <span className="text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono font-extrabold uppercase">
               2-Stage Vision OCR
             </span>
           </h2>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
             Upload SSC/HSC Board Exam PDFs, DOCX, image scans, or raw text to extract structured MCQ slides.
           </p>
         </div>
@@ -168,13 +168,13 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
         <div className="flex flex-col gap-6">
           {/* Gemini API Key BYOK Input */}
           <div>
-            <label className="block text-sm font-extrabold mb-2.5 text-slate-300 flex items-center justify-between">
+            <label className={`block text-sm font-extrabold mb-2.5 flex items-center justify-between ${isAppLight ? 'text-slate-800' : 'text-slate-300'}`}>
               <span>Gemini / OpenRouter API Key (BYOK):</span>
               <a
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs font-bold text-amber-400 hover:underline"
+                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
               >
                 Get Free Key ↗
               </a>
@@ -186,15 +186,15 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
               placeholder="Paste your API Key (e.g. AIzaSy...)"
               className={`w-full px-4 py-3.5 rounded-2xl border focus:outline-none focus:border-amber-500 font-mono text-sm font-semibold transition-all ${
                 isAppLight
-                  ? 'bg-slate-50 border-slate-300 text-slate-900'
-                  : 'bg-slate-900 border-slate-800 text-slate-100'
+                  ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
+                  : 'bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600'
               }`}
             />
           </div>
 
           {/* Text Input */}
           <div>
-            <label className="block text-sm font-extrabold mb-2.5 text-slate-300">
+            <label className={`block text-sm font-extrabold mb-2.5 ${isAppLight ? 'text-slate-800' : 'text-slate-300'}`}>
               Paste Raw Question Text or Exam Content:
             </label>
             <textarea
@@ -203,22 +203,22 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
               placeholder="Paste raw unformatted exam text, notes, or math formulas here..."
               className={`w-full h-48 p-4 rounded-2xl border focus:outline-none focus:border-amber-500 text-sm leading-relaxed resize-none transition-all ${
                 isAppLight
-                  ? 'bg-slate-50 border-slate-300 text-slate-900'
-                  : 'bg-slate-900 border-slate-800 text-slate-100'
+                  ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
+                  : 'bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600'
               }`}
             />
           </div>
 
           {/* Fatty File Upload Zone */}
           <div>
-            <label className="block text-sm font-extrabold mb-2.5 text-slate-300">
+            <label className={`block text-sm font-extrabold mb-2.5 ${isAppLight ? 'text-slate-800' : 'text-slate-300'}`}>
               Or Attach Question Paper (PDF, PNG, JPG, DOCX):
             </label>
             <div
               className={`relative border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center gap-3 transition-all text-center cursor-pointer group ${
                 isAppLight
-                  ? 'bg-slate-50 border-slate-300 hover:border-amber-500 hover:bg-amber-50/50'
-                  : 'bg-slate-900/60 border-slate-800 hover:border-amber-500/50 hover:bg-slate-900'
+                  ? 'bg-slate-50/80 border-slate-300 hover:border-amber-500 hover:bg-amber-50/60 shadow-sm'
+                  : 'bg-slate-950/60 border-slate-800 hover:border-amber-500/50 hover:bg-slate-950'
               }`}
             >
               <input
@@ -227,20 +227,20 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
                 onChange={handleFileChange}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
-              <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
+              <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
                 <Upload className="w-8 h-8" />
               </div>
               {file ? (
                 <div>
-                  <p className="text-base font-black text-amber-400">{file.name}</p>
-                  <p className="text-xs text-slate-400 font-mono mt-1">
+                  <p className="text-base font-black text-amber-600 dark:text-amber-400">{file.name}</p>
+                  <p className={`text-xs font-mono mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type || 'Document'}
                   </p>
                 </div>
               ) : (
                 <div>
-                  <p className="text-base font-black text-white">Click to browse or drag & drop file</p>
-                  <p className="text-xs text-slate-400 font-medium mt-1">
+                  <p className={`text-base font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Click to browse or drag & drop file</p>
+                  <p className={`text-xs font-medium mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Supports 2-Stage Vision OCR for Board Exam PDFs & scanned photo test papers
                   </p>
                 </div>
@@ -249,8 +249,8 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
           </div>
 
           {errorMsg && (
-            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm font-semibold flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-sm font-semibold flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 text-rose-500" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -278,8 +278,8 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
         <div
           className={`p-8 rounded-3xl border flex flex-col justify-between ${
             isAppLight
-              ? 'bg-slate-50 border-slate-200 text-slate-900'
-              : 'bg-slate-900/60 border-slate-800 text-slate-100'
+              ? 'bg-slate-50/80 border-slate-200 text-slate-900'
+              : 'bg-slate-950/80 border-slate-800 text-slate-100'
           }`}
         >
           <div>

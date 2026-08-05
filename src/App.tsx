@@ -205,7 +205,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
-      isAppLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
+      isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
     } flex flex-col font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}>
       {/* Top Header Navbar */}
       <HeaderNavbar

@@ -419,30 +419,34 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                 className={`p-6 rounded-3xl border transition-all flex flex-col justify-between space-y-6 group ${
                   deck.isCurrent
                     ? isAppLight
-                      ? 'bg-amber-50/80 border-amber-400 shadow-xl ring-2 ring-amber-400/40'
+                      ? 'bg-amber-50/90 border-amber-400 shadow-xl ring-2 ring-amber-400/40'
                       : 'bg-slate-900 border-amber-500/60 shadow-2xl ring-2 ring-amber-500/30'
                     : isAppLight
-                    ? 'bg-white border-slate-200 hover:border-slate-300 shadow-md'
-                    : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                    ? 'glass-card-fatty-light bg-white/95 border-slate-200 hover:border-amber-400 shadow-lg'
+                    : 'glass-card-fatty bg-slate-900/90 border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div className="space-y-4">
                   {/* Card Top Badge Header */}
-                  <div className="flex items-center justify-between gap-2 border-b pb-3 border-slate-800/60">
+                  <div className={`flex items-center justify-between gap-2 border-b pb-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800/60'}`}>
                     <div className="flex items-center gap-2">
                       <span className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono ${
-                        deck.isCurrent ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-300'
+                        deck.isCurrent
+                          ? 'bg-amber-500 text-slate-950 shadow-sm'
+                          : isAppLight
+                          ? 'bg-slate-100 text-amber-700 border border-amber-300'
+                          : 'bg-slate-800 text-amber-300'
                       }`}>
                         {deck.questionCount} Questions
                       </span>
                       {deck.isCurrent && (
-                        <span className="text-[10px] font-bold text-emerald-500 uppercase flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" /> Active Deck
                         </span>
                       )}
                     </div>
 
-                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                    <span className={`text-[10px] font-bold flex items-center gap-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                       <Calendar className="w-3 h-3" />
                       {deck.lastUpdated}
                     </span>

@@ -137,7 +137,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
 
       {/* Provider Selector */}
       <div className="space-y-4">
-        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">
+        <label className={`block text-xs font-black uppercase tracking-widest ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
           Select Active AI Provider Engine:
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -146,20 +146,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
             onClick={() => saveProvider('gemini')}
             className={`p-6 rounded-3xl border cursor-pointer transition-all flex items-start gap-4 ${
               provider === 'gemini'
-                ? 'bg-amber-500/15 border-amber-500 text-white ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10'
+                ? 'bg-amber-500/15 border-amber-500 text-slate-900 dark:text-white ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10'
                 : isAppLight
-                ? 'bg-slate-50 border-slate-200 hover:border-slate-400'
+                ? 'bg-white border-slate-200 hover:border-slate-400 shadow-sm'
                 : 'bg-slate-900 border-slate-800 hover:border-slate-700'
             }`}
           >
-            <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400">
+            <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-500 dark:text-amber-400">
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-lg flex items-center gap-2">
+              <h3 className={`font-black text-lg flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                 Google Gemini API
               </h3>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <p className={`text-xs mt-1 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Direct connection to Google AI Studio. Native 2-stage vision support for PDFs & photos.
               </p>
             </div>
@@ -170,20 +170,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
             onClick={() => saveProvider('openrouter')}
             className={`p-6 rounded-3xl border cursor-pointer transition-all flex items-start gap-4 ${
               provider === 'openrouter'
-                ? 'bg-blue-500/15 border-blue-500 text-white ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
+                ? 'bg-blue-500/15 border-blue-500 text-slate-900 dark:text-white ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/10'
                 : isAppLight
-                ? 'bg-slate-50 border-slate-200 hover:border-slate-400'
+                ? 'bg-white border-slate-200 hover:border-slate-400 shadow-sm'
                 : 'bg-slate-900 border-slate-800 hover:border-slate-700'
             }`}
           >
-            <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400">
+            <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-500 dark:text-blue-400">
               <Cpu className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-lg flex items-center gap-2">
+              <h3 className={`font-black text-lg flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                 OpenRouter API
               </h3>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <p className={`text-xs mt-1 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Access Gemini, Claude 3.5, Llama 3.3, & DeepSeek R1 via OpenRouter proxying.
               </p>
             </div>
@@ -193,9 +193,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
 
       {/* Provider Details Form */}
       {provider === 'gemini' ? (
-        <div className="space-y-4 p-6 rounded-2xl bg-slate-950 border border-slate-800">
+        <div className={`space-y-4 p-6 rounded-3xl border ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
           <div className="flex items-center justify-between">
-            <label className="text-sm font-bold text-amber-400 flex items-center gap-2">
+            <label className="text-sm font-extrabold text-amber-500 dark:text-amber-400 flex items-center gap-2">
               <Key className="w-4 h-4" />
               Google Gemini API Key:
             </label>
