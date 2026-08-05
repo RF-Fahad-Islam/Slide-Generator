@@ -41,6 +41,8 @@ export default function App() {
     templateId: 'rakib-dark',
     brandName: "RAKIB'S CLASSROOM",
     logoUrl: '',
+    logoSize: 'md',
+    logoPosition: 'top-left',
     headerTitle: 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
     badgeTag: '৯ম-১০ম শ্রেণি | জীববিজ্ঞান',
     footerTag: 'BIOMISSION',
@@ -51,6 +53,9 @@ export default function App() {
     showExplanationInSlide: false,
     questionNumberFormat: 'bangla',
     fontFamily: "'Kalpurush', serif",
+    bgPreset: 'none',
+    bgImageOpacity: 1.0,
+    bgOverlayDarkness: 0.0,
   });
 
   // IndexedDB Auto-Sync Hook

@@ -5,7 +5,7 @@
 > at the top.
 
 ## Status legend
-`[ ]` pending · `[~]` in progress · `[x]` done · `[!]` blocked (note why)
+`[x]` done · `[~]` in progress · `[!]` needs refactor/alignment · `[ ]` pending
 
 ---
 
@@ -22,80 +22,51 @@
 - [x] 2026-08-05 — Write `context/build-plan.md`
 - [x] 2026-08-05 — Write `context/progress-tracker.md`
 
-## Phase 0 — Scaffold (branch: `feat/phase-0-scaffold`) — NOT STARTED
-- [ ] git init + .gitignore + initial commit + phase branch
-- [ ] `create-next-app` (TS, Tailwind, ESLint, App Router) — temp+copy if it rejects non-empty dir
-- [ ] Read `node_modules/next/dist/docs/` for installed conventions
-- [ ] Install deps (exact list, `library-docs.md`)
-- [ ] shadcn/ui + base components (load `/shadcn` skill first)
-- [ ] Add semantic tokens incl. `--success`/`--warning`/`--info` to theme CSS
-- [ ] Bundle Bengali woff2 (Hind Siliguri, Noto Sans Bengali), self-hosted
-- [ ] Folder skeleton per `architecture.md` §9
-- [ ] `npm run build` clean
-- [ ] Commit + `/remember save`
+## Phase 0 — Scaffold (Vite + React 19 + Express)
+- [x] 2026-08-05 — Vite + React 19 + Tailwind CSS + Express (`server.ts`, `vite.config.ts`)
+- [x] 2026-08-05 — Install dependencies (`@google/genai`, `pptxgenjs`, `jspdf`, `html-to-image`, `dexie`, `katex`, `lucide-react`)
+- [x] 2026-08-05 — Fix TypeScript type definitions (`@types/react`, `@types/react-dom`, `@types/node`)
+- [x] 2026-08-05 — Clean TypeScript build (`tsc --noEmit` & `npm run build` green)
+- [!] Bundle Bengali woff2 self-hosted fonts in `public/fonts/` (currently relying on Google Fonts / web fonts)
 
-## Phase 1 — One template + renderer (`feat/phase-1-renderer`) — NOT STARTED
-- [ ] Zod schemas: deck, brand-kit, template (with `.refine` exactly-one-correct)
-- [ ] `build-slides.ts` — expand + resolve-once autofit (D6) + unit tests
-- [ ] `SlideStage.tsx` — logical canvas, transform:scale, KaTeX, `<img>`, brand CSS vars, fonts.ready
-- [ ] built-in `class-mode-bangla.ts` (writing area + right options + answer layout)
-- [ ] `storage/` interface + idb-keyval impl + JSON export/import
-- [ ] dev page rendering fixture deck (plain + bohupodi + LaTeX)
-- [ ] `export/png.ts` (offscreen render, fonts.ready, html-to-image)
-- [ ] Done-when: PNG matches preview; autofit/coords tests pass; build clean
-- [ ] Commit + `/remember save`
+## Phase 1 — Template & Canvas Renderer
+- [x] 2026-08-05 — `SlideCanvas.tsx`: Responsive 1920x1080 canvas with `ResizeObserver` scale calculation & KaTeX formula support (`MathText.tsx`)
+- [x] 2026-08-05 — Preset template registry in `src/templates/registry.ts`
+- [x] 2026-08-05 — IndexedDB sync via Dexie in `src/db/dexie.ts` & `src/hooks/useIndexedDBSync.ts`
+- [x] 2026-08-05 — PNG export using `html-to-image`
+- [!] Refactor renderer to declarative `Element[]` descriptor schema with resolve-once autofit (Decision D6)
 
-## Phase 2 — AI SPINE (`feat/phase-2-ai-spine`) — NOT STARTED ⚑ milestone #1
-- [ ] Settings — BYOK key (localStorage, namespaced) + BrandKit CRUD + privacy copy
-- [ ] `ai/constants.ts` — verify model ID from Google docs (no memory trust); chunk size 15
-- [ ] `app/api/extract/route.ts` — structured output (responseSchema), streaming, finish-reason guards, safe errors, countTokens estimate
-- [ ] `lib/ai/` — prompt (bohupodi+LaTeX+tags, never-silent-answer), chunking, numeral normalization (D15), Zod validation
-- [ ] Review screen — accept/edit/discard, live KaTeX preview, confidence-flagged answers must-confirm (D10)
-- [ ] Deck editor (minimal) — list/select, per-question form, live SlideStage preview, zustand+immer
-- [ ] `export/katex-raster.ts` + `pptx.ts` — hybrid (native text + KaTeX PNGs + raw LaTeX in notes), LAYOUT_16x9
-- [ ] Paste-text input UI with chunk progress
-- [ ] **Key-hygiene test** + **AI-spine acceptance** (plan.md §8) incl. PPTX in PowerPoint
-- [ ] Save Gemini API excerpts → `context/library-docs-gemini.md`
-- [ ] Commit + `/remember save`
+## Phase 2 — AI Spine (Gemini Ingestion)
+- [x] 2026-08-05 — `AIUploader.tsx`: Raw text paste & file/PDF upload interface
+- [x] 2026-08-05 — `server.ts`: `/api/ai/parse-mcqs` Express route handler using `@google/genai` structured outputs
+- [!] Update server proxy to accept BYOK `x-gemini-key` header (instead of server env variable)
+- [!] Implement hybrid KaTeX rasterization to PNG for embedded PPTX formulas (Decision D4/D5)
 
-## Phase 3 — Editor depth + manual mode (`feat/phase-3-editor-manual`) — NOT STARTED
-- [ ] dnd-kit sortable (keyboard sensor), multi-select, bulk dup/delete
-- [ ] Full per-question form incl. passage type, stemType picker, image upload
-- [ ] `parse/plain-text.ts` Bangla bulk-paste parser + Vitest messy fixtures
-- [ ] `parse/csv.ts` fixed-header import + example CSV
-- [ ] Validation panel (missing correct, dup options, overflow, numeral mismatch, jump-to)
-- [ ] Deck settings: pick BrandKit + template inline token tweaks (token-swap, D7)
-- [ ] Offline acceptance: network off → bulk-paste → slides
-- [ ] Commit + `/remember save`
+## Phase 3 — Editor Depth & Manual Mode
+- [x] 2026-08-05 — `ManualEditor.tsx`: Full per-question form (standard, bohupodi statement, passage stem)
+- [x] 2026-08-05 — `src/utils/bulkParser.ts`: Bangla-aware regex bulk parser
+- [x] 2026-08-05 — `src/utils/csvParser.ts`: CSV import & template generator
+- [x] 2026-08-05 — `ValidationPanel.tsx`: Live question validation & error detection drawer
+- [ ] Add `dnd-kit` drag-and-drop sortable question reordering
 
-## Phase 4 — Export breadth (`feat/phase-4-export`) — NOT STARTED
-- [ ] Ratios 1:1/4:5/9:16 + warn/seed "from 16:9" (D12)
-- [ ] `answerKeyList` repeater + paginated build-slides (D13)
-- [ ] ZIP (JSZip, `01_q.png`/`01_ans.png`)
-- [ ] PDF (image-per-page)
-- [ ] Export dialog (format/ratio/kinds/filename/determinate progress)
-- [ ] Ratio acceptance: no clipped text at 1:1 and 9:16
-- [ ] Commit + `/remember save`
+## Phase 4 — Export Breadth
+- [x] 2026-08-05 — `ExportModal.tsx`: PPTX presentation export, multi-slide PNG image download, and PDF export (`jspdf`)
+- [x] 2026-08-05 — `SocialPostGenerator.tsx`: Multi-aspect ratio templates (1:1, 4:5, 9:16, 16:9)
+- [ ] Paginated standalone answer-key slides (`answerKeyList`)
+- [ ] ZIP archive download (`jszip`) for bulk PNG exports
 
-## Phase 5 — Template management (`feat/phase-5-templates`) — NOT STARTED (no drag editor, D7)
-- [ ] Template studio: clone/fork built-ins, token editor, live preview, JSON export/import
-- [ ] Per-ratio variant tabs + "copy from 16:9"
-- [ ] Built-ins: `standard-grid`, `social-square` (Bangla+LaTeX, all slideKinds)
-- [ ] Update `ui-registry.md`
-- [ ] Commit + `/remember save`
-
-## Phase 6 — SaaS seam — LATER (not v1; needs fresh /architect)
+## Phase 5 — Template Management
+- [x] 2026-08-05 — `DeckSettings.tsx`: Custom branding, logo positioning, background overlays, and typography presets
+- [ ] Interactive template studio with JSON template import/export
 
 ---
 
 ## Open questions / blockers
-_None._
+- **Framework alignment**: Decide whether to maintain the high-functioning Vite SPA + Express stack or rewrite into Next.js App Router per `context/build-plan.md`.
 
 ## Notes for the next session
-- Repo has NO git yet — Phase 0 task 1 (`git init`) is the first code action.
-- This session wrote docs only (per explicit instruction "your task is not code").
-- `plan.md` in the repo was previously corrupted (two concatenated truncated copies);
-  it has been overwritten with the clean final plan.
-- The 9 context files required by `CLAUDE.md` now exist (read order in `CLAUDE.md`).
-- Decisions D1–D16 in `plan.md` §4 are locked; do not re-open without explicit
-  user approval. If one seems wrong in practice, stop and ask.
+- Build commands are passing (`npx typescript --noEmit` and `npm run build` clean).
+- Priorities remaining:
+  1. Fix BYOK key header support in `server.ts`.
+  2. Implement KaTeX formula image embedding in `src/utils/pptxExport.ts`.
+  3. Add ZIP export for PNG downloads.
