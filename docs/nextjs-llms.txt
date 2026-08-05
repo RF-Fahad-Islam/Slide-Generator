@@ -1,0 +1,64 @@
+# Next.js Documentation Reference
+# Source: https://context7.com/websites/nextjs/llms.txt
+# Fetched: 2026-06-26
+
+## Key Commands & Patterns
+
+### Initialization
+- `npx create-next-app@latest my-app --yes` — scaffold with defaults (TS, Tailwind, ESLint, App Router)
+- `npx create-next-app@latest --example with-jest with-jest-app` — with Jest
+- `npx create-next-app@latest --example with-vitest with-vitest-app` — with Vitest
+- `npx create-next-app@latest --example with-cypress with-cypress-app` — with Cypress
+- `npx create-next-app@latest --example with-playwright with-playwright-app` — with Playwright
+
+### Development
+- `npm run dev -- --webpack` — dev server with Webpack (not Turbopack)
+- `next dev --webpack` — same
+- `next build` — production build
+- `next experimental-analyze` — bundle analysis
+
+### API Routes (App Router)
+- Route handlers in `app/api/route.ts`
+- Export named functions: `GET`, `POST`, `PUT`, `DELETE`
+- Use `NextRequest` and `NextResponse`
+- Pattern: `export async function GET(request: NextRequest) { return NextResponse.json({}) }`
+
+### Server Components
+- Default in App Router — no `"use client"` needed
+- Async components for data fetching
+- `generateMetadata` for dynamic SEO
+- `generateStaticParams` for static generation
+
+### Key Features
+- `next/image` — image optimization
+- `next/font` — font optimization (Google Fonts, local)
+- Route Groups: `(groupName)` for layout organization
+- Parallel Routes: `@slot` for complex layouts
+- Intercepting Routes: `(..)parent` for modal patterns
+- Middleware: `middleware.ts` at root
+- `loading.tsx` — loading UI per segment
+- `error.tsx` — error boundaries
+- `not-found.tsx` — 404 UI
+
+### Testing
+- Vitest: `vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/dom`
+- Jest: `jest jest-environment-jsdom @testing-library/react @testing-library/dom @testing-library/jest-dom`
+- Playwright: `npx create playwright`
+- Cypress: `pnpm add -D cypress`
+
+### OpenTelemetry
+- `@vercel/otel` + `@opentelemetry/sdk-logs @opentelemetry/api-logs @opentelemetry/instrumentation`
+
+### PWA
+- Manifest file: `app/manifest.ts` exporting `MetadataRoute.Manifest`
+- Web Push: `pnpm add -g web-push` for VAPID keys
+
+### Self-Hosting
+- Custom Cache Handler with `get`, `set`, `revalidateTag`, `resetRequestCache`
+- Standalone output: `output: 'standalone'` in next.config
+- `node .next/standalone/server.js`
+
+### Migrating
+- From Vite: `pnpm add next@latest` + `@vitejs/plugin-react`
+- From CRA: `next dev --webpack`
+- Upgrade codemod: `npx @next/codemod upgrade <patch|minor|major>`
