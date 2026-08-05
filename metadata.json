@@ -1,0 +1,6 @@
+{
+  "name": "EdTech MCQ Slide Generator",
+  "description": "Template-to-slide generator for MCQs with manual bulk editor and AI PDF/text parser for teachers and coaching centers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
