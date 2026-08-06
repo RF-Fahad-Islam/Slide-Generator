@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MCQItem, DeckConfig } from '../types';
 import { getTemplateById, TEMPLATES } from '../templates/registry';
 import { MathText } from './MathText';
@@ -263,10 +263,18 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
   const [fileName, setFileName] = useState<string>(() =>
     `${(config.brandName || 'QuestionBank').replace(/[^a-z0-9]+/gi, '_')}_MCQs`
   );
+  // Track whether the user has typed a custom name — a fresh open keeps the
+  // brand-derived default unless they edited it for the current deck.
+  const fileNameEditedRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (isOpen && !fileNameEditedRef.current) {
+      setFileName(`${(config.brandName || 'QuestionBank').replace(/[^a-z0-9]+/gi, '_')}_MCQs`);
+    }
+  }, [isOpen, config.brandName]);
   const [templateId, setTemplateId] = useState<string>(config.templateId);
   const [itemsPerPage, setItemsPerPage] = useState<number>(3);
   // Page slice currently mounted in the offscreen render node (drives PDF pages)
-  const [renderSlice, setRenderSlice] = useState<{ start: number; items: MCQItem[] }>({ start: 0, items: [] });
+  const [renderSlice, setRenderSlice] = useState<{ start: number; items: MCQItem[]; pageNumber: number }>({ start: 0, items: [], pageNumber: 1 });
   const pageRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
@@ -297,7 +305,7 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
       let addedPage = 0;
 
       for (let p = 0; p < pages.length; p++) {
-        setRenderSlice({ start: pages[p].start, items: pages[p].items });
+        setRenderSlice({ start: pages[p].start, items: pages[p].items, pageNumber: p + 1 });
         setProgressMsg(`Rendering page ${p + 1} of ${pages.length}...`);
         await new Promise((r) => setTimeout(r, 150));
         const el = pageRef.current;
@@ -317,7 +325,7 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
-      setRenderSlice({ start: 0, items: firstPage.items });
+      setRenderSlice({ start: 0, items: firstPage.items, pageNumber: 1 });
     }
   };
 
@@ -366,7 +374,10 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
             <input
               type="text"
               value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
+              onChange={(e) => {
+                fileNameEditedRef.current = true;
+                setFileName(e.target.value);
+              }}
               placeholder="e.g. Biology_Chapter_8_MCQs"
               className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-slate-100'
@@ -530,7 +541,7 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
           items={renderSlice.items.length > 0 ? renderSlice.items : firstPage.items}
           config={effectiveConfig}
           startNumber={renderSlice.items.length > 0 ? renderSlice.start : firstPage.start}
-          pageNumber={1}
+          pageNumber={renderSlice.items.length > 0 ? renderSlice.pageNumber : 1}
           pageTotal={pages.length || 1}
         />
       </div>
