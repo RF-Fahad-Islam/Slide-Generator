@@ -22,6 +22,7 @@ import {
   Filter,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 interface SocialPostGeneratorProps {
   items: MCQItem[];
@@ -316,18 +317,30 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     if (!postCanvasRef.current) return;
     setIsExporting(true);
 
-    try {
-      const canvas = await html2canvas(postCanvasRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null,
-      });
-
-      const dataUrl = canvas.toDataURL('image/png');
+    const downloadDataUrl = (dataUrl: string) => {
       const link = document.createElement('a');
       link.download = `social_post_q${selectedQuestionIndex + 1}_${aspectRatio.replace(':', 'x')}.png`;
       link.href = dataUrl;
       link.click();
+    };
+
+    try {
+      try {
+        const canvas = await html2canvas(postCanvasRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null,
+        });
+        downloadDataUrl(canvas.toDataURL('image/png'));
+      } catch (html2canvasErr) {
+        console.warn('html2canvas failed, falling back to html-to-image:', html2canvasErr);
+        const dataUrl = await toPng(postCanvasRef.current, {
+          pixelRatio: 2,
+          cacheBust: true,
+          backgroundColor: null,
+        });
+        downloadDataUrl(dataUrl);
+      }
     } catch (err) {
       console.error('Error exporting social post image:', err);
       alert('Failed to generate image. Please try again.');
@@ -1109,23 +1122,23 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               </div>
             ) : (
               <div className="space-y-4">
-                <div className={`w-full mx-auto ${getAspectClass()} rounded-3xl border border-slate-700/80 shadow-2xl relative overflow-hidden select-none`}>
-                  {/* Export node: the custom card (captured by html2canvas) */}
+                <div className="relative">
+                  {/* Export node: static in-flow card (captured by html2canvas — same structure as the 4 template cards) */}
                   <div
                     ref={postCanvasRef}
-                    style={{ fontFamily: config.fontFamily || "'Kalpurush', serif" }}
-                    className="absolute inset-0"
+                    style={{
+                      fontFamily: config.fontFamily || "'Kalpurush', serif",
+                      ...(customDesign.bgImageUrl
+                        ? {
+                            backgroundImage: `url("${customDesign.bgImageUrl}")`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                          }
+                        : {}),
+                    }}
+                    className={`w-full mx-auto ${getAspectClass()} ${customDesign.bgImageUrl ? 'bg-slate-900' : getBgStyle()} rounded-3xl border border-slate-700/80 shadow-2xl relative overflow-hidden select-none`}
                   >
-                    {customDesign.bgImageUrl ? (
-                      <img
-                        src={customDesign.bgImageUrl}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div className={`absolute inset-0 ${getBgStyle()}`} />
-                    )}
                     <div className="relative w-full h-full p-4">
                       {customDesign.boxes.map(box => {
                         const fs = Math.max(8, Math.round((box.fontSize / 100) * canvasWidth));
