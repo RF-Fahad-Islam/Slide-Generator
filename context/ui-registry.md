@@ -159,6 +159,9 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Text:** `text-slate-900` (light) | `text-white` (dark)
 - **Shadow:** `shadow-2xl`
 - **Accent:** `bg-amber-500 text-slate-950` (selected font, scope button)
+- **Typography (fatty):** form labels/controls `text-sm` minimum (section headers `text-base`, main heading `text-lg`); selects `px-3 py-2.5`, inputs `px-4 py-2.5`. The 16:9 `TemplateThumbnailPreview` keeps micro-fonts (`text-[7px]`–`text-[11px]`) because it is a scaled-down slide canvas.
+- **Category tabs:** pill tab bar under the scope selector (`p-2 rounded-3xl border`, buttons `px-4 py-2.5 rounded-2xl text-sm font-black`); active tab `bg-amber-500 text-slate-950 ring-2 ring-amber-400/50`, inactive `text-slate-600 hover:bg-slate-100` (light) / `text-slate-400 hover:bg-slate-900` (dark). Tabs: Typography · Layout & Banners · Background · Theme & Preview · Header & Branding.
+- **Banner-mode hint:** when Custom Banner header is active, the 3 manual text cards are replaced by an amber hint card (`bg-amber-50 border-amber-300` light / `bg-slate-900 border-amber-500/30` dark) with `ImageIcon` and two `text-sm` lines.
 
 ### `ExportModal` — `src/components/ExportModal.tsx`
 - **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for modal panel
@@ -177,6 +180,8 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Shadow:** `shadow-2xl`
 - **Accent:** `bg-gradient-to-r from-amber-500 to-amber-400` (save button)
 - **Selected:** `bg-amber-50 border-amber-500 ring-2 ring-amber-400/50` (light) | `bg-amber-500/10 border-amber-500/50 ring-1 ring-amber-500/40` (dark)
+- **Spacing (fatty):** Filter panel `p-6 lg:p-8`, section headers `text-lg`/`text-base`, search `py-3 pl-11` with `w-5 h-5` icon, filter selects `px-3.5 py-3`, action buttons `px-4 py-2`, question cards `p-5` with `w-6 h-6` checkboxes, stems `text-base`, option pills `p-2.5` with `w-6 h-6` key badges, deck cards `p-5` with `text-base` titles, command bar buttons `px-5 py-2.5` / `px-6 py-2.5`. All form text is `text-sm`+ (no `text-xs`/`text-[10px]` in the filter/card UI).
+- **Share action:** every question card has a compact Share button (`px-3 py-1.5 rounded-xl border`, `Share2` `w-4 h-4` + label, `hover:scale-105`) wired to `onOpenInSocial(question)` — opens the question in the Social Post Generator. Amber text in both themes (`text-amber-700` light / `text-amber-300` dark).
 
 ### `SocialPostGenerator` — `src/components/SocialPostGenerator.tsx`
 - **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for header banner + 4 selector cards
@@ -185,6 +190,11 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Text:** `text-slate-900` (light) | `text-white` (dark)
 - **Shadow:** `shadow-2xl` (panels), `shadow-xl` (sub-panels)
 - **Accent:** `bg-amber-500 text-slate-950` (export button, header icon)
+- **Picker filter bar:** Question picker (step 4) has a fatty search input (`py-3 pl-11`, `w-5 h-5` icon) + 3 filter selects (`px-3 py-2.5 text-sm`) mirroring the Question Bank filter (subject/board/type). Picker items `p-3.5 text-sm` with `w-5 h-5` check icon; count shows `filtered / total`; empty state with `Filter` icon.
+- **Preselection from Question Bank:** accepts `preselectedItemId` prop; on mount it jumps `selectedQuestionIndex` + `selectedItemIds` to that question so a shared card opens directly in the post.
+- **Section labels:** `text-sm font-black uppercase tracking-wider` (numbered steps 1–4).
+- **Custom Design Editor:** 5th left-panel card with a toggle (`Enable Custom Mode` / `🎨 Custom Mode ON`; active state `bg-amber-500 text-slate-950 ring-2 ring-amber-400/50`). When ON: background-image card (`bg-amber-50/60 border-amber-200` light | `bg-slate-950 border-amber-500/30` dark) with Upload Image button (`rounded-xl border`, `hidden` file input), image URL text input, and clear ✕ badge; Add Text Box buttons (`px-3 py-2 rounded-xl text-xs font-bold border hover:scale-105`, amber text); selected-box style panel (`bg-amber-50/70 border-amber-300` light | `bg-slate-950 border-amber-500/40` dark) with bind `<select>`, free-text `<textarea>`, font-size slider (`accent-amber-500`), 8 color swatches (`w-6 h-6 rounded-lg`, active `ring-2 ring-amber-400 scale-110`) + native color input, align pills (active `bg-amber-500 text-slate-950`), bold toggle, Delete button (`border-rose-300 text-rose-600` light | `border-rose-500/40 text-rose-300` dark). Canvas in custom mode: boxes are drag handles with a `%`-positioned overlay — selected box `border-amber-400 ring-2 ring-amber-400/40`, label chip `bg-amber-500 text-slate-950 text-[9px] font-black uppercase`, resize handle `w-4 h-4 bg-amber-500 border-2 border-slate-950 cursor-nwse-resize`. Hint text: `text-xs` slate in both themes.
+- **Export boundary (custom mode):** the `postCanvasRef` export node is a sibling of the editor overlay (overlay `absolute inset-0 z-20`), so `html2canvas` captures the card only — overlay handles/chips never appear in the exported PNG.
 
 ### `SettingsView` — `src/components/SettingsView.tsx`
 - **Background:** `glass-card-fatty-light` (light) | `bg-slate-950/85` (dark) — dark mode uses plain Tailwind because `glass-card-fatty` would override the slate-800 border
@@ -193,6 +203,7 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Text:** `text-slate-900` (light) | `text-white` (dark)
 - **Shadow:** `shadow-2xl`
 - **Accent:** `bg-gradient-to-tr from-amber-500 to-amber-300` (header icon)
+- **Typography (fatty):** labels/descriptions `text-sm` minimum, security banner `text-base`, API key inputs `px-4 py-4`.
 
 ### `ValidationPanel` — `src/components/ValidationPanel.tsx`
 - **Background:** `bg-slate-50` (light) | `bg-slate-900` (dark)
