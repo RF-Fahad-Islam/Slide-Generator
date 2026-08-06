@@ -296,7 +296,7 @@ export default function App() {
                 </div>
 
                 {/* Slides Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {items.map((item, idx) => {
                     const isSelected = idx === selectedIndex;
                     return (
@@ -398,9 +398,9 @@ export default function App() {
               </div>
             ) : (
               /* SINGLE SLIDE PREVIEW & DECK MANAGER SIDE-BY-SIDE */
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-                {/* LEFT 8 COLUMNS: LIVE CANVAS DISPLAY */}
-                <div className="lg:col-span-8 flex flex-col gap-8">
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 xl:gap-10 items-start">
+                {/* LEFT 7 COLUMNS: LIVE CANVAS DISPLAY */}
+                <div className="xl:col-span-7 flex flex-col gap-8">
                   {/* Slide Name & Controls Bar */}
                   <div className={`flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl border shadow-2xl ${
                     isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-slate-800 text-white'
@@ -583,8 +583,8 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* RIGHT 4 COLUMNS: DECK QUESTION LIST MANAGER */}
-                <div className="lg:col-span-4">
+                {/* RIGHT 5 COLUMNS: DECK QUESTION LIST MANAGER */}
+                <div className="xl:col-span-5">
                   <DeckManager
                     items={items}
                     onUpdateItems={setItems}

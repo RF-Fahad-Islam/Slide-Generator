@@ -181,9 +181,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         {/* LEFT 5 COLUMNS: POST CONFIGURATION & CONTROLS */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="xl:col-span-5 space-y-6">
           {/* Aspect Ratio Selector */}
           <div
             className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-5 ${
@@ -401,7 +401,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         </div>
 
         {/* RIGHT 7 COLUMNS: LIVE SOCIAL POST CARD CANVAS PREVIEW */}
-        <div className="lg:col-span-7 flex flex-col items-center justify-center space-y-4">
+        <div className="xl:col-span-7 flex flex-col items-center justify-center space-y-4">
           <div className="flex items-center justify-between w-full max-w-[500px]">
             <span className={`text-xs font-bold flex items-center gap-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
               <Sparkles className="w-4 h-4 text-amber-400" />

@@ -123,7 +123,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
 
   return (
     <div
-      className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border p-8 flex flex-col gap-8 ${
+      className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border p-6 xl:p-8 flex flex-col gap-8 ${
         isAppLight
           ? 'border-slate-200'
           : 'bg-slate-900/80 border-slate-800'

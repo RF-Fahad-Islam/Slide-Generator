@@ -12,8 +12,8 @@ interface SortableQuestionCardProps {
   isAppLight: boolean;
   disabled: boolean;
   onSelect: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
 }
 
 export const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
@@ -53,11 +53,11 @@ export const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
     >
       <div className="flex items-start justify-between gap-4">
         {/* Question Stem & Details */}
-        <div className="flex items-start gap-4 flex-1">
+        <div className="flex items-start gap-4 flex-1 min-w-0">
           <span className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm flex items-center justify-center shrink-0 shadow-sm">
             {index + 1}
           </span>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h4 className="text-base font-bold leading-snug">
               <MathText text={item.stem} />
             </h4>
