@@ -312,6 +312,20 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Expanded mode:** Icons + labels + badges
 - **Persistence:** `localStorage` key `sidebar_collapsed` (boolean)
 - **Accent:** `bg-amber-500 text-slate-950` (active nav item), `bg-gradient-to-r from-amber-500 to-amber-400` (export button)
+- **Tour anchors:** every nav button carries `data-tour="nav-<id>"`; export button `data-tour="studio-export"`; a "Start Tour" help button (`HelpCircle`, amber icon) sits at the bottom of the expanded sidebar.
+- **Collapse toggle placement:** hidden on mobile (`lg:hidden` mobile top bar + slide-in drawer `w-80 max-w-[85vw]`)
+
+### `OnboardingTour` — `src/components/OnboardingTour.tsx`
+- **Overlay:** `fixed inset-0 z-[9999]`; dark scrim `bg-slate-950/75 backdrop-blur-[2px]`; click-through advances to the next step (closes on last).
+- **Spotlight cut-out:** absolutely-positioned div (target `getBoundingClientRect()` + 8px pad) with `rounded-3xl border-2 border-amber-400` and the scrim-away trick: `boxShadow: '0 0 0 9999px rgba(2,6,23,0.78), 0 0 0 4px rgba(245,158,11,0.25), 0 24px 60px rgba(0,0,0,0.55)'`.
+- **Tooltip card:** `w-[360px] max-w-[90vw] rounded-3xl border-amber-500/30 bg-slate-900 text-white shadow-2xl`; amber gradient top strip (`h-1.5`), title row with amber `Presentation` tile, close ✕, `text-xs` body, Back / gradient amber Next-or-Done buttons, progress dots (`w-5 h-1.5` current vs `w-1.5 h-1.5` rest), bottom-right mono step counter chip.
+- **Positioning:** tooltip flips below↔above the spotlight when it would overflow the viewport; re-measures on resize/scroll; `scrollIntoView({ block:'center' })` per step. Keyboard: Enter/→ next, ← back, Esc close.
+- **State:** auto-launch on first visit gated by `localStorage['edtech_tour_done']`; reopen via `onStartTour` from Home hero + sidebar.
+
+### ExportModal — Question Paper & Extract cards
+- **Export card pattern:** `p-5 rounded-2xl border` flex row (title + muted subtitle left, bordered accent button right). Colored accents per feature: PPTX amber gradient, Google Slides blue, Question Paper violet (`bg-violet-50 border-violet-300 text-violet-700` light / `bg-slate-800 text-violet-300 border-slate-700` dark), PDF emerald, ZIP amber, PNG slate.
+- **Segmented selector:** MCQs-per-page = `[2,3,4,6]` buttons `w-9 h-8 rounded-lg text-xs font-black border`; active = `bg-amber-500 text-slate-950 border-amber-400`, inactive uses the theme palette.
+- **Checkbox:** `w-4 h-4 accent-amber-500 rounded` inside a `flex items-center gap-2 text-xs font-bold` label.
 
 ---
 

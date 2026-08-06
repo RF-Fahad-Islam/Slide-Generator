@@ -26,6 +26,7 @@ import {
   Wand2,
   Target,
   RefreshCw,
+  Compass,
 } from 'lucide-react';
 
 // A theme selection for the ACTIVE slide: a built-in preset theme, a saved custom
@@ -47,6 +48,7 @@ interface SlideDecksHomeProps {
   onSelectTheme?: (selection: ThemeSelection) => void;
   onResetSlideTheme?: () => void;
   onLoadSample?: (sampleIndex: number) => void;
+  onStartTour?: () => void;
   appTheme: 'dark' | 'light';
 }
 
@@ -135,6 +137,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
   onSelectTheme,
   onResetSlideTheme,
   onLoadSample,
+  onStartTour,
   appTheme,
 }) => {
   const isAppLight = appTheme === 'light';
@@ -192,6 +195,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
     <div className="space-y-10 animate-fadeIn">
       {/* SECTION 1: HERO DASHBOARD HEADER HUB */}
       <div
+        data-tour="home-hero"
         className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-8 lg:p-12 relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10 ${
           isAppLight ? 'border-amber-200 text-slate-900' : 'text-white'
         }`}
@@ -292,6 +296,19 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
               <PlayCircle className="w-4 h-4 text-amber-400" />
               <span>Open Slide Studio</span>
             </button>
+            {onStartTour && (
+              <button
+                onClick={onStartTour}
+                className={`px-5 py-2.5 rounded-2xl border font-extrabold text-xs flex items-center gap-2 cursor-pointer transition-all ${
+                  isAppLight
+                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-300'
+                    : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/40'
+                }`}
+              >
+                <Compass className="w-4 h-4" />
+                <span>Start Tour</span>
+              </button>
+            )}
           </div>
         </div>
 

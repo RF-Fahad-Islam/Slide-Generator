@@ -18,7 +18,8 @@ import {
   Key,
   ChevronLeft,
   ChevronRight,
-  LayoutTemplate
+  LayoutTemplate,
+  HelpCircle,
 } from 'lucide-react';
 
 interface SidebarNavProps {
@@ -30,6 +31,7 @@ interface SidebarNavProps {
   lastSavedTime?: Date | null;
   appTheme?: 'dark' | 'light';
   onToggleAppTheme?: () => void;
+  onStartTour?: () => void;
 }
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({
@@ -41,6 +43,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   lastSavedTime,
   appTheme = 'dark',
   onToggleAppTheme,
+  onStartTour,
 }) => {
   const isAppLight = appTheme === 'light';
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -146,6 +149,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           return (
             <button
               key={item.id}
+              data-tour={`nav-${item.id}`}
               onClick={() => handleNavClick(item.id)}
               className={`w-full flex items-center rounded-2xl font-bold text-sm transition-all cursor-pointer ${
                 isCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
@@ -178,6 +182,24 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
       {/* Bottom Actions */}
       <div className={`border-t space-y-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800/80'} ${isCollapsed ? 'p-2' : 'p-4'}`}>
+        {/* Help / Start Tour */}
+        {onStartTour && (
+          <button
+            onClick={onStartTour}
+            className={`w-full flex items-center rounded-2xl font-bold text-sm transition-all cursor-pointer ${
+              isCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+            } ${
+              isAppLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                : 'bg-slate-950 hover:bg-slate-800 text-slate-300'
+            }`}
+            title={isCollapsed ? 'Start Tour' : undefined}
+          >
+            <HelpCircle className="w-5 h-5 text-amber-500" />
+            {!isCollapsed && <span>Start Tour</span>}
+          </button>
+        )}
+
         {/* Theme Toggle */}
         {onToggleAppTheme && (
           <button
@@ -202,6 +224,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
         {/* Export Button */}
         <button
+          data-tour="studio-export"
           onClick={onOpenExportModal}
           disabled={questionCount === 0}
           className={`w-full flex items-center rounded-2xl font-bold text-sm transition-all ${

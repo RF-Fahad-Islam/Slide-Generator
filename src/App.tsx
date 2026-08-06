@@ -20,6 +20,7 @@ import { SlideTextBoxPanel } from './components/SlideTextBoxPanel';
 import { SlideThumb } from './components/SlideThumb';
 import { SettingsView } from './components/SettingsView';
 import { MathText } from './components/MathText';
+import { OnboardingTour, defaultTourSteps, TourTab } from './components/OnboardingTour';
 import { getTemplateById } from './templates/registry';
 import { defaultSlideTextBoxes } from './utils/slideTextBoxes';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
@@ -59,6 +60,33 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('edtech_app_theme', appTheme);
   }, [appTheme]);
+
+  // Onboarding Tour — auto-launch on first visit, reopenable via Start Tour buttons
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
+  const [tourDone] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('edtech_tour_done') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const tourDoneRef = useRef<boolean>(tourDone);
+
+  useEffect(() => {
+    if (tourDoneRef.current) return;
+    const t = setTimeout(() => setIsTourOpen(true), 900);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleCloseTour = () => {
+    tourDoneRef.current = true;
+    try {
+      localStorage.setItem('edtech_tour_done', 'true');
+    } catch {
+      // localStorage unavailable — in-memory flag still prevents repeat auto-launch this session
+    }
+    setIsTourOpen(false);
+  };
 
   // Deck Branding Config State
   const [config, setConfig] = useState<DeckConfig>({
@@ -438,6 +466,7 @@ export default function App() {
         lastSavedTime={lastSavedTime}
         appTheme={appTheme}
         onToggleAppTheme={() => setAppTheme(t => t === 'dark' ? 'light' : 'dark')}
+        onStartTour={() => setIsTourOpen(true)}
       />
 
       {/* Main Content View Container */}
@@ -456,6 +485,7 @@ export default function App() {
             onResetSlideTheme={resetActiveSlideTheme}
             onLoadSample={handleLoadSample}
             appTheme={appTheme}
+            onStartTour={() => setIsTourOpen(true)}
           />
         )}
 
@@ -610,7 +640,9 @@ export default function App() {
                 {/* LEFT: LIVE CANVAS DISPLAY (wider when the Canva-style side panel is open) */}
                 <div className={`flex flex-col gap-8 ${isTextBoxEditMode ? 'xl:col-span-8' : 'xl:col-span-7'}`}>
                   {/* Slide Name & Controls Bar */}
-                  <div className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-5 rounded-3xl border shadow-2xl ${
+                  <div
+                    data-tour="studio-toolbar"
+                    className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-5 rounded-3xl border shadow-2xl ${
                     isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-slate-800 text-white'
                   }`}>
                     {/* Current Slide Name & Back Button to All Slides */}
@@ -999,6 +1031,14 @@ export default function App() {
           setActiveTab('manual');
         }}
         appTheme={appTheme}
+      />
+
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        open={isTourOpen}
+        onClose={handleCloseTour}
+        onNavigate={(tab) => setActiveTab(tab)}
+        steps={defaultTourSteps}
       />
     </div>
   );

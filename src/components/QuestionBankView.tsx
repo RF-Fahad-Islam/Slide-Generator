@@ -329,6 +329,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
         {/* Action: Import JSON + Save Current Active Slide Deck as Card */}
         <div className="flex items-center gap-3">
           <button
+            data-tour="bank-import"
             onClick={() => jsonFileInputRef.current?.click()}
             className={`px-5 py-3 rounded-2xl border text-sm font-black flex items-center gap-2 shadow-lg transition-all cursor-pointer ${
               isAppLight
