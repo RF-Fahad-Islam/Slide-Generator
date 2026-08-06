@@ -11,11 +11,13 @@ import { DeckSettings } from './components/DeckSettings';
 import { ExportModal } from './components/ExportModal';
 import { TemplateLibraryModal } from './components/TemplateLibraryModal';
 import { EditQuestionModal } from './components/EditQuestionModal';
+import { TemplateCreator } from './components/TemplateCreator';
 import { QuestionBankView } from './components/QuestionBankView';
 import { SlideDecksHome } from './components/SlideDecksHome';
 import { SocialPostGenerator } from './components/SocialPostGenerator';
 import { SlideTextBoxOverlay } from './components/SlideTextBoxOverlay';
 import { SlideTextBoxPanel } from './components/SlideTextBoxPanel';
+import { SlideThumb } from './components/SlideThumb';
 import { SettingsView } from './components/SettingsView';
 import { MathText } from './components/MathText';
 import { getTemplateById } from './templates/registry';
@@ -31,7 +33,7 @@ export default function App() {
   const [items, setItems] = useState<MCQItem[]>(SAMPLE_DECKS[0].items);
   const [reviewItems, setReviewItems] = useState<MCQItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'ai-keys'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys'>('home');
   const [isAnswerRevealMode, setIsAnswerRevealMode] = useState<boolean>(false);
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
@@ -460,11 +462,25 @@ export default function App() {
                     </div>
                   </div>
 
-                  <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border ${
-                    isAppLight ? 'bg-slate-100 text-slate-800 border-slate-200' : 'bg-slate-950 text-amber-300 border-slate-800'
-                  }`}>
-                    Active Slide: #{selectedIndex + 1} of {items.length}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setIsTemplateModalOpen(true)}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                        isAppLight
+                          ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                          : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                      }`}
+                      title="Switch the whole deck design to a saved template"
+                    >
+                      <LayoutTemplate className="w-3.5 h-3.5 text-amber-500" />
+                      Switch Template
+                    </button>
+                    <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border ${
+                      isAppLight ? 'bg-slate-100 text-slate-800 border-slate-200' : 'bg-slate-950 text-amber-300 border-slate-800'
+                    }`}>
+                      Active Slide: #{selectedIndex + 1} of {items.length}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Slides Grid */}
@@ -513,45 +529,15 @@ export default function App() {
                             </span>
                           </div>
 
-                          {/* Stem Text */}
-                          <div className={`text-sm font-bold line-clamp-3 leading-relaxed ${
-                            isAppLight ? 'text-slate-900' : 'text-white'
-                          }`}>
-                            <MathText text={item.stem} />
-                          </div>
-
-                          {/* Roman items if present */}
-                          {item.romanItems && item.romanItems.length > 0 && (
-                            <div className={`p-2 rounded-xl border text-[11px] space-y-0.5 ${
-                              isAppLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-950 border-slate-800/80 text-slate-300'
-                            }`}>
-                              {item.romanItems.map((r, rIdx) => (
-                                <div key={rIdx} className="line-clamp-1">
-                                  <MathText text={r} />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Options grid summary */}
-                          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                            {item.options.slice(0, 4).map(opt => {
-                              const isCorrect = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
-                              return (
-                                <div
-                                  key={opt.key}
-                                  className={`p-1.5 rounded-lg border flex items-center gap-1.5 font-medium truncate ${
-                                    isCorrect && isAnswerRevealMode
-                                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600'
-                                      : isAppLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-300'
-                                  }`}
-                                >
-                                  <span className="font-bold text-amber-500 font-mono text-[10px]">{opt.key}.</span>
-                                  <span className="truncate"><MathText text={opt.text} /></span>
-                                </div>
-                              );
-                            })}
-                          </div>
+                          {/* Exact real slide render — identical to the Slide Studio preview */}
+                          <SlideThumb
+                            item={item}
+                            config={config}
+                            index={idx}
+                            totalCount={items.length}
+                            isAnswerRevealMode={isAnswerRevealMode}
+                            className="group-hover:scale-[1.02] transition-transform"
+                          />
                         </div>
 
                         {/* Action Link Footer */}
@@ -915,6 +901,17 @@ export default function App() {
               });
             }}
             appTheme={appTheme}
+          />
+        )}
+
+        {/* TAB 6: TEMPLATE CREATOR — design & save custom slide formats */}
+        {activeTab === 'templates' && (
+          <TemplateCreator
+            config={config}
+            items={items}
+            appTheme={appTheme}
+            onApplyTemplate={(preset) => setConfig(applyDesignToConfig(preset, config))}
+            onApplyConfig={setConfig}
           />
         )}
       </main>

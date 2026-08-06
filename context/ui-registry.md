@@ -170,6 +170,16 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Templates tab (saved preset templates):** section card `p-6 rounded-3xl` with `LayoutTemplate` amber section header. **Save Current Design card:** `p-5 rounded-2xl border` (`bg-amber-50 border-amber-300` light / `bg-slate-900 border-amber-500/40` dark) — name input (`px-4 py-2.5`), Save button `bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-lg shadow-amber-500/20`, optional description input, footnote (`text-[11px]`) noting presets are visual-design-only (content not saved). **Saved grid:** `md:grid-cols-2 gap-4`; card `p-4 rounded-2xl border` with theme swatch tile (`w-14 h-14 rounded-2xl`, bg from design, `w-6 h-6 rounded-full` accent dot) + name + description/date; active state `bg-amber-50 border-amber-400 ring-2 ring-amber-400/50` (light) / `bg-amber-500/10 border-amber-500/50 ring-2 ring-amber-500/40` (dark) + `CheckCircle2` "Active" badge; actions: "Switch to This Template" (`bg-amber-500 text-slate-950 font-black`, disabled+`cursor-default` when active) + Delete (`border-rose-300 text-rose-600` light / `border-rose-500/40 text-rose-300` dark, confirm-guarded). Empty state: dashed `p-6 rounded-2xl` card with `LayoutTemplate` icon + two lines.
 - **App toolbar quick switcher:** "Switch Template…" dropdown (LayoutTemplate icon, `px-2.5 py-1.5 rounded-xl border`, `hidden xl:flex`) in the Slide Studio controls bar — selects a saved preset and applies `applyDesignToConfig(preset, config)`.
 
+### `SlideThumb` — `src/components/SlideThumb.tsx`
+- **Purpose:** real slide thumbnail — renders the exact `SlideCanvas` render (template + text boxes + per-slide `customConfig` overrides) at card scale via the ResizeObserver technique (`clientWidth / 1920`, `origin-top-left` scaled wrapper in `aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-lg bg-slate-950`). Props: `item`, `config`, `index`, `totalCount`, `isAnswerRevealMode?`, `className?`. Used in the "View All Slides" overview grid (replacing the abstract stem/options mock) and the Template Creator live preview.
+
+### `TemplateCreator` — `src/components/TemplateCreator.tsx`
+- **Purpose:** dedicated "Template Creator" page (sidebar nav item, `LayoutTemplate` icon) for designing and saving custom slide formats separately. Tab union extended with `'templates'`.
+- **Shell:** `glass-card-fatty-light`/`glass-card-fatty` panel, page identity bar (amber gradient `LayoutTemplate` tile, "Custom Templates" mono badge), `lg:grid-cols-12` split — designer controls (`lg:col-span-5`) + preview/saved (`lg:col-span-7`).
+- **Designer cards** (each `p-5 rounded-2xl border` on `bg-slate-50`/`bg-slate-950`): Template Name & Notes (name + optional desc inputs); Base Theme (2-col grid of `TEMPLATES` minus custom-theme, `previewGradient` strip + name + ☀️/🌙 badge, active `bg-amber-500/10 border-amber-400 ring-2 ring-amber-400/40`); Accent Color (swatches + native picker); Font Family (select of `FONT_PRESETS`); Slide Background (2-col grid of `BACKGROUND_PRESETS` with `previewGradient` strip). Actions: indigo "Apply to Current Deck" (`onApplyConfig`) + amber "Save as Template" (`saveTemplatePreset`, disabled until named).
+- **Live Preview:** `SlideThumb` with `candidateConfig = { ...config, templateId, accentColorCustom, fontFamily, bgPreset }` and `previewItem = items[0] || FALLBACK_ITEM` (hardcoded Bangla sample MCQ).
+- **My Templates:** `md:grid-cols-2` grid, card with name + Active badge + desc, "Use Template" (amber, disabled when active, `onApplyTemplate`) + Delete (rose, confirm). Active detection = same `templateId` + equal `customTheme` against the real deck config.
+
 ### `ExportModal` — `src/components/ExportModal.tsx`
 - **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for modal panel
 - **Backdrop:** `bg-black/40` (light) | `bg-black/80` (dark)
@@ -274,6 +284,7 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Shadow:** `shadow-2xl`
 - **Selected:** `bg-amber-50 border-amber-500 ring-2 ring-amber-400/50` (light) | `bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/40` (dark)
 - **Main content max-width:** `max-w-[1600px]` (bumped from `max-w-7xl` for more breathing room)
+- **Overview cards:** each card now renders the **exact real slide** via `SlideThumb` (header bar with slide number/Active/theme badge kept, abstract stem/options mock removed). Header has a "Switch Template" button (neutral bordered pill, `LayoutTemplate` amber icon) that opens the `TemplateLibraryModal`.
 
 ### `App.tsx` (Slide Studio / Preview Tab — fatty)
 - **Grid gap:** `gap-10` between canvas column and deck manager column

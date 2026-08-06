@@ -17,12 +17,13 @@ import {
   Menu,
   Key,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LayoutTemplate
 } from 'lucide-react';
 
 interface SidebarNavProps {
-  activeTab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'ai-keys';
-  setActiveTab: (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'ai-keys') => void;
+  activeTab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
+  setActiveTab: (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => void;
   questionCount: number;
   onOpenExportModal: () => void;
   isSyncing?: boolean;
@@ -86,7 +87,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     };
   }, [isMobileDrawerOpen]);
 
-  const handleNavClick = (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'ai-keys') => {
+  const handleNavClick = (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => {
     setActiveTab(tab);
     setIsMobileDrawerOpen(false);
   };
@@ -99,6 +100,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     { id: 'ai' as const, label: 'AI PDF Parser', icon: Sparkles, badge: null },
     { id: 'manual' as const, label: 'Manual Editor', icon: Edit3, badge: null },
     { id: 'settings' as const, label: 'Deck Settings', icon: Sliders, badge: null },
+    { id: 'templates' as const, label: 'Template Creator', icon: LayoutTemplate, badge: null },
     { id: 'ai-keys' as const, label: 'AI Keys', icon: Key, badge: null },
   ];
 
