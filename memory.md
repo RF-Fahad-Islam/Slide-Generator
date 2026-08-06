@@ -1,54 +1,87 @@
-# Memory — Local Big-Document AI Ingestion + Live Streaming (OCR-first Bangla)
+# Memory — Answer Display Modes (highlight-in-place / separate answer slides)
 
 Last updated: 2026-08-06
 
 ## What was built
 
-**This session — committed on `feat/ingestion-local-stream` as `d794f41`, merged to `main` as merge `72110ad`** (after a plan-review pass + fix round). All committed and green.
+**This session — feature + review fixes, both committed on branch `feat/answer-slides`:**
+`cba3b74` (feature) and `d4b3596` (review fixes). Branch `feat/answer-slides` also carries the
+parallel session's commits in its history (`fb95144` ingestion, `478d0a2` per-box fonts,
+`966663c` role fonts, `6d1540b` shared DeckCard).
 
-**Post-merge follow-up (2026-08-06):** (1) `GlobalSettings.tsx` de-nested — the wrapping mega-card removed; now a header row + four flat sections (Default Deck Name / Default Slide Template grid / Default Question Numbering + App Shell Theme side-by-side / footer note), still auto-saving via `update()`. (2) Slide Studio toolbar rebuilt as a **compact 2-row strip** (`App.tsx` `data-tour="studio-toolbar"`): ROW 1 = View All Slides + slide name/stem, plus **Theme toggle · Deck Settings · Download · Prev/Next**; ROW 2 (`border-t`) = Font selector (now always visible) · Apply Slide Design to All · Templates · Answer Reveal · Edit Text Boxes. Labels icon-only below `2xl` (tooltips), so both rows fit one physical line at laptop widths (171px vs 272px at 1366×768). (3) **Deck Settings stays the committed modal** — the full-page/DeckSettingsPage experiment was abandoned and reverted; the modal preview is strict 16:9 (`aspect-[16/9]`, width-scaled). Verified headless Chrome (strip rows, modal open/live-edit/Apply/Cancel-confirm/Classroom-View, flattened settings); `tsc --noEmit` + `vite build` green.
-
-- **`src/server/lib/` (new server-side ingestion pipeline, bundled into `dist/server.cjs`):**
-  - `extract-text.ts` — local PDF/DOCX/TXT text extraction. `pdf-parse` **v2** (new API: `new PDFParse({ data })` → `getText()`/`getScreenshot()`/`destroy()`, bundled `@napi-rs/canvas` prebuilt native) + `mammoth` (`extractRawText`). Bangla quality gate: PDF text layer trusted only when clean Unicode Bangla (U+0980–09FF ratio ≥ 0.3 AND ≥ 100 non-space chars); otherwise treated as scanned/legacy-Bijoy and routed to vision OCR. Legacy `.doc` throws a clear "save as .docx" error.
-  - `rasterize.ts` — server-side PDF page rasterization via `getScreenshot({ scale: 2 })`.
-  - `ocr.ts` — high-accuracy Bangla OCR system prompt (conjuncts, ০-৯ numerals preserved, LaTeX, multi-column order). Hybrid batching: per-page up to 10 pages, then 3-page batches. **One result per batch** (C-L2a fix — batches no longer emit per-page duplicated text). Gemini (`abortSignal`) + OpenRouter both supported.
-  - `chunk.ts` — Bangla-aware token estimate (`bangla/2 + other/4`, target ~4000).
-  - `sanitize.ts` — shared MCQ sanitize moved out of `server.ts`: `normalizeBanglaNumerals` (০-৯→0-9, D15 now actually applied), per-item skip with reasons, answer-key matching.
-  - `ai-stream.ts` — `streamParseMCQs()` orchestrator emitting NDJSON `StreamEvent`s. **C-L3a fix:** malformed/truncated structured JSON now **throws** → surfaces as `chunk_error` (no more silent empty `mcqs`). Sanitize skip reasons now shipped on the `mcqs` event (`skipReasons`). Abort: checks `signal.aborted` between chunks; Gemini passes `abortSignal`.
-- **`server.ts`** — `/api/ai/parse-mcqs` rewritten: `Content-Type: application/x-ndjson`, `res.flushHeaders()`, `X-Accel-Buffering: no`, **abort-on-disconnect** via `res.on('close')` → AbortController (checks `res.writableEnded`), `wroteError` guard suppresses post-error events, key-redaction regex on all error paths. Events: `stage1_start` / `stage1_page` (pageNumber is a `number[]` for batches) / `stage1_done` / `chunk_start` / `mcqs` / `chunk_error` / `done` / `error`.
-- **`src/components/AIUploader.tsx`** — rewritten as a `ReadableStream` NDJSON consumer: live progress bar (OCR pages done → chunk counter), growing MCQ list (live append, key = `mcq.id`), Cancel button (AbortController), scanned-doc warning banner, "Items Skipped (N)" card with per-chunk reasons, "Inspect Stage 1 Extracted Text" toggle, `stage1_page` label `[Page N]` / `[Pages 1, 2, 3]`. Uses `isAppLight` ternary pattern exclusively (no `dark:` prefix).
-- **Docs updated:** `context/library-docs.md` (pdf-parse v2 + mammoth sections), `context/progress-tracker.md` (feature row), `context/ui-registry.md` (AIUploader live-streaming section).
+1. **`answerMode?: 'hidden' | 'highlight' | 'separate_slide'` on `DeckConfig`** (`src/types.ts`) +
+   new `src/utils/answerSlides.ts`: `effectiveAnswerMode` (falls back to legacy `showAnswerInSlide`
+   boolean — saved decks need no migration), `effectiveShowAnswerInSlide`, `expandDeckSlides`
+   (question → [question, answer] expansion, returns `SlideRef[]`), `questionSlideIndex`.
+2. **`SlideCanvas`** — new `slideVariant?: 'question' | 'answer'` prop. Answer slides highlight the
+   correct option + show a visible emerald "উত্তর: {key}" strip (standard, class-mode, and
+   text-box/boxed designs) + explanation. The text-box `options` bind now highlights the correct
+   pill/card (template-token colors + ✓) when a highlight/answer slide is active.
+3. **`DeckSettings`** (Layout tab, "Slide Interactive Display Settings") — old "Show Answer Key
+   Highlight" checkbox replaced by a 3-state **Answer Display Mode** segmented control.
+4. **`App.tsx`** — `selectedIndex` now walks `expandDeckSlides()`: preview nav, slide counters,
+   overview grid (emerald "Answer" badge), deck-list clicks jump to the question slide.
+5. **Exports** — `ExportModal` "Include Answer Slides" checkbox (per-export, defaults to deck mode)
+   drives PPTX/PDF/ZIP; `pptxExport` gained `PptxSlideSpec[]` param and emits native editable answer
+   slides; `SlideThumb` gained `slideVariant`.
+6. Docs updated: `context/progress-tracker.md` + `context/ui-registry.md`.
 
 ## Decisions made
 
-- **OCR-first for Bangla (user priority):** vision OCR is the primary path, not the fallback. PDFs with scanned or legacy-Bijoy text layers + image uploads → per-page vision OCR. Local text extraction only when the PDF already has clean Unicode Bangla.
-- **Hybrid page batching:** per-page vision calls up to 10 pages, then 3-page batches (accuracy on the front pages, speed on long bundles).
-- **NDJSON over a single POST** (not SSE) — one JSON object per line, consumed via `fetch` + `ReadableStream`. Kept the existing single-endpoint shape.
-- **Token-estimate chunking** sequential (~4000 tokens), no parallelism (rate-limit safety).
-- **Scan bundles stay capped** at `express.json` 50mb (≈37MB base64) — known limit, not raised this session.
-- **Untrusted text layers are OCR'd:** an English-only PDF (no Bangla chars) also routes to vision — the price of "clean Unicode Bangla" being the only local-extraction shortcut.
+- **3-state answer model** (mutually exclusive): No Answer / Highlight on Slide / Separate Answer
+  Slide (+1 per question). Replaced the old boolean.
+- **Answer slide content** = highlighted option + "উত্তর" label + explanation (when present).
+- **Per-export toggles, not forced**: exports keep their own "Include Answer Slides" checkbox; it
+  defaults to the deck's answer mode but can be flipped per export.
+- **`answerMode` is deck-wide only** (review fix): slide expansion is a deck-level property, so the
+  Deck Settings control ignores the Global/Slide scope toggle (with an "Applies to the whole deck"
+  hint). A per-slide `answerMode` silently did nothing.
+- **Answer slides reuse the same layout** (highlighted) rather than a distinct "উত্তরমালা" design.
+- **No hardcoded hex** in the new renderer code (review fix) — textbox highlight derives from
+  `styles.hexColors.optionSelectedBg/Border/Text`; answer pills use theme-aware Tailwind emerald
+  classes.
 
 ## Problems solved
 
-- **"Can't process big docs / no live output"** — old flow base64'd the whole file to Gemini in one call, returned one JSON at the end. Now: local extraction where possible, per-page OCR for scans, chunked structuring, everything streamed live.
-- **Bangla OCR accuracy** — dedicated OCR system prompt (conjuncts, numerals, LaTeX, column order) on small per-page inputs instead of one huge vision call.
-- **Batched OCR duplicated MCQs** (C-L2a) — `ocrPages` returned combined batch text once **per page** in the batch → same MCQs emitted N times. Fixed: one `OcrBatchResult` per batch.
-- **Truncated JSON silently dropped questions** (C-L3a) — `JSON.parse` failure returned `[]` and emitted a benign empty `mcqs`. Now throws → `chunk_error` so the client shows `failedChunks`.
-- **`normalizeBanglaNumerals` was declared but never applied** (D15) — now applied in the shared sanitize.
-- **PowerShell test-harness UTF-8 mangling** — `Invoke-WebRequest` + `Set-Content` default encodings turn Bangla into `?`. Test clients must be Node `fetch` with UTF-8 bodies (verified Bangla end-to-end: stems, options, Bangla keys, correct answers all preserved).
+- **Textbox options never highlighted** — the `options` text-box bind rendered every option
+  identically even when `showAnswerInSlide` was on; now the correct one is highlighted.
+- **Parallel session clobbered my uncommitted edits** — they ran `git add -A` and my `types.ts` +
+  `SlideCanvas.tsx` changes were swept into their commit `478d0a2`. Verified intact in HEAD; no data
+  lost, but keep re-checking the working tree while they're active.
+- **Per-slide "Separate Answer Slide" silently no-oped** (review) — forced deck-wide.
+- **Export checkbox was a no-op outside `separate_slide` mode** (review) — it now FORCES
+  separate-slide expansion (`answerSlides` list) so it works in hidden/highlight decks too.
+- **Stale `selectedIndex` after delete / mode switch** (review) — clamped via an effect on
+  `expandedSlides.length`.
 
 ## Current state
 
-- On `main`, HEAD = `72110ad` (merge of `d794f41`). My feature is committed and green (`tsc --noEmit` 0 errors, `vite build` + esbuild server bundle clean). Live-verified: EN + Bangla text extraction (2 MCQs each), per-chunk error on bad key, vision routing + rasterize + OCR.
-- **A parallel session is actively working in this repo** (settings-restructure continued: `App.tsx`, `MyDecksView.tsx`, `OnboardingTour.tsx`, `SidebarNav.tsx`, `SlideDecksHome.tsx` modified, new `DeckSettingsPage.tsx`). They fixed the `GlobalDefaults.defaultTemplateId` type errors from earlier. **Do not pop the stash** — `stash@{0}` holds their earlier WIP snapshot and they are still working.
-- Known non-blocking: html-to-image `SecurityError` for cross-origin Google Fonts/KaTeX CSS during raster exports (pre-existing).
+- Branch `feat/answer-slides` at `d4b3596`. `tsc --noEmit` + `npm run build` green.
+- **The parallel session is STILL actively editing this repo** — uncommitted working-tree changes
+  right now: `ExportModal.tsx`, `SlideCanvas.tsx`, `SlideThumb.tsx`, `pptxExport.ts`,
+  `DeckQuestionPaperModal.tsx`, `QuestionBankPdfModal.tsx`, `context/progress-tracker.md`,
+  `context/ui-registry.md` (additive on top of my committed work — my `slideVariant`/`answerMode`/
+  `expandDeckSlides` markers verified intact). **Do not commit, stash, or pop their files.**
+- `server-log.txt` is a dev-server artifact (untracked, deletable).
+- Known non-blocking: html-to-image `SecurityError` for cross-origin Google Fonts/KaTeX CSS during
+  raster exports (pre-existing).
 
 ## Next session starts with
 
-1. **Browser-verify (manual, agent cannot):** upload a real scanned Bangla board-exam PDF → confirm per-page OCR progress, live MCQ stream, Bangla accuracy; upload a text-layer Bangla PDF → confirm local shortcut (no OCR); test Cancel mid-run stops the server loop; confirm "Items Skipped" reasons render.
-2. Re-check repo state — the parallel settings-restructure session may have merged or rewritten things; reconcile before starting new work.
-3. Remaining backlog (unchanged): bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor; interactive template studio JSON import/export.
+1. Reconcile with the parallel session — they're mid-edit on files I own (`ExportModal`,
+   `pptxExport`, `SlideCanvas`, `SlideThumb`). If they haven't committed yet, wait or coordinate
+   before merging `feat/answer-slides` to `main`.
+2. Manual browser verification (agent cannot): toggle Answer Display Mode in Deck Settings →
+   confirm highlight-in-place on question slides; switch to "Separate Answer Slide" → confirm
+   preview navigates question → answer, overview shows Answer badges, PPTX/PDF/ZIP include answer
+   slides with the "উত্তর" strip, and the text-box design highlights the correct option.
+3. Remaining backlog (unchanged): bundle self-hosted Bengali woff2 fonts; declarative `Element[]`
+   renderer refactor; interactive template studio JSON import/export; large-scan `express.json`
+   50mb limit.
 
 ## Open questions
 
-- None blocking for this feature. Highest-risk unverified: real-world scanned-Bangla OCR accuracy (page-by-page) in the browser, and whether `express.json` 50mb needs raising for very large scans.
+- Whether the parallel session merges/rebases onto my branch and when they stop editing shared files
+  so `feat/answer-slides` can be merged to `main`.
+- Real-world visual QA of the answer slide design (strip placement, boxed-mode pill) in the browser
+  is unverified.
