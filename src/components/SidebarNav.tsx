@@ -411,6 +411,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           <button
             onClick={() => setIsMobileDrawerOpen(true)}
             aria-label="Open menu"
+            data-tour="mobile-menu"
             className={`p-2.5 rounded-xl transition-all cursor-pointer border ${
               isAppLight
                 ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -451,6 +452,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             onClick={onOpenExportModal}
             disabled={questionCount === 0}
             aria-label="Export slides"
+            data-tour="mobile-export"
             className={`p-2.5 rounded-xl transition-all border ${
               questionCount > 0
                 ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 shadow-md shadow-amber-500/25 cursor-pointer'

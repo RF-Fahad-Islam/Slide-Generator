@@ -162,8 +162,22 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
 
         // ROMAN STATEMENTS
         if (box.bind === 'roman') {
+          const cardStyle: React.CSSProperties =
+            box.shape === 'card' || box.shape === 'pill' || box.shape === 'banner'
+              ? {
+                  backgroundColor: box.bg,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                  borderRadius: box.shape === 'pill' ? 999 : box.shape === 'card' ? 16 : 24,
+                  padding: box.shape === 'pill' ? '10px 28px' : '16px 28px',
+                }
+              : undefined;
           return (
-            <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={base}>
+            <div
+              key={box.id}
+              className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`}
+              style={{ ...base, ...cardStyle, height: box.h || undefined }}
+            >
               {(item.romanItems || []).map((stmt, i) => (
                 <div key={i} className="my-1"><MathText text={stmt} /></div>
               ))}

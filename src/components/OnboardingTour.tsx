@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { X, ChevronRight, ChevronLeft, Sparkles, Presentation } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -21,6 +21,10 @@ export interface TourStep {
   body: string;
   navigateTab?: TourTab;
   placement?: 'bottom' | 'top' | 'left' | 'right';
+  // Alternate anchor used on mobile (<1024px) where the desktop sidebar is
+  // hidden — the nav steps spotlight the mobile menu button instead of
+  // falling into the "target missing" centered fallback.
+  mobileTarget?: string;
 }
 
 export const defaultTourSteps: TourStep[] = [
@@ -33,12 +37,14 @@ export const defaultTourSteps: TourStep[] = [
     target: '[data-tour="nav-home"]',
     title: 'Home',
     body: 'The Home tab is your launchpad — open a saved deck, browse preset themes, or start a fresh deck from the Question Bank.',
+    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="nav-bank"]',
     title: 'Question Bank',
     body: 'Import questions from a PDF, paste them in, or upload a JSON file. Your library is saved right in your browser.',
     navigateTab: 'bank',
+    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="bank-import"]',
@@ -50,18 +56,21 @@ export const defaultTourSteps: TourStep[] = [
     title: 'AI PDF Parser',
     body: 'Let AI read a question paper PDF and extract MCQs automatically. Paste your own AI key, or use the built-in key.',
     navigateTab: 'ai',
+    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="nav-manual"]',
     title: 'Manual Editor',
     body: 'Prefer hands-on control? The Manual Editor lets you type questions and options one by one.',
     navigateTab: 'manual',
+    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="nav-preview"]',
     title: 'Slide Studio',
     body: 'See your questions rendered as real slides. Toggle answer reveal, switch themes, reorder slides, and fine-tune every element.',
     navigateTab: 'preview',
+    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="studio-toolbar"]',
@@ -72,18 +81,21 @@ export const defaultTourSteps: TourStep[] = [
     target: '[data-tour="studio-export"]',
     title: 'Export Everything',
     body: 'When your deck is ready, export to PowerPoint, PDF, Google Slides, PNG images, or a printable Question Paper with answer key.',
+    mobileTarget: '[data-tour="mobile-export"]',
   },
   {
     target: '[data-tour="nav-settings"]',
     title: 'Global Settings',
     body: 'Set app-wide defaults — default deck name, template, question numbering, and app theme. Deck-level branding, layout, fonts & banners now live in Slide Studio → Deck Settings.',
     navigateTab: 'settings',
+    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="nav-home"]',
     title: 'You are all set!',
     body: 'That is the tour. Open a deck and start creating — have fun!',
     navigateTab: 'home',
+    mobileTarget: '[data-tour="mobile-menu"]',
   },
 ];
 
@@ -106,7 +118,12 @@ const GAP = 16; // gap between the hole and the tooltip card
 const TIP_H = 168; // estimated tooltip height for placement flips
 const MAX_TIP_W = 360;
 const POLS_INTERVAL = 150;
-const POLS_MAX = 24;
+const POLS_MAX = 16;
+const MIN_TOUR_TOP = 8; // min tooltip inset from the viewport top/bottom
+
+// Desktop sidebar shows at lg (1024px) — below that the nav lives behind the
+// mobile hamburger, so nav steps use step.mobileTarget instead.
+const isMobileViewport = () => window.innerWidth < 1024;
 
 // Skip the global Enter/Arrow shortcut when the user is interacting with a real
 // control (button / input / select / link) — pressing Enter there must not
@@ -137,7 +154,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
   // animation itself) would fight the user and cause jitter.
   const measure = useCallback(() => {
     if (!step) return false;
-    const el = document.querySelector(step.target) as HTMLElement | null;
+    const sel = isMobileViewport() && step.mobileTarget ? step.mobileTarget : step.target;
+    const el = document.querySelector(sel) as HTMLElement | null;
     if (!el) return false;
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) return false;
@@ -173,7 +191,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
   // Scroll the target into view ONCE per step, then measure.
   const revealAndMeasure = useCallback(() => {
     if (!step) return;
-    const el = document.querySelector(step.target) as HTMLElement | null;
+    const sel = isMobileViewport() && step.mobileTarget ? step.mobileTarget : step.target;
+    const el = document.querySelector(sel) as HTMLElement | null;
     if (el) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
     window.setTimeout(tryMeasure, 220);
   }, [step, tryMeasure]);
@@ -231,8 +250,28 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     if (placement === 'bottom') top = rect.top + rect.height + GAP;
     else if (placement === 'top') top = rect.top - GAP - TIP_H;
     else top = rect.top + rect.height / 2 - 78;
+    // Keep the card inside the viewport vertically (estimate pass; refined with
+    // the real measured height in useLayoutEffect below).
+    const maxTop = vh - TIP_H - MIN_TOUR_TOP;
+    if (maxTop > MIN_TOUR_TOP) top = Math.max(MIN_TOUR_TOP, Math.min(maxTop, top));
     setTipRect({ top, left, placement });
   }, [rect, step, isMissing]);
+
+  // Refine the tooltip top with its real rendered height so it never clips
+  // off the top/bottom of the viewport (important on small mobile screens where
+  // wrapped body text makes the card taller than the TIP_H estimate).
+  const tipRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!tipRect || !tipRef.current) return;
+    const h = tipRef.current.offsetHeight;
+    const vh = window.innerHeight;
+    const maxTop = vh - h - MIN_TOUR_TOP;
+    if (maxTop <= MIN_TOUR_TOP) return; // taller than viewport — leave as-is
+    const clamped = Math.max(MIN_TOUR_TOP, Math.min(maxTop, tipRect.top));
+    if (Math.abs(clamped - tipRect.top) > 0.5) {
+      setTipRect(prev => (prev ? { ...prev, top: clamped } : prev));
+    }
+  }, [tipRect]);
 
   // Keyboard controls — ignored while a real control has focus
   useEffect(() => {
@@ -304,6 +343,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
       {/* Tooltip card */}
       {tipRect && (
         <div
+          ref={tipRef}
           className="fixed w-[360px] max-w-[90vw] rounded-3xl border border-amber-500/30 bg-slate-900 text-white shadow-2xl shadow-black/50 overflow-hidden"
           style={{ top: tipRect.top, left: tipRect.left }}
         >

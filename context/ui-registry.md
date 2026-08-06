@@ -34,6 +34,13 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
 | Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
 
+> **2026-08-07 — App accent is gold (`amber-*`).** An experimental app-chrome-wide
+> `amber → orange` sweep was applied and then fully reverted to amber. Slide-content
+> rendering stays amber too (`SlideCanvas.tsx`, `templates/registry.ts`,
+> `utils/slideElements.ts`, `utils/backgroundPresets.ts`, `utils/fontPresets.ts`,
+> `MathText.tsx`, SocialPostGenerator post-gradient presets). Use `amber-*` for app
+> chrome.
+
 ### Spacing & Radius
 
 | Element | Class |
@@ -417,8 +424,9 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 
 ### `templateToTextBoxes()` — `src/utils/templateToTextBoxes.ts` (preset template → editable boxes)
 - **Purpose:** converts the active preset template's chrome layout into the deck-wide text-box layer, so opening Edit Text Boxes shows the template as movable/resizable/restylable boxes that look identical to the template (2026-08-07).
-- **Geometry** (mirrors `SlideCanvas` chrome at 1920×1080): `PAD=40`. Header — banner mode → full-width `image` box (h 140); else logo `image` box (64×64) or brand text at `x=40`; `brand` @ PAD, `headerTitle` @ accent below it, `badgeTag` pill top-right (`SLIDE_W-PAD-640`). Middle card — `free` container box (empty text, `shape:'card'`, `bg = hexColors.cardBg` @ 18% alpha, y 180 h 470); `questionNumber` chip (64×48, accent bg), `stem` @ body size, `source` @ accent right-aligned, `roman` card, `prompt` @ accent. Options — `options` box, vertical `card` stack (renderer has no grid), `bg = hexColors.optionBg`. Explanation box only when `showExplanationInSlide`. Footer — banner image or `watermark` left + `footerTag` right @ accent (`y = 1080-40-44`).
+- **Geometry** (mirrors `SlideCanvas` chrome at 1920×1080): `PAD=40`. Header — banner mode → full-width `image` box (h 140); else logo `image` box (64×64) or brand text at `x=40`; `brand` @ PAD, `headerTitle` @ accent below it, `badgeTag` pill top-right (`SLIDE_W-PAD-640`). Middle card (redesigned 2026-08-07) — `free` container box (empty text, `shape:'card'`, `bg = hexColors.cardBg`, y 170 h 470, right edge 1880); header row: `questionNumber` chip (72×56, accent bg, `x=+36 y=+26`) with `source` @ accent right-aligned (`y=+32`); `stem` on its own full-width row (`y=+96`); `roman` sub-card (`shape:'card'` with subtle bg, `y=+192`, font 20); `prompt` @ accent (`y=+378`). Options — `options` box (y 660; y 640 when explanation shown), vertical `card` stack (renderer has no grid), `bg = hexColors.optionBg`. Explanation box only when `showExplanationInSlide` (y 940; footer drops to y 1024). Footer — banner image or `watermark` left + `footerTag` right @ accent (`y = 1080-40-44`).
 - **Colors/fonts:** `getTemplateById(config.templateId, config.customTheme)` → `styles.hexColors` (bg, cardBg, titleColor, textColor, badgeFill, badgeText, optionBg) + `styles.accentColor`; `hexToRgba` helper; per-role fonts from `config.headerFont/bodyFont/optionsFont/footerFont`. Font px maps: `HEADER_SIZES xs20→xl48`, `BODY_SIZES sm20→3xl60`, `OPTIONS_SIZES xs18→xl36`, `FOOTER_SIZES xs18→md24`.
+- **Roman card on the live layer:** `SlideTextBoxLayer` renders `bind:'roman'` boxes with `shape:'card'|'pill'|'banner'` using `box.bg` + border + shadow + padding (previously it dropped the shape and drew plain text, so the live/PNG slide lacked the sub-card that PPTX export and the edit-mode overlay showed).
 - **Wiring:** `App.tsx` initial config, `handleCreateNewDeckFromSelection`, `handleLoadSample` and `resetSlideTextBoxes` ("Reset to Template Layout") all call it; class mode delegates to `classroomTextBoxes()`. Boxes carry deterministic IDs (`hdr_brand`, `mdl_stem`, `mdl_options`, `ftr_tag`, …).
 - **Container-box rendering (shared with the box editor):** `SlideTextBoxLayer` + `SlideTextBoxOverlay` now honor `box.h` (previously auto-height only) so empty-text container cards render full height and keep a full-size drag frame; `pptxExport.renderTextBox` draws shape-only containers (empty text) as round-rect layers and skips `addText`.
 

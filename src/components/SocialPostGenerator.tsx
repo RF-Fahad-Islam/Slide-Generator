@@ -15,16 +15,11 @@ import {
   Maximize,
   Sliders,
   Type,
-  Award,
   RefreshCw,
   User,
   BookOpen,
   Search,
   Filter,
-  List,
-  Heading,
-  PenLine,
-  GraduationCap,
   Landmark,
   LayoutGrid,
 } from 'lucide-react';
@@ -119,8 +114,6 @@ const loadSavedDesign = (w: number, h: number): CustomPostDesign => {
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-const BOX_COLOR_PRESETS = ['#ffffff', '#fbbf24', '#f59e0b', '#38bdf8', '#34d399', '#fb7185', '#a78bfa', '#000000'];
-
 export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   items,
   config,
@@ -148,7 +141,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:5' | '9:16'>('1:1');
   const [postTemplate, setPostTemplate] = useState<PostTemplateId>('classic');
   const [postBgColor, setPostBgColor] = useState<string>('gradient_amber');
-  const [customHeaderTitle, setCustomHeaderTitle] = useState<string>('à¦†à¦œà¦•à§‡à¦° à¦•à§à¦‡à¦œ');
+  const [customHeaderTitle, setCustomHeaderTitle] = useState<string>('আজকের কুইজ');
   const [showAnswerKey, setShowAnswerKey] = useState<boolean>(true);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -172,7 +165,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
   const postCanvasRef = useRef<HTMLDivElement>(null);
   const postFrameRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ type: 'move' | 'resize'; boxId: string; startX: number; startY: number; orig: SlideTextBox } | null>(null);
 
   // Measure the preview frame width so the fixed-size design space (px) can be
   // scaled to fit, and %-font equivalents resolve for html2canvas.
@@ -205,18 +197,16 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const currentItem = items[selectedQuestionIndex] || {
     id: 'sample',
     questionType: 'standard',
-    stem: 'à¦°à§à¦‡ à¦®à¦¾à¦›à§‡à¦° à¦¹à§ƒà¦¦à¦ªà¦¿à¦£à§à¦¡à§‡ à¦•à¦¯à¦¼à¦Ÿà¦¿ à¦ªà§à¦°à¦•à§‹à¦·à§à¦  à¦¥à¦¾à¦•à§‡?',
+    stem: 'রুই মাছের হৃদপিণ্ডে কয়টি প্রকোষ্ঠ থাকে?',
     options: [
-      { key: 'à¦•', text: 'à§¨à¦Ÿà¦¿' },
-      { key: 'à¦–', text: 'à§ªà¦Ÿà¦¿' },
-      { key: 'à¦—', text: 'à§©à¦Ÿà¦¿' },
-      { key: 'à¦˜', text: 'à§§à¦Ÿà¦¿' },
+      { key: 'ক', text: '২টি' },
+      { key: 'খ', text: '৪টি' },
+      { key: 'গ', text: '৩টি' },
+      { key: 'ঘ', text: '১টি' },
     ],
-    answer: 'à¦•',
-    explanation: 'à¦°à§à¦‡ à¦®à¦¾à¦›à§‡à¦° à¦¹à§ƒà¦¦à¦ªà¦¿à¦£à§à¦¡ à¦¦à§à¦‡ à¦ªà§à¦°à¦•à§‹à¦·à§à¦  à¦¬à¦¿à¦¶à¦¿à¦·à§à¦Ÿ (à¦à¦• à¦…à¦²à¦¿à¦¨à§à¦¦ à¦“ à¦à¦• à¦¨à¦¿à¦²à¦¯à¦¼)à¥¤',
+    answer: 'ক',
+    explanation: 'রুই মাছের হৃদপিণ্ড দুই প্রকোষ্ঠ বিশিষ্ট (এক অলিন্দ ও এক নিলয়)।',
   };
-
-  const selectedBox = customDesign.boxes.find(b => b.id === selectedBoxId) || null;
 
   const updateBox = (id: string, patch: Partial<SlideTextBox>) => {
     setCustomDesign(prev => ({
@@ -833,7 +823,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   type="text"
                   value={customHeaderTitle}
                   onChange={(e) => setCustomHeaderTitle(e.target.value)}
-                  placeholder="e.g. à¦†à¦œà¦•à§‡à¦° à¦•à§à¦‡à¦œ | à¦à¦‡à¦šà¦à¦¸à¦¸à¦¿ à¦œà§€à¦¬à¦¬à¦¿à¦œà§à¦žà¦¾à¦¨"
+                  placeholder="e.g. আজকের কুইজ | এইচএসসি জীববিজ্ঞান"
                   className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
                     isAppLight
                       ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
@@ -931,9 +921,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     }`}
                   >
                     <option value="all">All Boards</option>
-                    <option value="à¦šà¦Ÿà§à¦Ÿà¦—à§à¦°à¦¾à¦®">Chittagong Board</option>
-                    <option value="à¦¢à¦¾à¦•à¦¾">Dhaka Board</option>
-                    <option value="à¦°à¦¾à¦œà¦¶à¦¾à¦¹à§€">Rajshahi Board</option>
+                    <option value="চট্টগ্রাম">Chittagong Board</option>
+                    <option value="ঢাকা">Dhaka Board</option>
+                    <option value="রাজশাহী">Rajshahi Board</option>
                     <option value="admission">Admission</option>
                   </select>
                 </div>

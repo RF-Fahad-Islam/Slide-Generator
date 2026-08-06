@@ -132,18 +132,26 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   }
 
   // -------------------------------------------------------------------------
-  // Middle — stem card (number chip + stem + source + roman + prompt)
+  // Middle — question card. Mirrors the template chrome's hierarchy: a header
+  // row with the number chip and source on the right, then the stem, then the
+  // roman-statement sub-card, then the closing prompt line. The card is sized
+  // for the typical bohupodi (roman-statement) case: a 1–2 line stem, three
+  // single-line i./ii./iii. statements, one prompt line, four options.
   // -------------------------------------------------------------------------
   const cardX = PAD;
   const cardW = SLIDE_W - PAD * 2;
+  const cardY = 170;
+  const cardH = 470;
+  const innerX = cardX + 36;
+  const innerW = cardW - 72;
   boxes.push({
     id: bid('mdl_card'),
     bind: 'free',
     text: '',
     x: cardX,
-    y: 180,
+    y: cardY,
     w: cardW,
-    h: 470,
+    h: cardH,
     fontSize: bodySize,
     color: textColor,
     align: 'left',
@@ -155,11 +163,11 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   boxes.push({
     id: bid('mdl_qnum'),
     bind: 'questionNumber',
-    x: cardX + 28,
-    y: 204,
-    w: 64,
-    h: 48,
-    fontSize: 26,
+    x: innerX,
+    y: cardY + 26,
+    w: 72,
+    h: 56,
+    fontSize: 28,
     color: isLight ? '#ffffff' : '#0f172a',
     align: 'center',
     bold: true,
@@ -168,23 +176,11 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     bg: accent,
   });
   boxes.push({
-    id: bid('mdl_stem'),
-    bind: 'stem',
-    x: cardX + 108,
-    y: 208,
-    w: cardW - 108 - 28,
-    fontSize: bodySize,
-    color: textColor,
-    align: 'left',
-    bold: true,
-    fontFamily: bodyFont,
-  });
-  boxes.push({
     id: bid('mdl_source'),
     bind: 'source',
-    x: SLIDE_W - PAD - 620,
-    y: 214,
-    w: 600,
+    x: SLIDE_W - PAD - 36 - 354,
+    y: cardY + 32,
+    w: 354,
     fontSize: 18,
     color: accent,
     align: 'right',
@@ -192,11 +188,23 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     fontFamily: bodyFont,
   });
   boxes.push({
+    id: bid('mdl_stem'),
+    bind: 'stem',
+    x: innerX,
+    y: cardY + 96,
+    w: innerW,
+    fontSize: bodySize,
+    color: textColor,
+    align: 'left',
+    bold: true,
+    fontFamily: bodyFont,
+  });
+  boxes.push({
     id: bid('mdl_roman'),
     bind: 'roman',
-    x: cardX + 28,
-    y: 430,
-    w: cardW - 56,
+    x: innerX,
+    y: cardY + 192,
+    w: innerW,
     fontSize: 20,
     color: textColor,
     align: 'left',
@@ -208,9 +216,9 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   boxes.push({
     id: bid('mdl_prompt'),
     bind: 'prompt',
-    x: cardX + 28,
-    y: 560,
-    w: 1200,
+    x: innerX,
+    y: cardY + 378,
+    w: innerW,
     fontSize: 22,
     color: accent,
     align: 'left',
@@ -225,7 +233,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     id: bid('mdl_options'),
     bind: 'options',
     x: cardX,
-    y: 670,
+    y: config.showExplanationInSlide ? 640 : 660,
     w: cardW,
     fontSize: optionsSize,
     color: textColor,
@@ -237,14 +245,15 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   });
 
   // -------------------------------------------------------------------------
-  // Explanation — shown when the deck has it enabled
+  // Explanation — shown when the deck has it enabled. Sits above the footer,
+  // which drops toward the bottom edge so the two never collide.
   // -------------------------------------------------------------------------
   if (config.showExplanationInSlide) {
     boxes.push({
       id: bid('mdl_explanation'),
       bind: 'explanation',
       x: cardX,
-      y: 960,
+      y: 940,
       w: cardW,
       fontSize: 20,
       color: textColor,
@@ -257,8 +266,10 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   }
 
   // -------------------------------------------------------------------------
-  // Footer — banner image, or watermark + footer tag
+  // Footer — banner image, or watermark + footer tag. With the explanation box
+  // above, the footer drops toward the bottom edge to clear it.
   // -------------------------------------------------------------------------
+  const footerY = config.showExplanationInSlide ? SLIDE_H - 56 : SLIDE_H - PAD - 44;
   if (config.useFooterBanner && config.footerBannerUrl) {
     boxes.push({
       id: bid('ftr_banner'),
@@ -278,7 +289,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       id: bid('ftr_watermark'),
       bind: 'watermark',
       x: PAD,
-      y: SLIDE_H - PAD - 44,
+      y: footerY,
       w: 900,
       fontSize: footerSize,
       color: textColor,
@@ -290,7 +301,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       id: bid('ftr_tag'),
       bind: 'footerTag',
       x: SLIDE_W - PAD - 700,
-      y: SLIDE_H - PAD - 44,
+      y: footerY,
       w: 700,
       fontSize: footerSize,
       color: accent,

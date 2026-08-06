@@ -207,8 +207,9 @@ const TemplateThumbnailPreview: React.FC<{ config: DeckConfig }> = ({ config }) 
           }}
         />
 
-        {/* Template Theme Applied Card Styling */}
-        <div className={`relative z-10 h-full flex flex-col justify-between ${styles.bgClass} p-2 rounded-xl border ${isLight ? 'border-slate-300/80' : 'border-white/10'}`}>
+        {/* Template Theme Applied Card Styling — theme bg steps aside when a
+            background image replaces it */}
+        <div className={`relative z-10 h-full flex flex-col justify-between ${bgImageUrl ? '' : styles.bgClass} p-2 rounded-xl border ${isLight ? 'border-slate-300/80' : 'border-white/10'}`}>
           {/* Header Bar (Full Width Image Banner vs Manual Structured Header) */}
           {isHeaderBanner ? (
             <div className="w-full flex items-center justify-between pb-1 border-b border-white/15">
@@ -1211,13 +1212,15 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 style={{ backgroundImage: `url("${config.bgImageUrl}")` }}
               />
               <p className="text-sm text-amber-300 font-medium">
-                Custom background active! (Preset set to <code className="font-mono font-bold">custom</code>)
+                Custom background active! (Theme background removed — preset options hidden below)
               </p>
             </div>
           )}
         </div>
 
-        {/* Presets Grid */}
+        {/* Presets Grid — hidden while a custom image is active, because the
+            image replaces the theme background entirely. */}
+        {!config.bgImageUrl && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {BACKGROUND_PRESETS.map((preset) => {
             const isSelected = config.bgPreset === preset.id;
@@ -1258,6 +1261,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             );
           })}
         </div>
+        )}
 
         {/* Image Opacity & Tint Overlays */}
         {config.bgPreset !== 'none' && (

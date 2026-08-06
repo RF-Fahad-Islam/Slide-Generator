@@ -181,9 +181,10 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
       ref={ref}
       id="slide-canvas-root"
       style={aspectStyle}
-      className={`relative w-[1920px] h-[1080px] flex flex-col justify-between p-10 select-none overflow-hidden box-border ${styles.bgClass}`}
+      className={`relative w-[1920px] h-[1080px] flex flex-col justify-between p-10 select-none overflow-hidden box-border ${bgImageUrl ? 'bg-slate-950' : styles.bgClass}`}
     >
-      {/* IMAGE BASE BACKGROUND FOR SLIDES */}
+      {/* IMAGE BASE BACKGROUND FOR SLIDES — when set (preset or custom upload)
+          it REPLACES the template theme background entirely. */}
       {bgImageUrl && (
         <div
           className="absolute inset-0 z-0 bg-cover bg-center pointer-events-none transition-opacity duration-300"
@@ -204,9 +205,14 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
         }}
       />
 
-      {/* Decorative Ambient Radial Glows */}
-      <div className={`absolute top-0 right-0 w-[650px] h-[650px] rounded-full blur-3xl pointer-events-none z-0 ${isLight ? 'bg-amber-400/10' : 'bg-amber-500/10'}`} />
-      <div className={`absolute bottom-0 left-0 w-[550px] h-[550px] rounded-full blur-3xl pointer-events-none z-0 ${isLight ? 'bg-blue-400/10' : 'bg-blue-500/10'}`} />
+      {/* Decorative Ambient Radial Glows — theme decoration, hidden when a
+          background image replaces the theme */}
+      {!bgImageUrl && (
+        <>
+          <div className={`absolute top-0 right-0 w-[650px] h-[650px] rounded-full blur-3xl pointer-events-none z-0 ${isLight ? 'bg-amber-400/10' : 'bg-amber-500/10'}`} />
+          <div className={`absolute bottom-0 left-0 w-[550px] h-[550px] rounded-full blur-3xl pointer-events-none z-0 ${isLight ? 'bg-blue-400/10' : 'bg-blue-500/10'}`} />
+        </>
+      )}
 
       {/* Boxed-design mode: when text boxes are present they ARE the slide content — template header/middle/footer are hidden */}
       {!isBoxedDesign && (

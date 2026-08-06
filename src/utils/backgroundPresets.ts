@@ -8,8 +8,20 @@ export interface BackgroundPreset {
   previewGradient: string;
 }
 
+// Encode an SVG string as a base64 data URL. PptxGenJS's addImage() strictly
+// requires a `base64,` marker in `data:` URIs and silently drops (with a
+// console error) any image whose data lacks one — a `;utf8,` + encodeURIComponent
+// data URL (valid for CSS `background-image`) is rejected outright, which is
+// why these background presets never appeared in the exported PPTX.
+const svgToDataUrl = (svg: string): string => {
+  const bytes = new TextEncoder().encode(svg);
+  let binary = '';
+  bytes.forEach(b => { binary += String.fromCharCode(b); });
+  return `data:image/svg+xml;base64,${btoa(binary)}`;
+};
+
 // Inline SVG Data URLs for reliable, high-resolution rendering without external network calls
-const CHALKBOARD_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
+const CHALKBOARD_SVG = svgToDataUrl(`
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
   <defs>
     <radialGradient id="grad" cx="50%" cy="50%" r="70%">
@@ -26,9 +38,9 @@ const CHALKBOARD_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <!-- Subtle Grid lines -->
   <path d="M0 100 H1920 M0 200 H1920 M0 300 H1920 M0 400 H1920 M0 500 H1920 M0 600 H1920 M0 700 H1920 M0 800 H1920 M0 900 H1920 M0 1000 H1920" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
 </svg>
-`)}`;
+`);
 
-const TECH_MESH_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
+const TECH_MESH_SVG = svgToDataUrl(`
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -46,9 +58,9 @@ const TECH_MESH_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <circle cx="1600" cy="200" r="400" fill="rgba(245, 158, 11, 0.04)" filter="blur(80px)"/>
   <circle cx="300" cy="800" r="500" fill="rgba(59, 130, 246, 0.04)" filter="blur(100px)"/>
 </svg>
-`)}`;
+`);
 
-const BLUE_STUDIO_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
+const BLUE_STUDIO_SVG = svgToDataUrl(`
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
   <defs>
     <radialGradient id="blueGlow" cx="50%" cy="30%" r="80%">
@@ -61,9 +73,9 @@ const BLUE_STUDIO_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <path d="M-200 400 C 400 200, 800 800, 2100 300" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="3"/>
   <path d="M-200 600 C 600 900, 1200 100, 2100 700" fill="none" stroke="rgba(245, 158, 11, 0.05)" stroke-width="2"/>
 </svg>
-`)}`;
+`);
 
-const GEOMETRIC_DARK_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
+const GEOMETRIC_DARK_SVG = svgToDataUrl(`
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
   <defs>
     <linearGradient id="darkBg" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -77,9 +89,9 @@ const GEOMETRIC_DARK_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <circle cx="960" cy="540" r="450" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="1.5"/>
   <circle cx="960" cy="540" r="700" fill="none" stroke="rgba(255,255,255,0.01)" stroke-width="1"/>
 </svg>
-`)}`;
+`);
 
-const PAPER_TEXTURE_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
+const PAPER_TEXTURE_SVG = svgToDataUrl(`
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
   <defs>
     <linearGradient id="paperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -91,7 +103,7 @@ const PAPER_TEXTURE_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <!-- Light diagonal grain lines -->
   <path d="M 0,0 L 1920,1080 M -200,0 L 1720,1080 M 200,0 L 2120,1080" stroke="rgba(255,255,255,0.02)" stroke-width="1"/>
 </svg>
-`)}`;
+`);
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = [
   {
