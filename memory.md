@@ -1,87 +1,44 @@
-# Memory — Answer Display Modes (highlight-in-place / separate answer slides)
+# Memory — Shared DeckCard + Batch Deck Export + MCQ Strip Preview
 
 Last updated: 2026-08-06
 
 ## What was built
 
-**This session — feature + review fixes, both committed on branch `feat/answer-slides`:**
-`cba3b74` (feature) and `d4b3596` (review fixes). Branch `feat/answer-slides` also carries the
-parallel session's commits in its history (`fb95144` ingestion, `478d0a2` per-box fonts,
-`966663c` role fonts, `6d1540b` shared DeckCard).
+All committed on `feat/answer-slides` (three commits this session):
 
-1. **`answerMode?: 'hidden' | 'highlight' | 'separate_slide'` on `DeckConfig`** (`src/types.ts`) +
-   new `src/utils/answerSlides.ts`: `effectiveAnswerMode` (falls back to legacy `showAnswerInSlide`
-   boolean — saved decks need no migration), `effectiveShowAnswerInSlide`, `expandDeckSlides`
-   (question → [question, answer] expansion, returns `SlideRef[]`), `questionSlideIndex`.
-2. **`SlideCanvas`** — new `slideVariant?: 'question' | 'answer'` prop. Answer slides highlight the
-   correct option + show a visible emerald "উত্তর: {key}" strip (standard, class-mode, and
-   text-box/boxed designs) + explanation. The text-box `options` bind now highlights the correct
-   pill/card (template-token colors + ✓) when a highlight/answer slide is active.
-3. **`DeckSettings`** (Layout tab, "Slide Interactive Display Settings") — old "Show Answer Key
-   Highlight" checkbox replaced by a 3-state **Answer Display Mode** segmented control.
-4. **`App.tsx`** — `selectedIndex` now walks `expandDeckSlides()`: preview nav, slide counters,
-   overview grid (emerald "Answer" badge), deck-list clicks jump to the question slide.
-5. **Exports** — `ExportModal` "Include Answer Slides" checkbox (per-export, defaults to deck mode)
-   drives PPTX/PDF/ZIP; `pptxExport` gained `PptxSlideSpec[]` param and emits native editable answer
-   slides; `SlideThumb` gained `slideVariant`.
-6. Docs updated: `context/progress-tracker.md` + `context/ui-registry.md`.
+1. **`6d1540b` — Shared `DeckCard` (visual parity Home ↔ My Decks)** — new `src/components/DeckCard.tsx` is THE single deck-card design, used by BOTH `SlideDecksHome.tsx` Section 4 and `MyDecksView.tsx`. Card = `p-5 rounded-3xl` glass card → real first-slide `DeckSlideThumb` (`getTemplateById(config?.templateId || 'rakib-dark')`), "N Questions" + optional subject chips, optional `lastUpdated`, `line-clamp-2` title, `badgeTag` line, Theme row, solid-amber **Open Slide Studio** CTA, optional 2-col `Deck Settings`/`Social Posts` row (renders only when handler given), and My Decks-only tertiary controls (`onDownload`/`onExportJson`/`onDelete` → `Download Deck` subtle amber, `N MCQs` + `Export JSON` + `Trash2`). Both call sites pass `appTheme`; My Decks keeps the **3-arg** `onOpenDeckSettings(items, config, deck.id)` so `editingSavedDeckId` auto-sync survives, Home keeps **2-arg**.
+2. **`48dbea2` — Navbar batch deck export + Studio whole-deck download** — new `src/components/BatchExportModal.tsx` opened from the navbar "Export Slides" buttons (`SidebarNav` bottom action; `HeaderNavbar` is defined but NOT rendered — only SidebarNav is live). Lists saved decks from `db.questionDecks` (auto-seeds 2 `SAMPLE_DECKS` via `seedConfig` prop when empty, sorted `updatedAt` desc) with checkboxes + Select All/Clear; **Download PPTX (N)** sequentially calls `exportDeckToPPTX(deck.items, deck.config, onProgress)` per selected deck (each triggers its own `.pptx` via `writeFile`), with progress bar + success state; single selection works. `App.tsx`: new `isBatchExportModalOpen` state; `SidebarNav.onOpenExportModal` now opens the batch modal; `<BatchExportModal>` rendered next to `<ExportModal>`. **Slide Studio toolbar Download** flipped `exportScope` `'current'` → **`'all'`** (whole active deck through the existing ExportModal); `'current'` scope remains in ExportModal but no entry point uses it.
+3. **`9f2cc47` — Manual Editor "Live Parse Preview" as MCQ strip** — `ManualEditor.tsx` preview changed from `aspect-video` (16:9, stacked stem + 2×2 options) to a **wide strip** `aspect-[21/6]` (3.5:1): left zone = number chip + `line-clamp-2` stem (42% width), right zone = 4 option pills in one `grid-cols-4` row. Shows only the parsed MCQ, no slide chrome.
+
+Docs updated each time: `context/progress-tracker.md` + `context/ui-registry.md` (new `BatchExportModal` section; `ExportModal` scope-model entry and ManualEditor Live Parse Preview entry updated; DeckCard section added earlier).
 
 ## Decisions made
 
-- **3-state answer model** (mutually exclusive): No Answer / Highlight on Slide / Separate Answer
-  Slide (+1 per question). Replaced the old boolean.
-- **Answer slide content** = highlighted option + "উত্তর" label + explanation (when present).
-- **Per-export toggles, not forced**: exports keep their own "Include Answer Slides" checkbox; it
-  defaults to the deck's answer mode but can be flipped per export.
-- **`answerMode` is deck-wide only** (review fix): slide expansion is a deck-level property, so the
-  Deck Settings control ignores the Global/Slide scope toggle (with an "Applies to the whole deck"
-  hint). A per-slide `answerMode` silently did nothing.
-- **Answer slides reuse the same layout** (highlighted) rather than a distinct "উত্তরমালা" design.
-- **No hardcoded hex** in the new renderer code (review fix) — textbox highlight derives from
-  `styles.hexColors.optionSelectedBg/Border/Text`; answer pills use theme-aware Tailwind emerald
-  classes.
+- **One shared `DeckCard`** is the single source of truth for deck cards — no more hand-maintained duplicates.
+- **Two `onOpenDeckSettings` signatures must stay distinct**: Home = `(items, config?)`, My Decks = `(items, config?, savedDeckId?)`. `DeckCard` only forwards the handler.
+- **Single solid CTA per card** — "Open Slide Studio" is the solid amber button; Download Deck is deliberately subtle (amber-500/15).
+- **Navbar download = batch selector; Slide Studio download = whole active deck** (via the ExportModal at scope `all`); studio stays scoped to the active working deck only, NOT a batch.
+- **Design system compliance**: `glass-card-fatty`/`light`, `isAppLight` ternaries, amber accents only — no hardcoded hex/raw colors.
 
 ## Problems solved
 
-- **Textbox options never highlighted** — the `options` text-box bind rendered every option
-  identically even when `showAnswerInSlide` was on; now the correct one is highlighted.
-- **Parallel session clobbered my uncommitted edits** — they ran `git add -A` and my `types.ts` +
-  `SlideCanvas.tsx` changes were swept into their commit `478d0a2`. Verified intact in HEAD; no data
-  lost, but keep re-checking the working tree while they're active.
-- **Per-slide "Separate Answer Slide" silently no-oped** (review) — forced deck-wide.
-- **Export checkbox was a no-op outside `separate_slide` mode** (review) — it now FORCES
-  separate-slide expansion (`answerSlides` list) so it works in hidden/highlight decks too.
-- **Stale `selectedIndex` after delete / mode switch** (review) — clamped via an effect on
-  `expandedSlides.length`.
+- **Deck cards looked different between Home and My Decks** — two hand-maintained copies of the same markup; fixed by extracting `DeckCard` and deleting both duplicates.
+- **Navbar export only exported the active deck** — added a real multi-deck selector (single or batch), reusing the existing `exportDeckToPPTX` (which already downloads via `pptx.writeFile`).
+- **Slide Studio Download only exported the current slide** — flipped to whole deck; user confirmed it should remain deck-scoped.
+- **Parallel-session note**: the answer-slides parallel session committed (`cba3b74`, `d4b3596`, `4916cd2`) and the old pre-existing `App.tsx` `slideVariant` type error is GONE (their `SlideThumb` now accepts it). tsc is fully clean now. They still have UNCOMMITTED edits in the tree (`DeckQuestionPaperModal.tsx`, `ExportModal.tsx`, `QuestionBankPdfModal.tsx`, `SlideCanvas.tsx`, `SlideThumb.tsx`, `pptxExport.ts`) — do NOT commit those.
 
 ## Current state
 
-- Branch `feat/answer-slides` at `d4b3596`. `tsc --noEmit` + `npm run build` green.
-- **The parallel session is STILL actively editing this repo** — uncommitted working-tree changes
-  right now: `ExportModal.tsx`, `SlideCanvas.tsx`, `SlideThumb.tsx`, `pptxExport.ts`,
-  `DeckQuestionPaperModal.tsx`, `QuestionBankPdfModal.tsx`, `context/progress-tracker.md`,
-  `context/ui-registry.md` (additive on top of my committed work — my `slideVariant`/`answerMode`/
-  `expandDeckSlides` markers verified intact). **Do not commit, stash, or pop their files.**
-- `server-log.txt` is a dev-server artifact (untracked, deletable).
-- Known non-blocking: html-to-image `SecurityError` for cross-origin Google Fonts/KaTeX CSS during
-  raster exports (pre-existing).
+- On branch `feat/answer-slides`, HEAD = `9f2cc47`. All three features committed and green (`tsc --noEmit` clean project-wide, `vite build` green).
+- CDP-verified: batch modal opens from sidebar (2 deck rows, Select All → "2 / 2 selected" + "Download PPTX (2)", deselect → single, Cancel), studio Download tooltip = "Download the whole deck — PPTX, PDF, PNG, ZIP", Manual Editor strip renders 3.50:1 (717×205) with stem + A–D options.
+- Known non-blocking: html-to-image `SecurityError` for cross-origin Google Fonts/KaTeX during raster exports (pre-existing). PPTX batch download relies on the browser allowing sequential multi-downloads.
 
 ## Next session starts with
 
-1. Reconcile with the parallel session — they're mid-edit on files I own (`ExportModal`,
-   `pptxExport`, `SlideCanvas`, `SlideThumb`). If they haven't committed yet, wait or coordinate
-   before merging `feat/answer-slides` to `main`.
-2. Manual browser verification (agent cannot): toggle Answer Display Mode in Deck Settings →
-   confirm highlight-in-place on question slides; switch to "Separate Answer Slide" → confirm
-   preview navigates question → answer, overview shows Answer badges, PPTX/PDF/ZIP include answer
-   slides with the "উত্তর" strip, and the text-box design highlights the correct option.
-3. Remaining backlog (unchanged): bundle self-hosted Bengali woff2 fonts; declarative `Element[]`
-   renderer refactor; interactive template studio JSON import/export; large-scan `express.json`
-   50mb limit.
+1. **Browser-verify the batch PPTX actually downloads** (manual, agent cannot): open navbar Export Slides → select 1 deck → Download → confirm a real `.pptx` lands; then select 2 decks → confirm 2 files (browser may prompt "allow multiple downloads"). Eyeball the batch modal in light theme.
+2. Reconcile with the parallel session — their answer-slides edits are still uncommitted on this branch; confirm before starting new work.
+3. Remaining backlog (unchanged): bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor; interactive template studio JSON import/export.
 
 ## Open questions
 
-- Whether the parallel session merges/rebases onto my branch and when they stop editing shared files
-  so `feat/answer-slides` can be merged to `main`.
-- Real-world visual QA of the answer slide design (strip placement, boxed-mode pill) in the browser
-  is unverified.
+- None blocking. The actual `.pptx` download inside the batch loop is the only unverified behavior (logic is identical to the working ExportModal path, but a human should confirm the browser's multi-download handling).
