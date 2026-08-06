@@ -20,7 +20,10 @@ import {
   Check,
   X,
   ListOrdered,
-  Eye
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  ListChecks
 } from 'lucide-react';
 
 interface ManualEditorProps {
@@ -31,6 +34,8 @@ interface ManualEditorProps {
   onUpdateItems?: (items: MCQItem[]) => void;
   reviewItems?: MCQItem[]; // Incoming MCQs waiting for review
   onClearReviewItems?: () => void;
+  prefillEditItem?: MCQItem | null; // Question to open in the form (from the deck-list edit modal)
+  onPrefillConsumed?: () => void;
 }
 
 export const ManualEditor: React.FC<ManualEditorProps> = ({
@@ -41,6 +46,8 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
   onUpdateItems,
   reviewItems = [],
   onClearReviewItems,
+  prefillEditItem = null,
+  onPrefillConsumed,
 }) => {
   const isAppLight = appTheme === 'light';
   const [activeSubTab, setActiveSubTab] = useState<'review' | 'bulk' | 'single'>('bulk');
@@ -127,6 +134,43 @@ iii. অস্ত্রোপচার
     setQuestionType('standard');
     setRomanItems(['i. ', 'ii. ', 'iii. ']);
     setPrompt('নিচের কোনটি সঠিক?');
+  };
+
+  // Batch-edit-all: walk through every question in the active deck inside the form.
+  const [batchQueue, setBatchQueue] = useState<{ ids: string[]; index: number } | null>(null);
+
+  // Open a question from the deck-list edit modal directly in this dedicated editor.
+  useEffect(() => {
+    if (prefillEditItem && onUpdateItems) {
+      const target = items.find((q) => q.id === prefillEditItem.id) || prefillEditItem;
+      loadItemIntoForm(target, 'deck');
+      setBatchQueue(null);
+      if (onPrefillConsumed) onPrefillConsumed();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillEditItem]);
+
+  const startBatchEditAll = () => {
+    if (items.length === 0) return;
+    setBatchQueue({ ids: items.map((q) => q.id), index: 0 });
+    loadItemIntoForm(items[0], 'deck');
+    setActiveSubTab('single');
+  };
+
+  const batchNav = (dir: 'prev' | 'next') => {
+    if (!batchQueue) return;
+    let idx = dir === 'prev' ? batchQueue.index - 1 : batchQueue.index + 1;
+    if (idx < 0) idx = batchQueue.ids.length - 1;
+    if (idx >= batchQueue.ids.length) idx = 0;
+    const targetItem = items.find((q) => q.id === batchQueue.ids[idx]);
+    if (!targetItem) return;
+    setBatchQueue({ ...batchQueue, index: idx });
+    loadItemIntoForm(targetItem, 'deck');
+  };
+
+  const endBatchEdit = () => {
+    setBatchQueue(null);
+    resetForm();
   };
 
   // CSV Upload -> Passes through Question Reviewer first!
@@ -746,6 +790,51 @@ iii. অস্ত্রোপচার
       {/* SUB-TAB 3: FORM QUESTION CREATOR & EDITOR */}
       {activeSubTab === 'single' && (
         <form ref={formRef} onSubmit={handleAddOrUpdateSingle} className="space-y-6 max-w-4xl">
+          {/* Batch edit-all toolbar */}
+          {batchQueue && (
+            <div className={`p-4 rounded-2xl border flex flex-wrap items-center gap-3 text-xs ${
+              isAppLight ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-950 border-indigo-500/40'
+            }`}>
+              <span className={`font-black flex items-center gap-2 ${isAppLight ? 'text-indigo-700' : 'text-indigo-300'}`}>
+                <ListChecks className="w-4 h-4" />
+                Batch Editing All Deck Questions
+              </span>
+              <span className={`px-2.5 py-1 rounded-lg font-mono font-black ${isAppLight ? 'bg-white text-indigo-700 border border-indigo-200' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'}`}>
+                {batchQueue.index + 1} / {batchQueue.ids.length}
+              </span>
+              <div className="flex-1" />
+              <button
+                type="button"
+                onClick={() => batchNav('prev')}
+                className={`px-3 py-1.5 rounded-xl font-bold border flex items-center gap-1 cursor-pointer ${
+                  isAppLight ? 'bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-100' : 'bg-slate-900 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20'
+                }`}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                Prev
+              </button>
+              <button
+                type="button"
+                onClick={() => batchNav('next')}
+                className={`px-3 py-1.5 rounded-xl font-bold border flex items-center gap-1 cursor-pointer ${
+                  isAppLight ? 'bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-100' : 'bg-slate-900 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20'
+                }`}
+              >
+                Next
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={endBatchEdit}
+                className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer ${
+                  isAppLight ? 'bg-slate-800 text-white' : 'bg-slate-800 text-white'
+                }`}
+              >
+                Done
+              </button>
+            </div>
+          )}
+
           {/* Banner showing if we are editing an existing question */}
           {editingId ? (
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs font-bold text-emerald-400">
@@ -1007,6 +1096,19 @@ iii. অস্ত্রোপচার
                 Click "Edit in Creator" on any existing MCQ to update its stem, options, or answer key.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={startBatchEditAll}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all shrink-0 ${
+                isAppLight
+                  ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
+                  : 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20'
+              }`}
+              title="Open every deck question in the editor view to batch edit them one by one"
+            >
+              <ListChecks className="w-4 h-4" />
+              Batch Edit All in Editor
+            </button>
           </div>
 
           <div className="space-y-3 max-h-96 overflow-y-auto pr-1">

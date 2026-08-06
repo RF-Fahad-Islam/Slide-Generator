@@ -122,6 +122,7 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Accent:** `bg-amber-500 text-slate-950` (primary button, active tab)
 - **Page header:** `Edit3` amber gradient tile (`p-4 rounded-2xl from-amber-500 to-amber-300`) + `text-2xl lg:text-3xl font-black` title + mono badge (`Bangla · LaTeX · CSV`) + subtitle.
 - **Live Parse Preview:** `p-4 rounded-2xl` card under the parse button — `Eye` emerald label + live MCQ count (`font-mono`); when `parsedPreview.length > 0` renders an `aspect-video` mock slide (`bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950`, amber glow blob, `MathText` stem, 2×2 option pills with correct answer `bg-amber-500/20 border-amber-500/50 text-amber-300`), else a dashed empty hint. `parsedPreview = parseBulkTextToMCQs(bulkText)` recomputed each render and reused by the parse button count.
+- **Batch edit toolbar:** "Batch Edit All in Editor" button (indigo pill, `ListChecks`) in the Active Deck Questions header loads every deck question into a `batchQueue`; while active the form shows an indigo toolbar (`bg-indigo-50 border-indigo-300` light / `bg-slate-950 border-indigo-500/40` dark) with a `X / N` mono counter + Prev/Next wraparound buttons + Done. `prefillEditItem`/`onPrefillConsumed` props let the `EditQuestionModal`'s "Open in Question Editor" hand a specific question straight into the form.
 
 ### `AIUploader` — `src/components/AIUploader.tsx`
 - **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for main panel + result panel
@@ -151,7 +152,7 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Radius:** `rounded-2xl`
 - **Drag feedback:** `opacity-50 shadow-2xl z-50` applied via `isDragging` from `useSortable`; transform + transition applied inline from `CSS.Transform.toString(transform)`
 - **Drag handle:** `GripVertical` icon (`w-4 h-4`) in `p-2 rounded-xl` button with `touch-none` + `cursor-grab active:cursor-grabbing`; listeners + attributes from `useSortable` spread onto the handle. Disabled state: `opacity-30 cursor-default` with title "Drag disabled while searching".
-- **Action buttons:** Duplicate (`Copy`, amber hover), Delete (`Trash2`, rose) — same pattern as the pre-drag action row
+- **Action buttons:** Pencil Edit (indigo hover, opens the inline `EditQuestionModal`), Duplicate (`Copy`, amber hover), Delete (`Trash2`, rose) — all `p-2 rounded-xl` icons; drag handle first. Same pattern as the pre-drag action row
 - **Text:** `text-slate-800` (light) | `text-slate-300` (dark); stems `text-base font-bold`
 - **Number badge:** `w-9 h-9 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm`
 - **Keyboard a11y:** handle is focusable (`role="button"`, `tabIndex`, `aria-roledescription="sortable"` from dnd-kit attributes); Space/Enter to pick up, arrows to move, Space/Enter to drop
@@ -177,6 +178,18 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Text:** `text-slate-900` (light) | `text-white` (dark)
 - **Shadow:** `shadow-2xl`
 - **Accent:** `bg-gradient-to-r from-amber-500 to-amber-400` (PPTX button)
+
+### `TemplateLibraryModal` — `src/components/TemplateLibraryModal.tsx`
+- **Purpose:** Template store — save the current slide format as a template and switch between saved templates. Opened from the Slide Studio controls-bar "Templates" button (`App` `isTemplateModalOpen`).
+- **Shell:** ExportModal-style fixed overlay (`z-50`, backdrop-blur, `max-w-3xl`, `max-h-[92vh] overflow-y-auto`), header tile `p-4 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300` (`LayoutTemplate`), title "Template Store".
+- **Save card:** `p-5 rounded-2xl` amber (`bg-amber-50 border-amber-300` light / `bg-slate-950 border-amber-500/40` dark) — name input + amber Save button + optional description + `text-[11px]` note that content isn't saved and same-name overwrites. Calls `saveTemplatePreset(name, config, desc)` then refreshes.
+- **My Templates grid:** `md:grid-cols-2 gap-4`; card `p-4 rounded-2xl` with theme swatch (`w-14 h-14 rounded-2xl` bg + accent dot) + name + desc/date; Active badge (`bg-amber-500 text-slate-950`, `CheckCircle2`); actions "Use This Template" (amber, disabled when active) + Delete (rose, confirm). Active detection = same `templateId` + equal `customTheme`. Empty state = dashed card with `Sparkles`.
+
+### `EditQuestionModal` — `src/components/EditQuestionModal.tsx`
+- **Purpose:** Inline edit of a deck question, opened from the new Pencil icon on every `SortableQuestionCard` (via `DeckManager onEditQuestion` → `App editingQuestion`).
+- **Shell:** ExportModal-style overlay (`max-w-2xl`), header tile `Edit3` gradient, title "Edit Question".
+- **Form:** question-type pills, stem input, bohupodi roman-items block (indigo/amber), 4-option grid (amber key badge, transparent text input, "✓ Correct"/"Answer" toggle button), source + explanation inputs.
+- **Actions:** indigo "Open in Question Editor" (`ArrowUpRight`, saves changes, closes, switches App to the `manual` tab and hands the item to `ManualEditor` via `prefillEditItem`); amber "Save Changes" updates `items` in place.
 
 ### `QuestionBankView` — `src/components/QuestionBankView.tsx`
 - **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for top banner
@@ -210,11 +223,13 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Element rendering (SlideCanvas):** `icon` bind → centered lucide icon sized by `fontSize`, optional card/banner container (`rounded-3xl`, `bg`, 1px `rgba(255,255,255,0.12)` border, `0 20px 40px` shadow). `image` bind → `rounded-3xl` overflow-hidden `<img object-cover>` at `box.h`. `options` bind with `shape:'pill'` → `flex flex-wrap gap-3` chip rows (`px-6 py-2.5 rounded-full`); `shape:'card'` → `px-5 py-3.5 rounded-2xl` option rows. Text binds with `shape:'pill'` → inline-flex capsule (`px-7 py-2.5 rounded-full`); `card`/`banner` → padded container (`rounded-2xl`/`rounded-3xl`). All fills use `box.bg`, borders `rgba(255,255,255,0.12)`.
 - **Edit overlay (not exported):** `absolute inset-0 z-30`, sibling of SlideCanvas inside the scaled wrapper. Selected box `border-amber-400 ring-2 ring-amber-400/40`; label chip `-top-7 text-xs font-black uppercase`, `bg-amber-500 text-slate-950` (selected) / `bg-slate-900 text-amber-300 border-white/20`; resize handle `w-6 h-6 bg-amber-500 border-2 border-slate-950 cursor-nwse-resize`. Icon/image boxes get a fixed `box.h`; the resize drag does **aspect-locked** w+h (ratio from the original box, 16:9 fallback) via `onResize(id, patch)`. **Chip-below rule:** label chip flips to `top-full mt-1` when `chipBelow = box.y < 56 || box.y + boxH + 28 <= SLIDE_H` so it never pokes toward the controls bar above the canvas; only uses `-top-7` when below the box would clip at the slide bottom.
 - **Import from Deck Config:** panel section "Import from Deck Config" — 2-col grid (`grid-cols-2 gap-2`) of the deck's saved images; each tile `p-2.5 rounded-xl border` with thumbnail (`h-12 w-full object-cover rounded-lg`), `text-xs font-extrabold` label + `text-[10px]` source hint (`logoUrl`, `headerBannerUrl`, …); active tile `bg-amber-500/10 border-amber-400`; click sets the selected image box's `imageUrl` or adds a banner element (`onAddElement('banner_image', { imageUrl })`); empty state shows "No images saved in deck config yet". Sources: Brand Logo (`logoUrl`), Header Banner (`headerBannerUrl`), Footer Banner (`footerBannerUrl`), Watermark Avatar (`watermarkAvatar`), Background Image (`bgImageUrl`).
-- **Panel:** `glass-card-fatty-light`/`glass-card-fatty` card; add-box buttons `px-3 py-2 rounded-xl text-xs font-bold` (amber text) now with a small lucide icon per bind (`BIND_ICONS` map). New sections (all `p-4 rounded-2xl border` on `bg-slate-50`/`bg-slate-950`):
-  - **Design Elements:** 2-col grid of 6 element cards (`p-3 rounded-xl border`, amber icon tile `p-1.5 rounded-lg`, `text-xs font-extrabold` + `text-[10px]` desc) → `onAddElement(id, extra)`. Plus an "Upload Image / Banner" button (hidden file input → data-URL).
-  - **Icon Library:** 6-col grid (`max-h-36 overflow-y-auto`), `p-2 rounded-lg` tiles, active `bg-amber-500 border-amber-400 text-slate-950`; click sets selected icon box or adds a new one.
-  - **Quick Layouts:** 1-col list of 3 composed presets (`p-3 rounded-xl border`, `SquareStack` tile, `Plus` rotate-on-hover) → `onAddLayout(id)` replaces the deck's boxes (confirm in App).
-  - **Style sub-panel** (`bg-amber-50/70 border-amber-300` light / `bg-slate-950 border-amber-500/40` dark): bind select, free-text textarea, icon sub-picker (when `bind==='icon'`), image preview + replace/URL input (when `bind==='image'`), Shape pills (Plain/Pill/Card/Banner), Container Fill (native color + Subtle White / Amber Glow / Sky Glow presets, shown when shape ≠ plain or image), font slider, height slider for icon/image, 8 color swatches (active `ring-2 ring-amber-400 scale-110`) + native picker, align pills (active `bg-amber-500 text-slate-950`), bold `B` toggle, Duplicate/Delete (rose).
+- **Panel (Canva-style side rail):** `glass-card-fatty-light`/`glass-card-fatty` card, `rounded-3xl flex flex-col`, internally scrollable (`xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto`), rendered in the right grid column when edit mode is ON (sticky via `xl:sticky xl:top-20`). Header: `p-2.5 rounded-2xl` amber gradient tile (`Layers` icon) + title "Text Box Editor" + live subtitle (`Editing: {bind}` / box count) + close ✕ (`onClose`). Scope: compact segmented control ("All Slides" amber active + Globe / "This Slide" indigo active + Target) with a `RotateCcw` revert button shown when a slide override exists. Tab bar: `p-1 rounded-2xl border` row of pill tabs (Style · Text · Elements · Photos · Layouts), active `bg-amber-500 text-slate-950`, Style only appears when a box is selected — selecting a box on canvas auto-jumps to Style (`prevSelected` ref). Body renders one tab at a time.
+  - **Style tab:** Layers list (`p-4 rounded-2xl`, reversed top-first rows: number badge, bind label, ↑/↓ reorder via `onReorderBox` — up = bring-forward/down = send-back in the array, disabled at bounds, click row → `onSelectBox`) + the full selected-box style sub-panel (bind select, free text, icon picker, image preview/replace/URL, Shape pills, Container Fill, font-size slider, height slider for icon/image, text-color swatches + picker, align pills, bold B, Duplicate/Delete).
+  - **Text tab:** "Add Text Box" grid (`grid-cols-2`) of `SLIDE_BOX_BINDS` with per-bind icons.
+  - **Elements tab:** Design Elements 2-col grid + "Upload Image / Banner" button (shared hidden file input).
+  - **Photos tab:** "Import from Deck Config" 2-col thumbnail grid (`CONFIG_IMAGE_SOURCES`) + Upload button.
+  - **Layouts tab:** Quick Layouts 1-col list + scope-aware note.
+  - **Footer:** Reset to Default Layout / Clear All row.
 - **Element data (slideElements.ts):** `SlideTextBox` extras `h?`, `shape?`, `bg?`, `iconName?`, `imageUrl?`; binds `'icon'`/`'image'`. `SLIDE_ICON_LIBRARY` = 30 curated lucide icons. `SLIDE_LAYOUTS` presets build full box sets (Modern Quiz amber / Clean Card sky / Minimal emerald).
 - **Keys-tab sourcing (AIUploader):** no API-key input on the AI page — a read-only banner (`KeyRound` tile, provider + model code chip) mirrors `mcqgen.provider`/`mcqgen.geminiKey`/`mcqgen.openrouterKey`/`mcqgen.openrouterModel` from `SettingsView`.
 
@@ -266,7 +281,8 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Control bar padding:** `p-5 rounded-3xl`
 - **Nav buttons:** `p-2.5 rounded-xl` (prev/next), `px-4 py-2.5` (view all, answer reveal)
 - **Theme toggle button:** `px-3 py-2 rounded-xl`
-- **Template quick switcher:** "Switch Template…" select (`px-2.5 py-1.5 rounded-xl border`, LayoutTemplate icon, `hidden xl:flex`) right of the theme toggle — applies `applyDesignToConfig(preset, config)`.
+- **Templates button:** "Templates" toolbar button (`LayoutTemplate` amber icon, neutral bordered pill) opens the `TemplateLibraryModal`.
+- **Edit-mode grid restructure:** when "Edit Text Boxes" is ON the grid re-balances — canvas column `xl:col-span-8` (from 7) and the right column becomes `xl:col-span-4` holding the Canva-style `SlideTextBoxPanel` in a sticky wrapper (`xl:sticky xl:top-20`); when OFF the right column is `xl:col-span-5` with the `DeckManager`. Closing the panel (`onClose`) toggles edit mode off and restores the question list.
 - **Control bar wrapping (anti-overlap):** outer `flex flex-wrap items-center justify-between gap-x-4 gap-y-3`; left group `flex flex-wrap items-center gap-3 min-w-0 flex-1`; right controls group `flex flex-wrap items-center gap-3` — **never `shrink-0`** on the controls group, or the buttons overflow the card at narrow widths instead of wrapping.
 
 ### Text-box overlay pattern (slide + social, shared look)

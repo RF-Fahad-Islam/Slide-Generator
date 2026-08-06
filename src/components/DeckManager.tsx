@@ -24,6 +24,7 @@ interface DeckManagerProps {
   onSelectIndex: (index: number) => void;
   selectedIndex: number;
   appTheme?: 'dark' | 'light';
+  onEditQuestion?: (item: MCQItem) => void;
 }
 
 export const DeckManager: React.FC<DeckManagerProps> = ({
@@ -32,6 +33,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   onSelectIndex,
   selectedIndex,
   appTheme = 'dark',
+  onEditQuestion,
 }) => {
   const isAppLight = appTheme === 'light';
   const [searchQuery, setSearchQuery] = useState('');
@@ -221,6 +223,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     isAppLight={isAppLight}
                     disabled={!dragEnabled}
                     onSelect={() => onSelectIndex(idx)}
+                    onEdit={onEditQuestion ? () => onEditQuestion(item) : undefined}
                     onDuplicate={() => duplicateItem(item, idx)}
                     onDelete={() => deleteItem(item.id)}
                   />

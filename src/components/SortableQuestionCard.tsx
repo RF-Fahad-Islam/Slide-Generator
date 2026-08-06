@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Copy, Trash2 } from 'lucide-react';
+import { GripVertical, Copy, Trash2, Pencil } from 'lucide-react';
 import { MCQItem } from '../types';
 import { MathText } from './MathText';
 
@@ -12,6 +12,7 @@ interface SortableQuestionCardProps {
   isAppLight: boolean;
   disabled: boolean;
   onSelect: () => void;
+  onEdit?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
 }
@@ -23,6 +24,7 @@ export const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
   isAppLight,
   disabled,
   onSelect,
+  onEdit,
   onDuplicate,
   onDelete,
 }) => {
@@ -113,6 +115,17 @@ export const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
             title={disabled ? 'Drag disabled while searching' : 'Drag to reorder'}
           >
             <GripVertical className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onEdit}
+            className={`p-2 rounded-xl transition-colors ${
+              isAppLight
+                ? 'bg-slate-100 text-slate-600 hover:bg-indigo-100 hover:text-indigo-700'
+                : 'bg-slate-800 text-slate-300 hover:text-indigo-400'
+            }`}
+            title="Edit Question"
+          >
+            <Pencil className="w-4 h-4" />
           </button>
           <button
             onClick={onDuplicate}

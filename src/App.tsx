@@ -9,6 +9,8 @@ import { AIUploader } from './components/AIUploader';
 import { DeckManager } from './components/DeckManager';
 import { DeckSettings } from './components/DeckSettings';
 import { ExportModal } from './components/ExportModal';
+import { TemplateLibraryModal } from './components/TemplateLibraryModal';
+import { EditQuestionModal } from './components/EditQuestionModal';
 import { QuestionBankView } from './components/QuestionBankView';
 import { SlideDecksHome } from './components/SlideDecksHome';
 import { SocialPostGenerator } from './components/SocialPostGenerator';
@@ -22,7 +24,7 @@ import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, LayoutTemplate } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
-import { getTemplatePresets, applyDesignToConfig } from './utils/templatePresets';
+import { applyDesignToConfig } from './utils/templatePresets';
 
 export default function App() {
   // Application State
@@ -33,6 +35,11 @@ export default function App() {
   const [isAnswerRevealMode, setIsAnswerRevealMode] = useState<boolean>(false);
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+
+  // Inline question edit modal (opened from the deck list) + handoff to the dedicated editor
+  const [editingQuestion, setEditingQuestion] = useState<MCQItem | null>(null);
+  const [dedicatedEditItem, setDedicatedEditItem] = useState<MCQItem | null>(null);
 
   // Slide text box edit mode (overlay layer) + edit scope (deck-wide vs active slide only)
   const [isTextBoxEditMode, setIsTextBoxEditMode] = useState<boolean>(false);
@@ -203,6 +210,17 @@ export default function App() {
       if (!src) return boxes;
       const copy: SlideTextBox = { ...src, id: `b_${src.bind}_${Date.now()}`, y: Math.min(src.y + 60, 1020) };
       return [...boxes, copy];
+    });
+  };
+
+  const reorderSlideBox = (id: string, dir: 'up' | 'down') => {
+    setTextBoxes(boxes => {
+      const idx = boxes.findIndex(b => b.id === id);
+      const target = dir === 'up' ? idx - 1 : idx + 1;
+      if (idx < 0 || target < 0 || target >= boxes.length) return boxes;
+      const next = [...boxes];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
     });
   };
 
@@ -553,8 +571,8 @@ export default function App() {
             ) : (
               /* SINGLE SLIDE PREVIEW & DECK MANAGER SIDE-BY-SIDE */
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 xl:gap-10 items-start">
-                {/* LEFT 7 COLUMNS: LIVE CANVAS DISPLAY */}
-                <div className="xl:col-span-7 flex flex-col gap-8">
+                {/* LEFT: LIVE CANVAS DISPLAY (wider when the Canva-style side panel is open) */}
+                <div className={`flex flex-col gap-8 ${isTextBoxEditMode ? 'xl:col-span-8' : 'xl:col-span-7'}`}>
                   {/* Slide Name & Controls Bar */}
                   <div className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-5 rounded-3xl border shadow-2xl ${
                     isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-slate-800 text-white'
@@ -634,28 +652,19 @@ export default function App() {
                         )}
                       </button>
 
-                      {/* Quick Template Preset Switcher */}
-                      <div className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border ${
-                        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                      }`}>
-                        <LayoutTemplate className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            const preset = getTemplatePresets().find(p => p.id === e.target.value);
-                            if (preset) setConfig(applyDesignToConfig(preset, config));
-                          }}
-                          className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer max-w-[150px] truncate"
-                          title="Switch the whole deck design to a saved template preset"
-                        >
-                          <option value="" disabled>Switch Template…</option>
-                          {getTemplatePresets().map((p) => (
-                            <option key={p.id} value={p.id} className="bg-slate-900 text-white">
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      {/* Template Store Modal Opener */}
+                      <button
+                        onClick={() => setIsTemplateModalOpen(true)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                          isAppLight
+                            ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                        }`}
+                        title="Open the template store — save the current slide format or switch to a saved template"
+                      >
+                        <LayoutTemplate className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="hidden sm:inline">Templates</span>
+                      </button>
 
                       {/* Previous / Next Slide Nav */}
                       <div className="flex items-center gap-1.5">
@@ -792,40 +801,47 @@ export default function App() {
 
                   </div>
 
-                  {isTextBoxEditMode && (
-                    <SlideTextBoxPanel
-                      boxes={activeTextBoxes}
-                      selectedId={selectedTextBoxId}
-                      appTheme={appTheme}
-                      config={effectiveTextBoxConfig}
-                      textBoxScope={textBoxScope}
-                      hasTextBoxOverride={hasTextBoxOverride}
-                      onChangeTextBoxScope={changeTextBoxScope}
-                      onRevertTextBoxOverride={revertTextBoxOverride}
-                      onAddBox={addSlideBox}
-                      onAddElement={addElementBox}
-                      onAddLayout={addLayoutToDeck}
-                      onUpdateBox={updateSlideBox}
-                      onDeleteBox={deleteSlideBox}
-                      onDuplicateBox={duplicateSlideBox}
-                      onReset={resetSlideTextBoxes}
-                      onClearAll={clearSlideTextBoxes}
-                    />
-                  )}
                 </div>
 
-                {/* RIGHT 5 COLUMNS: DECK QUESTION LIST MANAGER */}
-                <div className="xl:col-span-5">
-                  <DeckManager
-                    items={items}
-                    onUpdateItems={setItems}
-                    onSelectIndex={(idx) => {
-                      setSelectedIndex(idx);
-                      setIsOverviewMode(false);
-                    }}
-                    selectedIndex={selectedIndex}
-                    appTheme={appTheme}
-                  />
+                {/* RIGHT COLUMN: Canva-style side panel while editing boxes, else the deck question list */}
+                <div className={isTextBoxEditMode ? 'xl:col-span-4' : 'xl:col-span-5'}>
+                  {isTextBoxEditMode ? (
+                    <div className="xl:sticky xl:top-20">
+                      <SlideTextBoxPanel
+                        boxes={activeTextBoxes}
+                        selectedId={selectedTextBoxId}
+                        appTheme={appTheme}
+                        config={effectiveTextBoxConfig}
+                        textBoxScope={textBoxScope}
+                        hasTextBoxOverride={hasTextBoxOverride}
+                        onChangeTextBoxScope={changeTextBoxScope}
+                        onRevertTextBoxOverride={revertTextBoxOverride}
+                        onAddBox={addSlideBox}
+                        onAddElement={addElementBox}
+                        onAddLayout={addLayoutToDeck}
+                        onUpdateBox={updateSlideBox}
+                        onDeleteBox={deleteSlideBox}
+                        onDuplicateBox={duplicateSlideBox}
+                        onReorderBox={reorderSlideBox}
+                        onSelectBox={setSelectedTextBoxId}
+                        onReset={resetSlideTextBoxes}
+                        onClearAll={clearSlideTextBoxes}
+                        onClose={() => setIsTextBoxEditMode(false)}
+                      />
+                    </div>
+                  ) : (
+                    <DeckManager
+                      items={items}
+                      onUpdateItems={setItems}
+                      onSelectIndex={(idx) => {
+                        setSelectedIndex(idx);
+                        setIsOverviewMode(false);
+                      }}
+                      selectedIndex={selectedIndex}
+                      appTheme={appTheme}
+                      onEditQuestion={(item) => setEditingQuestion(item)}
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -842,6 +858,8 @@ export default function App() {
             onUpdateItems={setItems}
             reviewItems={reviewItems}
             onClearReviewItems={() => setReviewItems([])}
+            prefillEditItem={dedicatedEditItem}
+            onPrefillConsumed={() => setDedicatedEditItem(null)}
           />
         )}
 
@@ -909,6 +927,32 @@ export default function App() {
         config={config}
         currentIndex={selectedIndex}
         slideRef={slideRef}
+        appTheme={appTheme}
+      />
+
+      {/* Template Store Modal */}
+      <TemplateLibraryModal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        config={config}
+        appTheme={appTheme}
+        onApply={(preset) => setConfig(applyDesignToConfig(preset, config))}
+      />
+
+      {/* Inline Question Edit Modal */}
+      <EditQuestionModal
+        isOpen={!!editingQuestion}
+        onClose={() => setEditingQuestion(null)}
+        item={editingQuestion}
+        onSave={(updated) => {
+          setItems(prev => prev.map(q => (q.id === updated.id ? updated : q)));
+        }}
+        onOpenInDedicatedEditor={(item) => {
+          setItems(prev => prev.map(q => (q.id === item.id ? item : q)));
+          setEditingQuestion(null);
+          setDedicatedEditItem(item);
+          setActiveTab('manual');
+        }}
         appTheme={appTheme}
       />
     </div>
