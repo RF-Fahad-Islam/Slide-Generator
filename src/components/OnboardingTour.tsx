@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, ChevronRight, ChevronLeft, Sparkles, Presentation } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -102,50 +102,63 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
   const [current, setCurrent] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [tipRect, setTipRect] = useState<{ top: number; left: number; placement: string } | null>(null);
-  const pendingNavigate = useRef<TourTab | null>(null);
-  const measuringRef = useRef(false);
+  const [isMissing, setIsMissing] = useState(false);
 
   const step = steps[Math.min(current, steps.length - 1)];
 
   const measure = useCallback(() => {
-    if (!step) return;
+    if (!step) return false;
     const el = document.querySelector(step.target) as HTMLElement | null;
-    if (!el) return;
+    if (!el) return false;
     const r = el.getBoundingClientRect();
     const pad = 8;
-    setRect({
-      top: r.top - pad,
-      left: r.left - pad,
-      width: r.width + pad * 2,
-      height: r.height + pad * 2,
-    });
+    const set = (rr: DOMRect) =>
+      setRect({
+        top: rr.top - pad,
+        left: rr.left - pad,
+        width: rr.width + pad * 2,
+        height: rr.height + pad * 2,
+      });
+    set(r);
     el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
     requestAnimationFrame(() => {
       const r2 = el.getBoundingClientRect();
-      setRect({
-        top: r2.top - pad,
-        left: r2.left - pad,
-        width: r2.width + pad * 2,
-        height: r2.height + pad * 2,
-      });
+      set(r2);
     });
+    return true;
   }, [step]);
 
-  // Jump to a step (handles tab navigation before measuring)
+  // Poll for the target element (it may not be in the DOM yet after a tab
+  // navigation), then fall back to a centered tooltip if it never appears
+  // (e.g. a nav anchor hidden on mobile).
+  const tryMeasure = useCallback(() => {
+    let attempts = 0;
+    const poll = () => {
+      attempts++;
+      if (measure()) {
+        setIsMissing(false);
+        return;
+      }
+      if (attempts >= 20) {
+        setIsMissing(true);
+        setRect(null);
+        return;
+      }
+      setTimeout(poll, 150);
+    };
+    poll();
+  }, [measure]);
+
+  // Jump to a step (navigates to the step's tab when needed)
   const goTo = useCallback(
     (index: number) => {
-      const next = Math.max(0, Math.min(steps.length - 1, index));
-      const s = steps[next];
-      setCurrent(next);
-      if (s && s.navigateTab) {
-        onNavigate(s.navigateTab);
-      }
-      setTimeout(measure, 420);
+      setCurrent(Math.max(0, Math.min(steps.length - 1, index)));
+      setTimeout(tryMeasure, 260);
     },
-    [steps, onNavigate, measure]
+    [steps, tryMeasure]
   );
 
-  // Measure position when step changes
+  // When the step changes: navigate to its tab (if any) and measure
   useEffect(() => {
     if (!open) return;
     const s = steps[current];
@@ -153,9 +166,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     if (s.navigateTab) {
       onNavigate(s.navigateTab);
     }
-    const t = setTimeout(measure, 320);
+    const t = setTimeout(tryMeasure, 260);
     return () => clearTimeout(t);
-  }, [current, open, steps, onNavigate, measure]);
+  }, [current, open, steps, onNavigate, tryMeasure]);
 
   // Reposition on resize / scroll
   useEffect(() => {
@@ -168,16 +181,20 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     };
   }, [open, measure]);
 
-  // Position the tooltip near the spotlight
+  // Position the tooltip near the spotlight (or centered when the target is missing)
   useEffect(() => {
-    if (!rect) {
-      setTipRect(null);
-      return;
-    }
-    const pl = step?.placement || 'bottom';
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const tipW = Math.min(360, vw - 24);
+    if (!rect) {
+      if (isMissing) {
+        setTipRect({ top: vh / 2 - 100, left: (vw - tipW) / 2, placement: 'center' });
+      } else {
+        setTipRect(null);
+      }
+      return;
+    }
+    const pl = step?.placement || 'bottom';
     let left = rect.left + rect.width / 2 - tipW / 2;
     left = Math.max(12, Math.min(vw - tipW - 12, left));
     let top: number;
@@ -188,7 +205,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     else if (placement === 'top') top = rect.top - GAP - 150;
     else top = rect.top + rect.height / 2 - 75;
     setTipRect({ top, left, placement });
-  }, [rect, step]);
+  }, [rect, step, isMissing]);
 
   // Keyboard controls
   useEffect(() => {

@@ -53,7 +53,7 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
           for (let p = 0; p < pages.length; p++) {
             setActivePage(p);
             onProgress(`Rendering question paper page ${p + 1} of ${pages.length}...`);
-            await new Promise((r) => setTimeout(r, 130));
+            await new Promise((r) => setTimeout(r, 150));
             const el = pageRef.current;
             if (!el) continue;
             const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
@@ -65,7 +65,7 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
           if (includeAnswerKey) {
             setActivePage(-1);
             onProgress('Rendering answer key page...');
-            await new Promise((r) => setTimeout(r, 130));
+            await new Promise((r) => setTimeout(r, 150));
             const el = pageRef.current;
             if (el) {
               const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });

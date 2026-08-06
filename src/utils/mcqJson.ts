@@ -23,7 +23,7 @@ export const normalizeMCQ = (raw: any, idx: number): MCQItem | null => {
   if (options.length === 0) return null;
 
   const correctKey = String(raw.answer ?? raw.correct ?? raw.answerKey ?? raw.correctOption ?? '').trim();
-  const answer = correctKey || options.find((o) => o.isCorrect)?.key || options[0].key;
+  const answer = correctKey || options.find((o) => o.isCorrect)?.key || '';
 
   return {
     id: raw.id ? String(raw.id) : `q_${Date.now().toString(36)}_${idx}`,

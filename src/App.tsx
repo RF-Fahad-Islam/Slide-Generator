@@ -449,8 +449,10 @@ export default function App() {
 
   // Active slide's effective theme (deck config + slide-level override) — used by
   // the quick Light/Dark toggle so theme choices stay slide-specific.
-  const activeSlideTemplateId = items[selectedIndex]?.customConfig?.templateId || config.templateId;
-  const isActiveSlideLight = activeSlideTemplateId.includes('light');
+  const activeSlideConfigOverride = items[selectedIndex]?.customConfig;
+  const activeSlideTemplateId = activeSlideConfigOverride?.templateId || config.templateId;
+  const activeSlideTheme = getTemplateById(activeSlideTemplateId, activeSlideConfigOverride?.customTheme);
+  const isActiveSlideLight = activeSlideTheme.themeType === 'light';
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${

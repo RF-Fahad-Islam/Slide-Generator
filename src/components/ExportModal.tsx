@@ -8,7 +8,7 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { downloadJSON } from '../utils/mcqJson';
 import jsPDF from 'jspdf';
-import { Download, FileArchive, FileCode, CheckCircle2, Loader2, X, Sparkles, Presentation, ExternalLink, FileText } from 'lucide-react';
+import { Download, FileArchive, CheckCircle2, Loader2, X, Sparkles, Presentation, ExternalLink, FileText } from 'lucide-react';
 
 interface ExportModalProps {
   isOpen: boolean;
