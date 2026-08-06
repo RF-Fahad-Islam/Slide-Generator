@@ -1,8 +1,8 @@
 import pptxgen from 'pptxgenjs';
 import { DeckConfig, MCQItem, SlideTextBox } from '../types';
+import { getSlideBoxContent, getBoxFontFamily } from './slideTextBoxes';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
-import { getSlideBoxContent } from './slideTextBoxes';
 
 export const exportDeckToPPTX = async (
   items: MCQItem[],
@@ -109,7 +109,7 @@ export const exportDeckToPPTX = async (
       color: (box.color || '#ffffff').replace('#', ''),
       bold: box.bold,
       align: box.align,
-      fontFace: box.fontFamily ? box.fontFamily.replace(/'/g, '').split(',')[0].trim() : undefined,
+      fontFace: getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim(),
       valign: 'top',
     });
   };

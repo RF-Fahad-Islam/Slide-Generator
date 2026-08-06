@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { DeckConfig, MCQItem } from '../types';
 import { getTemplateById } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
-import { getSlideBoxContent, formatSlideQNumber } from '../utils/slideTextBoxes';
+import { getSlideBoxContent, formatSlideQNumber, getBoxFontFamily } from '../utils/slideTextBoxes';
 import { getSlideIcon } from '../utils/slideElements';
 import { MathText } from './MathText';
 import { Check, Award, BookOpen, User, Sparkles } from 'lucide-react';
@@ -670,7 +670,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               fontSize: box.fontSize,
               color: box.color,
               textAlign: box.align,
-              fontFamily: box.fontFamily || defaultFont,
+              fontFamily: getBoxFontFamily(box, effectiveConfig),
             };
 
             // ICON ELEMENT (decorative lucide icon, sized by fontSize)
@@ -784,7 +784,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               fontSize: box.fontSize,
               color: box.color,
               textAlign: box.align,
-              fontFamily: box.fontFamily || defaultFont,
+              fontFamily: getBoxFontFamily(box, effectiveConfig),
               backgroundColor: box.bg,
               border: box.shape && box.shape !== 'plain' ? '1px solid rgba(255,255,255,0.12)' : undefined,
             } as React.CSSProperties;

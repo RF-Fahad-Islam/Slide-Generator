@@ -24,6 +24,26 @@ export const clamp = (v: number, min: number, max: number) => Math.min(max, Math
 export const SLIDE_W = 1920;
 export const SLIDE_H = 1080;
 
+// Resolve the effective font for a text box — per-box override first, then the
+// deck's role font for that bind (set in Deck Settings), then the deck base font.
+export const getBoxFontFamily = (box: SlideTextBox, config: DeckConfig): string => {
+  if (box.fontFamily) return box.fontFamily;
+  const def = config.fontFamily || "'Kalpurush', serif";
+  switch (box.bind) {
+    case 'headerTitle':
+    case 'brand':
+      return config.headerFont || def;
+    case 'options':
+    case 'answer':
+      return config.optionsFont || def;
+    case 'footerTag':
+    case 'watermark':
+      return config.footerFont || def;
+    default:
+      return config.bodyFont || def;
+  }
+};
+
 export const defaultSlideTextBoxes = (): SlideTextBox[] => [
   { id: 'b_brand', bind: 'brand', x: 80, y: 60, w: 900, fontSize: 44, color: '#fbbf24', align: 'left', bold: true },
   { id: 'b_header', bind: 'headerTitle', x: 80, y: 120, w: 1200, fontSize: 34, color: '#ffffff', align: 'left', bold: false },

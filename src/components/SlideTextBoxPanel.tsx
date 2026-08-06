@@ -393,7 +393,15 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                     isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
                   }`}
                 >
-                  <option value="">Use deck font ({config.fontFamily || "'Kalpurush', serif"})</option>
+                  <option value="">
+                    {selectedBox.bind === 'headerTitle' || selectedBox.bind === 'brand'
+                      ? `Header font (${config.headerFont || config.fontFamily || "'Kalpurush', serif"})`
+                      : selectedBox.bind === 'options' || selectedBox.bind === 'answer'
+                      ? `Options font (${config.optionsFont || config.fontFamily || "'Kalpurush', serif"})`
+                      : selectedBox.bind === 'footerTag' || selectedBox.bind === 'watermark'
+                      ? `Footer font (${config.footerFont || config.fontFamily || "'Kalpurush', serif"})`
+                      : `Body font (${config.bodyFont || config.fontFamily || "'Kalpurush', serif"})`}
+                  </option>
                   {FONT_PRESETS.map(font => (
                     <option key={font.id} value={font.family}>{font.name}</option>
                   ))}
