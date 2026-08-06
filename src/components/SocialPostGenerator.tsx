@@ -560,32 +560,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   </div>
                 </div>
 
-                {/* The SAME text editor as Slide Studio â€” text box panel with
-                    Style / Text / Elements / Photos / Layouts tabs. Boxes live in
-                    the shared SlideTextBox coordinate space (scaled to the post). */}
-                <SlideTextBoxPanel
-                  boxes={customDesign.boxes}
-                  selectedId={selectedBoxId}
-                  appTheme={appTheme}
-                  config={{ ...config, headerTitle: customHeaderTitle }}
-                  textBoxScope="global"
-                  hasTextBoxOverride={false}
-                  onChangeTextBoxScope={() => {}}
-                  onRevertTextBoxOverride={() => {}}
-                  onApplySlideLayoutToAll={() => {}}
-                  onAddBox={addBox}
-                  onAddElement={addElement}
-                  onAddLayout={addLayout}
-                  onUpdateBox={updateBox}
-                  onDeleteBox={deleteBox}
-                  onDuplicateBox={duplicateBox}
-                  onReorderBox={reorderBox}
-                  onSelectBox={setSelectedBoxId}
-                  onReset={resetDesign}
-                  onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
-                  onClose={() => setIsBoxEditMode(false)}
-                />
-
               </div>
             )}
           </div>
@@ -1125,6 +1099,43 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Canva-style right drawer: the shared text box editor opens here
+          instead of cluttering the left configuration column */}
+      {isCustomMode && isBoxEditMode && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn"
+            onClick={() => setIsBoxEditMode(false)}
+          />
+          <div
+            className="absolute right-0 top-0 h-full w-[380px] max-w-[92vw] shadow-2xl animate-slideInRight overflow-y-auto"
+          >
+            <SlideTextBoxPanel
+              boxes={customDesign.boxes}
+              selectedId={selectedBoxId}
+              appTheme={appTheme}
+              config={{ ...config, headerTitle: customHeaderTitle }}
+              textBoxScope="global"
+              hasTextBoxOverride={false}
+              onChangeTextBoxScope={() => {}}
+              onRevertTextBoxOverride={() => {}}
+              onApplySlideLayoutToAll={() => {}}
+              onAddBox={addBox}
+              onAddElement={addElement}
+              onAddLayout={addLayout}
+              onUpdateBox={updateBox}
+              onDeleteBox={deleteBox}
+              onDuplicateBox={duplicateBox}
+              onReorderBox={reorderBox}
+              onSelectBox={setSelectedBoxId}
+              onReset={resetDesign}
+              onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
+              onClose={() => setIsBoxEditMode(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
