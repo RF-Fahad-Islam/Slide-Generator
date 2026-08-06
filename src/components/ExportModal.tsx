@@ -2,9 +2,11 @@ import React, { useState, useRef } from 'react';
 import { DeckConfig, MCQItem } from '../types';
 import { exportDeckToPPTX } from '../utils/pptxExport';
 import { SlideCanvas } from './SlideCanvas';
+import { QuestionPaperPage, QuestionPaperHandle } from './QuestionPaperPage';
 import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { downloadJSON } from '../utils/mcqJson';
 import jsPDF from 'jspdf';
 import { Download, FileArchive, FileCode, CheckCircle2, Loader2, X, Sparkles, Presentation, ExternalLink, FileText } from 'lucide-react';
 
@@ -33,6 +35,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [showGoogleSlidesGuide, setShowGoogleSlidesGuide] = useState(false);
   const [bulkRenderIndex, setBulkRenderIndex] = useState<number>(currentIndex);
   const exportCanvasRef = useRef<HTMLDivElement | null>(null);
+
+  // Question Paper PDF options
+  const [paperItemsPerPage, setPaperItemsPerPage] = useState<number>(3);
+  const [includeAnswerKey, setIncludeAnswerKey] = useState<boolean>(true);
+  const qpaperRef = useRef<QuestionPaperHandle>(null);
 
   if (!isOpen) return null;
 
@@ -226,6 +233,28 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     saveAs(dataStr, `${config.brandName || 'Deck'}_mcq_backup.json`);
   };
 
+  // Extract MCQs only (clean question array — no config/slide overrides) as re-importable JSON
+  const downloadMCQsJSON = () => {
+    if (items.length === 0) return;
+    const cleanItems = items.map(({ customConfig, ...q }) => q);
+    downloadJSON(cleanItems, `${config.brandName || 'MCQ'}_mcqs.json`);
+  };
+
+  // Question Paper PDF (A4 portrait, N MCQs per page, slide header/footer branding)
+  const downloadQuestionPaper = async () => {
+    if (items.length === 0) return;
+    setIsExporting(true);
+    try {
+      await qpaperRef.current?.renderPdf(setProgressMsg);
+    } catch (err: any) {
+      console.error('Question Paper Export Error:', err);
+      alert('Failed to generate question paper PDF: ' + err.message);
+    } finally {
+      setIsExporting(false);
+      setProgressMsg('');
+    }
+  };
+
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${
       isAppLight ? 'bg-black/40' : 'bg-black/80'
@@ -417,6 +446,87 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </button>
           </div>
 
+          <div className={`p-5 rounded-2xl border space-y-3 ${
+            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+          }`}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h4 className={`text-sm font-bold flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                  <FileText className="w-4 h-4 text-violet-500" />
+                  Question Paper (PDF)
+                </h4>
+                <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  A4 portrait paper with {items.length} MCQs using the slide header &amp; footer branding
+                </p>
+              </div>
+              <button
+                onClick={downloadQuestionPaper}
+                disabled={isExporting || items.length === 0}
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
+                  isAppLight ? 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100' : 'bg-slate-800 hover:bg-slate-700 text-violet-300 border-slate-700'
+                }`}
+              >
+                Export Paper
+              </button>
+            </div>
+
+            {/* Paper options: MCQs per page + answer key */}
+            <div className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border ${
+              isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+            }`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-xs font-bold ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>MCQs per page:</span>
+                <div className="flex items-center gap-1">
+                  {[2, 3, 4, 6].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPaperItemsPerPage(n)}
+                      className={`w-9 h-8 rounded-lg text-xs font-black border transition-all cursor-pointer ${
+                        paperItemsPerPage === n
+                          ? 'bg-amber-500 text-slate-950 border-amber-400'
+                          : isAppLight
+                          ? 'bg-white text-slate-600 border-slate-300 hover:border-amber-400'
+                          : 'bg-slate-950 text-slate-300 border-slate-700 hover:border-amber-500/40'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className={`flex items-center gap-2 text-xs font-bold cursor-pointer ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
+                <input
+                  type="checkbox"
+                  checked={includeAnswerKey}
+                  onChange={(e) => setIncludeAnswerKey(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500 rounded"
+                />
+                Include Answer Key
+              </label>
+            </div>
+          </div>
+
+          <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
+            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+          }`}>
+            <div>
+              <h4 className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>Extract MCQs (JSON)</h4>
+              <p className={`text-xs ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Download only the questions ({items.length}) as a clean array — re-importable into the Question Bank
+              </p>
+            </div>
+            <button
+              onClick={downloadMCQsJSON}
+              disabled={isExporting || items.length === 0}
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
+                isAppLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
+              }`}
+            >
+              Export MCQs
+            </button>
+          </div>
+
           <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
             isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
           }`}>
@@ -472,6 +582,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           />
         )}
       </div>
+
+      {/* Hidden Offscreen A4 Question Paper Renders for PDF Export */}
+      <QuestionPaperPage
+        ref={qpaperRef}
+        items={items}
+        config={config}
+        itemsPerPage={paperItemsPerPage}
+        includeAnswerKey={includeAnswerKey}
+      />
     </div>
   );
 };
