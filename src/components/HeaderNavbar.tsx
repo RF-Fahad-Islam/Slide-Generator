@@ -65,7 +65,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           <div>
             <h1 className={`text-lg font-black tracking-tight flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
               EdTech Studio
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30 font-mono font-black tracking-wide">
+              <span className={`text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 font-mono font-black tracking-wide ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                 MCQ PRO
               </span>
             </h1>

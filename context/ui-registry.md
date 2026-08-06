@@ -3,81 +3,229 @@
 > CLAUDE.md mandates updating this after EVERY feature (run `/imprint` after building
 > a UI component). Purpose: every new component matches what came before.
 
-## Entry format (copy this block per component)
+## Baseline — Established 2026-08-06
 
-```
-### <ComponentName> — src/components/<path>
-- Purpose: one line.
-- Built: Phase N, date.
-- Tokens used: bg-*, text-*, border-* (semantic only).
-- Patterns: layout approach, keyboard handling, states (empty/loading/error).
-- Reuse notes: when to use vs. not; variants.
-```
+[Note: This baseline was established via /imprint audit]
 
-## Established patterns (fill in as components land)
+### Theme System
+
+All components accept `appTheme?: 'dark' | 'light'` prop and derive `const isAppLight = appTheme === 'light'`.
+Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`.
+**Do NOT use Tailwind `dark:` prefix** — use the prop-based `isAppLight` pattern exclusively.
+
+### Color Tokens
+
+| Property | Dark Mode | Light Mode |
+|---|---|---|
+| Panel background | `bg-slate-900` | `bg-white` |
+| Inset/nested background | `bg-slate-950` | `bg-slate-50` |
+| Hover/active background | `bg-slate-800` | `bg-slate-100` |
+| Card border | `border-slate-800` | `border-slate-200` |
+| Input border | `border-slate-800` | `border-slate-300` |
+| Divider border | `border-slate-800` | `border-slate-200` |
+| Text — primary | `text-white` | `text-slate-900` |
+| Text — secondary | `text-slate-300` | `text-slate-700` |
+| Text — muted | `text-slate-400` | `text-slate-600` |
+| Text — tertiary | `text-slate-500` | `text-slate-500` |
+| Accent — primary | `text-amber-500`, `bg-amber-500` | `text-amber-600`, `bg-amber-500` |
+| Accent badge (dark) | `bg-amber-500/20 text-amber-500 border-amber-500/30` | — |
+| Accent badge (light) | — | `bg-amber-100 text-amber-800 border-amber-300` |
+| Success | `bg-emerald-500/10 border-emerald-500/30 text-emerald-300` | `bg-emerald-50 border-emerald-300 text-emerald-800` |
+| Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
+| Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
+
+### Spacing & Radius
+
+| Element | Class |
+|---|---|
+| Main panel/card | `rounded-3xl p-6 lg:p-8` |
+| Inner section card | `rounded-2xl p-4` or `rounded-3xl p-5` |
+| Button (primary) | `rounded-xl` or `rounded-2xl` |
+| Button (small/icon) | `rounded-lg` or `rounded-xl` |
+| Input / Select | `rounded-xl` |
+| Badge / Pill | `rounded-full` or `rounded-lg` |
+| Shadow (main panel) | `shadow-2xl` |
+| Shadow (button) | `shadow-lg` or `shadow-md` |
+| Shadow (light card) | `shadow-sm` |
+
+### Button Patterns
+
+| Type | Dark | Light |
+|---|---|---|
+| Primary (amber) | `bg-amber-500 text-slate-950 hover:brightness-110` | `bg-amber-500 text-slate-950 hover:brightness-110` |
+| Secondary | `bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700` | `bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200` |
+| Ghost/outline | `bg-transparent text-slate-300 hover:text-white` | `bg-transparent text-slate-700 hover:text-slate-900` |
+| Selected/active | `bg-amber-500/10 border-amber-400 text-amber-300 ring-1 ring-amber-400/50` | `bg-amber-50 border-amber-400 ring-1 ring-amber-400/30` |
+| Danger | `bg-rose-500/10 text-rose-400 hover:bg-rose-500/20` | `bg-rose-50 text-rose-500 hover:bg-rose-100` |
+
+### CSS Utility Classes (index.css)
+
+| Class | Purpose |
+|---|---|
+| `.glass-card-fatty` | Dark mode glassmorphism card (bg: rgba(15,23,42,0.85), blur 24px) |
+| `.glass-card-fatty-light` | Light mode glassmorphism card (bg: rgba(255,255,255,0.95), blur 20px) |
+| `.btn-fatty-primary` | Gradient amber primary button with glow shadow |
+| `.bg-mesh-gradient` | Dark ambient background mesh |
+| `.bg-mesh-gradient-light` | Light ambient background mesh |
+| `.animate-fadeIn` | Fade + slide-up entrance animation |
+
+**CRITICAL — `glass-card-fatty` Tailwind v4 gotcha:** The `.glass-card-fatty*` classes are defined as unlayered CSS in `index.css`. In Tailwind v4, unlayered rules have higher specificity than `@layer utilities`. Therefore:
+- Putting `glass-card-fatty` (dark) in the base className and adding `bg-white/95` in the light branch → the DARK background wins → light cards render grey.
+- Correct pattern: put the glass class itself inside the `isAppLight` ternary, e.g.
+  ```jsx
+  className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 ... ${
+    isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-slate-800'
+  }`}
+  ```
+- Same trap applies in reverse: `glass-card-fatty` in dark mode will override `bg-slate-950/85` AND its built-in `border: 1px solid rgba(255,255,255,0.08)` will override `border-slate-800/80`. For dark mode, either use `glass-card-fatty` alone (accept the white-ish border) or use `bg-slate-900/80 border-slate-800` without the glass class.
+
+---
+
+## Established patterns
 
 | Pattern | Decision | First used in |
 |---|---|---|
-| App shell | — pending Phase 2 — | |
-| Lists (questions, review) | — pending — | |
-| Dialogs | — pending — | |
-| Forms | — pending — | |
-| Feedback (confidence flags) | `--warning` + must-confirm (D10) | planned: review screen |
-| Validation panel | persistent list + jump-to links | planned: deck editor |
-| Progress | determinate bar + label | planned: export dialog |
+| App shell | Single-page tab navigation with theme toggle (dark/light) | `App.tsx`, `HeaderNavbar.tsx` |
+| Lists (questions, review) | Reorderable list with search, delete, duplicate | `DeckManager.tsx` |
+| Dialogs | Modal overlay with backdrop blur | `ExportModal.tsx` |
+| Forms | Multi-section form with validation panel | `ManualEditor.tsx`, `DeckSettings.tsx` |
+| Feedback (confidence flags) | `--warning` + must-confirm (D10) | `ValidationPanel.tsx` |
+| Validation panel | Persistent list + jump-to links | `ValidationPanel.tsx` |
+| Progress | Determinate bar + label | `ExportModal.tsx` |
+| Cards | Chunky rounded-3xl cards with shadow-2xl | All components |
+| Theme system | Template registry with hex colors for PPTX parity | `src/templates/registry.ts` |
+| Grid overview | 3-column responsive grid for slide thumbnails | `App.tsx` (overview mode) |
 
 ## Registered components
 
 ### `HeaderNavbar` — `src/components/HeaderNavbar.tsx`
-- Purpose: Main application top navigation bar with tab selector, sample deck loader, app theme toggle, and export trigger.
-- Built: 2026-08-05.
-- Tokens used: `bg-slate-900`, `text-slate-100`, `border-slate-800`, `text-amber-500`.
+- **Background:** `bg-white/95` (light) | `bg-slate-950/85` (dark)
+- **Border:** `border-slate-200` (light) | `border-slate-800/80` (dark)
+- **Radius:** `rounded-2xl` (nav container), `rounded-xl` (buttons)
+- **Text:** `text-slate-900` (light) | `text-slate-100` (dark)
+- **Hover:** `hover:bg-white` (light nav) | `hover:bg-slate-800/80` (dark nav)
+- **Shadow:** `shadow-md` (light) | `shadow-xl` (dark)
+- **Accent:** `bg-amber-500 text-slate-950` (active tab)
 
 ### `SlideCanvas` — `src/components/SlideCanvas.tsx`
-- Purpose: Primary interactive 1920x1080 slide renderer with automatic aspect scaling (`ResizeObserver`), KaTeX rendering, and visual editing overlays.
-- Built: 2026-08-05.
-- Tokens used: `bg-slate-950`, `border-slate-800`, `text-slate-100`.
+- **Background:** `bg-slate-950` (always dark — it's the slide surface)
+- **Border:** `border-slate-800`
+- **Radius:** `rounded-2xl`
+- **Note:** Canvas is always dark regardless of app theme (slide content renders on dark surface)
 
 ### `ManualEditor` — `src/components/ManualEditor.tsx`
-- Purpose: Question authoring form supporting standard MCQs, bohupodi statement questions, and passage stems.
-- Built: 2026-08-05.
+- **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for panel + side cards
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — glass class provides the border internally
+- **Radius:** `rounded-3xl` (panel), `rounded-2xl` (inner cards), `rounded-xl` (buttons/inputs)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl`
+- **Accent:** `bg-amber-500 text-slate-950` (primary button, active tab)
 
 ### `AIUploader` — `src/components/AIUploader.tsx`
-- Purpose: Gemini AI question ingestion panel supporting raw text paste and PDF/image file uploads.
-- Built: 2026-08-05.
+- **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for main panel + result panel
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — glass class provides the border internally
+- **Radius:** `rounded-3xl` (panel), `rounded-2xl` (inputs, result cards)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl`
+- **Accent:** `bg-gradient-to-tr from-amber-500 to-amber-300` (header icon)
 
 ### `DeckManager` — `src/components/DeckManager.tsx`
-- Purpose: Reorderable question deck list manager with item search, delete, and duplicate controls.
-- Built: 2026-08-05.
+- **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for main panel
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — glass class provides the border internally
+- **Radius:** `rounded-3xl` (panel), `rounded-2xl` (question cards), `rounded-xl` (action buttons)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl`
+- **Accent:** `bg-amber-500 text-slate-950` (question number badge)
+- **Selected:** `bg-amber-50 border-amber-400 ring-1 ring-amber-400/30` (light) | `bg-amber-500/10 border-amber-500/60` (dark)
+- **Spacing (fatty):** Panel `p-8`, cards `p-5`, badges `w-9 h-9 rounded-xl text-sm`, stems `text-base`, action buttons `p-2`, icons `w-4 h-4`, list gap `space-y-4`, search `py-2.5 pl-10`, bulk tools `p-4`
 
 ### `DeckSettings` — `src/components/DeckSettings.tsx`
-- Purpose: Branding, typography, background overlay, logo placement, and header/footer customization drawer.
-- Built: 2026-08-05.
+- **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for main panel
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — glass class provides the border internally
+- **Radius:** `rounded-3xl` (sections), `rounded-2xl` (inner cards), `rounded-xl` (inputs)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl`
+- **Accent:** `bg-amber-500 text-slate-950` (selected font, scope button)
 
 ### `ExportModal` — `src/components/ExportModal.tsx`
-- Purpose: Dialog for exporting decks to 16:9 PPTX presentations, PNG slide images, and PDF document formats.
-- Built: 2026-08-05.
+- **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for modal panel
+- **Backdrop:** `bg-black/40` (light) | `bg-black/80` (dark)
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — glass class provides the border internally
+- **Radius:** `rounded-3xl` (modal), `rounded-2xl` (export option cards)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl`
+- **Accent:** `bg-gradient-to-r from-amber-500 to-amber-400` (PPTX button)
 
 ### `QuestionBankView` — `src/components/QuestionBankView.tsx`
-- Purpose: Local question bank repository view with tagging, subject filter, search, and bulk deck import.
-- Built: 2026-08-05.
+- **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for top banner
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — glass class provides the border internally
+- **Radius:** `rounded-3xl` (sections), `rounded-2xl` (deck cards, question cards)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl`
+- **Accent:** `bg-gradient-to-r from-amber-500 to-amber-400` (save button)
+- **Selected:** `bg-amber-50 border-amber-500 ring-2 ring-amber-400/50` (light) | `bg-amber-500/10 border-amber-500/50 ring-1 ring-amber-500/40` (dark)
 
 ### `SocialPostGenerator` — `src/components/SocialPostGenerator.tsx`
-- Purpose: Multi-aspect ratio social media post slide builder for 1:1, 4:5, 9:16, and 16:9 social formats.
-- Built: 2026-08-05.
-
-### `ValidationPanel` — `src/components/ValidationPanel.tsx`
-- Purpose: Live question audit panel detecting missing correct options, duplicate choices, and empty question stems.
-- Built: 2026-08-05.
-
-### `MathText` — `src/components/MathText.tsx`
-- Purpose: KaTeX inline formula parser component converting LaTeX delimiters `\(...\)` and `$...$` to math typography.
-- Built: 2026-08-05.
+- **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for header banner + 4 selector cards
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — glass class provides the border internally
+- **Radius:** `rounded-3xl` (panels), `rounded-2xl` (selector buttons)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl` (panels), `shadow-xl` (sub-panels)
+- **Accent:** `bg-amber-500 text-slate-950` (export button, header icon)
 
 ### `SettingsView` — `src/components/SettingsView.tsx`
-- Purpose: Multi-provider AI settings panel for Google Gemini & OpenRouter API key BYOK configuration, model selection, and API diagnostic test connection.
-- Built: 2026-08-05.
-- Tokens used: `bg-slate-900`, `border-slate-800`, `text-amber-400`, `text-blue-400`.
+- **Background:** `glass-card-fatty-light` (light) | `bg-slate-950/85` (dark) — dark mode uses plain Tailwind because `glass-card-fatty` would override the slate-800 border
+- **Border:** `border-slate-200` (light) | `border-slate-800/80` (dark)
+- **Radius:** `rounded-3xl` (sections), `rounded-2xl` (provider cards, inputs)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl`
+- **Accent:** `bg-gradient-to-tr from-amber-500 to-amber-300` (header icon)
+
+### `ValidationPanel` — `src/components/ValidationPanel.tsx`
+- **Background:** `bg-slate-50` (light) | `bg-slate-900` (dark)
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark)
+- **Radius:** `rounded-2xl`
+- **Text:** `text-slate-900` (light) | `text-slate-100` (dark)
+- **Accent:** `text-amber-700` (light) | `text-amber-300` (dark) for section header
+- **Success:** `bg-emerald-50 border-emerald-300 text-emerald-800` (light) | `bg-emerald-500/10 border-emerald-500/30 text-emerald-300` (dark)
+
+### `MathText` — `src/components/MathText.tsx`
+- **Purpose:** KaTeX inline formula parser. No own styling — inherits from parent.
+
+### `SlideDecksHome` — `src/components/SlideDecksHome.tsx`
+- **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for hero + tool cards
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — `glass-card-fatty-light` provides the slate-200 border + shadow internally
+- **Radius:** `rounded-3xl` (all cards)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** provided by `glass-card-fatty-light` (light) | `shadow-xl` (dark, via `glass-card-fatty` + Tailwind)
+- **Accent:** `bg-amber-500 text-slate-950` (primary buttons), `bg-indigo-600 text-white` (social tool)
+- **Gotcha:** Never combine `glass-card-fatty` (dark) with `bg-white/95` in light mode — the unlayered CSS class wins over Tailwind v4 utilities, producing a grey bleed-through. Always swap to `glass-card-fatty-light` in light mode.
+
+### `App.tsx` (Overview Mode)
+- **Background:** `bg-white` (light) | `bg-slate-900` (dark)
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark)
+- **Radius:** `rounded-3xl` (grid cards), `rounded-2xl` (controls)
+- **Text:** `text-slate-900` (light) | `text-white` (dark)
+- **Shadow:** `shadow-2xl`
+- **Selected:** `bg-amber-50 border-amber-500 ring-2 ring-amber-400/50` (light) | `bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/40` (dark)
+- **Main content max-width:** `max-w-[1600px]` (bumped from `max-w-7xl` for more breathing room)
+
+### `App.tsx` (Slide Studio / Preview Tab — fatty)
+- **Grid gap:** `gap-10` between canvas column and deck manager column
+- **Canvas container padding:** `p-4 sm:p-6 lg:p-8`
+- **Control bar padding:** `p-5 rounded-3xl`
+- **Nav buttons:** `p-2.5 rounded-xl` (prev/next), `px-4 py-2.5` (view all, answer reveal)
+- **Theme toggle button:** `px-3 py-2 rounded-xl`
+
+### `SidebarNav` — `src/components/SidebarNav.tsx`
+- **Background:** `bg-white/95` (light) | `bg-slate-950/85` (dark) with `backdrop-blur-2xl`
+- **Border:** `border-slate-200` (light) | `border-slate-800/80` (dark)
+- **Width:** `w-64` (expanded) | `w-20` (collapsed) — transition `duration-300`
+- **Collapse toggle:** Floating amber circle button (`w-6 h-6 rounded-full bg-amber-500`) on right edge, vertically centered
+- **Collapsed mode:** Icons only (`w-5 h-5`), labels hidden, `title` attribute for tooltip
+- **Expanded mode:** Icons + labels + badges
+- **Persistence:** `localStorage` key `sidebar_collapsed` (boolean)
+- **Accent:** `bg-amber-500 text-slate-950` (active nav item), `bg-gradient-to-r from-amber-500 to-amber-400` (export button)
 
 ---
 

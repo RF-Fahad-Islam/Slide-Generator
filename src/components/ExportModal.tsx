@@ -227,47 +227,51 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className={`relative w-full max-w-2xl border rounded-3xl p-6 lg:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto ${
-        isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${
+      isAppLight ? 'bg-black/40' : 'bg-black/80'
+    }`}>
+      <div className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} relative w-full max-w-2xl border p-6 lg:p-8 space-y-6 max-h-[90vh] overflow-y-auto ${
+        isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-slate-800'
       }`}>
-        {/* Close Button */}
         <button
           onClick={onClose}
           disabled={isExporting}
-          className="absolute top-5 right-5 p-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white border border-slate-800 cursor-pointer"
+          className={`absolute top-5 right-5 p-2.5 rounded-xl cursor-pointer transition-colors ${
+            isAppLight ? 'bg-slate-100 text-slate-500 hover:text-slate-900 border border-slate-200' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+          }`}
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Header */}
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
-          <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            <Presentation className="w-6 h-6 stroke-[2.5]" />
+        <div className={`flex items-center gap-4 pb-4 border-b ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
+          <div className="p-4 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25">
+            <Presentation className="w-7 h-7 stroke-[2.5]" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white">Export 16:9 Presentation Deck</h3>
-            <p className="text-xs text-slate-400">
+            <h3 className={`text-xl font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Export 16:9 Presentation Deck</h3>
+            <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
               Download PowerPoint (.pptx), Google Slides, high-res PNG images or JSON
             </p>
           </div>
         </div>
 
-        {/* Export Options Grid */}
         <div className="space-y-4">
-          {/* POWERPOINT PPTX EXPORT */}
-          <div className="p-5 rounded-2xl bg-slate-950 border border-amber-500/40 bg-gradient-to-r from-amber-500/10 to-transparent flex items-center justify-between gap-4 shadow-lg">
+          <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 shadow-lg ${
+            isAppLight
+              ? 'bg-amber-50 border-amber-300 shadow-amber-200/30'
+              : 'bg-slate-950 border-amber-500/40 bg-gradient-to-r from-amber-500/10 to-transparent'
+          }`}>
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black uppercase">
                   Recommended
                 </span>
-                <h4 className="text-base font-extrabold text-amber-300 flex items-center gap-2">
-                  <Presentation className="w-4 h-4 text-amber-400" />
+                <h4 className={`text-base font-extrabold flex items-center gap-2 ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
+                  <Presentation className="w-4 h-4" />
                   Download PowerPoint (.pptx)
                 </h4>
               </div>
-              <p className="text-xs text-slate-300 mt-1">
+              <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 Generates native 16:9 PowerPoint slides formatted with brand logos, headers & option cards.
               </p>
             </div>
@@ -280,44 +284,48 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </button>
           </div>
 
-          {/* GOOGLE SLIDES EXPORT */}
-          <div className="p-5 rounded-2xl bg-slate-950 border border-blue-500/40 bg-gradient-to-r from-blue-500/10 to-transparent flex items-center justify-between gap-4 shadow-lg">
+          <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 shadow-lg ${
+            isAppLight
+              ? 'bg-blue-50 border-blue-300 shadow-blue-200/30'
+              : 'bg-slate-950 border-blue-500/40 bg-gradient-to-r from-blue-500/10 to-transparent'
+          }`}>
             <div>
-              <h4 className="text-base font-extrabold text-blue-300 flex items-center gap-2">
-                <ExternalLink className="w-4 h-4 text-blue-400" />
+              <h4 className={`text-base font-extrabold flex items-center gap-2 ${isAppLight ? 'text-blue-700' : 'text-blue-300'}`}>
+                <ExternalLink className="w-4 h-4" />
                 Export to Google Slides
               </h4>
-              <p className="text-xs text-slate-300 mt-1">
+              <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 Downloads 16:9 .pptx file and opens Google Drive / Slides to import in 1 click.
               </p>
             </div>
             <button
               onClick={handleExportGoogleSlides}
               disabled={isExporting}
-              className="px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-black text-xs shadow-lg shadow-blue-500/20 shrink-0 cursor-pointer disabled:opacity-50 transition-all"
+              className="px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-black text-xs shadow-lg shadow-blue-500/20 shrink-0 cursor-pointer disabled:opacity-50 transition-all"
             >
               Google Slides
             </button>
           </div>
 
-          {/* GOOGLE SLIDES STEP GUIDE CARD */}
           {showGoogleSlidesGuide && (
-            <div className="p-4 rounded-2xl bg-blue-950/80 border border-blue-500/50 text-blue-100 text-xs space-y-3 animate-fadeIn">
+            <div className={`p-4 rounded-2xl border text-xs space-y-3 animate-fadeIn ${
+              isAppLight ? 'bg-blue-50 border-blue-300 text-blue-900' : 'bg-blue-950/80 border-blue-500/50 text-blue-100'
+            }`}>
               <div className="flex items-center justify-between">
-                <h5 className="font-bold text-blue-300 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <h5 className={`font-bold flex items-center gap-2 ${isAppLight ? 'text-blue-800' : 'text-blue-300'}`}>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   PPTX Downloaded! Next steps for Google Slides:
                 </h5>
                 <button
                   onClick={() => setShowGoogleSlidesGuide(false)}
-                  className="text-slate-400 hover:text-white text-[10px]"
+                  className={`text-[10px] cursor-pointer ${isAppLight ? 'text-slate-500 hover:text-slate-800' : 'text-slate-400 hover:text-white'}`}
                 >
                   Dismiss
                 </button>
               </div>
-              <ol className="list-decimal list-inside space-y-1.5 text-slate-200">
+              <ol className={`list-decimal list-inside space-y-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
                 <li>Click the button below to open Google Drive / Google Slides</li>
-                <li>Drag and drop the downloaded <code className="text-amber-300 font-mono">.pptx</code> file into Google Drive</li>
+                <li>Drag and drop the downloaded <code className={`font-mono ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>.pptx</code> file into Google Drive</li>
                 <li>Double click to open and edit directly as a Google Presentation!</li>
               </ol>
               <div className="pt-1 flex gap-2">
@@ -325,7 +333,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   href="https://slides.new"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500 text-slate-950 font-bold text-xs hover:bg-blue-400"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500 text-white font-bold text-xs hover:bg-blue-400"
                 >
                   Open Google Slides (slides.new) <ExternalLink className="w-3.5 h-3.5" />
                 </a>
@@ -333,7 +341,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   href="https://drive.google.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs border border-slate-700 hover:text-white"
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs border ${
+                    isAppLight ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' : 'bg-slate-800 text-slate-200 border-slate-700 hover:text-white'
+                  }`}
                 >
                   Open Google Drive <ExternalLink className="w-3.5 h-3.5" />
                 </a>
@@ -341,85 +351,98 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
           )}
 
-          {/* EXPORT TO PDF DOCUMENT */}
-          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
+          <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
+            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+          }`}>
             <div>
-              <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-400" />
+              <h4 className={`text-sm font-bold flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                <FileText className="w-4 h-4 text-emerald-500" />
                 Export PDF Document
               </h4>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                 Generates a print-ready vector PDF document with 1 slide per page
               </p>
             </div>
             <button
               onClick={downloadPDF}
               disabled={isExporting}
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-xs border border-slate-700 shrink-0 cursor-pointer disabled:opacity-50"
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
+                isAppLight ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border-slate-700'
+              }`}
             >
               Export PDF
             </button>
           </div>
 
-          {/* BULK PNG ZIP EXPORT */}
-          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
+          <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
+            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+          }`}>
             <div>
-              <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <FileArchive className="w-4 h-4 text-amber-400" />
+              <h4 className={`text-sm font-bold flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                <FileArchive className="w-4 h-4 text-amber-500" />
                 Bulk Images ZIP ({items.length} PNG Slides)
               </h4>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                 Generates high-resolution 1920x1080 PNG image files for all slides in deck
               </p>
             </div>
             <button
               onClick={downloadBulkZip}
               disabled={isExporting}
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs border border-slate-700 shrink-0 cursor-pointer disabled:opacity-50"
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
+                isAppLight ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100' : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
+              }`}
             >
               Export ZIP
             </button>
           </div>
 
-          {/* SINGLE SLIDE PNG EXPORT */}
-          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
+          <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
+            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+          }`}>
             <div>
-              <h4 className="text-sm font-bold text-slate-100">Current Slide Image (PNG)</h4>
-              <p className="text-xs text-slate-400">
+              <h4 className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>Current Slide Image (PNG)</h4>
+              <p className={`text-xs ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                 Download current active slide #{currentIndex + 1} at 1920x1080 resolution
               </p>
             </div>
             <button
               onClick={downloadSingleSlide}
               disabled={isExporting}
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 shrink-0 cursor-pointer disabled:opacity-50"
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
+                isAppLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+              }`}
             >
               Export PNG
             </button>
           </div>
 
-          {/* BACKUP JSON EXPORT */}
-          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
+          <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
+            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+          }`}>
             <div>
-              <h4 className="text-sm font-bold text-slate-100">Backup Deck JSON</h4>
-              <p className="text-xs text-slate-400">
+              <h4 className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>Backup Deck JSON</h4>
+              <p className={`text-xs ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                 Save full editable deck questions & brand configurations to JSON file
               </p>
             </div>
             <button
               onClick={downloadDeckJSON}
               disabled={isExporting}
-              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs border border-slate-800 shrink-0 cursor-pointer"
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer transition-colors ${
+                isAppLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
+              }`}
             >
               Export JSON
             </button>
           </div>
         </div>
 
-        {/* Loading Progress State */}
         {isExporting && (
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-3">
-            <Loader2 className="w-5 h-5 animate-spin shrink-0 text-amber-400" />
+          <div className={`p-4 rounded-2xl border text-xs flex items-center gap-3 ${
+            isAppLight ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+          }`}>
+            <Loader2 className="w-5 h-5 animate-spin shrink-0" />
             <span className="font-semibold">{progressMsg}</span>
           </div>
         )}

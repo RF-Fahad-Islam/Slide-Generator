@@ -13,6 +13,7 @@ export interface ValidationIssue {
 interface ValidationPanelProps {
   items: MCQItem[];
   onSelectItem: (index: number) => void;
+  appTheme?: 'dark' | 'light';
 }
 
 export function validateDeck(items: MCQItem[]): ValidationIssue[] {
@@ -84,22 +85,27 @@ export function validateDeck(items: MCQItem[]): ValidationIssue[] {
   return issues;
 }
 
-export const ValidationPanel: React.FC<ValidationPanelProps> = ({ items, onSelectItem }) => {
+export const ValidationPanel: React.FC<ValidationPanelProps> = ({ items, onSelectItem, appTheme = 'dark' }) => {
   const issues = validateDeck(items);
   const errorsCount = issues.filter(i => i.type === 'error').length;
   const warningsCount = issues.filter(i => i.type === 'warning').length;
+  const isAppLight = appTheme === 'light';
 
   if (issues.length === 0) {
     return (
-      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2.5">
-          <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+      <div className={`p-5 rounded-3xl border flex items-center justify-between text-xs ${
+        isAppLight ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+      }`}>
+        <div className="flex items-center gap-3">
+          <ShieldCheck className={`w-6 h-6 shrink-0 ${isAppLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
           <div>
-            <strong className="font-bold text-sm block">Deck Health: Pristine</strong>
-            <span>All {items.length} questions have correct answers, valid options, & clean formatting.</span>
+            <strong className="font-black text-sm block">Deck Health: Pristine</strong>
+            <span className="font-semibold">All {items.length} questions have correct answers, valid options, & clean formatting.</span>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold uppercase tracking-wider">
+        <span className={`px-3 py-1 rounded-full font-mono text-[10px] font-black uppercase tracking-wider ${
+          isAppLight ? 'bg-emerald-200 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300'
+        }`}>
           100% Ready
         </span>
       </div>
@@ -107,22 +113,28 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({ items, onSelec
   }
 
   return (
-    <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 shadow-lg">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+    <div className={`p-5 rounded-3xl border space-y-3 ${
+      isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
+    }`}>
+      <div className={`flex items-center justify-between border-b pb-2.5 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400" />
-          <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
+          <h4 className={`text-xs font-bold uppercase tracking-wider ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
             Deck Quality Inspector ({issues.length} Issues)
           </h4>
         </div>
         <div className="flex items-center gap-2 text-[11px] font-bold">
           {errorsCount > 0 && (
-            <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30">
+            <span className={`px-2 py-0.5 rounded-md border ${
+              isAppLight ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+            }`}>
               {errorsCount} Errors
             </span>
           )}
           {warningsCount > 0 && (
-            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            <span className={`px-2 py-0.5 rounded-md border ${
+              isAppLight ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+            }`}>
               {warningsCount} Warnings
             </span>
           )}
@@ -136,20 +148,26 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({ items, onSelec
             onClick={() => onSelectItem(issue.itemIndex)}
             className={`w-full text-left p-2.5 rounded-xl border text-xs flex items-start justify-between gap-3 transition-all hover:brightness-110 cursor-pointer ${
               issue.type === 'error'
-                ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                ? isAppLight
+                  ? 'bg-rose-50 border-rose-300 text-rose-800'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                : isAppLight
+                  ? 'bg-amber-50 border-amber-300 text-amber-800'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-200'
             }`}
           >
             <div className="space-y-0.5 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="px-1.5 py-0.5 rounded bg-slate-950 font-mono text-[10px] font-bold text-slate-300 border border-slate-800">
+                <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold border ${
+                  isAppLight ? 'bg-white text-slate-700 border-slate-200' : 'bg-slate-950 text-slate-300 border-slate-800'
+                }`}>
                   Q{issue.itemIndex + 1}
                 </span>
-                <span className="font-bold truncate text-slate-100">{issue.stemSnippet}</span>
+                <span className={`font-bold truncate ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>{issue.stemSnippet}</span>
               </div>
               <p className="text-[11px] opacity-90 leading-tight">{issue.message}</p>
             </div>
-            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 shrink-0 mt-0.5">
+            <span className={`flex items-center gap-1 text-[10px] font-bold shrink-0 mt-0.5 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
               <span>Fix</span>
               <ArrowRight className="w-3 h-3" />
             </span>

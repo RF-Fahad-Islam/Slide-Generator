@@ -29,7 +29,7 @@ interface SlideDecksHomeProps {
   onOpenDeck: (items: MCQItem[], deckTitle?: string) => void;
   onOpenDeckSettings: (items: MCQItem[], config?: DeckConfig) => void;
   onOpenSocialGenerator: (items: MCQItem[]) => void;
-  onNavigateTab: (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings') => void;
+  onNavigateTab: (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'ai-keys') => void;
   onSelectTemplate?: (templateId: string) => void;
   onLoadSample?: (sampleIndex: number) => void;
   appTheme: 'dark' | 'light';
@@ -80,9 +80,9 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
     <div className="space-y-10 animate-fadeIn">
       {/* SECTION 1: HERO DASHBOARD HEADER HUB */}
       <div
-        className={`glass-card-fatty p-8 lg:p-10 relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 ${
+        className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-8 lg:p-10 relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 ${
           isAppLight
-            ? 'bg-gradient-to-r from-amber-500/15 via-amber-100/50 to-white border-amber-200 text-slate-900 shadow-xl'
+            ? 'border-amber-200 text-slate-900'
             : 'bg-gradient-to-r from-amber-500/20 via-slate-950 to-slate-900 border-amber-500/30 text-white'
         }`}
       >
@@ -160,9 +160,9 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
           {/* Tool 1: 16:9 Slide Presentation Generator */}
           <div
             onClick={() => onNavigateTab('preview')}
-            className={`glass-card-fatty p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
               isAppLight
-                ? 'bg-white/95 border-slate-200 hover:border-amber-400 shadow-lg'
+                ? 'hover:border-amber-400'
                 : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/50 shadow-xl'
             }`}
           >
@@ -194,9 +194,9 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
           {/* Tool 2: Social Media Posting Card Generator */}
           <div
             onClick={() => onNavigateTab('social')}
-            className={`glass-card-fatty p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
               isAppLight
-                ? 'bg-white/95 border-slate-200 hover:border-indigo-400 shadow-lg'
+                ? 'hover:border-indigo-400'
                 : 'bg-slate-900/80 border-slate-800 hover:border-indigo-500/50 shadow-xl'
             }`}
           >
@@ -228,114 +228,136 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
           {/* Tool 3: AI PDF & Image Parser */}
           <div
             onClick={() => onNavigateTab('ai')}
-            className={`p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
               isAppLight
-                ? 'bg-white border-slate-200 hover:border-emerald-400 hover:shadow-xl'
-                : 'bg-slate-900 border-slate-800 hover:border-emerald-500 shadow-xl'
+                ? 'hover:border-emerald-400'
+                : 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-emerald-600 text-white font-black shadow-md group-hover:scale-105 transition-transform">
-                  <Sparkles className="w-6 h-6 stroke-[2.5]" />
+                <div className="p-3.5 rounded-2xl bg-emerald-600 text-white font-black shadow-lg group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-7 h-7 stroke-[2.5]" />
                 </div>
-                <span className="text-[10px] font-mono font-black px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   AI PDF Extract
                 </span>
               </div>
               <div>
-                <h3 className={`text-base font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                   <span>AI PDF / Image Parser</span>
-                  <ArrowRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-5 h-5 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                 </h3>
-                <p className={`text-xs mt-1 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                   Upload coaching question papers, PDFs, or photos. Gemini AI extracts questions, options & answers automatically!
                 </p>
               </div>
             </div>
-            <div className="text-xs font-bold text-emerald-400 group-hover:underline pt-2 border-t border-slate-800/80">
-              Upload PDF or Text →
+            <div className="text-sm font-black text-emerald-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
+              <span>Upload PDF or Text</span>
+              <ArrowRight className="w-4 h-4" />
             </div>
           </div>
 
           {/* Tool 4: Bulk MCQ Input & Editor */}
           <div
             onClick={() => onNavigateTab('manual')}
-            className={`p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
               isAppLight
-                ? 'bg-white border-slate-200 hover:border-amber-400 hover:shadow-xl'
-                : 'bg-slate-900 border-slate-800 hover:border-amber-500 shadow-xl'
+                ? 'hover:border-amber-400'
+                : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl font-bold ${
-                  isAppLight ? 'bg-amber-100 text-amber-800' : 'bg-slate-800 text-amber-400'
-                }`}>
-                  <Edit3 className="w-5 h-5" />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="p-3.5 rounded-2xl bg-amber-500 text-slate-950 font-black shadow-lg group-hover:scale-110 transition-transform">
+                  <Edit3 className="w-7 h-7 stroke-[2.5]" />
                 </div>
-                <div>
-                  <h4 className={`text-sm font-extrabold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Bulk MCQ Editor</h4>
-                  <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Manual text input & Multiselect (বহুপদী)</p>
-                </div>
+                <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Bulk Editor
+                </span>
+              </div>
+              <div>
+                <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                  <span>Bulk MCQ Editor</span>
+                  <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
+                </h3>
+                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Manual text input & Multiselect (বহুপদী). Paste raw questions or enter them one by one with full Bangla support.
+                </p>
               </div>
             </div>
-            <div className="text-xs font-bold text-amber-500 group-hover:underline pt-2 border-t border-slate-800/80">
-              Open Bulk Editor →
+            <div className="text-sm font-black text-amber-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
+              <span>Open Bulk Editor</span>
+              <ArrowRight className="w-4 h-4" />
             </div>
           </div>
 
           {/* Tool 5: Question Bank Archive */}
           <div
             onClick={() => onNavigateTab('bank')}
-            className={`p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
               isAppLight
-                ? 'bg-white border-slate-200 hover:border-amber-400 hover:shadow-xl'
-                : 'bg-slate-900 border-slate-800 hover:border-amber-500 shadow-xl'
+                ? 'hover:border-indigo-400'
+                : 'bg-slate-900/80 border-slate-800 hover:border-indigo-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl font-bold ${
-                  isAppLight ? 'bg-amber-100 text-amber-800' : 'bg-slate-800 text-amber-400'
-                }`}>
-                  <Database className="w-5 h-5" />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="p-3.5 rounded-2xl bg-indigo-600 text-white font-black shadow-lg group-hover:scale-110 transition-transform">
+                  <Database className="w-7 h-7 stroke-[2.5]" />
                 </div>
-                <div>
-                  <h4 className={`text-sm font-extrabold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Question Bank</h4>
-                  <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Saved questions archive & tag builder</p>
-                </div>
+                <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  MCQ Archive
+                </span>
+              </div>
+              <div>
+                <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                  <span>Question Bank</span>
+                  <ArrowRight className="w-5 h-5 text-indigo-400 group-hover:translate-x-1 transition-transform" />
+                </h3>
+                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Saved questions archive with subject tags, search filters, and bulk import to any active deck.
+                </p>
               </div>
             </div>
-            <div className="text-xs font-bold text-amber-500 group-hover:underline pt-2 border-t border-slate-800/80">
-              Open Question Bank →
+            <div className="text-sm font-black text-indigo-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
+              <span>Open Question Bank</span>
+              <ArrowRight className="w-4 h-4" />
             </div>
           </div>
 
           {/* Tool 6: Deck Branding & Font Customization */}
           <div
             onClick={() => onNavigateTab('settings')}
-            className={`p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
               isAppLight
-                ? 'bg-white border-slate-200 hover:border-amber-400 hover:shadow-xl'
-                : 'bg-slate-900 border-slate-800 hover:border-amber-500 shadow-xl'
+                ? 'hover:border-violet-400'
+                : 'bg-slate-900/80 border-slate-800 hover:border-violet-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl font-bold ${
-                  isAppLight ? 'bg-amber-100 text-amber-800' : 'bg-slate-800 text-amber-400'
-                }`}>
-                  <Sliders className="w-5 h-5" />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="p-3.5 rounded-2xl bg-violet-600 text-white font-black shadow-lg group-hover:scale-110 transition-transform">
+                  <Sliders className="w-7 h-7 stroke-[2.5]" />
                 </div>
-                <div>
-                  <h4 className={`text-sm font-extrabold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Branding & Fonts</h4>
-                  <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Custom Bangla fonts, headers & footers</p>
-                </div>
+                <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/30">
+                  Branding
+                </span>
+              </div>
+              <div>
+                <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                  <span>Branding & Fonts</span>
+                  <ArrowRight className="w-5 h-5 text-violet-400 group-hover:translate-x-1 transition-transform" />
+                </h3>
+                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Custom Bangla fonts, logo positioning, header/footer banners, background presets & per-slide overrides.
+                </p>
               </div>
             </div>
-            <div className="text-xs font-bold text-amber-500 group-hover:underline pt-2 border-t border-slate-800/80">
-              Configure Branding →
+            <div className="text-sm font-black text-violet-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
+              <span>Configure Branding</span>
+              <ArrowRight className="w-4 h-4" />
             </div>
           </div>
         </div>
@@ -422,7 +444,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                       ? 'bg-amber-50/90 border-amber-400 shadow-xl ring-2 ring-amber-400/40'
                       : 'bg-slate-900 border-amber-500/60 shadow-2xl ring-2 ring-amber-500/30'
                     : isAppLight
-                    ? 'glass-card-fatty-light bg-white/95 border-slate-200 hover:border-amber-400 shadow-lg'
+                    ? 'glass-card-fatty-light hover:border-amber-400'
                     : 'glass-card-fatty bg-slate-900/90 border-slate-800 hover:border-slate-700'
                 }`}
               >
@@ -440,7 +462,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                         {deck.questionCount} Questions
                       </span>
                       {deck.isCurrent && (
-                        <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase flex items-center gap-1">
+                        <span className={`text-[10px] font-bold uppercase flex items-center gap-1 ${isAppLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                           <CheckCircle2 className="w-3.5 h-3.5" /> Active Deck
                         </span>
                       )}

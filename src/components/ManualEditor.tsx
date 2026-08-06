@@ -244,15 +244,17 @@ iii. অস্ত্রোপচার
 
   return (
     <div
-      className={`border rounded-3xl p-6 lg:p-8 shadow-2xl space-y-8 ${
+      className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border p-6 lg:p-8 space-y-8 ${
         isAppLight
-          ? 'bg-white border-slate-200 text-slate-900'
-          : 'bg-slate-900 border-slate-800 text-white'
+          ? 'border-slate-200'
+          : 'bg-slate-900/80 border-slate-800'
       }`}
     >
       {/* Header Bar & Tab Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4 border-slate-700/50">
-        <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl border bg-slate-950/20 border-slate-700/50">
+      <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-4 ${isAppLight ? 'border-slate-200' : 'border-slate-700/50'}`}>
+        <div className={`flex flex-wrap items-center gap-2 p-1.5 rounded-2xl border ${
+          isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950/20 border-slate-700/50'
+        }`}>
           <button
             onClick={() => setActiveSubTab('bulk')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -414,21 +416,21 @@ iii. অস্ত্রোপচার
 
           {/* Format Helper Sidebar & CSV Import */}
           <div
-            className={`p-6 rounded-2xl border text-xs flex flex-col gap-4 ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border text-xs flex flex-col gap-4 ${
               isAppLight
-                ? 'bg-slate-50 border-slate-200 text-slate-700'
-                : 'bg-slate-950 border-slate-800 text-slate-300'
+                ? 'border-slate-200'
+                : 'bg-slate-950 border-slate-800'
             }`}
           >
             {/* CSV Import Box */}
             <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-900/10 border border-emerald-500/30 space-y-3">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
-                <h4 className="font-extrabold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <h4 className={`font-extrabold text-xs uppercase tracking-wider ${isAppLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                   CSV File Import
                 </h4>
               </div>
-              <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+              <p className={`text-[11px] leading-snug ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 Upload a structured <code className="font-mono font-bold">.csv</code> spreadsheet
                 with columns: <code className="font-mono font-bold">stem, A, B, C, D, correct</code>
               </p>
@@ -517,13 +519,13 @@ iii. অস্ত্রোপচার
       {/* SUB-TAB 2: QUESTION REVIEWER QUEUE (Review, Edit & Approve Gatekeeper) */}
       {activeSubTab === 'review' && (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30">
             <div>
-              <h3 className="text-base font-extrabold text-amber-500 flex items-center gap-2">
+              <h3 className="text-base font-black text-amber-500 flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
                 Questions Creator Review Queue ({unapprovedQueue.length} Pending Approval)
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 All parsed questions from AI, bulk text, or CSV pass through here for your inspection & editing before joining your active slide deck.
               </p>
             </div>
@@ -562,10 +564,10 @@ iii. অস্ত্রোপচার
               {unapprovedQueue.map((item, idx) => (
                 <div
                   key={item.id}
-                  className={`p-5 rounded-2xl border transition-all space-y-3 ${
+                  className={`p-5 rounded-3xl border transition-all space-y-3 ${
                     isAppLight
-                      ? 'bg-slate-50 border-slate-200 text-slate-900 shadow-sm'
-                      : 'bg-slate-950 border-slate-800 text-slate-100'
+                      ? 'glass-card-fatty-light border-slate-200 text-slate-900'
+                      : 'glass-card-fatty bg-slate-950 border-slate-800 text-slate-100'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -595,7 +597,11 @@ iii. অস্ত্রোপচার
                       <button
                         type="button"
                         onClick={() => loadItemIntoForm(item, 'queue')}
-                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold border border-slate-700 flex items-center gap-1 cursor-pointer"
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1 cursor-pointer transition-colors ${
+                          isAppLight
+                            ? 'bg-slate-100 hover:bg-slate-200 text-amber-700 border-slate-300'
+                            : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
+                        }`}
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                         <span>Edit in Form</span>
@@ -603,7 +609,7 @@ iii. অস্ত্রোপচার
                       <button
                         type="button"
                         onClick={() => approveQueueItem(item.id)}
-                        className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black shadow-sm flex items-center gap-1 cursor-pointer"
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black shadow-sm flex items-center gap-1 cursor-pointer"
                       >
                         <Check className="w-3.5 h-3.5" />
                         <span>Approve</span>
@@ -611,7 +617,9 @@ iii. অস্ত্রোপচার
                       <button
                         type="button"
                         onClick={() => removeQueueItem(item.id)}
-                        className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 cursor-pointer"
+                        className={`p-1.5 rounded-xl border cursor-pointer transition-colors ${
+                          isAppLight ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
+                        }`}
                         title="Remove"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -906,13 +914,13 @@ iii. অস্ত্রোপচার
 
       {/* ACTIVE PRESENTATION DECK RE-EDITOR INSPECTOR */}
       {items.length > 0 && (
-        <div className="pt-8 border-t border-slate-700/50 space-y-4">
+        <div className={`pt-8 border-t space-y-4 ${isAppLight ? 'border-slate-200' : 'border-slate-700/50'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-extrabold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+              <h3 className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-700' : 'text-amber-500'}`}>
                 <ListOrdered className="w-4 h-4" /> Active Presentation Deck Questions ({items.length})
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Click "Edit in Creator" on any existing MCQ to update its stem, options, or answer key.
               </p>
             </div>
@@ -936,7 +944,7 @@ iii. অস্ত্রোপচার
                     <h4 className="text-xs font-bold truncate max-w-[300px] sm:max-w-[500px]">
                       <MathText text={item.stem} />
                     </h4>
-                    <span className="text-[10px] text-amber-500 font-mono font-semibold">
+                    <span className={`text-[10px] font-mono font-semibold ${isAppLight ? 'text-amber-700' : 'text-amber-500'}`}>
                       Ans: {item.answer} {item.source ? `• ${item.source}` : ''}
                     </span>
                   </div>
@@ -946,7 +954,11 @@ iii. অস্ত্রোপচার
                   <button
                     type="button"
                     onClick={() => loadItemIntoForm(item, 'deck')}
-                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold border border-slate-700 flex items-center gap-1 cursor-pointer"
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1 cursor-pointer transition-colors ${
+                      isAppLight
+                        ? 'bg-slate-100 hover:bg-amber-100 text-amber-700 border-slate-300 hover:border-amber-300'
+                        : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
+                    }`}
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>Edit in Creator</span>

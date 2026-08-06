@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { DeckConfig, MCQItem } from './types';
 import { SAMPLE_DECKS } from './utils/bulkParser';
 import { useIndexedDBSync } from './hooks/useIndexedDBSync';
-import { HeaderNavbar } from './components/HeaderNavbar';
+import { SidebarNav } from './components/SidebarNav';
 import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
 import { AIUploader } from './components/AIUploader';
@@ -23,7 +23,7 @@ export default function App() {
   const [items, setItems] = useState<MCQItem[]>(SAMPLE_DECKS[0].items);
   const [reviewItems, setReviewItems] = useState<MCQItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'ai-keys'>('home');
   const [isAnswerRevealMode, setIsAnswerRevealMode] = useState<boolean>(false);
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
@@ -206,15 +206,12 @@ export default function App() {
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
       isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
-    } flex flex-col font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}>
-      {/* Top Header Navbar */}
-      <HeaderNavbar
+    } flex flex-col lg:flex-row font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}>
+      {/* Sidebar Navigation (Desktop) + Mobile Drawer */}
+      <SidebarNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         questionCount={items.length}
-        templateId={config.templateId}
-        onSelectTemplate={(id) => setConfig(prev => ({ ...prev, templateId: id }))}
-        onLoadSample={handleLoadSample}
         onOpenExportModal={() => setIsExportModalOpen(true)}
         isSyncing={isSyncing}
         lastSavedTime={lastSavedTime}
@@ -223,7 +220,7 @@ export default function App() {
       />
 
       {/* Main Content View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-10">
+      <main className="flex-1 min-w-0 max-w-[1600px] w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-10">
         {/* TAB 0: HOME - SLIDE DECKS LIST & TOOL SELECTOR */}
         {activeTab === 'home' && (
           <SlideDecksHome
@@ -248,8 +245,8 @@ export default function App() {
           />
         )}
 
-        {/* TAB 0.6: SETTINGS VIEW */}
-        {activeTab === 'settings' && (
+        {/* TAB 0.6: AI PROVIDER & KEY SETTINGS */}
+        {activeTab === 'ai-keys' && (
           <SettingsView appTheme={appTheme} />
         )}
 
@@ -386,7 +383,9 @@ export default function App() {
                         </div>
 
                         {/* Action Link Footer */}
-                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-amber-400">
+                        <div className={`pt-3 border-t flex items-center justify-between text-xs font-bold ${
+                          isAppLight ? 'border-slate-200 text-amber-600' : 'border-slate-800/80 text-amber-400'
+                        }`}>
                           <span>Select to Preview</span>
                           <span className="flex items-center gap-1 hover:translate-x-1 transition-transform">
                             Preview Slide #{idx + 1} →
@@ -399,18 +398,18 @@ export default function App() {
               </div>
             ) : (
               /* SINGLE SLIDE PREVIEW & DECK MANAGER SIDE-BY-SIDE */
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                 {/* LEFT 8 COLUMNS: LIVE CANVAS DISPLAY */}
-                <div className="lg:col-span-8 flex flex-col gap-6">
+                <div className="lg:col-span-8 flex flex-col gap-8">
                   {/* Slide Name & Controls Bar */}
-                  <div className={`flex flex-wrap items-center justify-between gap-4 p-4 rounded-3xl border shadow-2xl ${
+                  <div className={`flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl border shadow-2xl ${
                     isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-slate-800 text-white'
                   }`}>
                     {/* Current Slide Name & Back Button to All Slides */}
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <button
                         onClick={() => setIsOverviewMode(true)}
-                        className="px-3.5 py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0"
+                        className="px-4 py-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0"
                         title="View all created slides in grid view"
                       >
                         <LayoutGrid className="w-4 h-4 text-amber-500" />
@@ -462,6 +461,8 @@ export default function App() {
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                           config.templateId.includes('light')
                             ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/20'
+                            : isAppLight
+                            ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
                             : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
                         }`}
                         title="Toggle Light / Dark Theme"
@@ -484,7 +485,7 @@ export default function App() {
                         <button
                           onClick={() => setSelectedIndex(prev => Math.max(0, prev - 1))}
                           disabled={selectedIndex === 0 || items.length === 0}
-                          className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          className="p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                           title="Previous Slide (Left Arrow)"
                         >
                           <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
@@ -497,7 +498,7 @@ export default function App() {
                         <button
                           onClick={() => setSelectedIndex(prev => Math.min(items.length - 1, prev + 1))}
                           disabled={selectedIndex >= items.length - 1 || items.length === 0}
-                          className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          className="p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                           title="Next Slide (Right Arrow)"
                         >
                           <ChevronRight className="w-4 h-4 stroke-[2.5]" />
@@ -507,9 +508,11 @@ export default function App() {
                       {/* Answer Reveal Toggle Button */}
                       <button
                         onClick={() => setIsAnswerRevealMode(prev => !prev)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                           isAnswerRevealMode
                             ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
+                            : isAppLight
+                            ? 'bg-slate-100 text-slate-700 border-slate-300 hover:text-slate-900'
                             : 'bg-slate-800 text-slate-200 border-slate-700 hover:text-white'
                         }`}
                       >
@@ -520,7 +523,7 @@ export default function App() {
                   </div>
 
                   {/* Responsive Slide Canvas Container */}
-                  <div className={`relative w-full border rounded-3xl p-3 sm:p-5 lg:p-6 shadow-2xl overflow-hidden flex items-center justify-center ${
+                  <div className={`relative w-full border rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden flex items-center justify-center ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
                   }`}>
                     {items.length === 0 ? (
@@ -541,7 +544,9 @@ export default function App() {
                           </button>
                           <button
                             onClick={() => handleLoadSample(1)}
-                            className="px-4 py-2 rounded-xl bg-slate-800 text-amber-300 font-bold text-xs border border-slate-700"
+                            className={`px-4 py-2 rounded-xl font-bold text-xs border ${
+                              isAppLight ? 'bg-slate-100 text-amber-700 border-slate-300' : 'bg-slate-800 text-amber-300 border-slate-700'
+                            }`}
                           >
                             + Load Math Sample
                           </button>

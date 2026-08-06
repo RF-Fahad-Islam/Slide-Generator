@@ -140,24 +140,28 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
 
   return (
     <div
-      className={`p-8 lg:p-10 rounded-3xl border shadow-2xl transition-all ${
+      className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-8 lg:p-10 border ${
         isAppLight
-          ? 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
-          : 'bg-slate-900/90 border-slate-800 text-white shadow-black/50'
+          ? 'border-slate-200'
+          : 'bg-slate-900/80 border-slate-800'
       }`}
     >
       <div className={`flex items-center gap-4 pb-6 border-b mb-8 ${isAppLight ? 'border-slate-200' : 'border-slate-800/80'}`}>
-        <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/20">
-          <Sparkles className="w-7 h-7" />
+        <div className="p-4 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25">
+          <Sparkles className="w-8 h-8 stroke-[2.5]" />
         </div>
         <div>
-          <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
+          <h2 className={`text-2xl lg:text-3xl font-black tracking-tight flex items-center gap-3 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
             AI Automated MCQ Ingestion
-            <span className="text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono font-extrabold uppercase">
+            <span className={`text-xs px-3 py-1 rounded-full font-mono font-black uppercase border ${
+              isAppLight
+                ? 'bg-amber-100 text-amber-700 border-amber-300'
+                : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+            }`}>
               2-Stage Vision OCR
             </span>
           </h2>
-          <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+          <p className={`text-sm mt-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
             Upload SSC/HSC Board Exam PDFs, DOCX, image scans, or raw text to extract structured MCQ slides.
           </p>
         </div>
@@ -174,7 +178,7 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
+                className={`text-xs font-bold hover:underline ${isAppLight ? 'text-amber-700' : 'text-amber-400'}`}
               >
                 Get Free Key ↗
               </a>
@@ -227,12 +231,12 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
                 onChange={handleFileChange}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
-              <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+              <div className={`p-4 rounded-2xl bg-amber-500/10 group-hover:scale-110 transition-transform ${isAppLight ? 'text-amber-700' : 'text-amber-400'}`}>
                 <Upload className="w-8 h-8" />
               </div>
               {file ? (
                 <div>
-                  <p className="text-base font-black text-amber-600 dark:text-amber-400">{file.name}</p>
+                  <p className={`text-base font-black ${isAppLight ? 'text-amber-700' : 'text-amber-400'}`}>{file.name}</p>
                   <p className={`text-xs font-mono mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type || 'Document'}
                   </p>
@@ -249,7 +253,7 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
           </div>
 
           {errorMsg && (
-            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-sm font-semibold flex items-center gap-3">
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 text-sm font-semibold flex items-center gap-3">
               <AlertCircle className="w-5 h-5 shrink-0 text-rose-500" />
               <span>{errorMsg}</span>
             </div>
@@ -276,10 +280,10 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
 
         {/* Right Column: AI Extraction Results */}
         <div
-          className={`p-8 rounded-3xl border flex flex-col justify-between ${
+          className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-8 border flex flex-col justify-between ${
             isAppLight
-              ? 'bg-slate-50/80 border-slate-200 text-slate-900'
-              : 'bg-slate-950/80 border-slate-800 text-slate-100'
+              ? 'border-slate-200'
+              : 'bg-slate-950/80 border-slate-800'
           }`}
         >
           <div>
