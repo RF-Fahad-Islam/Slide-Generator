@@ -20,8 +20,9 @@ import { getTemplateById } from './templates/registry';
 import { defaultSlideTextBoxes } from './utils/slideTextBoxes';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, LayoutTemplate } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
+import { getTemplatePresets, applyDesignToConfig } from './utils/templatePresets';
 
 export default function App() {
   // Application State
@@ -33,9 +34,10 @@ export default function App() {
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
-  // Slide text box edit mode (deck-wide overlay layer)
+  // Slide text box edit mode (overlay layer) + edit scope (deck-wide vs active slide only)
   const [isTextBoxEditMode, setIsTextBoxEditMode] = useState<boolean>(false);
   const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
+  const [textBoxScope, setTextBoxScope] = useState<'global' | 'slide'>('global');
 
   // Question shared from the Question Bank → preselected in Social Post Generator
   const [socialTargetId, setSocialTargetId] = useState<string | null>(null);
@@ -85,12 +87,73 @@ export default function App() {
   const slideContainerRef = useRef<HTMLDivElement>(null);
   const [slideScale, setSlideScale] = useState<number>(0.4);
 
-  // Slide text box overlay actions (deck-wide, stored in config.slideTextBoxes)
+  // Slide text box overlay actions (deck-wide stored in config.slideTextBoxes;
+  // slide-scope stored on the active MCQItem's customConfig.slideTextBoxes)
+  const slideTextBoxOverride = items[selectedIndex]?.customConfig?.slideTextBoxes;
+  const hasTextBoxOverride = !!slideTextBoxOverride;
+  const activeTextBoxes: SlideTextBox[] = slideTextBoxOverride ?? config.slideTextBoxes ?? [];
+  const effectiveTextBoxConfig: DeckConfig = { ...config, ...(items[selectedIndex]?.customConfig || {}) };
+
+  const setTextBoxes = (updater: (boxes: SlideTextBox[]) => SlideTextBox[]) => {
+    if (textBoxScope === 'slide' && items[selectedIndex]) {
+      const slideIdx = selectedIndex;
+      setItems(prev => {
+        const updated = [...prev];
+        const cur = updated[slideIdx];
+        if (!cur) return prev;
+        const base = cur.customConfig?.slideTextBoxes ?? config.slideTextBoxes ?? [];
+        updated[slideIdx] = {
+          ...cur,
+          customConfig: { ...(cur.customConfig || {}), slideTextBoxes: updater(base) },
+        };
+        return updated;
+      });
+    } else {
+      setConfig(prev => ({ ...prev, slideTextBoxes: updater(prev.slideTextBoxes || []) }));
+    }
+  };
+
+  const changeTextBoxScope = (scope: 'global' | 'slide') => {
+    // Switching to slide scope snapshots the deck-wide boxes so the active slide
+    // starts from exactly what is on screen (later edits no longer touch other slides)
+    if (scope === 'slide' && items[selectedIndex] && !items[selectedIndex]?.customConfig?.slideTextBoxes) {
+      const slideIdx = selectedIndex;
+      setItems(prev => {
+        const updated = [...prev];
+        const cur = updated[slideIdx];
+        if (!cur) return prev;
+        updated[slideIdx] = {
+          ...cur,
+          customConfig: { ...(cur.customConfig || {}), slideTextBoxes: config.slideTextBoxes || [] },
+        };
+        return updated;
+      });
+    }
+    setTextBoxScope(scope);
+  };
+
+  const revertTextBoxOverride = () => {
+    if (!window.confirm("Remove this slide's custom text boxes and go back to the deck-wide (all slides) layout?")) return;
+    const slideIdx = selectedIndex;
+    setItems(prev => {
+      const updated = [...prev];
+      const cur = updated[slideIdx];
+      if (!cur) return prev;
+      const copy = { ...cur };
+      if (copy.customConfig) {
+        const cc = { ...copy.customConfig };
+        delete cc.slideTextBoxes;
+        if (Object.keys(cc).length === 0) delete copy.customConfig;
+        else copy.customConfig = cc;
+      }
+      updated[slideIdx] = copy;
+      return updated;
+    });
+    setSelectedTextBoxId(null);
+  };
+
   const updateSlideBox = (id: string, patch: Partial<SlideTextBox>) => {
-    setConfig(prev => ({
-      ...prev,
-      slideTextBoxes: (prev.slideTextBoxes || []).map(b => (b.id === id ? { ...b, ...patch } : b)),
-    }));
+    setTextBoxes(boxes => boxes.map(b => (b.id === id ? { ...b, ...patch } : b)));
   };
 
   const addSlideBox = (bind: SlideTextBoxBind) => {
@@ -100,14 +163,14 @@ export default function App() {
       bind,
       text: bind === 'free' ? 'Type your text here...' : undefined,
       x: 120,
-      y: 300 + ((config.slideTextBoxes?.length || 0) % 5) * 80,
+      y: 300 + (activeTextBoxes.length % 5) * 80,
       w: 900,
       fontSize: bind === 'stem' ? 56 : 40,
       color: '#ffffff',
       align: 'left',
       bold: bind === 'stem' || bind === 'brand',
     };
-    setConfig(prev => ({ ...prev, slideTextBoxes: [...(prev.slideTextBoxes || []), newBox] }));
+    setTextBoxes(boxes => [...boxes, newBox]);
     setSelectedTextBoxId(id);
   };
 
@@ -115,42 +178,43 @@ export default function App() {
     const def = SLIDE_ELEMENT_DEFS.find(d => d.id === elementId);
     if (!def) return;
     const newBox = def.build(extra);
-    setConfig(prev => ({ ...prev, slideTextBoxes: [...(prev.slideTextBoxes || []), newBox] }));
+    setTextBoxes(boxes => [...boxes, newBox]);
     setSelectedTextBoxId(newBox.id);
   };
 
   const addLayoutToDeck = (layoutId: string) => {
     const layout = SLIDE_LAYOUTS.find(l => l.id === layoutId);
     if (!layout) return;
-    if (window.confirm(`Apply the "${layout.name}" layout? This replaces the current slide text boxes on every slide.`)) {
-      setConfig(prev => ({ ...prev, slideTextBoxes: layout.build() }));
+    const scopeLabel = textBoxScope === 'slide' ? 'the current slide' : 'every slide';
+    if (window.confirm(`Apply the "${layout.name}" layout? This replaces the current text boxes on ${scopeLabel}.`)) {
+      setTextBoxes(() => layout.build());
       setSelectedTextBoxId(null);
     }
   };
 
   const deleteSlideBox = (id: string) => {
-    setConfig(prev => ({ ...prev, slideTextBoxes: (prev.slideTextBoxes || []).filter(b => b.id !== id) }));
+    setTextBoxes(boxes => boxes.filter(b => b.id !== id));
     setSelectedTextBoxId(prev => (prev === id ? null : prev));
   };
 
   const duplicateSlideBox = (id: string) => {
-    setConfig(prev => {
-      const src = (prev.slideTextBoxes || []).find(b => b.id === id);
-      if (!src) return prev;
+    setTextBoxes(boxes => {
+      const src = boxes.find(b => b.id === id);
+      if (!src) return boxes;
       const copy: SlideTextBox = { ...src, id: `b_${src.bind}_${Date.now()}`, y: Math.min(src.y + 60, 1020) };
-      return { ...prev, slideTextBoxes: [...(prev.slideTextBoxes || []), copy] };
+      return [...boxes, copy];
     });
   };
 
   const resetSlideTextBoxes = () => {
     if (!window.confirm('Reset the slide text boxes to the default layout?')) return;
-    setConfig(prev => ({ ...prev, slideTextBoxes: defaultSlideTextBoxes() }));
+    setTextBoxes(() => defaultSlideTextBoxes());
     setSelectedTextBoxId(null);
   };
 
   const clearSlideTextBoxes = () => {
-    if (!window.confirm('Remove all text boxes from the deck?')) return;
-    setConfig(prev => ({ ...prev, slideTextBoxes: [] }));
+    if (!window.confirm('Remove all text boxes in this scope?')) return;
+    setTextBoxes(() => []);
     setSelectedTextBoxId(null);
   };
 
@@ -570,6 +634,29 @@ export default function App() {
                         )}
                       </button>
 
+                      {/* Quick Template Preset Switcher */}
+                      <div className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border ${
+                        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                      }`}>
+                        <LayoutTemplate className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const preset = getTemplatePresets().find(p => p.id === e.target.value);
+                            if (preset) setConfig(applyDesignToConfig(preset, config));
+                          }}
+                          className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer max-w-[150px] truncate"
+                          title="Switch the whole deck design to a saved template preset"
+                        >
+                          <option value="" disabled>Switch Template…</option>
+                          {getTemplatePresets().map((p) => (
+                            <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       {/* Previous / Next Slide Nav */}
                       <div className="flex items-center gap-1.5">
                         <button
@@ -631,8 +718,8 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Responsive Slide Canvas Container */}
-                  <div className={`relative w-full border rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden flex items-center justify-center ${
+                  {/* Responsive Slide Canvas Container — generous top padding keeps slide-top boxes clear of the controls bar */}
+                  <div className={`relative w-full border rounded-3xl pt-8 sm:pt-10 lg:pt-12 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 shadow-2xl overflow-hidden flex items-center justify-center ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
                   }`}>
                     {items.length === 0 ? (
@@ -688,7 +775,7 @@ export default function App() {
                           />
                           {isTextBoxEditMode && (
                             <SlideTextBoxOverlay
-                              boxes={config.slideTextBoxes || []}
+                              boxes={activeTextBoxes}
                               selectedId={selectedTextBoxId}
                               item={currentItem}
                               config={config}
@@ -707,9 +794,14 @@ export default function App() {
 
                   {isTextBoxEditMode && (
                     <SlideTextBoxPanel
-                      boxes={config.slideTextBoxes || []}
+                      boxes={activeTextBoxes}
                       selectedId={selectedTextBoxId}
                       appTheme={appTheme}
+                      config={effectiveTextBoxConfig}
+                      textBoxScope={textBoxScope}
+                      hasTextBoxOverride={hasTextBoxOverride}
+                      onChangeTextBoxScope={changeTextBoxScope}
+                      onRevertTextBoxOverride={revertTextBoxOverride}
                       onAddBox={addSlideBox}
                       onAddElement={addElementBox}
                       onAddLayout={addLayoutToDeck}

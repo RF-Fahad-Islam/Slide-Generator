@@ -94,6 +94,11 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
       {boxes.map(box => {
         const selected = box.id === selectedId;
         const isElement = box.bind === 'icon' || box.bind === 'image';
+        // Keep the label chip fully inside the slide canvas: it sits BELOW the box
+        // when the box is near the top (so it never pokes toward the controls bar),
+        // and above the box only when below would clip at the slide bottom.
+        const boxH = box.h || 40;
+        const chipBelow = box.y < 56 || box.y + boxH + 28 <= SLIDE_H;
         return (
           <div
             key={box.id}
@@ -113,7 +118,7 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
                 )}
               </div>
               <span className={`absolute left-0 text-xs font-black uppercase px-2 py-1 rounded leading-none ${
-                box.y < 40 ? 'top-full mt-1' : '-top-7'
+                chipBelow ? 'top-full mt-1' : '-top-7'
               } ${
                 selected ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-amber-300 border border-white/20'
               }`}>

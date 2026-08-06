@@ -3,7 +3,14 @@ import { DeckConfig, CustomThemeColors } from '../types';
 import { TEMPLATES, getTemplateById } from '../templates/registry';
 import { BACKGROUND_PRESETS, getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { FONT_PRESETS, getFontPresetByFamily } from '../utils/fontPresets';
-import { Sliders, Upload, Palette, User, Award, BookOpen, Image as ImageIcon, SlidersHorizontal, CheckCircle2, Eye, Type, Sun, Moon, Sparkles, Layers, RefreshCw, Layers3, Target, Globe } from 'lucide-react';
+import {
+  getTemplatePresets,
+  saveTemplatePreset,
+  deleteTemplatePreset,
+  applyDesignToConfig,
+  DeckTemplatePreset,
+} from '../utils/templatePresets';
+import { Sliders, Upload, Palette, User, Award, BookOpen, Image as ImageIcon, SlidersHorizontal, CheckCircle2, Eye, Type, Sun, Moon, Sparkles, Layers, RefreshCw, Layers3, Target, Globe, LayoutTemplate, Save, Trash2 } from 'lucide-react';
 
 interface DeckSettingsProps {
   config: DeckConfig;
@@ -306,9 +313,31 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   const [themeFilter, setThemeFilter] = useState<'all' | 'light' | 'dark' | 'custom'>('all');
   const [fontCategoryFilter, setFontCategoryFilter] = useState<string>('all');
 
+  // Saved custom template presets (Templates tab)
+  const [savedPresets, setSavedPresets] = useState<DeckTemplatePreset[]>(getTemplatePresets());
+  const [presetName, setPresetName] = useState('');
+  const [presetDesc, setPresetDesc] = useState('');
+
+  const handleSavePreset = () => {
+    saveTemplatePreset(presetName, config, presetDesc);
+    setSavedPresets(getTemplatePresets());
+    setPresetName('');
+    setPresetDesc('');
+  };
+
+  const handleApplyPreset = (preset: DeckTemplatePreset) => {
+    onUpdateConfig(applyDesignToConfig(preset, config));
+  };
+
+  const handleDeletePreset = (id: string) => {
+    if (!window.confirm('Delete this saved template preset?')) return;
+    deleteTemplatePreset(id);
+    setSavedPresets(getTemplatePresets());
+  };
+
   // Settings Scope: 'global' applies to all slides without overrides; 'slide' applies to active slide ONLY
   const [settingsScope, setSettingsScope] = useState<'global' | 'slide'>('global');
-  const [settingsTab, setSettingsTab] = useState<'typography' | 'layout' | 'background' | 'theme' | 'header'>('typography');
+  const [settingsTab, setSettingsTab] = useState<'typography' | 'layout' | 'background' | 'theme' | 'header' | 'presets'>('typography');
 
   // Determine effective config currently being edited in settings
   const effectiveConfig: DeckConfig = settingsScope === 'slide'
@@ -485,6 +514,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           { id: 'background', icon: ImageIcon, label: 'Background' },
           { id: 'theme', icon: Palette, label: 'Theme & Preview' },
           { id: 'header', icon: BookOpen, label: 'Header & Branding' },
+          { id: 'presets', icon: LayoutTemplate, label: 'Templates' },
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -1978,6 +2008,165 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             </div>
           </div>
         </div>
+      </div>
+      )}
+
+      {/* SECTION 5: SAVED CUSTOM TEMPLATE PRESETS (SAVE / SWITCH / DELETE) */}
+      {settingsTab === 'presets' && (
+      <div className={`p-6 rounded-3xl border space-y-6 ${
+        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+      }`}>
+        <div className={`border-b pb-4 ${isAppLight ? 'border-slate-200' : 'border-slate-800/80'}`}>
+          <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${
+            isAppLight ? 'text-amber-700' : 'text-amber-300'
+          }`}>
+            <LayoutTemplate className="w-4 h-4 text-amber-400" />
+            Saved Custom Template Presets
+          </h3>
+          <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            Capture the current design (theme, fonts, layout, background, banners &amp; logo) as a named template, then switch back to it anytime with one click.
+          </p>
+        </div>
+
+        {/* Save Current Design Card */}
+        <div className={`p-5 rounded-2xl border space-y-3 ${
+          isAppLight ? 'bg-amber-50 border-amber-300' : 'bg-slate-900 border-amber-500/40'
+        }`}>
+          <span className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
+            <Save className="w-4 h-4" />
+            Save Current Design as Preset
+          </span>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              placeholder="Preset name (e.g. Rakib Biology Dark)"
+              className={`flex-1 border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 font-bold ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={handleSavePreset}
+              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-black shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              Save Preset
+            </button>
+          </div>
+          <input
+            type="text"
+            value={presetDesc}
+            onChange={(e) => setPresetDesc(e.target.value)}
+            placeholder="Optional short description (e.g. Dark coaching style with banner header)"
+            className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 ${
+              isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
+            }`}
+          />
+          <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            Saving with an existing name overwrites that preset. Content (brand name, header title, badge, watermark text) is NOT saved — presets are visual design only.
+          </p>
+        </div>
+
+        {/* Saved Presets Grid */}
+        {savedPresets.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {savedPresets.map((preset) => {
+              const tmpl = getTemplateById(preset.design.templateId, preset.design.customTheme);
+              const isCurrent =
+                config.templateId === preset.design.templateId &&
+                JSON.stringify(config.customTheme) === JSON.stringify(preset.design.customTheme);
+              const accent = preset.design.customTheme?.accentColor || tmpl.styles.accentColor;
+              const bg = preset.design.customTheme?.bg || tmpl.styles.hexColors.bg;
+              return (
+                <div
+                  key={preset.id}
+                  className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                    isCurrent
+                      ? isAppLight
+                        ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/50'
+                        : 'bg-amber-500/10 border-amber-500/50 ring-2 ring-amber-500/40'
+                      : isAppLight
+                      ? 'bg-white border-slate-200 hover:border-slate-300'
+                      : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Theme swatch */}
+                    <div
+                      className="w-14 h-14 rounded-2xl border border-white/15 shadow-lg shrink-0 flex items-center justify-center"
+                      style={{ backgroundColor: bg }}
+                    >
+                      <span className="w-6 h-6 rounded-full border-2 border-white/40 shadow" style={{ backgroundColor: accent }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className={`text-sm font-extrabold truncate ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                          {preset.name}
+                        </h4>
+                        {isCurrent && (
+                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1 ${
+                            isAppLight ? 'bg-amber-500 text-slate-950' : 'bg-amber-500 text-slate-950'
+                          }`}>
+                            <CheckCircle2 className="w-3 h-3" /> Active
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs truncate ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                        {preset.description || tmpl.name} · {new Date(preset.updatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset(preset)}
+                      className={`flex-1 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        isCurrent
+                          ? isAppLight
+                            ? 'bg-slate-200 text-slate-500 cursor-default'
+                            : 'bg-slate-800 text-slate-500 cursor-default'
+                          : isAppLight
+                          ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow'
+                          : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow'
+                      }`}
+                      disabled={isCurrent}
+                      title={isCurrent ? 'This preset is already active' : 'Switch the deck design to this preset'}
+                    >
+                      <LayoutTemplate className="w-3.5 h-3.5" />
+                      {isCurrent ? 'Active' : 'Switch to This Template'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePreset(preset.id)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                        isAppLight ? 'bg-white border-rose-300 text-rose-600 hover:bg-rose-50' : 'bg-slate-950 border-rose-500/40 text-rose-300 hover:border-rose-500'
+                      }`}
+                      title="Delete this preset"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className={`p-6 rounded-2xl border border-dashed flex flex-col items-center justify-center text-center gap-2 ${
+            isAppLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-900 border-slate-700'
+          }`}>
+            <LayoutTemplate className={`w-8 h-8 ${isAppLight ? 'text-slate-400' : 'text-slate-600'}`} />
+            <p className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+              No saved templates yet
+            </p>
+            <p className={`text-sm ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+              Tune your design in the other tabs, then save it above to switch between looks instantly.
+            </p>
+          </div>
+        )}
       </div>
       )}
     </div>

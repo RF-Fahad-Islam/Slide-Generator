@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { SlideTextBox, SlideTextBoxBind } from '../types';
+import { DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
 import { SLIDE_BOX_BINDS, SLIDE_BOX_COLOR_PRESETS } from '../utils/slideTextBoxes';
 import {
   SLIDE_ICON_LIBRARY,
@@ -19,6 +19,10 @@ import {
   Plus,
   Trash2,
   Copy,
+  Globe,
+  Target,
+  Download,
+  RotateCcw,
 } from 'lucide-react';
 
 const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
@@ -40,10 +44,25 @@ const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
   image: FileImage,
 };
 
+// Design images already saved in the deck configuration (Deck & Font Settings)
+// that can be dropped straight into the slide as banner/image boxes.
+const CONFIG_IMAGE_SOURCES: { label: string; hint: string; get: (c: DeckConfig) => string | undefined }[] = [
+  { label: 'Brand Logo', hint: 'logoUrl', get: c => c.logoUrl || undefined },
+  { label: 'Header Banner', hint: 'headerBannerUrl', get: c => c.headerBannerUrl },
+  { label: 'Footer Banner', hint: 'footerBannerUrl', get: c => c.footerBannerUrl },
+  { label: 'Watermark Avatar', hint: 'watermarkAvatar', get: c => c.watermarkAvatar || undefined },
+  { label: 'Background Image', hint: 'bgImageUrl', get: c => c.bgImageUrl },
+];
+
 interface SlideTextBoxPanelProps {
   boxes: SlideTextBox[];
   selectedId: string | null;
   appTheme: 'dark' | 'light';
+  config: DeckConfig; // effective config (global + active-slide overrides)
+  textBoxScope: 'global' | 'slide';
+  hasTextBoxOverride: boolean;
+  onChangeTextBoxScope: (scope: 'global' | 'slide') => void;
+  onRevertTextBoxOverride: () => void;
   onAddBox: (bind: SlideTextBoxBind) => void;
   onAddElement: (elementId: string, extra?: { imageUrl?: string; iconName?: string }) => void;
   onAddLayout: (layoutId: string) => void;
@@ -58,6 +77,11 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   boxes,
   selectedId,
   appTheme,
+  config,
+  textBoxScope,
+  hasTextBoxOverride,
+  onChangeTextBoxScope,
+  onRevertTextBoxOverride,
   onAddBox,
   onAddElement,
   onAddLayout,
@@ -70,6 +94,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   const isAppLight = appTheme === 'light';
   const selectedBox = boxes.find(b => b.id === selectedId) || null;
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const availableImportSources = CONFIG_IMAGE_SOURCES.filter(src => src.get(config));
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,6 +122,68 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
         <Layers className="w-4 h-4" />
         Slide Text Box Editor
       </label>
+
+      {/* Apply scope: deck-wide (all slides) vs active slide only */}
+      <div className={`p-4 rounded-2xl border space-y-3 ${
+        isAppLight ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-950 border-amber-500/40'
+      }`}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
+            <Target className="w-4 h-4" />
+            Apply Box Changes To
+          </span>
+          {hasTextBoxOverride && (
+            <button
+              type="button"
+              onClick={onRevertTextBoxOverride}
+              className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                isAppLight ? 'bg-white border-rose-300 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-rose-500/40 text-rose-300 hover:border-rose-500'
+              }`}
+              title="Remove this slide's custom boxes and use the deck-wide layout again"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset Slide to All-Slides
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onChangeTextBoxScope('global')}
+            className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+              textBoxScope === 'global'
+                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg ring-2 ring-amber-400/50'
+                : isAppLight
+                ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            All Slides
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeTextBoxScope('slide')}
+            className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+              textBoxScope === 'slide'
+                ? 'bg-indigo-600 text-white border-indigo-400 shadow-lg ring-2 ring-indigo-400/50'
+                : isAppLight
+                ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Target className="w-4 h-4" />
+            Current Slide Only
+          </button>
+        </div>
+        <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+          {textBoxScope === 'global'
+            ? hasTextBoxOverride
+              ? 'This slide has its own layout and keeps it. Switch to "Current Slide Only" to edit it, or reset it above.'
+              : 'Boxes are saved deck-wide and appear on every slide.'
+            : 'Boxes are saved for the active slide only — other slides keep the deck-wide layout.'}
+        </p>
+      </div>
 
       {/* Add text box buttons */}
       <div className={`p-4 rounded-2xl border space-y-3 ${
@@ -184,6 +271,58 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
         </button>
       </div>
 
+      {/* Import images already saved in the deck configuration */}
+      <div className={`p-4 rounded-2xl border space-y-3 ${
+        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+      }`}>
+        <span className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+          <Download className="w-4 h-4 text-amber-500" />
+          Import from Deck Config
+        </span>
+        <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+          Reuse images already saved in <strong>Header &amp; Branding / Layout &amp; Banners</strong> settings.
+          Click to place one on the slide — it fills the selected image box or adds a new banner.
+        </p>
+        {availableImportSources.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2">
+            {availableImportSources.map(src => {
+              const url = src.get(config) as string;
+              const isActive = selectedBox?.bind === 'image' && selectedBox.imageUrl === url;
+              return (
+                <button
+                  key={src.label}
+                  type="button"
+                  title={`${src.label} (${src.hint})`}
+                  onClick={() => {
+                    if (selectedBox?.bind === 'image') {
+                      onUpdateBox(selectedBox.id, { imageUrl: url });
+                    } else {
+                      onAddElement('banner_image', { imageUrl: url });
+                    }
+                  }}
+                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer hover:scale-[1.03] group flex flex-col gap-1.5 ${
+                    isActive
+                      ? 'bg-amber-500/10 border-amber-400 ring-2 ring-amber-400/40'
+                      : isAppLight
+                      ? 'bg-white border-slate-300 hover:border-amber-300 hover:bg-amber-50/60'
+                      : 'bg-slate-900 border-slate-700 hover:border-amber-500/40'
+                  }`}
+                >
+                  <span className="h-12 w-full overflow-hidden rounded-lg border border-white/10 bg-black/30 flex items-center justify-center">
+                    <img src={url} alt={src.label} className="w-full h-full object-cover" draggable={false} />
+                  </span>
+                  <span className={`block text-[10px] font-extrabold leading-tight ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>{src.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className={`text-[10px] rounded-xl border border-dashed p-3 text-center ${isAppLight ? 'bg-white border-slate-300 text-slate-500' : 'bg-slate-900 border-slate-700 text-slate-500'}`}>
+            No images saved yet — add a logo, header/footer banner or background in <strong>Deck &amp; Font Settings</strong> to see them here.
+          </p>
+        )}
+      </div>
+
       {/* Icon picker */}
       <div className={`p-4 rounded-2xl border space-y-3 ${
         isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
@@ -256,7 +395,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
           ))}
         </div>
         <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-          Applying a layout replaces the deck's current text boxes with a complete pre-designed set for every slide.
+          Applying a layout replaces the {textBoxScope === 'slide' ? 'active slide\'s' : 'deck-wide'} text boxes with a complete pre-designed set.
         </p>
       </div>
 
