@@ -31,6 +31,12 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      if (selectedFile.size > 75 * 1024 * 1024) {
+        setFile(null);
+        setFileBase64(null);
+        setErrorMsg('File is too large (max ~75 MB). Try a smaller file or split the PDF into parts.');
+        return;
+      }
       setFile(selectedFile);
 
       const reader = new FileReader();

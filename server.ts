@@ -11,7 +11,17 @@ async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '100mb' }));
+
+  // Return JSON (not Express's HTML error page) for body-parser failures like 413
+  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err?.type === 'entity.too.large') {
+      return res.status(413).json({
+        error: 'Uploaded file is too large. The AI pipeline accepts files up to ~75 MB. Try a smaller file or split the PDF into parts.',
+      });
+    }
+    next(err);
+  });
 
   // Health check
   app.get('/api/health', (req, res) => {

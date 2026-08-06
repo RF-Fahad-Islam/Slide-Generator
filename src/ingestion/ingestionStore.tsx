@@ -153,7 +153,14 @@ async function consumeStream(
       const errData = await response.json();
       errText = errData?.error || errText;
     } catch {
-      /* ignore non-JSON error body */
+      try {
+        const bodyText = await response.text();
+        if (/PayloadTooLarge|entity too large|request entity too large/i.test(bodyText)) {
+          errText = 'Uploaded file is too large. Try a smaller file or split the PDF into parts.';
+        }
+      } catch {
+        /* ignore unreadable body */
+      }
     }
     throw new Error(errText);
   }
