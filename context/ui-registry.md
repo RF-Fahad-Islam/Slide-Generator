@@ -138,6 +138,19 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Accent:** `bg-amber-500 text-slate-950` (question number badge)
 - **Selected:** `bg-amber-50 border-amber-400 ring-1 ring-amber-400/30` (light) | `bg-amber-500/10 border-amber-500/60` (dark)
 - **Spacing (fatty):** Panel `p-8`, cards `p-5`, badges `w-9 h-9 rounded-xl text-sm`, stems `text-base`, action buttons `p-2`, icons `w-4 h-4`, list gap `space-y-4`, search `py-2.5 pl-10`, bulk tools `p-4`
+- **Reordering:** `@dnd-kit/core` + `@dnd-kit/sortable` drag-and-drop. `DndContext` (PointerSensor with 5px activation distance + KeyboardSensor with `sortableKeyboardCoordinates`) wraps a `SortableContext` (vertical strategy) around the question cards. Drag disabled while search filter is active (`dragEnabled = searchQuery.trim() === ''`). MoveUp/MoveDown buttons removed — drag-and-drop is the only reorder mechanism.
+
+### `SortableQuestionCard` — `src/components/SortableQuestionCard.tsx`
+- **Purpose:** Sortable wrapper around each question card in `DeckManager`; uses `useSortable({ id, disabled })` from `@dnd-kit/sortable`
+- **Background:** `bg-slate-50` (light) | `bg-slate-950/60` (dark) for unselected cards
+- **Border:** `border-slate-200` (light) | `border-slate-800` (dark) — `border` with hover `hover:border-slate-300` / `hover:border-slate-700`
+- **Radius:** `rounded-2xl`
+- **Drag feedback:** `opacity-50 shadow-2xl z-50` applied via `isDragging` from `useSortable`; transform + transition applied inline from `CSS.Transform.toString(transform)`
+- **Drag handle:** `GripVertical` icon (`w-4 h-4`) in `p-2 rounded-xl` button with `touch-none` + `cursor-grab active:cursor-grabbing`; listeners + attributes from `useSortable` spread onto the handle. Disabled state: `opacity-30 cursor-default` with title "Drag disabled while searching".
+- **Action buttons:** Duplicate (`Copy`, amber hover), Delete (`Trash2`, rose) — same pattern as the pre-drag action row
+- **Text:** `text-slate-800` (light) | `text-slate-300` (dark); stems `text-base font-bold`
+- **Number badge:** `w-9 h-9 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm`
+- **Keyboard a11y:** handle is focusable (`role="button"`, `tabIndex`, `aria-roledescription="sortable"` from dnd-kit attributes); Space/Enter to pick up, arrows to move, Space/Enter to drop
 
 ### `DeckSettings` — `src/components/DeckSettings.tsx`
 - **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for main panel
@@ -234,6 +247,5 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Component | Phase | Notes |
 |---|---|---|
 | Declarative `SlideStage` | 1 | Refactor renderer to declarative `Element[]` descriptor schema |
-| Drag-and-drop sortable | 3 | Add `dnd-kit` keyboard/touch sortable question list |
 | ZIP Export Progress Dialog | 4 | Determinate progress dialog for multi-slide JSZip PNG package |
 

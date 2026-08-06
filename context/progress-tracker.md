@@ -52,7 +52,7 @@
 - [x] 2026-08-05 — `src/utils/csvParser.ts`: CSV import & template generator
 - [x] 2026-08-05 — `ValidationPanel.tsx`: Live question validation & error detection drawer
 - [x] 2026-08-05 — `DeckManager.tsx`: Reorderable question deck list with search, delete, duplicate controls
-- [ ] Add `dnd-kit` drag-and-drop sortable question reordering
+- [x] 2026-08-06 — `@dnd-kit/core` + `@dnd-kit/sortable` drag-and-drop sortable question reordering (`SortableQuestionCard.tsx`): grip-handle drag, PointerSensor (5px) + KeyboardSensor (`sortableKeyboardCoordinates`), drag disabled while search filter active, MoveUp/MoveDown buttons removed, dragged card gets `opacity-50 shadow-2xl`
 
 ## Phase 4 — Export Breadth
 - [x] 2026-08-05 — `ExportModal.tsx`: PPTX presentation export, multi-slide PNG image download, and PDF export (`jspdf`)
@@ -93,7 +93,6 @@
 - AI pipeline: 2-stage vision OCR (Gemini/OpenRouter) → structured JSON → review → deck
 - Export: PPTX (hybrid with pre-rendered images), PNG, PDF, ZIP
 - Priorities remaining:
-  1. Add `dnd-kit` drag-and-drop sortable question reordering
-  2. Implement paginated answer-key slides
-  3. Bundle self-hosted Bengali woff2 fonts
-  4. Refactor to declarative `Element[]` renderer (if pursuing architecture parity)
+  1. Implement paginated answer-key slides
+  2. Bundle self-hosted Bengali woff2 fonts
+  3. Refactor to declarative `Element[]` renderer (if pursuing architecture parity)
