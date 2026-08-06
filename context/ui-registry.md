@@ -291,14 +291,15 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 ### `App.tsx` (Slide Studio / Preview Tab — fatty)
 - **Grid gap:** `gap-10` between canvas column and deck manager column
 - **Deck-name header (top of studio):** `p-5 rounded-3xl border shadow-xl` bar — amber gradient `FileText` tile, "Active Deck" label (`text-[10px] uppercase tracking-widest`) + `{N} slide(s)` mono badge, `deckName` as `text-base sm:text-lg font-black truncate` headline, and a hidden-md Theme chip (`Presentation` icon + `activeTemplate.name`). Always visible in the preview tab (above the overview/single toggle).
-- **Apply Slide Design to All:** toolbar button (`Copy` amber icon, neutral bordered pill, label hidden below `xl`) calls `applyActiveSlideDesignToAll()` — promotes the active slide's `customConfig` (theme + design fields + `slideTextBoxes`) into the deck `config`, strips every per-slide `customConfig` override, resets box scope to `global`, confirm-guarded.
+- **Compact 2-row control strip (2026-08-06, `data-tour="studio-toolbar"`):** card `p-4 sm:p-5 rounded-3xl`. **ROW 1** = `flex flex-wrap items-center justify-between gap-x-4 gap-y-3`: left group (View All Slides + `Slide #N` mono chip + truncated stem) / right group (Theme toggle · Deck Settings · Download · Prev/Next nav). **ROW 2** = `flex flex-wrap items-center gap-2 mt-3 pt-3 border-t` (separator `border-slate-200` light / `border-slate-800` dark): Font selector · Apply Slide Design to All · Templates · Answer Reveal · Edit Text Boxes. **Labels are icon-only below `2xl`** (`hidden 2xl:inline` on every label span — tooltips carry context) so both rows fit one physical line at laptop widths; toolbar ~171px tall at 1366×768 (was ~272px with 5 wrapped rows). Key actions (Theme / Deck Settings / Download) always land on the top row.
+- **Apply Slide Design to All:** secondary-row toolbar button (`Copy` amber icon, neutral bordered pill, label hidden below `2xl`) calls `applyActiveSlideDesignToAll()` — promotes the active slide's `customConfig` (theme + design fields + `slideTextBoxes`) into the deck `config`, strips every per-slide `customConfig` override, resets box scope to `global`, confirm-guarded.
 - **Canvas container padding:** `pt-8 sm:pt-10 lg:pt-12 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8` — generous top padding keeps slide-top boxes clear of the controls bar.
-- **Control bar padding:** `p-5 rounded-3xl`
-- **Nav buttons:** `p-2.5 rounded-xl` (prev/next), `px-4 py-2.5` (view all, answer reveal)
+- **Control bar padding:** `p-4 sm:p-5 rounded-3xl`
+- **Nav buttons:** `p-2 rounded-xl` (prev/next), `px-3.5 py-2` (view all), `px-3 py-2` (answer reveal, edit text boxes)
 - **Theme toggle button:** `px-3 py-2 rounded-xl`
-- **Templates button:** "Templates" toolbar button (`LayoutTemplate` amber icon, neutral bordered pill) opens the `TemplateLibraryModal`.
+- **Templates button:** "Templates" secondary-row toolbar button (`LayoutTemplate` amber icon, neutral bordered pill) opens the `TemplateLibraryModal`.
 - **Edit-mode grid restructure:** when "Edit Text Boxes" is ON the grid re-balances — canvas column `xl:col-span-8` (from 7) and the right column becomes `xl:col-span-4` holding the Canva-style `SlideTextBoxPanel` in a sticky wrapper (`xl:sticky xl:top-20`); when OFF the right column is `xl:col-span-5` with the `DeckManager`. Closing the panel (`onClose`) toggles edit mode off and restores the question list.
-- **Control bar wrapping (anti-overlap):** outer `flex flex-wrap items-center justify-between gap-x-4 gap-y-3`; left group `flex flex-wrap items-center gap-3 min-w-0 flex-1`; right controls group `flex flex-wrap items-center gap-3` — **never `shrink-0`** on the controls group, or the buttons overflow the card at narrow widths instead of wrapping.
+- **Control bar wrapping (anti-overlap):** ROW 1 outer `flex flex-wrap items-center justify-between gap-x-4 gap-y-3`; left group `flex flex-wrap items-center gap-3 min-w-0 flex-1`; ROW 1 actions group `flex flex-wrap items-center gap-2` — never `shrink-0` on the action groups, or the buttons overflow the card at narrow widths instead of wrapping.
 
 ### Text-box overlay pattern (slide + social, shared look)
 - **Editor overlay:** sibling of the export node (never captured). `absolute inset-0` layer; each box a draggable wrapper + an inner border box.
@@ -380,12 +381,12 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 
 ### `GlobalSettings` — `src/components/GlobalSettings.tsx`
 - **Purpose:** the **Settings** sidebar tab is now app-wide preferences (AI keys moved to a separate AI Keys tab). All values persist to localStorage `mcqgen.globalDefaults` via `src/utils/globalDefaults.ts` (`GlobalDefaults` = `defaultDeckName` / `defaultTemplateId` / `defaultQuestionNumberFormat`).
-- **Page header:** amber gradient `Settings`/`Sliders` tile + "Global Settings" title + subtitle pointing users to "Slide Studio → Deck Settings" for deck-scoped config.
-- **Default Deck Name card:** text input (`px-4 py-2.5 rounded-xl`, dark `bg-slate-950 border-slate-800` / light `bg-white border-slate-300`), helper "Used when creating a new deck from Question Bank selections."
-- **Default Slide Template card:** grid of template cards (same pattern as the home theme strip) — `🌙 DARK` / `☀️ LIGHT` mono chip, template name; selected card `bg-amber-500/10 border-amber-400 ring-1 ring-amber-400/50` + `CheckCircle2`.
-- **Default Question Numbering card:** `<select>` (bangla `ক.` / english `A.` / `ক_pre`).
-- **App Theme card:** segmented dark/light toggle (matches the header toggle; `onToggleAppTheme` prop) + save feedback note ("saved automatically").
-- **Theme compliance:** uses `appTheme` prop + `isAppLight` ternary exclusively (ui-registry rule), `glass-card-fatty-light`/`glass-card-fatty` glass cards, `text-slate-900`/`text-white` text, amber accents.
+- **Flat page layout (de-nested, 2026-08-06):** no wrapping outer card. Page = header row (amber gradient `Settings`/`Sliders` tile + "Global Settings" title + subtitle pointing to "Slide Studio → Deck Settings" for deck-scoped config) then four sibling flat sections stacked with `space-y-6`:
+  - **Default Deck Name:** text input (`px-4 py-2.5 rounded-xl`, dark `bg-slate-950 border-slate-800` / light `bg-white border-slate-300`), helper "Used when creating a new deck from Question Bank selections."
+  - **Default Slide Template:** grid of template cards (home theme-strip pattern) — `🌙 DARK` / `☀️ LIGHT` mono chip, template name; selected `bg-amber-500/10 border-amber-400 ring-1 ring-amber-400/50` + `CheckCircle2`.
+  - **Default Question Numbering + App Shell Theme:** two sections side-by-side on one row — `<select>` (bangla `ক.` / english `A.` / `ক_pre`) and the segmented dark/light toggle (`onToggleAppTheme`).
+- **Auto-save:** every control writes through `update()` (debounce optional) — "saved automatically" footer note.
+- **Theme compliance:** `appTheme` prop + `isAppLight` ternary exclusively, glass cards, `text-slate-900`/`text-white`, amber accents.
 
 ### `classroomTextBoxes()` — `src/utils/slideElements.ts`
 - **Purpose:** factory returning the Classroom View box layout for a slide — brand strip + header/stem top-left, a wide free-text writing placeholder centered (`✏️ Live Teacher Writing / Stylus Space`), options column stacked vertically on the right, footer bottom-left. Applied deck-wide by `handleEnforceClassroomView`.

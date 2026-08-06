@@ -790,39 +790,138 @@ export default function App() {
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 xl:gap-10 items-start">
                 {/* LEFT: LIVE CANVAS DISPLAY (wider when the Canva-style side panel is open) */}
                 <div className={`flex flex-col gap-8 ${isTextBoxEditMode ? 'xl:col-span-8' : 'xl:col-span-7'}`}>
-                  {/* Slide Name & Controls Bar */}
+                  {/* Slide Name & Controls Bar — compact two-row strip */}
                   <div
                     data-tour="studio-toolbar"
-                    className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-5 rounded-3xl border shadow-2xl ${
+                    className={`rounded-3xl border shadow-2xl p-4 sm:p-5 ${
                     isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-slate-800 text-white'
                   }`}>
-                    {/* Current Slide Name & Back Button to All Slides */}
-                    <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
-                      <button
-                        onClick={() => setIsOverviewMode(true)}
-                        className="px-4 py-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0"
-                        title="View all created slides in grid view"
-                      >
-                        <LayoutGrid className="w-4 h-4 text-amber-500" />
-                        <span className="hidden sm:inline">View All Slides ({items.length})</span>
-                      </button>
+                    {/* ROW 1 — slide identity + primary studio actions (Theme, Deck Settings, Download, slide nav) */}
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                      {/* Current Slide Name & Back Button to All Slides */}
+                      <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
+                        <button
+                          onClick={() => setIsOverviewMode(true)}
+                          className="px-3.5 py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0"
+                          title="View all created slides in grid view"
+                        >
+                          <LayoutGrid className="w-4 h-4 text-amber-500" />
+                          <span className="hidden 2xl:inline">View All Slides ({items.length})</span>
+                        </button>
 
-                      {items.length > 0 && (
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-mono text-xs font-bold border border-amber-400 shrink-0">
-                            Slide #{selectedIndex + 1}
+                        {items.length > 0 && (
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-mono text-xs font-bold border border-amber-400 shrink-0">
+                              Slide #{selectedIndex + 1}
+                            </span>
+                            <h3 className="text-xs sm:text-sm font-bold truncate max-w-[200px] sm:max-w-[320px]">
+                              <MathText text={currentItem.stem} />
+                            </h3>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ROW 1 actions — Theme, Deck Settings, Download, slide nav */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Quick Theme Toggle (Minimal Light vs Rakib Dark) — applies to the ACTIVE slide only */}
+                        <button
+                          onClick={() => {
+                            applyThemeToActiveSlide({
+                              templateId: isActiveSlideLight ? 'rakib-dark' : 'minimal-light',
+                            });
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                            isActiveSlideLight
+                              ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/20'
+                              : isAppLight
+                              ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                              : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                          }`}
+                          title="Toggle Light / Dark Theme (active slide only)"
+                        >
+                          {isActiveSlideLight ? (
+                            <>
+                              <Sun className="w-3.5 h-3.5 text-slate-950" />
+                              <span className="hidden 2xl:inline">☀️ Light Theme</span>
+                            </>
+                          ) : (
+                            <>
+                              <Moon className="w-3.5 h-3.5 text-amber-400" />
+                              <span className="hidden 2xl:inline">🌙 Dark Theme</span>
+                            </>
+                          )}
+                        </button>
+
+                        {/* Deck Settings — deck-scoped branding/layout modal (draft + live preview + Apply to All) */}
+                        <button
+                          onClick={() => {
+                            setEditingSavedDeckId(null);
+                            setIsDeckSettingsModalOpen(true);
+                          }}
+                          data-tour="studio-deck-settings"
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                            isAppLight
+                              ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                              : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                          }`}
+                          title="Open Deck Settings — branding, fonts, layout mode, background & banners for this deck"
+                        >
+                          <Sliders className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="hidden 2xl:inline">Deck Settings</span>
+                        </button>
+
+                        {/* Download Current Slide — Export modal scoped to the active slide only */}
+                        <button
+                          onClick={() => {
+                            setExportScope('current');
+                            setIsExportModalOpen(true);
+                          }}
+                          disabled={items.length === 0}
+                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                            isAppLight
+                              ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                          title="Download the current slide — PPTX, PDF, PNG, ZIP (current slide only)"
+                          data-tour="studio-download"
+                        >
+                          <Download className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="hidden 2xl:inline">Download</span>
+                        </button>
+
+                        {/* Previous / Next Slide Nav */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setSelectedIndex(prev => Math.max(0, prev - 1))}
+                            disabled={selectedIndex === 0 || items.length === 0}
+                            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                            title="Previous Slide (Left Arrow)"
+                          >
+                            <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                          </button>
+
+                          <span className="text-xs font-bold px-2 font-mono">
+                            {items.length > 0 ? selectedIndex + 1 : 0} / {items.length}
                           </span>
-                          <h3 className="text-xs sm:text-sm font-bold truncate max-w-[200px] sm:max-w-[320px]">
-                            <MathText text={currentItem.stem} />
-                          </h3>
+
+                          <button
+                            onClick={() => setSelectedIndex(prev => Math.min(items.length - 1, prev + 1))}
+                            disabled={selectedIndex >= items.length - 1 || items.length === 0}
+                            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                            title="Next Slide (Right Arrow)"
+                          >
+                            <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                          </button>
                         </div>
-                      )}
+                      </div>
                     </div>
 
-                    {/* Nav, Font & Theme Quick Controls */}
-                    <div className="flex flex-wrap items-center gap-3">
+                    {/* ROW 2 — secondary controls (font, apply design to all, templates, reveal, text boxes) */}
+                    <div className={`flex flex-wrap items-center gap-2 mt-3 pt-3 border-t ${
+                      isAppLight ? 'border-slate-200' : 'border-slate-800'
+                    }`}>
                       {/* Quick Font Family Selector */}
-                      <div className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border ${
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border ${
                         isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
                       }`}>
                         <Type className="w-3.5 h-3.5 text-amber-500 shrink-0" />
@@ -840,35 +939,6 @@ export default function App() {
                         </select>
                       </div>
 
-                      {/* Quick Theme Toggle (Minimal Light vs Rakib Dark) — applies to the ACTIVE slide only */}
-                      <button
-                        onClick={() => {
-                          applyThemeToActiveSlide({
-                            templateId: isActiveSlideLight ? 'rakib-dark' : 'minimal-light',
-                          });
-                        }}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                          isActiveSlideLight
-                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/20'
-                            : isAppLight
-                            ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
-                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
-                        }`}
-                        title="Toggle Light / Dark Theme (active slide only)"
-                      >
-                        {isActiveSlideLight ? (
-                          <>
-                            <Sun className="w-3.5 h-3.5 text-slate-950" />
-                            <span className="hidden sm:inline">☀️ Light Theme</span>
-                          </>
-                        ) : (
-                          <>
-                            <Moon className="w-3.5 h-3.5 text-amber-400" />
-                            <span className="hidden sm:inline">🌙 Dark Theme</span>
-                          </>
-                        )}
-                      </button>
-
                       {/* Apply the active slide's design (theme + box layout) to every slide */}
                       <button
                         onClick={applyActiveSlideDesignToAll}
@@ -880,7 +950,7 @@ export default function App() {
                         title="Make this slide's theme and text-box layout the design for every slide in the deck"
                       >
                         <Copy className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="hidden xl:inline">Apply Slide Design to All</span>
+                        <span className="hidden 2xl:inline">Apply Slide Design to All</span>
                       </button>
 
                       {/* Template Store Modal Opener */}
@@ -894,84 +964,23 @@ export default function App() {
                         title="Open the template store — save the current slide format or switch to a saved template"
                       >
                         <LayoutTemplate className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="hidden sm:inline">Templates</span>
+                        <span className="hidden 2xl:inline">Templates</span>
                       </button>
-
-                      {/* Deck Settings — deck-scoped branding/layout modal (draft + live preview + Apply to All) */}
-                      <button
-                        onClick={() => {
-                          setEditingSavedDeckId(null);
-                          setIsDeckSettingsModalOpen(true);
-                        }}
-                        data-tour="studio-deck-settings"
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                          isAppLight
-                            ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
-                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
-                        }`}
-                        title="Open Deck Settings — branding, fonts, layout mode, background & banners for this deck"
-                      >
-                        <Sliders className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="hidden sm:inline">Deck Settings</span>
-                      </button>
-
-                      {/* Download Current Slide — Export modal scoped to the active slide only */}
-                      <button
-                        onClick={() => {
-                          setExportScope('current');
-                          setIsExportModalOpen(true);
-                        }}
-                        disabled={items.length === 0}
-                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                          isAppLight
-                            ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
-                            : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
-                        } disabled:opacity-40 disabled:cursor-not-allowed`}
-                        title="Download the current slide — PPTX, PDF, PNG, ZIP (current slide only)"
-                        data-tour="studio-download"
-                      >
-                        <Download className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="hidden sm:inline">Download</span>
-                      </button>
-
-                      {/* Previous / Next Slide Nav */}
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => setSelectedIndex(prev => Math.max(0, prev - 1))}
-                          disabled={selectedIndex === 0 || items.length === 0}
-                          className="p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                          title="Previous Slide (Left Arrow)"
-                        >
-                          <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-                        </button>
-
-                        <span className="text-xs font-bold px-2 font-mono">
-                          {items.length > 0 ? selectedIndex + 1 : 0} / {items.length}
-                        </span>
-
-                        <button
-                          onClick={() => setSelectedIndex(prev => Math.min(items.length - 1, prev + 1))}
-                          disabled={selectedIndex >= items.length - 1 || items.length === 0}
-                          className="p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                          title="Next Slide (Right Arrow)"
-                        >
-                          <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-                        </button>
-                      </div>
 
                       {/* Answer Reveal Toggle Button */}
                       <button
                         onClick={() => setIsAnswerRevealMode(prev => !prev)}
-                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                           isAnswerRevealMode
                             ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
                             : isAppLight
                             ? 'bg-slate-100 text-slate-700 border-slate-300 hover:text-slate-900'
                             : 'bg-slate-800 text-slate-200 border-slate-700 hover:text-white'
                         }`}
+                        title="Reveal / hide the correct answer on the active slide"
                       >
                         {isAnswerRevealMode ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                        <span className="hidden md:inline">{isAnswerRevealMode ? 'Answer Revealed' : 'Hide Answer'}</span>
+                        <span className="hidden 2xl:inline">{isAnswerRevealMode ? 'Answer Revealed' : 'Hide Answer'}</span>
                       </button>
 
                       {/* Slide Text Box Edit Mode Toggle */}
@@ -980,7 +989,7 @@ export default function App() {
                           setIsTextBoxEditMode(prev => !prev);
                           if (isTextBoxEditMode) setSelectedTextBoxId(null);
                         }}
-                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                           isTextBoxEditMode
                             ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
                             : isAppLight
@@ -990,7 +999,7 @@ export default function App() {
                         title="Add/Edit draggable text boxes over every slide"
                       >
                         <PenTool className="w-3.5 h-3.5" />
-                        <span className="hidden md:inline">{isTextBoxEditMode ? 'Editing Text Boxes' : 'Edit Text Boxes'}</span>
+                        <span className="hidden 2xl:inline">{isTextBoxEditMode ? 'Editing Text Boxes' : 'Edit Text Boxes'}</span>
                       </button>
                     </div>
                   </div>
