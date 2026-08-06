@@ -22,6 +22,8 @@ import { SlideTextBoxPanel } from './components/SlideTextBoxPanel';
 import { SlideThumb } from './components/SlideThumb';
 import { SettingsView } from './components/SettingsView';
 import { GlobalSettings } from './components/GlobalSettings';
+import { IngestionToast } from './components/IngestionToast';
+import { IngestionProvider } from './ingestion/ingestionStore';
 import { MathText } from './components/MathText';
 import { OnboardingTour, defaultTourSteps, TourTab } from './components/OnboardingTour';
 import { getTemplateById } from './templates/registry';
@@ -556,6 +558,7 @@ export default function App() {
   const isActiveSlideLight = activeSlideTheme.themeType === 'light';
 
   return (
+    <IngestionProvider>
     <div className={`min-h-screen transition-colors duration-300 ${
       isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
     } flex flex-col lg:flex-row font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}>
@@ -1266,6 +1269,10 @@ export default function App() {
         onNavigate={(tab) => setActiveTab(tab)}
         steps={defaultTourSteps}
       />
+
+      {/* AI Ingestion progress toast — bottom-right, survives tab changes */}
+      <IngestionToast appTheme={appTheme} />
     </div>
+    </IngestionProvider>
   );
 }

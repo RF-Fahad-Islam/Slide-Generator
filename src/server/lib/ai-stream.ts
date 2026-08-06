@@ -8,6 +8,7 @@ import { sanitizeMCQs } from './sanitize.js';
 
 export type StreamEvent =
   | { type: 'stage1_start'; kind: 'text' | 'vision'; sourceName: string; pageCount: number }
+  | { type: 'stage1_raster'; pageNumber: number }
   | { type: 'stage1_page'; pageNumber: number[]; text: string }
   | { type: 'stage1_done'; kind: 'text' | 'vision'; text: string; warnings: string[]; totalChars: number }
   | { type: 'chunk_start'; chunkIndex: number; totalChunks: number; approxTokens: number }
@@ -23,12 +24,13 @@ export interface ParseRequest {
   mimeType?: string;
   fileBase64?: string;
   fileName?: string;
+  text?: string;
   provider: AiProvider;
   keys: ProviderKeys;
   signal?: AbortSignal;
 }
 
-export async function streamParseMCQs(req: ParseRequest, emit: EmitFn): Promise<void> {
+export async function streamStage1(req: ParseRequest, emit: EmitFn): Promise<void> {
   const { promptText, mimeType, fileBase64, fileName, provider, keys, signal } = req;
   const sourceName = fileName || mimeType?.split('/')[1] || 'pasted text';
 
@@ -41,9 +43,6 @@ export async function streamParseMCQs(req: ParseRequest, emit: EmitFn): Promise<
   const warnings: string[] = [];
 
   try {
-    // =========================================================================
-    // STAGE 1: LOCAL EXTRACTION OR VISION OCR (OCR-first for Bangla accuracy)
-    // =========================================================================
     if (fileBase64) {
       const buffer = Buffer.from(fileBase64, 'base64');
       const doc = await extractTextFromBuffer(buffer, normalizeMime(mimeType, fileName), fileName);
@@ -54,17 +53,19 @@ export async function streamParseMCQs(req: ParseRequest, emit: EmitFn): Promise<
         emit({ type: 'stage1_start', kind: 'text', sourceName, pageCount: doc.pages.length || 1 });
         emit({ type: 'stage1_done', kind: 'text', text: stage1Text, warnings, totalChars: stage1Text.length });
       } else {
-        // Vision path: rasterize PDF pages, or use the raw image as a single page.
         let pages: { pageNumber: number; dataUrl: string }[];
         if (normalizeMime(mimeType, fileName) === 'application/pdf') {
-          pages = await rasterizePdfPages(buffer);
+          const pageCount = doc.pages.length || 0;
+          emit({ type: 'stage1_start', kind: 'vision', sourceName, pageCount });
+          pages = await rasterizePdfPages(buffer, pageCount, (pageNumber) => {
+            emit({ type: 'stage1_raster', pageNumber });
+          });
         } else {
+          emit({ type: 'stage1_start', kind: 'vision', sourceName, pageCount: 1 });
           pages = [{ pageNumber: 1, dataUrl: `data:${mimeType || 'image/png'};base64,${fileBase64}` }];
         }
 
         warnings.push(...doc.warnings);
-        emit({ type: 'stage1_start', kind: 'vision', sourceName, pageCount: pages.length });
-
         const ocrResults = await ocrPages(provider, keys, pages, signal);
         for (const r of ocrResults) {
           emit({ type: 'stage1_page', pageNumber: r.pageNumbers, text: r.text });
@@ -79,13 +80,22 @@ export async function streamParseMCQs(req: ParseRequest, emit: EmitFn): Promise<
       emit({ type: 'stage1_start', kind: 'text', sourceName, pageCount: 1 });
       emit({ type: 'stage1_done', kind: 'text', text: stage1Text, warnings, totalChars: stage1Text.length });
     }
-
+  } catch (err: any) {
     if (signal?.aborted) return;
+    emit({ type: 'error', message: safeError(err) });
+  }
+}
 
-    // =========================================================================
-    // STAGE 2: STRUCTURED MCQ EXTRACTION — sequential token-estimate chunks
-    // =========================================================================
-    const chunks = chunkText(stage1Text);
+export async function streamStage2(req: ParseRequest, emit: EmitFn): Promise<void> {
+  const { text, provider, keys, signal } = req;
+
+  if (!text?.trim()) {
+    emit({ type: 'error', message: 'No extracted text to structure. Run Stage 1 first.' });
+    return;
+  }
+
+  try {
+    const chunks = chunkText(text);
     if (chunks.length === 0) {
       emit({ type: 'error', message: 'No usable text was extracted from this document.' });
       return;
@@ -107,23 +117,27 @@ export async function streamParseMCQs(req: ParseRequest, emit: EmitFn): Promise<
         emit({ type: 'mcqs', chunkIndex: chunk.index, items, skipped, skipReasons: errors });
       } catch (err: any) {
         failedChunks += 1;
-        const safeMsg = String(err?.message || 'Unknown chunk error').replace(
-          /(AIzaSy|sk-or-)[A-Za-z0-9_-]+/g,
-          '[REDACTED_API_KEY]',
-        );
-        emit({ type: 'chunk_error', chunkIndex: chunk.index, message: safeMsg });
+        emit({ type: 'chunk_error', chunkIndex: chunk.index, message: safeError(err) });
       }
     }
 
     emit({ type: 'done', totalMCQs, failedChunks, totalChunks: chunks.length, skippedTotal });
   } catch (err: any) {
     if (signal?.aborted) return;
-    const safeMsg = String(err?.message || 'Failed to parse MCQs using AI.').replace(
-      /(AIzaSy|sk-or-)[A-Za-z0-9_-]+/g,
-      '[REDACTED_API_KEY]',
-    );
-    emit({ type: 'error', message: safeMsg });
+    emit({ type: 'error', message: safeError(err) });
   }
+}
+
+function safeError(err: any): string {
+  let msg = String(err?.message || 'Failed to parse MCQs using AI.').replace(
+    /(AIzaSy|sk-or-)[A-Za-z0-9_-]+/g,
+    '[REDACTED_API_KEY]',
+  );
+  if (/credit|afford|insufficient|top up|balance/i.test(msg)) {
+    msg =
+      'Your AI provider is out of credits. Switch to Gemini in the Keys tab (Google free tier), or top up your OpenRouter account, then try again.';
+  }
+  return msg;
 }
 
 const STRUCTURER_SYSTEM_INSTRUCTION = `You are an expert EdTech exam question parser specializing in Multiple Choice Questions (MCQs) for Bengali and English coaching centers, school board exams, and admission tests.
@@ -201,8 +215,6 @@ async function extractMCQsFromText(
     try {
       return JSON.parse(response.text || '[]');
     } catch {
-      // A truncated/non-JSON structured response must surface as a chunk_error,
-      // not silently drop the whole chunk (review I-L3b).
       throw new Error('AI returned malformed JSON for this chunk — questions may be lost.');
     }
   }
@@ -224,6 +236,7 @@ async function extractMCQsFromText(
         { role: 'user', content: `Parse all MCQs from the following content into structured JSON array:\n\n${text}` },
       ],
       response_format: { type: 'json_object' },
+      max_tokens: 8192,
     }),
     signal,
   });

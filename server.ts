@@ -3,7 +3,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
-import { streamParseMCQs, type StreamEvent } from './src/server/lib/ai-stream.js';
+import { streamStage1, streamStage2, type StreamEvent } from './src/server/lib/ai-stream.js';
 
 dotenv.config();
 
@@ -91,68 +91,79 @@ async function startServer() {
     }
   });
 
-  // AI MCQ Parser Endpoint — local big-document ingestion + live NDJSON streaming
-  app.post('/api/ai/parse-mcqs', async (req, res) => {
-    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
+  // NDJSON stream helper — shared wire format for both ingestion stages.
+  // Aborts the pipeline when the client disconnects (saves API quota mid-run).
+  const streamHandler =
+    (
+      run: (
+        body: any,
+        emit: (event: StreamEvent) => void,
+        signal: AbortSignal,
+        provider: 'gemini' | 'openrouter',
+        keys: { geminiKey?: string; openrouterKey?: string; openrouterModel?: string },
+      ) => Promise<void>,
+    ) =>
+    async (req: express.Request, res: express.Response) => {
+      res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
 
-    // Abort the pipeline when the client disconnects (saves API quota mid-run).
-    const abort = new AbortController();
-    const onClose = () => {
-      if (!res.writableEnded) abort.abort();
+      const abort = new AbortController();
+      const onClose = () => {
+        if (!res.writableEnded) abort.abort();
+      };
+      res.on('close', onClose);
+
+      let wroteError = false;
+      const emit = (event: StreamEvent) => {
+        if (wroteError && event.type !== 'error') return;
+        if (event.type === 'error') wroteError = true;
+        if (res.writableEnded) return;
+        res.write(`${JSON.stringify(event)}\n`);
+      };
+
+      const provider = ((req.headers['x-ai-provider'] as string) || 'gemini') as 'gemini' | 'openrouter';
+      const geminiKey = (req.headers['x-gemini-key'] as string) || process.env.GEMINI_API_KEY;
+      const openrouterKey = (req.headers['x-openrouter-key'] as string) || process.env.OPENROUTER_API_KEY;
+      const openrouterModel = (req.headers['x-openrouter-model'] as string) || 'google/gemini-2.5-flash';
+
+      if (provider === 'gemini' && !geminiKey) {
+        emit({ type: 'error', message: 'Gemini API Key is missing. Add one in the Keys tab.' });
+        return res.end();
+      }
+      if (provider === 'openrouter' && !openrouterKey) {
+        emit({ type: 'error', message: 'OpenRouter API Key is missing. Add one in the Keys tab.' });
+        return res.end();
+      }
+
+      try {
+        await run(req.body || {}, emit, abort.signal, provider, { geminiKey, openrouterKey, openrouterModel });
+      } catch (err: any) {
+        const rawErrorMsg = err?.message || 'AI parsing failed.';
+        const sanitizedError = rawErrorMsg.replace(/(AIzaSy|sk-or-)[A-Za-z0-9_-]+/g, '[REDACTED_API_KEY]');
+        console.error('AI Ingestion Error:', sanitizedError);
+        emit({ type: 'error', message: sanitizedError });
+      } finally {
+        res.off('close', onClose);
+        if (!res.writableEnded) res.end();
+      }
     };
-    res.on('close', onClose);
 
-    let wroteError = false;
-    const emit = (event: StreamEvent) => {
-      if (wroteError && event.type !== 'error') return;
-      if (event.type === 'error') wroteError = true;
-      if (res.writableEnded) return;
-      res.write(`${JSON.stringify(event)}\n`);
-    };
+  // Stage 1 — raw text extraction / OCR. Streams raw text live, ends at stage1_done.
+  // The client shows this text and asks the user to approve before Stage 2 runs.
+  app.post('/api/ai/extract', streamHandler(async (body, emit, signal, provider, keys) => {
+    const { promptText, mimeType, fileBase64, fileName } = body;
+    console.log(`[Ingestion] Stage 1 extract via ${provider} — source: ${fileName || mimeType || 'pasted text'}`);
+    await streamStage1({ promptText, mimeType, fileBase64, fileName, provider, keys, signal }, emit);
+  }));
 
-    const { promptText, mimeType, fileBase64, fileName } = req.body || {};
-    const provider = ((req.headers['x-ai-provider'] as string) || 'gemini') as 'gemini' | 'openrouter';
-    const geminiKey = (req.headers['x-gemini-key'] as string) || process.env.GEMINI_API_KEY;
-    const openrouterKey = (req.headers['x-openrouter-key'] as string) || process.env.OPENROUTER_API_KEY;
-    const openrouterModel = (req.headers['x-openrouter-model'] as string) || 'google/gemini-2.5-flash';
-
-    if (provider === 'gemini' && !geminiKey) {
-      emit({ type: 'error', message: 'Gemini API Key is missing. Add one in the Keys tab.' });
-      return res.end();
-    }
-    if (provider === 'openrouter' && !openrouterKey) {
-      emit({ type: 'error', message: 'OpenRouter API Key is missing. Add one in the Keys tab.' });
-      return res.end();
-    }
-
-    console.log(`[Ingestion] Streaming parse via ${provider} — source: ${fileName || mimeType || 'pasted text'}`);
-
-    try {
-      await streamParseMCQs(
-        {
-          promptText,
-          mimeType,
-          fileBase64,
-          fileName,
-          provider,
-          keys: { geminiKey, openrouterKey, openrouterModel },
-          signal: abort.signal,
-        },
-        emit,
-      );
-    } catch (err: any) {
-      const rawErrorMsg = err?.message || 'Failed to parse MCQs using AI.';
-      const sanitizedError = rawErrorMsg.replace(/(AIzaSy|sk-or-)[A-Za-z0-9_-]+/g, '[REDACTED_API_KEY]');
-      console.error('AI MCQ Parsing Error:', sanitizedError);
-      emit({ type: 'error', message: sanitizedError });
-    } finally {
-      res.off('close', onClose);
-      if (!res.writableEnded) res.end();
-    }
-  });
+  // Stage 2 — structured MCQ extraction from approved raw text. Streams chunk events.
+  app.post('/api/ai/structure', streamHandler(async (body, emit, signal, provider, keys) => {
+    const { text } = body;
+    console.log(`[Ingestion] Stage 2 structure via ${provider} — ${(text || '').length} chars`);
+    await streamStage2({ text, provider, keys, signal }, emit);
+  }));
 
   // Vite development middleware or production static serving
   if (process.env.NODE_ENV !== 'production') {
