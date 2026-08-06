@@ -109,6 +109,7 @@ export const exportDeckToPPTX = async (
       color: (box.color || '#ffffff').replace('#', ''),
       bold: box.bold,
       align: box.align,
+      fontFace: box.fontFamily ? box.fontFamily.replace(/'/g, '').split(',')[0].trim() : undefined,
       valign: 'top',
     });
   };

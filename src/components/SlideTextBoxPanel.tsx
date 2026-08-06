@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
 import { SLIDE_BOX_BINDS, SLIDE_BOX_COLOR_PRESETS } from '../utils/slideTextBoxes';
+import { FONT_PRESETS } from '../utils/fontPresets';
 import {
   SLIDE_ICON_LIBRARY,
   SLIDE_ELEMENT_DEFS,
@@ -377,6 +378,24 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                 >
                   {SLIDE_BOX_BINDS.map(opt => (
                     <option key={opt.bind} value={opt.bind}>{opt.label.replace('+ ', '')}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Font Family: <span className="font-semibold text-[10px] normal-case">(default: deck font)</span>
+                </label>
+                <select
+                  value={selectedBox.fontFamily || ''}
+                  onChange={(e) => onUpdateBox(selectedBox.id, { fontFamily: e.target.value || undefined })}
+                  className={`w-full border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-amber-500 ${
+                    isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                  }`}
+                >
+                  <option value="">Use deck font ({config.fontFamily || "'Kalpurush', serif"})</option>
+                  {FONT_PRESETS.map(font => (
+                    <option key={font.id} value={font.family}>{font.name}</option>
                   ))}
                 </select>
               </div>
