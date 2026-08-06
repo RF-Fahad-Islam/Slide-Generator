@@ -308,6 +308,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
 
   // Settings Scope: 'global' applies to all slides without overrides; 'slide' applies to active slide ONLY
   const [settingsScope, setSettingsScope] = useState<'global' | 'slide'>('global');
+  const [settingsTab, setSettingsTab] = useState<'typography' | 'layout' | 'background' | 'theme' | 'header'>('typography');
 
   // Determine effective config currently being edited in settings
   const effectiveConfig: DeckConfig = settingsScope === 'slide'
@@ -315,6 +316,8 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
     : config;
 
   const hasSlideOverride = !!activeSlideConfig && Object.keys(activeSlideConfig).length > 0;
+
+  const isBannerMode = config.headerType === 'banner' || config.useHeaderBanner;
 
   const handleChange = (field: keyof DeckConfig, value: any) => {
     if (settingsScope === 'slide') {
@@ -407,21 +410,21 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       }`}>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow">
+            <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-sm uppercase tracking-wider flex items-center gap-1.5 shadow">
               <Sliders className="w-3.5 h-3.5" />
               Settings Scope Selector
             </span>
             {hasSlideOverride && (
-              <span className={`px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400 text-[11px] font-extrabold flex items-center gap-1 ${isAppLight ? 'text-emerald-700' : 'text-emerald-300'}`}>
+              <span className={`px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400 text-sm font-extrabold flex items-center gap-1 ${isAppLight ? 'text-emerald-700' : 'text-emerald-300'}`}>
                 <Target className="w-3 h-3" />
                 Slide #{activeSlideIndex + 1} Has Custom Overrides
               </span>
             )}
           </div>
-          <h2 className={`text-base font-extrabold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+          <h2 className={`text-lg font-extrabold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
             Configure {settingsScope === 'global' ? 'Global Deck Settings (All Slides)' : `Slide #${activeSlideIndex + 1} Scope (Active Slide Only)`}
           </h2>
-          <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+          <p className={`text-sm ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
             Global settings automatically apply to all slides. Changing settings in Slide Scope will customize only Slide #{activeSlideIndex + 1}.
           </p>
         </div>
@@ -431,7 +434,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           <button
             type="button"
             onClick={() => setSettingsScope('global')}
-            className={`px-4 py-2 rounded-2xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-2xl text-sm font-black flex items-center gap-2 transition-all cursor-pointer ${
               settingsScope === 'global'
                 ? 'bg-amber-500 text-slate-950 shadow-lg ring-2 ring-amber-400/50'
                 : isAppLight
@@ -446,7 +449,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           <button
             type="button"
             onClick={() => setSettingsScope('slide')}
-            className={`px-4 py-2 rounded-2xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-2xl text-sm font-black flex items-center gap-2 transition-all cursor-pointer ${
               settingsScope === 'slide'
                 ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-400/50'
                 : isAppLight
@@ -462,7 +465,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <button
               type="button"
               onClick={onResetActiveSlideConfig}
-              className={`px-3 py-2 rounded-2xl text-xs font-extrabold bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 flex items-center gap-1.5 cursor-pointer transition-all ${isAppLight ? 'text-rose-700' : 'text-rose-300'}`}
+              className={`px-4 py-2.5 rounded-2xl text-sm font-extrabold bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 flex items-center gap-1.5 cursor-pointer transition-all ${isAppLight ? 'text-rose-700' : 'text-rose-300'}`}
               title="Clear custom overrides on this slide and revert to global deck settings"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -472,7 +475,37 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         </div>
       </div>
 
+      {/* SETTINGS CATEGORY TABS */}
+      <div className={`p-2 rounded-3xl border shadow-xl flex flex-wrap items-center gap-1.5 ${
+        isAppLight ? 'bg-white/80 border-slate-200' : 'bg-slate-950 border-slate-800'
+      }`}>
+        {([
+          { id: 'typography', icon: Type, label: 'Typography' },
+          { id: 'layout', icon: SlidersHorizontal, label: 'Layout & Banners' },
+          { id: 'background', icon: ImageIcon, label: 'Background' },
+          { id: 'theme', icon: Palette, label: 'Theme & Preview' },
+          { id: 'header', icon: BookOpen, label: 'Header & Branding' },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setSettingsTab(tab.id)}
+            className={`px-4 py-2.5 rounded-2xl text-sm font-black flex items-center gap-2 transition-all cursor-pointer ${
+              settingsTab === tab.id
+                ? 'bg-amber-500 text-slate-950 shadow-lg ring-2 ring-amber-400/50'
+                : isAppLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* SECTION 1: SLIDE TYPOGRAPHY & GRANULAR FONT CONTROLS */}
+      {settingsTab === 'typography' && (
       <div className={`p-6 rounded-3xl border space-y-6 ${
         isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
       }`}>
@@ -480,13 +513,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           isAppLight ? 'border-slate-200' : 'border-slate-800/80'
         }`}>
           <div>
-            <h3 className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 ${
+            <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${
               isAppLight ? 'text-amber-700' : 'text-amber-300'
             }`}>
               <Type className="w-4 h-4 text-amber-400" />
               Slide Typography & Granular Font Controls
             </h3>
-            <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
               Customize fonts & text sizes independently for Header, Question Body, Options & Footer
             </p>
           </div>
@@ -506,7 +539,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setFontCategoryFilter(tab.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-sm font-semibold transition-all ${
                   fontCategoryFilter === tab.id
                     ? 'bg-amber-500 text-slate-950 font-bold shadow'
                     : isAppLight
@@ -522,7 +555,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
 
         {/* Global Primary Font Family Selection */}
         <div className="space-y-3">
-          <label className={`text-xs font-extrabold block uppercase tracking-wider ${
+          <label className={`text-sm font-extrabold block uppercase tracking-wider ${
             isAppLight ? 'text-slate-700' : 'text-slate-200'
           }`}>
             1. Base Default Font Family
@@ -545,7 +578,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <h4 className={`text-xs font-bold ${
+                    <h4 className={`text-sm font-bold ${
                       isSelected ? 'text-amber-300' : isAppLight ? 'text-slate-900' : 'text-slate-100'
                     }`}>
                       {font.name}
@@ -561,7 +594,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                       isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800/90'
                     }`}
                   >
-                    <p className="text-xs font-bold text-amber-300 leading-snug">
+                    <p className="text-sm font-bold text-amber-300 leading-snug">
                       {font.sampleBangla}
                     </p>
                   </div>
@@ -575,7 +608,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         <div className={`p-5 rounded-2xl border space-y-4 ${
           isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}>
-          <h4 className={`text-xs font-extrabold uppercase tracking-wider ${
+          <h4 className={`text-base font-extrabold uppercase tracking-wider ${
             isAppLight ? 'text-amber-700' : 'text-amber-300'
           }`}>
             2. Independent Font Family & Size Controls Per Slide Section
@@ -586,14 +619,14 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <div className={`p-4 rounded-xl border space-y-2 ${
               isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
             }`}>
-              <span className={`text-xs font-bold block ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Header Title & Brand Font</span>
+              <span className={`text-sm font-bold block ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Header Title & Brand Font</span>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={`text-[10px] block mb-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Family:</label>
+                  <label className={`text-sm block mb-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Family:</label>
                   <select
                     value={config.headerFont || config.fontFamily || "'Kalpurush', serif"}
                     onChange={(e) => handleChange('headerFont', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -603,11 +636,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Size:</label>
+                  <label className={`text-sm block mb-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Size:</label>
                   <select
                     value={config.headerFontSize || 'md'}
                     onChange={(e) => handleChange('headerFontSize', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -625,18 +658,18 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <div className={`p-4 rounded-xl border space-y-3 ${
               isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
             }`}>
-              <span className={`text-xs font-bold block uppercase tracking-wider ${
+              <span className={`text-sm font-bold block uppercase tracking-wider ${
                 isAppLight ? 'text-amber-700' : 'text-amber-300'
               }`}>
                 Question Body / Stem Styling & Position
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Family:</label>
+                  <label className={`text-sm block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Family:</label>
                   <select
                     value={config.bodyFont || config.fontFamily || "'Kalpurush', serif"}
                     onChange={(e) => handleChange('bodyFont', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-medium ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-medium ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -646,11 +679,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Size:</label>
+                  <label className={`text-sm block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Size:</label>
                   <select
                     value={config.bodyFontSize || 'lg'}
                     onChange={(e) => handleChange('bodyFontSize', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -663,11 +696,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold font-sans ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Weight:</label>
+                  <label className={`text-sm block mb-1 font-semibold font-sans ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Weight:</label>
                   <select
                     value={config.bodyFontWeight || 'bold'}
                     onChange={(e) => handleChange('bodyFontWeight', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -679,11 +712,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold font-sans ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Text Align:</label>
+                  <label className={`text-sm block mb-1 font-semibold font-sans ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Text Align:</label>
                   <select
                     value={config.questionAlignment || 'left'}
                     onChange={(e) => handleChange('questionAlignment', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -693,11 +726,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold font-sans ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Vertical Position:</label>
+                  <label className={`text-sm block mb-1 font-semibold font-sans ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Vertical Position:</label>
                   <select
                     value={config.questionPosition || 'top'}
                     onChange={(e) => handleChange('questionPosition', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -712,18 +745,18 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <div className={`p-4 rounded-xl border space-y-3 ${
               isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
             }`}>
-              <span className={`text-xs font-bold block uppercase tracking-wider ${
+              <span className={`text-sm font-bold block uppercase tracking-wider ${
                 isAppLight ? 'text-amber-700' : 'text-amber-300'
               }`}>
                 MCQ Options (A, B, C, D) Font & Layout
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Family:</label>
+                  <label className={`text-sm block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Family:</label>
                   <select
                     value={config.optionsFont || config.fontFamily || "'Kalpurush', serif"}
                     onChange={(e) => handleChange('optionsFont', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-medium ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-medium ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -733,11 +766,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Size:</label>
+                  <label className={`text-sm block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Size:</label>
                   <select
                     value={config.optionsFontSize || 'md'}
                     onChange={(e) => handleChange('optionsFontSize', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -750,11 +783,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Weight:</label>
+                  <label className={`text-sm block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Weight:</label>
                   <select
                     value={config.optionsFontWeight || 'bold'}
                     onChange={(e) => handleChange('optionsFontWeight', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -766,11 +799,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Grid Layout:</label>
+                  <label className={`text-sm block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Grid Layout:</label>
                   <select
                     value={config.optionsLayout || '2col'}
                     onChange={(e) => handleChange('optionsLayout', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -780,11 +813,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Option Text Align:</label>
+                  <label className={`text-sm block mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Option Text Align:</label>
                   <select
                     value={config.optionsAlignment || 'left'}
                     onChange={(e) => handleChange('optionsAlignment', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -800,14 +833,14 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <div className={`p-4 rounded-xl border space-y-2 ${
               isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
             }`}>
-              <span className={`text-xs font-bold block ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Footer & Watermark Font</span>
+              <span className={`text-sm font-bold block ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Footer & Watermark Font</span>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={`text-[10px] block mb-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Family:</label>
+                  <label className={`text-sm block mb-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Family:</label>
                   <select
                     value={config.footerFont || config.fontFamily || "'Kalpurush', serif"}
                     onChange={(e) => handleChange('footerFont', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -817,11 +850,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className={`text-[10px] block mb-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Size:</label>
+                  <label className={`text-sm block mb-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Font Size:</label>
                   <select
                     value={config.footerFontSize || 'sm'}
                     onChange={(e) => handleChange('footerFontSize', e.target.value)}
-                    className={`w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold ${
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm font-mono font-bold ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                     }`}
                   >
@@ -835,26 +868,28 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* SECTION 1.5: LAYOUT MODE & FULL-WIDTH CUSTOM BANNERS */}
+      {settingsTab === 'layout' && (
       <div className={`p-6 rounded-3xl border space-y-6 ${
         isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
       }`}>
         <div className={`border-b pb-4 ${isAppLight ? 'border-slate-200' : 'border-slate-800/80'}`}>
-          <h3 className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 ${
+          <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${
             isAppLight ? 'text-amber-700' : 'text-amber-300'
           }`}>
             <SlidersHorizontal className="w-4 h-4 text-amber-400" />
             Slide Layout Mode & Full-Width Custom Banners
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-sm text-slate-400 mt-0.5">
             Switch between Standard Presentation layout and Classroom Live Writing mode, or supply full-width graphic banners for Header & Footer
           </p>
         </div>
 
         {/* Layout Mode Selector Cards */}
         <div className="space-y-2">
-          <label className={`text-xs font-bold block uppercase tracking-wider ${
+          <label className={`text-sm font-bold block uppercase tracking-wider ${
             isAppLight ? 'text-slate-700' : 'text-slate-200'
           }`}>
             Slide Layout Format:
@@ -872,10 +907,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className={`text-xs font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>🖥️ Standard Center Presentation</span>
+                <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>🖥️ Standard Center Presentation</span>
                 {(config.layoutMode || 'standard') === 'standard' && <CheckCircle2 className="w-4 h-4 text-amber-400" />}
               </div>
-              <p className={`text-[11px] leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              <p className={`text-sm leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Classic 2-column options grid at bottom with question stem centered in the middle. Best for standard video recordings & projectors.
               </p>
             </button>
@@ -892,10 +927,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className={`text-xs font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>✏️ Classroom / Live Writing Mode (Rakib's Classroom Style)</span>
+                <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>✏️ Classroom / Live Writing Mode (Rakib's Classroom Style)</span>
                 {config.layoutMode === 'class_mode' && <CheckCircle2 className="w-4 h-4 text-amber-400" />}
               </div>
-              <p className={`text-[11px] leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              <p className={`text-sm leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Question stem on top-left leaving wide blank room in center for live stylus writing & math derivation. Options stacked vertically on right!
               </p>
             </button>
@@ -911,8 +946,8 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Graphic Header Banner</span>
-              <label className={`flex items-center gap-2 cursor-pointer text-xs font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
+              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Graphic Header Banner</span>
+              <label className={`flex items-center gap-2 cursor-pointer text-sm font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
                 <input
                   type="checkbox"
                   checked={!!config.useHeaderBanner}
@@ -931,11 +966,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     value={config.headerBannerUrl || ''}
                     onChange={(e) => handleChange('headerBannerUrl', e.target.value)}
                     placeholder="Paste header image banner URL or upload file"
-                    className={`w-full border rounded-xl px-3 py-1.5 text-xs font-mono ${
+                    className={`w-full border rounded-xl px-3 py-1.5 text-sm font-mono ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
                     }`}
                   />
-                  <label className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold cursor-pointer shrink-0">
+                  <label className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-sm font-bold cursor-pointer shrink-0">
                     Upload
                     <input
                       type="file"
@@ -963,8 +998,8 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
           }`}>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Graphic Footer Banner</span>
-              <label className={`flex items-center gap-2 cursor-pointer text-xs font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
+              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Graphic Footer Banner</span>
+              <label className={`flex items-center gap-2 cursor-pointer text-sm font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
                 <input
                   type="checkbox"
                   checked={!!config.useFooterBanner}
@@ -983,11 +1018,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     value={config.footerBannerUrl || ''}
                     onChange={(e) => handleChange('footerBannerUrl', e.target.value)}
                     placeholder="Paste footer image banner URL or upload file"
-                    className={`w-full border rounded-xl px-3 py-1.5 text-xs font-mono ${
+                    className={`w-full border rounded-xl px-3 py-1.5 text-sm font-mono ${
                       isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
                     }`}
                   />
-                  <label className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold cursor-pointer shrink-0">
+                  <label className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-sm font-bold cursor-pointer shrink-0">
                     Upload
                     <input
                       type="file"
@@ -1011,8 +1046,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* SECTION 2: SLIDE BACKGROUND IMAGE & PRESETS */}
+      {settingsTab === 'background' && (
       <div className={`p-6 rounded-3xl border space-y-6 ${
         isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
       }`}>
@@ -1020,18 +1057,18 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           isAppLight ? 'border-slate-200' : 'border-slate-800/80'
         }`}>
           <div>
-            <h3 className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 ${
+            <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${
               isAppLight ? 'text-amber-700' : 'text-amber-300'
             }`}>
               <ImageIcon className="w-4 h-4 text-amber-400" />
               Slide Background Image & Textures
             </h3>
-            <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
               Select or upload a background image for every slide with custom overlay contrast
             </p>
           </div>
 
-          <label className="text-xs px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-pointer flex items-center gap-2 font-bold transition-all">
+          <label className="text-sm px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-pointer flex items-center gap-2 font-bold transition-all">
             <Upload className="w-4 h-4" />
             Upload Custom Background
             <input
@@ -1049,10 +1086,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         }`}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <span className={`text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Custom Background Image URL:</span>
+              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Custom Background Image URL:</span>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label className="text-xs px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-pointer flex items-center gap-2 font-bold transition-all shrink-0">
+              <label className="text-sm px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-pointer flex items-center gap-2 font-bold transition-all shrink-0">
                 <Upload className="w-3.5 h-3.5" />
                 Upload Image File
                 <input
@@ -1072,7 +1109,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                       bgPreset: config.bgPreset === 'custom' ? 'none' : config.bgPreset,
                     });
                   }}
-                  className="text-xs px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition-all"
+                  className="text-sm px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition-all"
                 >
                   Clear Custom Image
                 </button>
@@ -1093,7 +1130,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 });
               }}
               placeholder="Paste image URL (e.g., https://images.unsplash.com/... or data:image/...)"
-              className={`w-full border rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 ${
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-amber-500 ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
               }`}
             />
@@ -1105,7 +1142,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 className="w-16 h-10 rounded-lg bg-cover bg-center border border-amber-400/50 shrink-0"
                 style={{ backgroundImage: `url("${config.bgImageUrl}")` }}
               />
-              <p className="text-[11px] text-amber-300 font-medium">
+              <p className="text-sm text-amber-300 font-medium">
                 Custom background active! (Preset set to <code className="font-mono font-bold">custom</code>)
               </p>
             </div>
@@ -1146,8 +1183,8 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 </div>
 
                 <div>
-                  <h4 className={`text-xs font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>{preset.name}</h4>
-                  <p className={`text-[10px] mt-0.5 line-clamp-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>{preset.description}</p>
+                  <h4 className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>{preset.name}</h4>
+                  <p className={`text-sm mt-0.5 line-clamp-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>{preset.description}</p>
                 </div>
               </button>
             );
@@ -1160,7 +1197,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             isAppLight ? 'border-slate-200' : 'border-slate-900'
           }`}>
             <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
+              <div className="flex justify-between text-sm font-semibold">
                 <span className={isAppLight ? 'text-slate-600' : 'text-slate-300'}>Background Image Opacity</span>
                 <span className="text-amber-400 font-mono">{Math.round((config.bgImageOpacity ?? 0.85) * 100)}%</span>
               </div>
@@ -1176,7 +1213,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
+              <div className="flex justify-between text-sm font-semibold">
                 <span className={isAppLight ? 'text-slate-600' : 'text-slate-300'}>Text Readability Dark Overlay</span>
                 <span className="text-amber-400 font-mono">{Math.round((config.bgOverlayDarkness ?? 0.4) * 100)}%</span>
               </div>
@@ -1193,8 +1230,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* SECTION 3: SLIDE TEMPLATE PALETTE & LIVE 16:9 THUMBNAIL PREVIEW */}
+      {settingsTab === 'theme' && (
       <div className={`p-6 rounded-3xl border space-y-6 ${
         isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
       }`}>
@@ -1202,13 +1241,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           isAppLight ? 'border-slate-200' : 'border-slate-800/80'
         }`}>
           <div>
-            <h3 className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 ${
+            <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${
               isAppLight ? 'text-amber-700' : 'text-amber-300'
             }`}>
               <Palette className="w-4 h-4 text-amber-400" />
               Presentation Theme Palette & Live Thumbnail Preview
             </h3>
-            <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
               Select a visual theme template (including clean Light Themes and high-contrast Dark Themes)
             </p>
           </div>
@@ -1220,7 +1259,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <button
               type="button"
               onClick={() => setThemeFilter('all')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${
                 themeFilter === 'all'
                   ? 'bg-amber-500 text-slate-950 shadow'
                   : isAppLight
@@ -1233,7 +1272,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <button
               type="button"
               onClick={() => setThemeFilter('light')}
-              className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-bold transition-all ${
                 themeFilter === 'light'
                   ? 'bg-amber-500 text-slate-950 shadow'
                   : isAppLight
@@ -1247,7 +1286,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <button
               type="button"
               onClick={() => setThemeFilter('dark')}
-              className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-bold transition-all ${
                 themeFilter === 'dark'
                   ? 'bg-amber-500 text-slate-950 shadow'
                   : isAppLight
@@ -1280,7 +1319,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 <div className="w-full h-9 rounded-xl bg-gradient-to-r from-amber-500 via-purple-500 to-indigo-600 flex items-center justify-between px-3 border border-white/20 shadow-sm">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-white animate-pulse" />
-                    <span className="text-xs font-black text-white uppercase tracking-wider">
+                    <span className="text-sm font-black text-white uppercase tracking-wider">
                       ✨ Custom Slide Theme Studio
                     </span>
                   </div>
@@ -1289,12 +1328,12 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   )}
                 </div>
                 <div>
-                  <h4 className={`text-xs font-extrabold ${
+                  <h4 className={`text-sm font-extrabold ${
                     effectiveConfig.templateId === 'custom-theme' ? 'text-amber-300' : isAppLight ? 'text-slate-900' : 'text-slate-100'
                   }`}>
                     Create Your Own Custom Color Theme
                   </h4>
-                  <p className={`text-[10px] mt-0.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <p className={`text-sm mt-0.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Build custom hex color combinations for background, cards, borders, text, and answer highlights with instant live preview.
                   </p>
                 </div>
@@ -1340,13 +1379,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     {/* Info */}
                     <div>
                       <div className="flex items-center justify-between">
-                        <h4 className={`text-xs font-extrabold ${
+                        <h4 className={`text-sm font-extrabold ${
                           isSelected ? 'text-amber-300' : isAppLight ? 'text-slate-900' : 'text-slate-100'
                         }`}>
                           {tmpl.name}
                         </h4>
                       </div>
-                      <p className={`text-[10px] line-clamp-2 mt-0.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <p className={`text-sm line-clamp-2 mt-0.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                         {tmpl.description}
                       </p>
                     </div>
@@ -1364,13 +1403,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   isAppLight ? 'border-slate-200' : 'border-slate-800'
                 }`}>
                   <div>
-                    <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${
+                    <h4 className={`text-sm font-black uppercase tracking-wider flex items-center gap-2 ${
                       isAppLight ? 'text-amber-700' : 'text-amber-300'
                     }`}>
                       <Palette className="w-4 h-4 text-amber-400" />
                       Custom Theme Color Palette Editor
                     </h4>
-                    <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <p className={`text-sm ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                       Pick custom hex colors for background, cards, borders, text, and MCQ options
                     </p>
                   </div>
@@ -1382,7 +1421,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                         key={preset.name}
                         type="button"
                         onClick={() => handleApplyCustomPalette(preset.colors)}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border transition-all flex items-center gap-1.5 ${
+                        className={`px-2.5 py-1 rounded-lg text-sm font-extrabold border transition-all flex items-center gap-1.5 ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-700 hover:text-slate-900 hover:border-amber-400' : 'bg-slate-950 border-slate-700 text-slate-200 hover:text-white hover:border-amber-400'
                         }`}
                         title={preset.name}
@@ -1400,7 +1439,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   <div className={`p-3 rounded-xl border space-y-1.5 ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800'
                   }`}>
-                    <label className={`text-[10px] font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Canvas Background:</label>
+                    <label className={`text-sm font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Canvas Background:</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -1412,7 +1451,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                         type="text"
                         value={effectiveConfig.customTheme?.bg || '#0f172a'}
                         onChange={(e) => handleCustomThemeChange('bg', e.target.value)}
-                        className={`w-full text-[11px] font-mono px-2 py-1 rounded border uppercase font-bold ${
+                        className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                         }`}
                       />
@@ -1423,7 +1462,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   <div className={`p-3 rounded-xl border space-y-1.5 ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800'
                   }`}>
-                    <label className={`text-[10px] font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Card Box Background:</label>
+                    <label className={`text-sm font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Card Box Background:</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -1435,7 +1474,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                         type="text"
                         value={effectiveConfig.customTheme?.cardBg || '#1e293b'}
                         onChange={(e) => handleCustomThemeChange('cardBg', e.target.value)}
-                        className={`w-full text-[11px] font-mono px-2 py-1 rounded border uppercase font-bold ${
+                        className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                         }`}
                       />
@@ -1446,7 +1485,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   <div className={`p-3 rounded-xl border space-y-1.5 ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800'
                   }`}>
-                    <label className={`text-[10px] font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Card Border & Accent:</label>
+                    <label className={`text-sm font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Card Border & Accent:</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -1458,7 +1497,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                         type="text"
                         value={effectiveConfig.customTheme?.cardBorder || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('cardBorder', e.target.value)}
-                        className={`w-full text-[11px] font-mono px-2 py-1 rounded border uppercase font-bold ${
+                        className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                         }`}
                       />
@@ -1469,7 +1508,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   <div className={`p-3 rounded-xl border space-y-1.5 ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800'
                   }`}>
-                    <label className={`text-[10px] font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Header & Num Accent:</label>
+                    <label className={`text-sm font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Header & Num Accent:</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -1481,7 +1520,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                         type="text"
                         value={effectiveConfig.customTheme?.titleColor || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('titleColor', e.target.value)}
-                        className={`w-full text-[11px] font-mono px-2 py-1 rounded border uppercase font-bold ${
+                        className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                         }`}
                       />
@@ -1492,7 +1531,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   <div className={`p-3 rounded-xl border space-y-1.5 ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800'
                   }`}>
-                    <label className={`text-[10px] font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Question Stem Text:</label>
+                    <label className={`text-sm font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Question Stem Text:</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -1504,7 +1543,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                         type="text"
                         value={effectiveConfig.customTheme?.textColor || '#ffffff'}
                         onChange={(e) => handleCustomThemeChange('textColor', e.target.value)}
-                        className={`w-full text-[11px] font-mono px-2 py-1 rounded border uppercase font-bold ${
+                        className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                         }`}
                       />
@@ -1515,7 +1554,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   <div className={`p-3 rounded-xl border space-y-1.5 ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-800'
                   }`}>
-                    <label className={`text-[10px] font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Subject Badge Fill:</label>
+                    <label className={`text-sm font-bold block ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>Subject Badge Fill:</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -1527,7 +1566,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                         type="text"
                         value={effectiveConfig.customTheme?.badgeBg || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('badgeBg', e.target.value)}
-                        className={`w-full text-[11px] font-mono px-2 py-1 rounded border uppercase font-bold ${
+                        className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                         }`}
                       />
@@ -1543,15 +1582,17 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900/90 border-slate-800'
           }`}>
             <TemplateThumbnailPreview config={effectiveConfig} />
-            <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 font-mono text-[11px] font-bold text-center flex items-center justify-center gap-2">
+            <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 font-mono text-sm font-bold text-center flex items-center justify-center gap-2">
               <Eye className="w-3.5 h-3.5" />
               <span>Editing: {settingsScope === 'global' ? 'Global Presentation Deck Config' : `Slide #${activeSlideIndex + 1} Scope Override`}</span>
             </div>
           </div>
         </div>
       </div>
+      )}
 
       {/* SECTION 4: HEADER TYPE SELECTOR & BRAND LOGO DETAILS */}
+      {settingsTab === 'header' && (
       <div className="space-y-6">
         {/* Header Type Mode Selector */}
         <div className={`p-6 rounded-3xl border space-y-4 ${
@@ -1561,13 +1602,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             isAppLight ? 'border-slate-200' : 'border-slate-800/80'
           }`}>
             <div>
-              <h3 className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 ${
+              <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${
                 isAppLight ? 'text-amber-700' : 'text-amber-300'
               }`}>
                 <BookOpen className="w-4 h-4 text-amber-400" />
                 Select Header Display Mode: Manual Texting vs Custom Header Image Banner
               </h3>
-            <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Choose between individual editable text elements (Logo + Coaching Title + Subject Badge) OR an all-in-one custom banner image.
               </p>
             </div>
@@ -1580,7 +1621,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   handleChange('headerType', 'manual');
                   handleChange('useHeaderBanner', false);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${
                   (config.headerType || 'manual') === 'manual' && !config.useHeaderBanner
                     ? 'bg-amber-500 text-slate-950 shadow-md'
                     : isAppLight
@@ -1596,7 +1637,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   handleChange('headerType', 'banner');
                   handleChange('useHeaderBanner', true);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${
                   config.headerType === 'banner' || config.useHeaderBanner
                     ? 'bg-amber-500 text-slate-950 shadow-md'
                     : isAppLight
@@ -1614,10 +1655,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <div className={`p-4 rounded-2xl border space-y-3 ${
               isAppLight ? 'bg-amber-50 border-amber-300' : 'bg-slate-900 border-amber-500/30'
             }`}>
-              <span className={`text-xs font-extrabold block ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
+              <span className={`text-sm font-extrabold block ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
                 Upload All-in-One Custom Header Banner Graphic Image
               </span>
-              <p className={`text-[11px] leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
+              <p className={`text-sm leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 Upload a graphic banner image containing your Coaching Logo, Name, Chapter Title, and Subject badge all together.
               </p>
 
@@ -1632,13 +1673,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     <button
                       type="button"
                       onClick={() => handleChange('headerBannerUrl', '')}
-                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center hover:bg-rose-600 shadow-md"
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-sm font-bold flex items-center justify-center hover:bg-rose-600 shadow-md"
                     >
                       ✕
                     </button>
                   </div>
                 ) : (
-                  <div className={`h-16 w-48 rounded-xl border border-dashed flex items-center justify-center text-xs text-center p-2 font-mono ${
+                  <div className={`h-16 w-48 rounded-xl border border-dashed flex items-center justify-center text-sm text-center p-2 font-mono ${
                     isAppLight ? 'bg-slate-50 border-slate-300 text-slate-500' : 'bg-slate-950 border-slate-700 text-slate-500'
                   }`}>
                     No Banner Uploaded
@@ -1652,11 +1693,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                       value={config.headerBannerUrl || ''}
                       onChange={(e) => handleChange('headerBannerUrl', e.target.value)}
                       placeholder="Paste image URL or click upload button"
-                      className={`w-full border rounded-xl px-3 py-1.5 text-xs font-mono ${
+                      className={`w-full border rounded-xl px-3 py-1.5 text-sm font-mono ${
                         isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
                       }`}
                     />
-                    <label className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-400 text-xs font-bold cursor-pointer shrink-0 shadow-md flex items-center gap-1.5">
+                    <label className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-400 text-sm font-bold cursor-pointer shrink-0 shadow-md flex items-center gap-1.5">
                       <Upload className="w-3.5 h-3.5" />
                       Upload Banner
                       <input
@@ -1675,7 +1716,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                       handleChange('useHeaderBanner', true);
                       handleChange('headerType', 'banner');
                     }}
-                    className="text-[11px] font-bold text-amber-400 hover:underline flex items-center gap-1"
+                    className="text-sm font-bold text-amber-400 hover:underline flex items-center gap-1"
                   >
                     ✨ Use Sample Biology Header Banner Image
                   </button>
@@ -1685,12 +1726,27 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           )}
         </div>
 
+        {isBannerMode && (
+          <div className={`p-5 rounded-2xl border flex items-start gap-3 ${
+            isAppLight ? 'bg-amber-50 border-amber-300' : 'bg-slate-900 border-amber-500/30'
+          }`}>
+            <ImageIcon className={`w-5 h-5 mt-0.5 shrink-0 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`} />
+            <div>
+              <p className={`text-sm font-extrabold ${isAppLight ? 'text-amber-800' : 'text-amber-300'}`}>Manual text fields hidden in Custom Banner mode</p>
+              <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                Logo, brand name, chapter title, subject badge, and instructor watermark are replaced by your banner image. Switch back to Manual Texting Header to edit them.
+              </p>
+            </div>
+          </div>
+        )}
+        {!isBannerMode && (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Brand Logo & Name */}
           <div className={`p-5 rounded-2xl border space-y-4 ${
             isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
           }`}>
-          <label className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+          <label className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${
             isAppLight ? 'text-amber-700' : 'text-amber-300'
           }`}>
             <Award className="w-4 h-4 text-amber-400" />
@@ -1709,14 +1765,14 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 <button
                   type="button"
                   onClick={() => handleChange('logoUrl', '')}
-                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center hover:bg-rose-600"
+                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-sm font-bold flex items-center justify-center hover:bg-rose-600"
                   title="Remove Logo"
                 >
                   ✕
                 </button>
               </div>
             ) : (
-              <div className={`w-16 h-16 rounded-2xl border border-dashed flex items-center justify-center text-xs text-center p-2 ${
+              <div className={`w-16 h-16 rounded-2xl border border-dashed flex items-center justify-center text-sm text-center p-2 ${
                 isAppLight ? 'bg-slate-100 border-slate-300 text-slate-500' : 'bg-slate-900 border-slate-700 text-slate-500'
               }`}>
                 No Logo
@@ -1724,7 +1780,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             )}
 
             <div className="space-y-2">
-              <label className={`text-xs px-3 py-1.5 rounded-xl border cursor-pointer flex items-center gap-1.5 font-semibold ${
+              <label className={`text-sm px-3 py-1.5 rounded-xl border cursor-pointer flex items-center gap-1.5 font-semibold ${
                 isAppLight ? 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200'
               }`}>
                 <Upload className="w-3.5 h-3.5" />
@@ -1736,13 +1792,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   className="hidden"
                 />
               </label>
-              <p className="text-[10px] text-slate-500">PNG / SVG logo with transparent background recommended.</p>
+              <p className="text-sm text-slate-500">PNG / SVG logo with transparent background recommended.</p>
             </div>
           </div>
 
           {/* Logo Size Control */}
           <div>
-            <label className={`block text-[10px] mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Logo Display Size:</label>
+            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Logo Display Size:</label>
             <div className="grid grid-cols-4 gap-1.5">
               {[
                 { id: 'sm', label: 'Small' },
@@ -1754,7 +1810,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   key={sz.id}
                   type="button"
                   onClick={() => handleChange('logoSize', sz.id)}
-                  className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all ${
+                  className={`py-1.5 px-2 rounded-xl text-sm font-bold border transition-all ${
                     config.logoSize === sz.id
                       ? 'bg-amber-500 text-slate-950 border-amber-400'
                       : isAppLight
@@ -1769,49 +1825,50 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           </div>
 
           <div>
-            <label className={`block text-[10px] mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Coaching / Brand Name:</label>
+            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Coaching / Brand Name:</label>
             <input
               type="text"
               value={config.brandName}
               onChange={(e) => handleChange('brandName', e.target.value)}
               placeholder="e.g. RAKIB'S CLASSROOM"
-              className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500 font-bold ${
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 font-bold ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             />
           </div>
         </div>
+      </div>
 
         {/* Header Chapter & Class Badge */}
         <div className={`p-5 rounded-2xl border space-y-3 ${
           isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
         }`}>
-          <label className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+          <label className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${
             isAppLight ? 'text-amber-700' : 'text-amber-300'
           }`}>
             <BookOpen className="w-4 h-4 text-amber-400" />
             Subject Header & Badge
           </label>
           <div>
-            <label className={`block text-[10px] mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Header Chapter Title:</label>
+            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Header Chapter Title:</label>
             <input
               type="text"
               value={config.headerTitle}
               onChange={(e) => handleChange('headerTitle', e.target.value)}
               placeholder="e.g. অধ্যায় ৮ঃ রেচন প্রক্রিয়া"
-              className={`w-full border rounded-xl px-3 py-2 text-sm ${
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             />
           </div>
           <div>
-            <label className={`block text-[10px] mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Class / Subject Badge Tag:</label>
+            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Class / Subject Badge Tag:</label>
             <input
               type="text"
               value={config.badgeTag}
               onChange={(e) => handleChange('badgeTag', e.target.value)}
               placeholder="e.g. ৯-১০ম শ্রেণি | জীববিজ্ঞান"
-              className={`w-full border rounded-xl px-3 py-2 text-sm ${
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             />
@@ -1822,38 +1879,38 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         <div className={`p-5 rounded-2xl border space-y-3 ${
           isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
         }`}>
-          <label className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+          <label className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${
             isAppLight ? 'text-amber-700' : 'text-amber-300'
           }`}>
             <User className="w-4 h-4 text-amber-400" />
             Instructor Watermark
           </label>
           <div>
-            <label className={`block text-[10px] mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Instructor Name:</label>
+            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Instructor Name:</label>
             <input
               type="text"
               value={config.watermarkHandle}
               onChange={(e) => handleChange('watermarkHandle', e.target.value)}
               placeholder="e.g. Hasnat Shuvro"
-              className={`w-full border rounded-xl px-3 py-2 text-sm ${
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             />
           </div>
           <div>
-            <label className={`block text-[10px] mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Footer Brand Tag:</label>
+            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Footer Brand Tag:</label>
             <input
               type="text"
               value={config.footerTag}
               onChange={(e) => handleChange('footerTag', e.target.value)}
               placeholder="e.g. BIOMISSION"
-              className={`w-full border rounded-xl px-3 py-2 text-sm ${
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             />
           </div>
           <div className="flex items-center gap-2 pt-1">
-            <label className={`text-xs px-3 py-1.5 rounded-xl border cursor-pointer flex items-center gap-1.5 font-semibold ${
+            <label className={`text-sm px-3 py-1.5 rounded-xl border cursor-pointer flex items-center gap-1.5 font-semibold ${
               isAppLight ? 'bg-white border-slate-300 text-slate-700 hover:text-slate-900' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
             }`}>
               <Upload className="w-3.5 h-3.5" />
@@ -1867,18 +1924,20 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             </label>
           </div>
         </div>
+        </>
+        )}
 
         {/* Toggles: Answer Reveal & Numbering Format */}
         <div className={`p-5 rounded-2xl border space-y-3 md:col-span-2 lg:col-span-3 ${
           isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
         }`}>
-          <label className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+          <label className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${
             isAppLight ? 'text-amber-700' : 'text-amber-300'
           }`}>
             <SlidersHorizontal className="w-4 h-4 text-amber-400" />
             Slide Interactive Display Settings
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm pt-1">
             <label className={`flex items-center justify-between cursor-pointer p-3 rounded-xl border ${
               isAppLight ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
             }`}>
@@ -1904,11 +1963,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             </label>
 
             <div>
-              <label className={`block text-[10px] mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Question Numbering Format:</label>
+              <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Question Numbering Format:</label>
               <select
                 value={config.questionNumberFormat}
                 onChange={(e) => handleChange('questionNumberFormat', e.target.value)}
-                className={`w-full border rounded-xl px-3 py-2 text-xs font-mono font-bold ${
+                className={`w-full border rounded-xl px-4 py-2.5 text-sm font-mono font-bold ${
                   isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
                 }`}
               >
@@ -1920,7 +1979,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
-  </div>
 );
 };

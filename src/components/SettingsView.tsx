@@ -132,7 +132,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
         </div>
 
         {/* Security Banner */}
-        <div className={`mt-8 p-5 rounded-2xl border text-sm font-semibold flex items-center gap-4 ${
+        <div className={`mt-8 p-5 rounded-2xl border text-base font-semibold flex items-center gap-4 ${
           isAppLight
             ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
             : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
@@ -145,7 +145,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
 
         {/* Provider Selector */}
         <div className="mt-8 space-y-5">
-          <label className={`block text-xs font-black uppercase tracking-widest ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+          <label className={`block text-sm font-black uppercase tracking-widest ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
             Select Active AI Provider Engine:
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -175,7 +175,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
                 <h3 className={`font-black text-lg ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                   Google Gemini API
                 </h3>
-                <p className={`text-xs mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                   Direct connection to Google AI Studio. Native 2-stage vision support for PDFs & photos.
                 </p>
               </div>
@@ -207,7 +207,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
                 <h3 className={`font-black text-lg ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                   OpenRouter API
                 </h3>
-                <p className={`text-xs mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                   Access Gemini, Claude 3.5, Llama 3.3, & DeepSeek R1 via OpenRouter proxying.
                 </p>
               </div>
@@ -230,7 +230,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-amber-500 hover:text-amber-400 font-bold flex items-center gap-1 transition-colors"
+                  className="text-sm text-amber-500 hover:text-amber-400 font-bold flex items-center gap-1 transition-colors"
                 >
                   Get Free Gemini Key <ExternalLink className="w-3 h-3" />
                 </a>
@@ -241,13 +241,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
                 value={geminiApiKey}
                 onChange={(e) => saveGeminiKey(e.target.value)}
                 placeholder="Paste your Gemini API Key (e.g. AIzaSy...)"
-                className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 font-mono text-sm transition-all ${
+                className={`w-full px-4 py-4 rounded-xl border focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 font-mono text-sm transition-all ${
                   isAppLight
                     ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                     : 'bg-slate-900 border-slate-800 text-slate-100 placeholder:text-slate-600'
                 }`}
               />
-              <p className={`text-xs ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+              <p className={`text-sm ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
                 Recommended default model: <code className={`px-1.5 py-0.5 rounded font-mono ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>gemini-2.5-flash</code> (Fast multimodal vision & Bengali LaTeX text extraction).
               </p>
             </div>
@@ -265,7 +265,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
                     href="https://openrouter.ai/keys"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-blue-500 hover:text-blue-400 font-bold flex items-center gap-1 transition-colors"
+                    className="text-sm text-blue-500 hover:text-blue-400 font-bold flex items-center gap-1 transition-colors"
                   >
                     Get OpenRouter Key <ExternalLink className="w-3 h-3" />
                   </a>
@@ -276,7 +276,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
                   value={openrouterApiKey}
                   onChange={(e) => saveOpenrouterKey(e.target.value)}
                   placeholder="Paste your OpenRouter Key (e.g. sk-or-v1-...)"
-                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-mono text-sm transition-all ${
+                  className={`w-full px-4 py-4 rounded-xl border focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-mono text-sm transition-all ${
                     isAppLight
                       ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
                       : 'bg-slate-900 border-slate-800 text-slate-100 placeholder:text-slate-600'
@@ -292,7 +292,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
                 <select
                   value={openrouterModel}
                   onChange={(e) => saveOpenrouterModel(e.target.value)}
-                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold transition-all cursor-pointer ${
+                  className={`w-full px-4 py-4 rounded-xl border focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold transition-all cursor-pointer ${
                     isAppLight
                       ? 'bg-white border-slate-300 text-slate-900'
                       : 'bg-slate-900 border-slate-800 text-slate-100'
@@ -333,7 +333,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
 
           {testStatus.msg && (
             <div
-              className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2.5 border w-full sm:w-auto ${
+              className={`p-4 rounded-xl text-sm font-semibold flex items-center gap-2.5 border w-full sm:w-auto ${
                 testStatus.success
                   ? isAppLight
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
