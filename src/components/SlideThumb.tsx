@@ -8,6 +8,7 @@ interface SlideThumbProps {
   index: number;
   totalCount: number;
   isAnswerRevealMode?: boolean;
+  slideVariant?: 'question' | 'answer';
   className?: string;
 }
 
@@ -20,6 +21,7 @@ export const SlideThumb: React.FC<SlideThumbProps> = ({
   index,
   totalCount,
   isAnswerRevealMode = false,
+  slideVariant = 'question',
   className = '',
 }) => {
   const thumbRef = useRef<HTMLDivElement>(null);
@@ -53,6 +55,7 @@ export const SlideThumb: React.FC<SlideThumbProps> = ({
             currentIndex={index}
             totalCount={totalCount}
             isAnswerRevealMode={isAnswerRevealMode}
+            slideVariant={slideVariant}
           />
         </div>
       )}

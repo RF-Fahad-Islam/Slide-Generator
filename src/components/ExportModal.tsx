@@ -1,22 +1,27 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { DeckConfig, MCQItem } from '../types';
-import { exportDeckToPPTX } from '../utils/pptxExport';
+import { exportDeckToPPTX, PptxSlideSpec } from '../utils/pptxExport';
 import { SlideCanvas } from './SlideCanvas';
 import { SlideThumb } from './SlideThumb';
 import { DeckQuestionPaperModal } from './DeckQuestionPaperModal';
+import { expandDeckSlides, effectiveAnswerMode, SlideRef } from '../utils/answerSlides';
 import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { downloadJSON } from '../utils/mcqJson';
 import jsPDF from 'jspdf';
-import { Download, FileArchive, CheckCircle2, Loader2, X, Sparkles, Presentation, ExternalLink, FileText } from 'lucide-react';
+import { FileArchive, CheckCircle2, Loader2, X, Presentation, ExternalLink, FileText } from 'lucide-react';
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
   items: MCQItem[];
   config: DeckConfig;
+  // Physical index into the expanded slide list (question + answer slides).
   currentIndex: number;
+  // The exact slide the user is currently viewing (variant-aware) — used by
+  // 'current' scope exports so an answer slide exports with its highlight.
+  currentSlideRef?: SlideRef | null;
   slideRef: React.RefObject<HTMLDivElement | null>;
   appTheme?: 'dark' | 'light';
   scope?: 'all' | 'current';
@@ -28,6 +33,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   items,
   config,
   currentIndex,
+  currentSlideRef,
   slideRef,
   appTheme = 'dark',
   scope = 'all',
@@ -36,39 +42,55 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [progressMsg, setProgressMsg] = useState('');
   const [showGoogleSlidesGuide, setShowGoogleSlidesGuide] = useState(false);
-  const [bulkRenderIndex, setBulkRenderIndex] = useState<number>(currentIndex);
+  const [isDeckPaperOpen, setIsDeckPaperOpen] = useState(false);
   const exportCanvasRef = useRef<HTMLDivElement | null>(null);
 
-  // Export scope: 'all' exports the whole deck; 'current' exports only the active slide.
-  // (Scope is fixed per entry point — sidebar "Export Slides" = all, Slide Studio Download = current.)
-  const isCurrentScope = scope === 'current';
-  const scopeIndices = isCurrentScope
-    ? items.length > 0
-      ? [currentIndex]
-      : []
-    : items.map((_, i) => i);
-  const scopedItems = isCurrentScope
-    ? items.length > 0
-      ? [items[currentIndex]]
-      : []
-    : items;
+  // Expanded physical slides. In 'separate_slide' answer mode every question is
+  // followed by its answer slide. `includeAnswerSlides` is the per-export toggle —
+  // it defaults to following the deck's answer mode but can be flipped per export.
+  const fullSlides = useMemo(() => expandDeckSlides(items, config), [items, config]);
+  const questionSlides = useMemo(
+    () => expandDeckSlides(items, { ...config, answerMode: 'hidden', showAnswerInSlide: false }),
+    [items, config]
+  );
 
-  // Question Paper PDF modal (opens separately — file name, template, MCQs per page, answer key)
-  const [isDeckPaperOpen, setIsDeckPaperOpen] = useState(false);
-  const [renderAnswerRevealState, setRenderAnswerRevealState] = useState<boolean>(false);
-  const [includeAnswerSlides, setIncludeAnswerSlides] = useState<boolean>(true);
+  const currentSlide: SlideRef | null =
+    currentSlideRef ?? fullSlides[Math.min(currentIndex, Math.max(0, fullSlides.length - 1))] ?? null;
+
+  const [includeAnswerSlides, setIncludeAnswerSlides] = useState<boolean>(() => effectiveAnswerMode(config) === 'separate_slide');
+  // Sync the per-export default to the deck's answer mode each time the modal opens
+  // (so a deck switched to 'separate_slide' exports answer slides by default).
+  useEffect(() => {
+    if (isOpen) setIncludeAnswerSlides(effectiveAnswerMode(config) === 'separate_slide');
+  }, [isOpen, config]);
   // PPTX: native editable layers (text boxes / shapes as layers) by default —
   // the flattened exact-image fallback is opt-in.
   const [pptxEditable, setPptxEditable] = useState<boolean>(true);
+  // The slide ref currently being rasterized in the offscreen canvas.
+  const [renderSlideRef, setRenderSlideRef] = useState<SlideRef | null>(null);
 
   if (!isOpen) return null;
+
+  // Which slides the current export includes.
+  const isCurrentScope = scope === 'current';
+  const scopeSlides: SlideRef[] = isCurrentScope
+    ? currentSlide
+      ? [currentSlide]
+      : []
+    : includeAnswerSlides
+    ? fullSlides
+    : questionSlides;
+
+  // Question Paper gets the raw items (scoped).
+  const paperItems = isCurrentScope ? (currentSlide ? [currentSlide.item] : []) : items;
 
   // Helper to render high-res slide images for exact PPTX visual reproduction
   const renderSlideDataUrls = async (): Promise<string[]> => {
     const slideDataUrls: string[] = [];
-    for (let i = 0; i < scopeIndices.length; i++) {
-      setBulkRenderIndex(scopeIndices[i]);
-      setProgressMsg(`Rendering high-res slide ${i + 1} of ${scopeIndices.length} for PPTX...`);
+    for (let i = 0; i < scopeSlides.length; i++) {
+      const ref = scopeSlides[i];
+      setRenderSlideRef(ref);
+      setProgressMsg(`Rendering high-res slide ${i + 1} of ${scopeSlides.length} for PPTX...`);
       await new Promise(r => setTimeout(r, 150));
 
       const targetEl = exportCanvasRef.current || slideRef.current;
@@ -83,16 +105,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     return slideDataUrls;
   };
 
+  const toPptxSpecs = (): PptxSlideSpec[] =>
+    scopeSlides.map(s => ({ item: s.item, questionIndex: s.questionIndex, isAnswerSlide: s.isAnswerSlide }));
+
   // Export to PowerPoint PPTX (16:9 Widescreen) - native editable layers (default) or exact visual image
   const downloadPPTX = async () => {
-    if (items.length === 0) return;
+    if (scopeSlides.length === 0) return;
     setIsExporting(true);
     try {
+      const specs = toPptxSpecs();
       if (pptxEditable) {
-        await exportDeckToPPTX(scopedItems, config, (msg) => setProgressMsg(msg), undefined, false);
+        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), undefined, false, specs);
       } else {
         const slideDataUrls = await renderSlideDataUrls();
-        await exportDeckToPPTX(scopedItems, config, (msg) => setProgressMsg(msg), slideDataUrls, true);
+        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), slideDataUrls, true, specs);
       }
     } catch (err: any) {
       console.error('PPTX Export Error:', err);
@@ -100,20 +126,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
-      setBulkRenderIndex(currentIndex);
+      setRenderSlideRef(null);
     }
   };
 
   // Export for Google Slides: Downloads exact visual PPTX & opens Google Drive upload prompt
   const handleExportGoogleSlides = async () => {
-    if (items.length === 0) return;
+    if (scopeSlides.length === 0) return;
     setIsExporting(true);
     try {
+      const specs = toPptxSpecs();
       if (pptxEditable) {
-        await exportDeckToPPTX(scopedItems, config, (msg) => setProgressMsg(msg), undefined, false);
+        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), undefined, false, specs);
       } else {
         const slideDataUrls = await renderSlideDataUrls();
-        await exportDeckToPPTX(scopedItems, config, (msg) => setProgressMsg(msg), slideDataUrls, true);
+        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), slideDataUrls, true, specs);
       }
       setShowGoogleSlidesGuide(true);
     } catch (err: any) {
@@ -122,15 +149,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
-      setBulkRenderIndex(currentIndex);
+      setRenderSlideRef(null);
     }
   };
 
   // Download Current Active Slide PNG
   const downloadSingleSlide = async () => {
+    if (!currentSlide) return;
     setIsExporting(true);
     setProgressMsg('Rendering active slide PNG (1920x1080)...');
-    setBulkRenderIndex(currentIndex);
+    setRenderSlideRef(currentSlide);
 
     try {
       await new Promise(r => setTimeout(r, 100));
@@ -142,7 +170,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         cacheBust: true,
       });
 
-      const fileName = `${(config.brandName || 'Slide').replace(/\s+/g, '_')}_q${currentIndex + 1}.png`;
+      const fileName = `${(config.brandName || 'Slide').replace(/\s+/g, '_')}_q${currentSlide.questionIndex + 1}${currentSlide.isAnswerSlide ? '_ans' : ''}.png`;
       saveAs(dataUrl, fileName);
     } catch (err: any) {
       console.error('Single Slide Export Error:', err);
@@ -150,51 +178,34 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
+      setRenderSlideRef(null);
     }
   };
 
   // Bulk Export All Slides to ZIP with exact template applied to every slide
   const downloadBulkZip = async () => {
-    if (items.length === 0) return;
+    if (scopeSlides.length === 0) return;
     setIsExporting(true);
     const zip = new JSZip();
 
     try {
       const folder = zip.folder(`${config.brandName || 'Slides'}_MCQs`);
 
-      for (let i = 0; i < scopeIndices.length; i++) {
-        setBulkRenderIndex(scopeIndices[i]);
-        const padIndex = (scopeIndices[i] + 1).toString().padStart(2, '0');
-
-        // 1. Render Question Slide (Unanswered)
-        setRenderAnswerRevealState(false);
-        setProgressMsg(`Rendering Question Slide ${i + 1} of ${scopeIndices.length}...`);
+      for (let i = 0; i < scopeSlides.length; i++) {
+        const ref = scopeSlides[i];
+        setRenderSlideRef(ref);
+        const padIndex = (ref.questionIndex + 1).toString().padStart(2, '0');
+        setProgressMsg(`Rendering slide ${i + 1} of ${scopeSlides.length}...`);
         await new Promise(r => setTimeout(r, 150));
 
         const targetEl = exportCanvasRef.current || slideRef.current;
         if (targetEl) {
-          const qDataUrl = await toPng(targetEl, {
+          const dataUrl = await toPng(targetEl, {
             pixelRatio: 2,
             cacheBust: true,
           });
-          const qBase64 = qDataUrl.replace(/^data:image\/png;base64,/, '');
-          folder?.file(`${padIndex}_q.png`, qBase64, { base64: true });
-        }
-
-        // 2. Render Answer Reveal Slide (if enabled)
-        if (includeAnswerSlides) {
-          setRenderAnswerRevealState(true);
-          setProgressMsg(`Rendering Answer Slide ${i + 1} of ${scopeIndices.length}...`);
-          await new Promise(r => setTimeout(r, 150));
-
-          if (targetEl) {
-            const ansDataUrl = await toPng(targetEl, {
-              pixelRatio: 2,
-              cacheBust: true,
-            });
-            const ansBase64 = ansDataUrl.replace(/^data:image\/png;base64,/, '');
-            folder?.file(`${padIndex}_ans.png`, ansBase64, { base64: true });
-          }
+          const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+          folder?.file(`${padIndex}_${ref.isAnswerSlide ? 'ans' : 'q'}.png`, base64, { base64: true });
         }
       }
 
@@ -203,7 +214,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       saveAs(
         blob,
         isCurrentScope
-          ? `${config.brandName || 'EdTech'}_Slide_${currentIndex + 1}.zip`
+          ? `${config.brandName || 'EdTech'}_Slide_${(currentSlide?.questionIndex ?? 0) + 1}.zip`
           : `${config.brandName || 'EdTech'}_MCQ_Slides.zip`
       );
     } catch (err: any) {
@@ -212,14 +223,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
-      setRenderAnswerRevealState(false);
-      setBulkRenderIndex(currentIndex);
+      setRenderSlideRef(null);
     }
   };
 
   // Download PDF Presentation Document
   const downloadPDF = async () => {
-    if (items.length === 0) return;
+    if (scopeSlides.length === 0) return;
     setIsExporting(true);
     try {
       const pdf = new jsPDF({
@@ -228,9 +238,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         format: [1920, 1080],
       });
 
-      for (let i = 0; i < scopeIndices.length; i++) {
-        setBulkRenderIndex(scopeIndices[i]);
-        setProgressMsg(`Rendering PDF slide ${i + 1} of ${scopeIndices.length}...`);
+      for (let i = 0; i < scopeSlides.length; i++) {
+        const ref = scopeSlides[i];
+        setRenderSlideRef(ref);
+        setProgressMsg(`Rendering PDF slide ${i + 1} of ${scopeSlides.length}...`);
         await new Promise(r => setTimeout(r, 150));
 
         const targetEl = exportCanvasRef.current || slideRef.current;
@@ -253,7 +264,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
-      setBulkRenderIndex(currentIndex);
+      setRenderSlideRef(null);
     }
   };
 
@@ -269,6 +280,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     const cleanItems = items.map(({ customConfig, ...q }) => q);
     downloadJSON(cleanItems, `${config.brandName || 'MCQ'}_mcqs.json`);
   };
+
+  const scopeSlideCount = isCurrentScope ? 1 : scopeSlides.length;
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${
@@ -299,7 +312,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   ? isAppLight ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-amber-500/15 text-amber-300 border border-amber-500/40'
                   : isAppLight ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40'
               }`}>
-                {isCurrentScope ? `Current Slide #${currentIndex + 1}` : `Full Deck (${items.length} slide${items.length === 1 ? '' : 's'})`}
+                {isCurrentScope
+                  ? `Current Slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1}`
+                  : `${includeAnswerSlides ? 'Question + Answer' : 'Question'} (${scopeSlideCount} slide${scopeSlideCount === 1 ? '' : 's'})`}
               </span>
             </div>
             <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -327,8 +342,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 {isCurrentScope
                   ? pptxEditable
-                    ? `Generates a single 16:9 PowerPoint slide for slide #${currentIndex + 1} with editable text fields & layers.`
-                    : `Generates a single 16:9 PowerPoint slide for slide #${currentIndex + 1} as a flattened image.`
+                    ? `Generates a single 16:9 PowerPoint slide for slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1} with editable text fields & layers.`
+                    : `Generates a single 16:9 PowerPoint slide for slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1} as a flattened image.`
                   : pptxEditable
                   ? 'Generates editable 16:9 PowerPoint slides — text fields, shapes & backgrounds stay as editable layers.'
                   : 'Generates 16:9 PowerPoint slides as flattened images (exact visual match, not editable).'}
@@ -368,7 +383,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </h4>
               <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 {isCurrentScope
-                  ? `Downloads a 16:9 .pptx of slide #${currentIndex + 1} and opens Google Drive / Slides to import in 1 click.`
+                  ? `Downloads a 16:9 .pptx of slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1} and opens Google Drive / Slides to import in 1 click.`
                   : 'Downloads 16:9 .pptx file and opens Google Drive / Slides to import in 1 click.'}
               </p>
             </div>
@@ -425,6 +440,27 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
           )}
 
+          {!isCurrentScope && (
+            <div className={`p-5 rounded-2xl border space-y-2 ${
+              isAppLight ? 'bg-amber-50 border-amber-300' : 'bg-slate-950 border-amber-500/40'
+            }`}>
+              <label className={`flex items-center gap-2.5 text-xs font-bold cursor-pointer select-none ${
+                isAppLight ? 'text-amber-800' : 'text-amber-200'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={includeAnswerSlides}
+                  onChange={(e) => setIncludeAnswerSlides(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+                Include Answer Slides (question + highlighted answer per MCQ)
+              </label>
+              <p className={`text-[11px] font-semibold ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                Adds a dedicated answer slide after every question slide — the correct option is highlighted with a "উত্তর" label. Applies to PPTX, PDF and ZIP exports.
+              </p>
+            </div>
+          )}
+
           <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 ${
             isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
           }`}>
@@ -435,8 +471,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </h4>
               <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                 {isCurrentScope
-                  ? `Generates a print-ready vector PDF document of slide #${currentIndex + 1}`
-                  : 'Generates a print-ready vector PDF document with 1 slide per page'}
+                  ? `Generates a print-ready vector PDF document of slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1}`
+                  : `Generates a print-ready vector PDF document with ${scopeSlideCount} slide${scopeSlideCount === 1 ? '' : 's'} (1 per page)`}
               </p>
             </div>
             <button
@@ -456,11 +492,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <div>
               <h4 className={`text-sm font-bold flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
                 <FileArchive className="w-4 h-4 text-amber-500" />
-                {isCurrentScope ? 'Current Slide ZIP (1 PNG Slide)' : `Bulk Images ZIP (${scopeIndices.length} PNG Slides)`}
+                {isCurrentScope ? 'Current Slide ZIP (1 PNG Slide)' : `Bulk Images ZIP (${scopeSlideCount} PNG Slide${scopeSlideCount === 1 ? '' : 's'})`}
               </h4>
               <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                 {isCurrentScope
-                  ? `Generates a high-resolution 1920x1080 PNG of slide #${currentIndex + 1}`
+                  ? `Generates a high-resolution 1920x1080 PNG of slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1}`
                   : 'Generates high-resolution 1920x1080 PNG image files for all slides in deck'}
               </p>
             </div>
@@ -482,12 +518,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               <div>
                 <h4 className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>Current Slide Image (PNG)</h4>
                 <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Download current active slide #{currentIndex + 1} at 1920x1080 resolution
+                  Download current active slide #{(currentSlide?.physicalIndex ?? currentIndex) + 1} at 1920x1080 resolution
                 </p>
               </div>
               <button
                 onClick={downloadSingleSlide}
-                disabled={isExporting || items.length === 0}
+                disabled={isExporting || !currentSlide}
                 className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
                   isAppLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                 }`}
@@ -498,13 +534,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
             {/* Live PNG preview of the current slide — exact render that will be downloaded */}
             <div className={`rounded-xl overflow-hidden border ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              {items.length > 0 && (
+              {currentSlide && (
                 <SlideThumb
-                  item={items[currentIndex]}
+                  item={currentSlide.item}
                   config={config}
-                  index={currentIndex}
+                  index={currentSlide.questionIndex}
                   totalCount={items.length}
                   isAnswerRevealMode={config.showAnswerInSlide}
+                  slideVariant={currentSlide.isAnswerSlide ? 'answer' : 'question'}
                 />
               )}
             </div>
@@ -521,7 +558,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                 {isCurrentScope
                   ? `A4 paper for the current slide — pick file name, template, MCQs per page & answer key`
-                  : `A4 portrait paper with ${scopeIndices.length} MCQs using the slide header & footer branding — pick file name, template, MCQs per page & answer key`}
+                  : `A4 portrait paper with ${items.length} MCQs using the slide header & footer branding — pick file name, template, MCQs per page & answer key`}
               </p>
             </div>
             <button
@@ -599,14 +636,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           zIndex: -100,
         }}
       >
-        {items.length > 0 && (
+        {renderSlideRef && (
           <SlideCanvas
             ref={exportCanvasRef}
-            item={items[bulkRenderIndex] || items[0]}
+            item={renderSlideRef.item}
             config={config}
-            currentIndex={bulkRenderIndex}
+            currentIndex={renderSlideRef.questionIndex}
             totalCount={items.length}
-            isAnswerRevealMode={renderAnswerRevealState || config.showAnswerInSlide}
+            isAnswerRevealMode={false}
+            slideVariant={renderSlideRef.isAnswerSlide ? 'answer' : 'question'}
           />
         )}
       </div>
@@ -615,7 +653,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       <DeckQuestionPaperModal
         isOpen={isDeckPaperOpen}
         onClose={() => setIsDeckPaperOpen(false)}
-        items={scopedItems}
+        items={paperItems}
         config={config}
         appTheme={appTheme}
       />

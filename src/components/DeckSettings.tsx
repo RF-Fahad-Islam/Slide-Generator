@@ -11,6 +11,7 @@ import {
   DeckTemplatePreset,
 } from '../utils/templatePresets';
 import { Sliders, Upload, Palette, User, Award, BookOpen, Image as ImageIcon, SlidersHorizontal, CheckCircle2, Eye, Type, Sun, Moon, Sparkles, Layers, RefreshCw, Layers3, Target, Globe, LayoutTemplate, Save, Trash2 } from 'lucide-react';
+import { AnswerMode, effectiveAnswerMode, effectiveShowAnswerInSlide } from '../utils/answerSlides';
 
 interface DeckSettingsProps {
   config: DeckConfig;
@@ -274,13 +275,13 @@ const TemplateThumbnailPreview: React.FC<{ config: DeckConfig }> = ({ config }) 
             <div className={`grid ${optionsGridClass} pt-0.5`}>
               <div
                 className={`p-1 rounded text-[8px] font-bold flex items-center justify-between border ${
-                  config.showAnswerInSlide
+                  effectiveShowAnswerInSlide(config)
                     ? `${styles.optionSelectedBg} border-amber-400`
                     : `${styles.optionBg} ${isLight ? 'border-slate-300' : 'border-white/10'}`
                 }`}
               >
                 <span>ক) ২টি</span>
-                {config.showAnswerInSlide && (
+                {effectiveShowAnswerInSlide(config) && (
                   <span className="w-3 h-3 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[7px] font-black">
                     ✓
                   </span>
@@ -361,6 +362,27 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       onUpdateConfig({
         ...config,
         [field]: value,
+      });
+    }
+  };
+
+  // Answer display mode — 3-state (hidden / highlight / separate_slide). The
+  // legacy `showAnswerInSlide` boolean is kept in sync so saved decks without
+  // `answerMode` still behave correctly (only 'highlight' highlights in-place).
+  const handleAnswerModeChange = (mode: AnswerMode) => {
+    const patch: Partial<DeckConfig> = {
+      answerMode: mode,
+      showAnswerInSlide: mode === 'highlight',
+    };
+    if (settingsScope === 'slide') {
+      onUpdateActiveSlideConfig?.({
+        ...(activeSlideConfig || {}),
+        ...patch,
+      });
+    } else {
+      onUpdateConfig({
+        ...config,
+        ...patch,
       });
     }
   };
@@ -1992,7 +2014,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         </>
         )}
 
-        {/* Toggles: Answer Reveal & Numbering Format */}
+        {/* Toggles: Answer Display Mode & Numbering Format */}
         <div className={`p-5 rounded-2xl border space-y-3 md:col-span-2 lg:col-span-3 ${
           isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
         }`}>
@@ -2002,19 +2024,47 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             <SlidersHorizontal className="w-4 h-4 text-amber-400" />
             Slide Interactive Display Settings
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm pt-1">
-            <label className={`flex items-center justify-between cursor-pointer p-3 rounded-xl border ${
-              isAppLight ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-            }`}>
-              <span className={`font-semibold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Show Answer Key Highlight</span>
-              <input
-                type="checkbox"
-                checked={config.showAnswerInSlide}
-                onChange={(e) => handleChange('showAnswerInSlide', e.target.checked)}
-                className="w-4 h-4 accent-amber-500 rounded"
-              />
-            </label>
 
+          {/* Answer Display Mode — 3-state segmented control */}
+          <div className="pt-1">
+            <span className={`block text-sm mb-2 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              Answer Display Mode:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {([
+                { value: 'hidden', title: 'No Answer', desc: 'Question only' },
+                { value: 'highlight', title: 'Highlight on Slide', desc: 'Answer highlighted in place' },
+                { value: 'separate_slide', title: 'Separate Answer Slide', desc: '+1 slide per question' },
+              ] as { value: AnswerMode; title: string; desc: string }[]).map(opt => {
+                const active = effectiveAnswerMode(config) === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleAnswerModeChange(opt.value)}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      active
+                        ? isAppLight
+                          ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/50'
+                          : 'bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/40'
+                        : isAppLight
+                        ? 'bg-white border-slate-200 hover:border-slate-300'
+                        : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className={`block text-sm font-black ${active ? (isAppLight ? 'text-amber-700' : 'text-amber-300') : isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      {opt.title}
+                    </span>
+                    <span className={`block text-xs mt-0.5 font-semibold ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                      {opt.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <label className={`flex items-center justify-between cursor-pointer p-3 rounded-xl border ${
               isAppLight ? 'bg-white border-slate-200 hover:border-slate-300' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
             }`}>

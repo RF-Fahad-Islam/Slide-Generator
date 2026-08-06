@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { DeckConfig, MCQItem } from './types';
 import { SAMPLE_DECKS } from './utils/bulkParser';
 import { useIndexedDBSync } from './hooks/useIndexedDBSync';
@@ -35,6 +35,7 @@ import { SlideTextBox, SlideTextBoxBind } from './types';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, LayoutTemplate, Copy, FileText, Download, Sliders } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
+import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
 
 export default function App() {
   // Application State
@@ -122,6 +123,7 @@ export default function App() {
     watermarkHandle: 'Hasnat Shuvro',
     aspectRatio: '16:9',
     showAnswerInSlide: false,
+    answerMode: 'hidden',
     showExplanationInSlide: false,
     questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
     fontFamily: "'Kalpurush', serif",
@@ -133,6 +135,13 @@ export default function App() {
 
   // Current deck's display name (shown at the top of Slide Studio).
   const [deckName, setDeckName] = useState<string>(SAMPLE_DECKS[0]?.name || 'Untitled Deck');
+
+  // Expanded physical slides — in 'separate_slide' answer mode every question is
+  // followed by its answer slide, so selectedIndex addresses THIS expanded list.
+  const expandedSlides = useMemo(() => expandDeckSlides(items, config), [items, config]);
+  const activeSlideRef: SlideRef | undefined = expandedSlides[selectedIndex];
+  const activeQuestionIndex =
+    activeSlideRef?.questionIndex ?? Math.min(selectedIndex, Math.max(0, items.length - 1));
 
   // IndexedDB Auto-Sync Hook
   const { isSyncing, lastSavedTime } = useIndexedDBSync(
@@ -168,14 +177,14 @@ export default function App() {
 
   // Slide text box overlay actions (deck-wide stored in config.slideTextBoxes;
   // slide-scope stored on the active MCQItem's customConfig.slideTextBoxes)
-  const slideTextBoxOverride = items[selectedIndex]?.customConfig?.slideTextBoxes;
+  const slideTextBoxOverride = items[activeQuestionIndex]?.customConfig?.slideTextBoxes;
   const hasTextBoxOverride = !!slideTextBoxOverride;
   const activeTextBoxes: SlideTextBox[] = slideTextBoxOverride ?? config.slideTextBoxes ?? [];
-  const effectiveTextBoxConfig: DeckConfig = { ...config, ...(items[selectedIndex]?.customConfig || {}) };
+  const effectiveTextBoxConfig: DeckConfig = { ...config, ...(items[activeQuestionIndex]?.customConfig || {}) };
 
   const setTextBoxes = (updater: (boxes: SlideTextBox[]) => SlideTextBox[]) => {
-    if (textBoxScope === 'slide' && items[selectedIndex]) {
-      const slideIdx = selectedIndex;
+    if (textBoxScope === 'slide' && items[activeQuestionIndex]) {
+      const slideIdx = activeQuestionIndex;
       setItems(prev => {
         const updated = [...prev];
         const cur = updated[slideIdx];
@@ -195,8 +204,8 @@ export default function App() {
   const changeTextBoxScope = (scope: 'global' | 'slide') => {
     // Switching to slide scope snapshots the deck-wide boxes so the active slide
     // starts from exactly what is on screen (later edits no longer touch other slides)
-    if (scope === 'slide' && items[selectedIndex] && !items[selectedIndex]?.customConfig?.slideTextBoxes) {
-      const slideIdx = selectedIndex;
+    if (scope === 'slide' && items[activeQuestionIndex] && !items[activeQuestionIndex]?.customConfig?.slideTextBoxes) {
+      const slideIdx = activeQuestionIndex;
       setItems(prev => {
         const updated = [...prev];
         const cur = updated[slideIdx];
@@ -213,7 +222,7 @@ export default function App() {
 
   const revertTextBoxOverride = () => {
     if (!window.confirm("Remove this slide's custom text boxes and go back to the deck-wide (all slides) layout?")) return;
-    const slideIdx = selectedIndex;
+    const slideIdx = activeQuestionIndex;
     setItems(prev => {
       const updated = [...prev];
       const cur = updated[slideIdx];
@@ -331,7 +340,7 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (activeTab !== 'preview') return;
       if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-        if (selectedIndex < items.length - 1) {
+        if (selectedIndex < expandedSlides.length - 1) {
           setSelectedIndex(prev => prev + 1);
         }
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
@@ -346,7 +355,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab, selectedIndex, items.length]);
+  }, [activeTab, selectedIndex, expandedSlides.length]);
 
   const ensureUniqueIds = (itemsList: MCQItem[]): MCQItem[] => {
     const seenIds = new Set<string>();
@@ -446,8 +455,8 @@ export default function App() {
   // customConfig only, so other slides keep the deck theme (SlideCanvas merges
   // item.customConfig over config when rendering every slide).
   const applyThemeToActiveSlide = (selection: ThemeSelection) => {
-    if (!items[selectedIndex]) return;
-    const slideIdx = selectedIndex;
+    if (!items[activeQuestionIndex]) return;
+    const slideIdx = activeQuestionIndex;
     setItems(prev => {
       const updated = [...prev];
       const cur = updated[slideIdx];
@@ -465,8 +474,8 @@ export default function App() {
   };
 
   const resetActiveSlideTheme = () => {
-    if (!items[selectedIndex]) return;
-    const slideIdx = selectedIndex;
+    if (!items[activeQuestionIndex]) return;
+    const slideIdx = activeQuestionIndex;
     setItems(prev => {
       const updated = [...prev];
       const cur = updated[slideIdx];
@@ -489,7 +498,7 @@ export default function App() {
   // deck: its customConfig becomes the deck-wide config, and every per-slide
   // override is cleared so all slides render exactly like the current one.
   const applyActiveSlideDesignToAll = () => {
-    const slideIdx = selectedIndex;
+    const slideIdx = activeQuestionIndex;
     const slide = items[slideIdx];
     if (!slide) return;
     const cc = slide.customConfig || {};
@@ -533,10 +542,10 @@ export default function App() {
     }
   };
 
-  const currentItem = items[selectedIndex] || {
+  const placeholderItem: MCQItem = {
     id: 'placeholder',
     questionType: 'standard',
-    stem: 'কোন প্রশ্ন পাওয়া যায়নি। প্রশ্ন যোগ করতে "Manual Editor" বা "AI Parser" ট্যাব ব্যবহার করুন।',
+    stem: 'কোন প্রশ্ন পাওয়া যায়নি। প্রশ্ন যোগ করতে "Manual Editor" বা "AI Parser" ট্যাব ব্যবহার করুন।',
     options: [
       { key: 'ক', text: 'অপশন ১' },
       { key: 'খ', text: 'অপশন ২' },
@@ -546,13 +555,15 @@ export default function App() {
     answer: 'ক',
   };
 
+  const currentItem = items[activeQuestionIndex] || placeholderItem;
+
   const activeTemplate = getTemplateById(config.templateId);
   const isLightTemplate = activeTemplate.themeType === 'light';
   const isAppLight = appTheme === 'light';
 
   // Active slide's effective theme (deck config + slide-level override) — used by
   // the quick Light/Dark toggle so theme choices stay slide-specific.
-  const activeSlideConfigOverride = items[selectedIndex]?.customConfig;
+  const activeSlideConfigOverride = items[activeQuestionIndex]?.customConfig;
   const activeSlideTemplateId = activeSlideConfigOverride?.templateId || config.templateId;
   const activeSlideTheme = getTemplateById(activeSlideTemplateId, activeSlideConfigOverride?.customTheme);
   const isActiveSlideLight = activeSlideTheme.themeType === 'light';
@@ -585,7 +596,7 @@ export default function App() {
           <SlideDecksHome
             currentItems={items}
             currentConfig={config}
-            activeSlideConfig={items[selectedIndex]?.customConfig}
+            activeSlideConfig={items[activeQuestionIndex]?.customConfig}
             onOpenDeck={handleOpenDeck}
             onOpenDeckSettings={handleOpenDeckSettings}
             onOpenSocialGenerator={handleOpenSocialGenerator}
@@ -645,7 +656,7 @@ export default function App() {
                   <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full border ${
                     isAppLight ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                   }`}>
-                    {items.length} slide{items.length === 1 ? '' : 's'}
+                    {expandedSlides.length} slide{expandedSlides.length === 1 ? '' : 's'}
                   </span>
                 </div>
                 <h1 className={`text-base sm:text-lg font-black tracking-tight leading-tight truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
@@ -678,7 +689,7 @@ export default function App() {
                     </button>
                     <div>
                       <h2 className="text-lg font-extrabold flex items-center gap-2">
-                        <span>All Created Slides Deck ({items.length})</span>
+                        <span>All Created Slides Deck ({expandedSlides.length})</span>
                         <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-600 font-mono border border-amber-500/30">
                           {items.length} Questions
                         </span>
@@ -712,20 +723,20 @@ export default function App() {
                     <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border ${
                       isAppLight ? 'bg-slate-100 text-slate-800 border-slate-200' : 'bg-slate-950 text-amber-300 border-slate-800'
                     }`}>
-                      Active Slide: #{selectedIndex + 1} of {items.length}
+                      Active Slide: #{selectedIndex + 1} of {expandedSlides.length}
                     </span>
                   </div>
                 </div>
 
                 {/* Slides Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {items.map((item, idx) => {
-                    const isSelected = idx === selectedIndex;
+                  {expandedSlides.map((ref) => {
+                    const isSelected = ref.physicalIndex === selectedIndex;
                     return (
                       <div
-                        key={`${item.id}_${idx}`}
+                        key={`${ref.item.id}_${ref.physicalIndex}`}
                         onClick={() => {
-                          setSelectedIndex(idx);
+                          setSelectedIndex(ref.physicalIndex);
                           setIsOverviewMode(false);
                         }}
                         className={`p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
@@ -739,7 +750,7 @@ export default function App() {
                         }`}
                       >
                         <div className="space-y-3">
-                          {/* Card Header Bar: Slide number + Subject + Theme Indicator */}
+                          {/* Card Header Bar: Slide number + Answer badge + Theme Indicator */}
                           <div className={`flex items-center justify-between gap-2 border-b pb-2 ${
                             isAppLight ? 'border-slate-200' : 'border-slate-800/80'
                           }`}>
@@ -747,8 +758,13 @@ export default function App() {
                               <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${
                                 isSelected ? 'bg-amber-500 text-slate-950' : isAppLight ? 'bg-slate-100 text-slate-800 border' : 'bg-slate-800 text-amber-300'
                               }`}>
-                                Slide #{idx + 1} of {items.length}
+                                Slide #{ref.physicalIndex + 1} of {ref.totalSlides}
                               </span>
+                              {ref.isAnswerSlide && (
+                                <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">
+                                  Answer
+                                </span>
+                              )}
                               {isSelected && (
                                 <span className="text-[10px] font-extrabold uppercase text-emerald-500 flex items-center gap-1">
                                   <CheckCircle2 className="w-3 h-3" /> Active
@@ -765,11 +781,12 @@ export default function App() {
 
                           {/* Exact real slide render — identical to the Slide Studio preview */}
                           <SlideThumb
-                            item={item}
+                            item={ref.item}
                             config={config}
-                            index={idx}
-                            totalCount={items.length}
-                            isAnswerRevealMode={isAnswerRevealMode}
+                            index={ref.questionIndex}
+                            totalCount={ref.totalQuestions}
+                            isAnswerRevealMode={ref.isAnswerSlide || isAnswerRevealMode}
+                            slideVariant={ref.isAnswerSlide ? 'answer' : 'question'}
                             className="group-hover:scale-[1.02] transition-transform"
                           />
                         </div>
@@ -780,7 +797,7 @@ export default function App() {
                         }`}>
                           <span>Select to Preview</span>
                           <span className="flex items-center gap-1 hover:translate-x-1 transition-transform">
-                            Preview Slide #{idx + 1} →
+                            Preview Slide #{ref.physicalIndex + 1} →
                           </span>
                         </div>
                       </div>
@@ -809,14 +826,19 @@ export default function App() {
                           title="View all created slides in grid view"
                         >
                           <LayoutGrid className="w-4 h-4 text-amber-500" />
-                          <span className="hidden 2xl:inline">View All Slides ({items.length})</span>
+                          <span className="hidden 2xl:inline">View All Slides ({expandedSlides.length})</span>
                         </button>
 
-                        {items.length > 0 && (
+                        {expandedSlides.length > 0 && (
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-mono text-xs font-bold border border-amber-400 shrink-0">
                               Slide #{selectedIndex + 1}
                             </span>
+                            {activeSlideRef?.isAnswerSlide && (
+                              <span className="px-2.5 py-1 rounded-xl bg-emerald-500 text-slate-950 font-mono text-xs font-bold border border-emerald-400 shrink-0">
+                                Answer
+                              </span>
+                            )}
                             <h3 className="text-xs sm:text-sm font-bold truncate max-w-[200px] sm:max-w-[320px]">
                               <MathText text={currentItem.stem} />
                             </h3>
@@ -896,7 +918,7 @@ export default function App() {
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => setSelectedIndex(prev => Math.max(0, prev - 1))}
-                            disabled={selectedIndex === 0 || items.length === 0}
+                            disabled={selectedIndex === 0 || expandedSlides.length === 0}
                             className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                             title="Previous Slide (Left Arrow)"
                           >
@@ -904,12 +926,12 @@ export default function App() {
                           </button>
 
                           <span className="text-xs font-bold px-2 font-mono">
-                            {items.length > 0 ? selectedIndex + 1 : 0} / {items.length}
+                            {expandedSlides.length > 0 ? selectedIndex + 1 : 0} / {expandedSlides.length}
                           </span>
 
                           <button
-                            onClick={() => setSelectedIndex(prev => Math.min(items.length - 1, prev + 1))}
-                            disabled={selectedIndex >= items.length - 1 || items.length === 0}
+                            onClick={() => setSelectedIndex(prev => Math.min(expandedSlides.length - 1, prev + 1))}
+                            disabled={selectedIndex >= expandedSlides.length - 1 || expandedSlides.length === 0}
                             className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                             title="Next Slide (Right Arrow)"
                           >
@@ -1011,7 +1033,7 @@ export default function App() {
                   <div className={`relative w-full border rounded-3xl pt-8 sm:pt-10 lg:pt-12 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 shadow-2xl overflow-hidden flex items-center justify-center ${
                     isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
                   }`}>
-                    {items.length === 0 ? (
+                    {expandedSlides.length === 0 ? (
                       <div className="text-center p-12 text-slate-400 space-y-4">
                         <Presentation className="w-16 h-16 mx-auto stroke-[1.2] text-amber-500" />
                         <div>
@@ -1058,9 +1080,10 @@ export default function App() {
                             ref={slideRef}
                             item={currentItem}
                             config={config}
-                            currentIndex={selectedIndex}
+                            currentIndex={activeQuestionIndex}
                             totalCount={items.length}
                             isAnswerRevealMode={isAnswerRevealMode}
+                            slideVariant={activeSlideRef?.isAnswerSlide ? 'answer' : 'question'}
                           />
                           {isTextBoxEditMode && (
                             <SlideTextBoxOverlay
@@ -1068,7 +1091,7 @@ export default function App() {
                               selectedId={selectedTextBoxId}
                               item={currentItem}
                               config={config}
-                              currentIndex={selectedIndex}
+                              currentIndex={activeQuestionIndex}
                               scale={slideScale}
                               onSelect={setSelectedTextBoxId}
                               onMove={(id, x, y) => updateSlideBox(id, { x, y })}
@@ -1115,10 +1138,10 @@ export default function App() {
                       items={items}
                       onUpdateItems={setItems}
                       onSelectIndex={(idx) => {
-                        setSelectedIndex(idx);
+                        setSelectedIndex(questionSlideIndex(expandedSlides, idx));
                         setIsOverviewMode(false);
                       }}
-                      selectedIndex={selectedIndex}
+                      selectedIndex={activeQuestionIndex}
                       appTheme={appTheme}
                       onEditQuestion={(item) => setEditingQuestion(item)}
                     />
@@ -1195,6 +1218,7 @@ export default function App() {
         items={exportDeckOverride?.items ?? items}
         config={exportDeckOverride?.config ?? config}
         currentIndex={exportDeckOverride ? 0 : selectedIndex}
+        currentSlideRef={exportDeckOverride ? null : activeSlideRef}
         slideRef={slideRef}
         appTheme={appTheme}
         scope={exportScope}
