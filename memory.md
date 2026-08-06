@@ -1,61 +1,39 @@
-# Memory — Codebase Scan & Context Update
+# Memory — Configure Tabs, Banner Mode, Share-to-Social, Custom Post Editor
 
 Last updated: 2026-08-06
 
 ## What was built
 
-**Full-stack MCQ slide generator application** (Vite + React 19 + Express):
+**Session 3 (this session)** — three features committed on `main`:
 
-- **Core components**: `App.tsx` (main shell with tab navigation), `SlideCanvas.tsx` (1920x1080 responsive renderer), `HeaderNavbar.tsx`, `DeckManager.tsx`, `ManualEditor.tsx`, `AIUploader.tsx`, `ExportModal.tsx`, `DeckSettings.tsx`, `QuestionBankView.tsx`, `SocialPostGenerator.tsx`, `SettingsView.tsx`, `SlideDecksHome.tsx`, `ValidationPanel.tsx`, `MathText.tsx`
-- **Backend**: `server.ts` with Express routes for health check, AI test connection, and 2-stage vision OCR pipeline (`/api/ai/parse-mcqs`)
-- **Template system**: 8 preset themes in `src/templates/registry.ts` (rakib-dark, quiztime-blue, classroom-green, minimal-light, pure-white-light, warm-paper-light, pastel-study-light, neon-cyber) with custom theme builder
-- **Data layer**: IndexedDB via Dexie (`src/db/dexie.ts`) with auto-sync hook
-- **Utilities**: PPTX export (`pptxExport.ts`), bulk parser (`bulkParser.ts`), CSV parser (`csvParser.ts`), background presets, font presets
-- **Features**: Dark/light app theme, BYOK (Bring Your Own Key) for Gemini + OpenRouter, multi-format export (PPTX/PNG/PDF/ZIP), social media post generator, question bank with tagging
+- `6df2659` — **Configure tab categories + banner mode** (`DeckSettings.tsx`, `SettingsView.tsx`): pill tab bar under the scope selector (Typography · Layout & Banners · Background · Theme & Preview · Header & Branding) via `settingsTab` state (default `typography`); each section renders only when its tab is active. In banner mode (`headerType === 'banner' || useHeaderBanner`) the 3 manual text cards (Brand Logo & Name, Subject Header & Badge, Instructor Watermark) are hidden behind `{!isBannerMode && (...)}` and replaced by an amber hint card; banner upload controls stay visible. `SettingsView.tsx` had a fatty-text pass (AI settings tab). DeckSettings.tsx must stay CRLF no-BOM (normalized: 1985 CRLF, 0 lone LF); its thumbnail preview (micro-fonts `text-[7px]`–`text-[11px]`) is a scaled 16:9 canvas — never touch.
+- `85c4bb5` — **Share question to Social Post Generator** (`QuestionBankView.tsx`, `App.tsx`, `SocialPostGenerator.tsx`): compact Share button per question card (`stopPropagation`). `App.tsx` `handleOpenInSocial` appends the question to the active deck if missing (id preserved via `ensureUniqueIds` — dedupe only assigns new ids, existing ids untouched), sets `socialTargetId`, switches to the `social` tab. `SocialPostGenerator` accepts `preselectedItemId?: string | null`; a `useEffect` jumps `selectedQuestionIndex` + `selectedItemIds` to it.
+- `6f42370` — **Custom design editor (5th mode)** (`SocialPostGenerator.tsx`): toggle card in the left column. In custom mode the preview canvas becomes a user-designed post: upload background image (FileReader data-URL or paste URL, clearable), add draggable/resizable text boxes bound to question fields (`stem`, `options` auto-rendered as keyed list, `answer`, `explanation`, `brand`, `headerTitle`, `footerTag`, `free` text). Style panel: bind dropdown, font-size slider (% of canvas width), 8 color presets + native picker, align, bold, duplicate, delete. Positions are `%` (`x/y/w`); drag + bottom-right resize via pointer events. Persists to `localStorage` (`social_post_custom_design_v1`) with corrupt-data fallback; quota-full catches are ignored.
+- `4566199` — docs: `context/progress-tracker.md` + `context/ui-registry.md` updated for all three features.
 
 ## Decisions made
 
-- **Stack choice**: Vite 6 + React 19 + Tailwind CSS 4 + Express 4 (not Next.js as originally planned in architecture docs). Current stack is working well with clean builds.
-- **AI pipeline**: 2-stage vision OCR approach — Stage 1 extracts text from images/PDFs, Stage 2 structures into JSON MCQs. Supports both Gemini and OpenRouter providers.
-- **PPTX export**: Hybrid approach using pre-rendered slide images (from `html-to-image`) for visual fidelity, with native PPTX fallback. LaTeX rendered as KaTeX snapshots.
-- **Template architecture**: Template registry with both Tailwind classes (for DOM rendering) and hex colors (for PPTX export parity). Custom theme builder allows user color customization.
-- **Storage**: IndexedDB via Dexie with schema versioning. Whole-deck JSON import/export for round-trip fidelity.
+- **Export boundary**: in custom mode the `postCanvasRef` export node is a sibling of the editor overlay (`absolute inset-0` + `z-20` overlay inside the aspect card), so `handleExportSinglePNG` (html2canvas) captures only the card — handles/chips never leak into the PNG. Do not nest the overlay inside the export node.
+- **Font sizing**: box `fontSize` is a % of canvas width; `canvasWidth` is measured from the export node via ResizeObserver (a 500px wrapper is NOT used — 4:5 and 9:16 cards are narrower, so measuring the wrapper would be wrong). `fs = max(8, round(fontSize/100 * canvasWidth))`.
+- **Raw hex is the sanctioned exception**: box/bg color storage is user data, so hex values (`BOX_COLOR_PRESETS`, native picker) are required; presets match Tailwind semantic palette (e.g. `#fbbf24` = amber-400). Rest of the UI still follows `isAppLight` ternary + semantic tokens.
+- **Existing 4 template layouts are untouched** — they render when custom mode is OFF; the custom editor is a strict add-on 5th mode (user-confirmed).
 
 ## Problems solved
 
-- **Build configuration**: Resolved TypeScript type issues with React 19 + Vite setup. Build now passes cleanly (`npm run build` and `tsc --noEmit`).
-- **BYOK security**: API keys passed via headers (`x-gemini-key`, `x-openrouter-key`), never stored server-side, sanitized from error messages with regex replacement.
-- **Responsive canvas**: `ResizeObserver` calculates scale factor to fit 1920x1080 canvas into any container size without layout shifts.
-- **Bangla numeral handling**: AI pipeline normalizes Bengali numerals (০-৯) to Arabic (0-9) for consistent key generation.
+- Duplicated `postCanvasRef` declaration (stale original kept from before refactor) — removed.
+- `addBox` originally had a convoluted double-`setCustomDesign` for options placement; simplified to a single clean add.
+- `canvasMeasureRef` was initially on a `max-w-[500px]` wrapper, which mis-measures 4:5 (450px) / 9:16 (360px) cards — moved measurement to `postCanvasRef.current` which in custom mode is `inset-0`, so its rect equals the card width.
 
 ## Current state
 
-**Working features**:
-- All 8 template themes render correctly in both dark and light modes
-- AI ingestion pipeline (text paste + file upload) with Gemini/OpenRouter BYOK
-- Manual question editor with standard, bohupodi (roman_statements), and passage types
-- Slide preview with answer reveal toggle, keyboard navigation, overview grid mode
-- Export to PPTX (hybrid), PNG (single/ZIP), PDF
-- Social media post generator with 4 aspect ratios
-- Question bank with search, filter, bulk import
-- IndexedDB auto-save with sync indicator
-- Deck settings with custom branding, fonts, backgrounds, per-slide overrides
-
-**Known issues / incomplete**:
-- Drag-and-drop reordering not implemented (needs `dnd-kit`)
-- Paginated answer-key slides not implemented
-- Bengali fonts loaded from Google Fonts CDN (should bundle woff2 locally)
-- Architecture doc specifies declarative `Element[]` renderer but current implementation is imperative
+All green: `npx tsc --noEmit` + `npm run build` pass. All work committed on `main`. Working tree has only `memory.md` modified (this file, previous sessions 1–2 dnd-kit + laptop responsiveness — see git log `d32235f`, `f433862`).
 
 ## Next session starts with
 
-1. **Add drag-and-drop reordering**: Install `dnd-kit` and implement sortable question list in `DeckManager.tsx`
-2. **Implement paginated answer-key slides**: Add `answerKeyList` element type to export pipeline
-3. **Bundle Bengali fonts**: Download Hind Siliguri + Noto Sans Bengali woff2 to `public/fonts/` for offline support
-4. **(Optional) Refactor to declarative renderer**: If pursuing architecture parity with `Element[]` descriptor schema per Decision D6
+1. `git commit` this `memory.md` (it supersedes the sessions 1–2 memory that was still uncommitted), or fold it into the next feature commit.
+2. Open the app and manually verify the custom design editor end-to-end: toggle custom mode, upload a bg image, drag/resize a box, change the selected question (bound boxes should update), and export a PNG — html2canvas with an `absolute inset-0` export node was NOT visually verified in a browser and is the highest-risk unverified behavior.
+3. Optional polish: add `onerror` handler to the background-image `FileReader` (currently silent on bad files) — flagged Minor in review.
 
 ## Open questions
 
-- **Framework migration**: Current Vite + Express stack works well. Should we migrate to Next.js App Router as originally planned, or stay with current stack?
-- **Declarative renderer**: Architecture doc specifies `Element[]` descriptor schema for dual-renderer parity. Is this refactor worth the effort given current hybrid PPTX approach works?
-- **Supabase integration**: Architecture mentions future Supabase layer. When to start implementing the tenant-shaped schema with `org_id` columns?
+- None blocking. The two Minor review notes (FileReader `onerror`, raw-hex exception documented) are captured above.
