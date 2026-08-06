@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MCQItem, DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
 import { MathText } from './MathText';
 import {
@@ -35,6 +35,10 @@ import { SlideTextBoxOverlay } from './SlideTextBoxOverlay';
 import { SlideTextBoxPanel } from './SlideTextBoxPanel';
 import { getSlideBoxContent } from '../utils/slideTextBoxes';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from '../utils/slideElements';
+import { PostTemplateSelector } from './social-post/PostTemplateSelector';
+import { ClassicQuizCard } from './social-post/ClassicQuizCard';
+import { QuizTimeCard } from './social-post/QuizTimeCard';
+import { PostTemplateId, ReactionEmojiSet, DEFAULT_REACTION_EMOJIS, REACTION_ORDER } from './social-post/types';
 
 interface SocialPostGeneratorProps {
   items: MCQItem[];
@@ -142,14 +146,18 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedItemId]);
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:5' | '9:16'>('1:1');
-  const [postTemplate, setPostTemplate] = useState<
-    'edtech_quiz' | 'minimal_card' | 'flashcard' | 'exam_highlight'
-  >('edtech_quiz');
+  const [postTemplate, setPostTemplate] = useState<PostTemplateId>('classic');
   const [postBgColor, setPostBgColor] = useState<string>('gradient_amber');
   const [customHeaderTitle, setCustomHeaderTitle] = useState<string>('à¦†à¦œà¦•à§‡à¦° à¦•à§à¦‡à¦œ');
   const [showAnswerKey, setShowAnswerKey] = useState<boolean>(true);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  // "Quiz Time" reaction-post template state
+  const [quizTitleText, setQuizTitleText] = useState<string>('Quiz Time');
+  const [quizCtaText, setQuizCtaText] = useState<string>('React to give your answer!');
+  const [quizSubCtaText, setQuizSubCtaText] = useState<string>('COMMENT YOUR ANSWER BELOW');
+  const [reactionEmojis, setReactionEmojis] = useState<ReactionEmojiSet>(DEFAULT_REACTION_EMOJIS);
 
   // Custom Design Editor State
   const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
@@ -592,6 +600,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             )}
           </div>
 
+          {/* Post Template Selector */}
+          {!isCustomMode && (
+            <PostTemplateSelector selected={postTemplate} onSelect={setPostTemplate} isAppLight={isAppLight} />
+          )}
+
           {/* Aspect Ratio Selector */}
           <div
             className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-5 ${
@@ -604,7 +617,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               isAppLight ? 'text-amber-600' : 'text-amber-400'
             }`}>
               <Smartphone className="w-4 h-4" />
-              1. Select Aspect Ratio & Platform
+              2. Select Aspect Ratio & Platform
             </label>
 
             <div className="grid grid-cols-3 gap-3 text-xs">
@@ -664,7 +677,10 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Background Theme Selector */}
+          {/* Background Theme Selector — the Quiz Time template ships its own
+              fixed navy/gold theme, so this only applies to the Classic card
+              (or custom mode, where it's the fallback behind an image). */}
+          {(isCustomMode || postTemplate === 'classic') && (
           <div
             className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-5 ${
               isAppLight
@@ -676,7 +692,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               isAppLight ? 'text-amber-600' : 'text-amber-400'
             }`}>
               <Sliders className="w-4 h-4" />
-              2. Post Background Color & Gradient
+              3. Post Background Color & Gradient
             </label>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
@@ -706,6 +722,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               ))}
             </div>
           </div>
+          )}
 
           {/* Custom Text Controls */}
           <div
@@ -719,9 +736,94 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               isAppLight ? 'text-amber-600' : 'text-amber-400'
             }`}>
               <Type className="w-4 h-4" />
-              3. Post Banner Header & Display Settings
+              4. Post Banner Header & Display Settings
             </label>
 
+            {postTemplate === 'quiz_time' && !isCustomMode ? (
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Quiz Wordmark Title:
+                </label>
+                <input
+                  type="text"
+                  value={quizTitleText}
+                  onChange={(e) => setQuizTitleText(e.target.value)}
+                  placeholder="Quiz Time"
+                  className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
+                    isAppLight
+                      ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
+                      : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Reaction Call-To-Action:
+                </label>
+                <input
+                  type="text"
+                  value={quizCtaText}
+                  onChange={(e) => setQuizCtaText(e.target.value)}
+                  placeholder="React to give your answer!"
+                  className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
+                    isAppLight
+                      ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
+                      : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Comment Prompt:
+                </label>
+                <input
+                  type="text"
+                  value={quizSubCtaText}
+                  onChange={(e) => setQuizSubCtaText(e.target.value)}
+                  placeholder="COMMENT YOUR ANSWER BELOW"
+                  className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
+                    isAppLight
+                      ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
+                      : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Reaction Emojis (A / B / C / D):
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {REACTION_ORDER.map((letter) => (
+                    <input
+                      key={letter}
+                      type="text"
+                      value={reactionEmojis[letter]}
+                      onChange={(e) => setReactionEmojis(prev => ({ ...prev, [letter]: e.target.value }))}
+                      className={`w-full text-center border rounded-xl px-2 py-2.5 text-lg transition-all focus:outline-none focus:ring-2 ${
+                        isAppLight
+                          ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
+                          : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className={`flex items-center justify-between pt-2 text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                <span>Highlight Correct Answer</span>
+                <input
+                  type="checkbox"
+                  checked={showAnswerKey}
+                  onChange={(e) => setShowAnswerKey(e.target.checked)}
+                  className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+            </div>
+            ) : (
             <div className="space-y-4">
               <div>
                 <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
@@ -760,6 +862,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 />
               </div>
             </div>
+            )}
           </div>
 
           {/* Question Selector List */}
@@ -775,7 +878,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 isAppLight ? 'text-amber-600' : 'text-amber-400'
               }`}>
                 <BookOpen className="w-5 h-5" />
-                4. Select Question To Post ({filteredPickerItems.length} / {items.length})
+                5. Select Question To Post ({filteredPickerItems.length} / {items.length})
               </label>
             </div>
 
@@ -929,103 +1032,33 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           {/* Live Scaled Canvas Card */}
           <div className="w-full max-w-[500px] relative">
             {!isCustomMode ? (
-              <div
-                ref={postCanvasRef}
-                style={{ fontFamily: config.fontFamily || "'Kalpurush', serif" }}
-                className={`w-full mx-auto ${getAspectClass()} ${getBgStyle()} rounded-3xl p-6 lg:p-8 shadow-2xl border border-slate-700/80 flex flex-col justify-between relative overflow-hidden select-none transition-all`}
-              >
-                {/* Top Brand Banner Bar */}
-                <div className="flex items-center justify-between border-b border-white/15 pb-4 z-10">
-                  <div className="flex items-center gap-3">
-                    {config.logoUrl ? (
-                      <img
-                        src={config.logoUrl}
-                        alt="Logo"
-                        className="w-10 h-10 object-contain rounded-xl bg-black/20 p-1 border border-white/20"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-amber-500/30">
-                        {config.brandName ? config.brandName.charAt(0).toUpperCase() : 'R'}
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="text-sm font-black tracking-wide uppercase leading-tight drop-shadow-sm">
-                        {config.brandName || "RAKIB'S CLASSROOM"}
-                      </h3>
-                      <p className="text-xs font-bold text-amber-400 mt-0.5">
-                        {customHeaderTitle || config.headerTitle || 'à¦†à¦œà¦•à§‡à¦° à¦•à§à¦‡à¦œ'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {config.badgeTag && (
-                    <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
-                      {config.badgeTag}
-                    </span>
-                  )}
-                </div>
-
-                {/* Question Stem Box */}
-                <div className="my-auto py-4 space-y-4 z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shadow">
-                      {selectedQuestionIndex + 1}
-                    </span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                      à¦ªà§à¦°à¦¶à§à¦¨à¦ƒ
-                    </span>
-                  </div>
-
-                  <h2 className="text-lg sm:text-xl font-extrabold leading-relaxed text-white drop-shadow">
-                    <MathText text={currentItem.stem} />
-                  </h2>
-
-                  {/* Options Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
-                    {currentItem.options.map((opt) => {
-                      const isCorrect = showAnswerKey && (opt.isCorrect || opt.key.toLowerCase() === currentItem.answer?.toLowerCase());
-                      return (
-                        <div
-                          key={opt.key}
-                          className={`p-3 rounded-2xl border text-xs sm:text-sm font-bold flex items-center justify-between transition-all ${
-                            isCorrect
-                              ? 'bg-amber-500 text-slate-950 border-amber-300 shadow-lg font-black'
-                              : 'bg-white/10 border-white/15 text-white'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center font-mono ${
-                              isCorrect ? 'bg-slate-950 text-amber-300 font-bold' : 'bg-white/15 text-white'
-                            }`}>
-                              {opt.key}
-                            </span>
-                            <span><MathText text={opt.text} /></span>
-                          </div>
-                          {isCorrect && <CheckCircle2 className="w-4 h-4 text-slate-950" />}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Optional Explanation */}
-                  {showExplanation && currentItem.explanation && (
-                    <div className="p-3 rounded-xl bg-white/10 border border-white/20 text-xs text-amber-200 mt-2">
-                      <strong>à¦¬à§à¦¯à¦¾à¦–à§à¦¯à¦¾:</strong> <MathText text={currentItem.explanation} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer Watermark Bar */}
-                <div className="flex items-center justify-between border-t border-white/15 pt-3 text-xs font-bold z-10">
-                  <span className="flex items-center gap-1.5 text-slate-300">
-                    <User className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{config.watermarkHandle || 'Hasnat Shuvro'}</span>
-                  </span>
-                  <span className="font-mono text-amber-400 font-extrabold tracking-widest uppercase">
-                    {config.footerTag || 'BIOMISSION'}
-                  </span>
-                </div>
-              </div>
+              postTemplate === 'quiz_time' ? (
+                <QuizTimeCard
+                  ref={postCanvasRef}
+                  item={currentItem}
+                  aspectClass={getAspectClass()}
+                  brandName={config.brandName}
+                  logoUrl={config.logoUrl}
+                  titleText={quizTitleText}
+                  ctaText={quizCtaText}
+                  subCtaText={quizSubCtaText}
+                  showAnswerKey={showAnswerKey}
+                  reactionEmojis={reactionEmojis}
+                  fontFamily={config.fontFamily}
+                />
+              ) : (
+                <ClassicQuizCard
+                  ref={postCanvasRef}
+                  item={currentItem}
+                  config={config}
+                  customHeaderTitle={customHeaderTitle}
+                  questionNumber={selectedQuestionIndex + 1}
+                  aspectClass={getAspectClass()}
+                  bgStyle={getBgStyle()}
+                  showAnswerKey={showAnswerKey}
+                  showExplanation={showExplanation}
+                />
+              )
             ) : (
               <div className="space-y-4">
                 <div className="relative" ref={postFrameRef}>
