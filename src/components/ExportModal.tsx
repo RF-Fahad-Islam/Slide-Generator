@@ -40,6 +40,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [paperItemsPerPage, setPaperItemsPerPage] = useState<number>(3);
   const [includeAnswerKey, setIncludeAnswerKey] = useState<boolean>(true);
   const qpaperRef = useRef<QuestionPaperHandle>(null);
+  const [renderAnswerRevealState, setRenderAnswerRevealState] = useState<boolean>(false);
+  const [includeAnswerSlides, setIncludeAnswerSlides] = useState<boolean>(true);
 
   if (!isOpen) return null;
 
@@ -124,9 +126,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       setProgressMsg('');
     }
   };
-
-  const [renderAnswerRevealState, setRenderAnswerRevealState] = useState<boolean>(false);
-  const [includeAnswerSlides, setIncludeAnswerSlides] = useState<boolean>(true);
 
   // Bulk Export All Slides to ZIP with exact template applied to every slide
   const downloadBulkZip = async () => {

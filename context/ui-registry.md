@@ -334,6 +334,15 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Segmented selector:** MCQs-per-page = `[2,3,4,6]` buttons `w-9 h-8 rounded-lg text-xs font-black border`; active = `bg-amber-500 text-slate-950 border-amber-400`, inactive uses the theme palette.
 - **Checkbox:** `w-4 h-4 accent-amber-500 rounded` inside a `flex items-center gap-2 text-xs font-bold` label.
 
+### `QuestionBankPdfModal` — `src/components/QuestionBankPdfModal.tsx`
+- **Purpose:** export selected Question Bank MCQs as an A4 portrait PDF with slide-style header/footer. Opened from the Question Bank selection command bar ("Export Selected as PDF", indigo accent button, `FileText` icon, counts `({N})`).
+- **Modal shell:** same pattern as ExportModal — `fixed inset-0 z-50` backdrop-blur overlay, `glass-card-fatty-light`/`glass-card-fatty` `max-w-4xl` panel, close ✕ top-right, amber gradient `FileText` tile header ("Export Selected MCQs as PDF" + subtitle with selected count).
+- **Options grid:** `grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl border` (inset `bg-slate-50`/`bg-slate-950`) — three controls: File Name text input (`px-3.5 py-2.5 rounded-xl`, default `${brandName}_MCQs`), Template `<select>` (option 0 = "Custom Built Theme (current deck)" when `config.customTheme` exists, then all `TEMPLATES`), and MCQs-per-page segmented `[2,3,4,6]` (flex buttons `h-10 rounded-lg`, active `bg-amber-500 text-slate-950 border-amber-400`).
+- **Effective config:** `{ ...config, templateId, customTheme: templateId === 'custom-theme' ? config.customTheme : undefined }` — so header/footer accent follows the selected template.
+- **Live preview:** "Preview — Page 1 of N (M MCQs)" header with selected template name; scaled page `transform: scale(0.56)` origin-top-left inside a grey `#94a3b8` scroll container (`height = 1123 × 0.56`, `rounded-2xl border overflow-hidden`).
+- **A4 page theme:** `PaperPage` (794×1123 white) — header: `borderBottom: 3px solid accent` (accent = `config.accentColorCustom || template.styles.accentColor`), brand name uppercase (`titleInk`), headerTitle in accent, badgeTag pill filled with `#${colors.badgeFill}`/`colors.badgeText`; body: MCQ cards (`border 1px cardBorder`, `rounded-10`, number chip `background: accent`), options 2-col grid with accent keys; footer: watermarkHandle · `Page N of M` · footerTag (both accent).
+- **Export flow:** `document.fonts.ready` → per-page `toPng(pixelRatio: 2, cacheBust)` on the offscreen `OffscreenPage` ref → jsPDF A4. The offscreen node's slice is swapped per page via `renderSlice` state; filename sanitized (`[\\/:*?"<>|]` → `_`, `.pdf` suffix enforced). Progress label swaps into the Download button (`Loader2` spinner).
+
 ---
 
 ## Planned components

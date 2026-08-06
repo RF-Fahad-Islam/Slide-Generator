@@ -5,6 +5,7 @@ import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { getTemplateById } from '../templates/registry';
 import { normalizeMCQs, downloadJSON } from '../utils/mcqJson';
 import { MathText } from './MathText';
+import { QuestionBankPdfModal } from './QuestionBankPdfModal';
 import {
   Database,
   Search,
@@ -27,6 +28,7 @@ import {
   Moon,
   Share2,
   UploadCloud,
+  FileText,
   X,
 } from 'lucide-react';
 
@@ -55,6 +57,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   const [newDeckSubject, setNewDeckSubject] = useState<string>('Biology');
   const [successMsg, setSuccessMsg] = useState<string>('');
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
+  const [isPdfExportOpen, setIsPdfExportOpen] = useState<boolean>(false);
 
   // Pending JSON import — parsed MCQs waiting for a deck name before saving
   const [importPending, setImportPending] = useState<{ items: MCQItem[]; sourceName: string } | null>(null);
@@ -88,8 +91,8 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           createdAt: Date.now() - (idx * 86400000),
           updatedAt: Date.now() - (idx * 86400000),
         }));
-        await db.questionDecks.bulkAdd(initialDecks);
-        decks = initialDecks;
+        await db.questionDecks.bulkPut(initialDecks);
+        decks = await db.questionDecks.toArray();
       }
       setSavedDecks(decks);
     } catch (err) {
@@ -806,6 +809,16 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                 <span>+ Append to Current Presentation ({selectedQuestionIds.size})</span>
               </button>
               <button
+                onClick={() => setIsPdfExportOpen(true)}
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm border cursor-pointer flex items-center gap-2 transition-colors ${
+                  isAppLight ? 'bg-white hover:bg-slate-50 text-indigo-700 border-indigo-300' : 'bg-slate-800 hover:bg-slate-700 text-indigo-300 border-slate-700'
+                }`}
+                title="Export the selected MCQs as a printable PDF paper with slide header/footer branding"
+              >
+                <FileText className="w-5 h-5" />
+                <span>Export Selected as PDF ({selectedQuestionIds.size})</span>
+              </button>
+              <button
                 onClick={handleCreateNewFromSelected}
                 className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm shadow-md cursor-pointer flex items-center gap-2"
               >
@@ -962,6 +975,15 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Selected MCQs → PDF export modal */}
+      <QuestionBankPdfModal
+        isOpen={isPdfExportOpen}
+        onClose={() => setIsPdfExportOpen(false)}
+        items={getSelectedQuestionsList()}
+        config={currentConfig}
+        appTheme={appTheme}
+      />
     </div>
   );
 };
