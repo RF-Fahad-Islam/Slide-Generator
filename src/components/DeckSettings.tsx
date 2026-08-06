@@ -20,6 +20,9 @@ interface DeckSettingsProps {
   onUpdateActiveSlideConfig?: (updated: Partial<DeckConfig>) => void;
   onResetActiveSlideConfig?: () => void;
   appTheme?: 'dark' | 'light';
+  // Classroom View quick action — enforces class_mode + classroom text boxes on
+  // the whole deck and hands off to the box editor (wired by Slide Studio).
+  onEnforceClassroomView?: () => void;
 }
 
 const CUSTOM_THEME_PALETTES: { name: string; colors: CustomThemeColors }[] = [
@@ -308,6 +311,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   onUpdateActiveSlideConfig,
   onResetActiveSlideConfig,
   appTheme = 'dark',
+  onEnforceClassroomView,
 }) => {
   const isAppLight = appTheme === 'light';
   const [themeFilter, setThemeFilter] = useState<'all' | 'light' | 'dark' | 'custom'>('all');
@@ -905,7 +909,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             Slide Layout Mode & Full-Width Custom Banners
           </h3>
           <p className="text-sm text-slate-400 mt-0.5">
-            Switch between Standard Presentation layout and Classroom Live Writing mode, or supply full-width graphic banners for Header & Footer
+            Switch between Standard Presentation layout and Classroom View (live writing mode), or supply full-width graphic banners for Header & Footer
           </p>
         </div>
 
@@ -939,7 +943,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
 
             <button
               type="button"
-              onClick={() => handleChange('layoutMode', 'class_mode')}
+              onClick={() => {
+                if (onEnforceClassroomView) {
+                  onEnforceClassroomView();
+                } else {
+                  handleChange('layoutMode', 'class_mode');
+                }
+              }}
               className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-2 ${
                 config.layoutMode === 'class_mode'
                   ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg'
@@ -948,8 +958,30 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                   : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
               }`}
             >
+              {/* Graphics preview — classroom view slide mock (stem top-left, writing space center, options right) */}
+              <div className={`relative w-full aspect-[16/9] rounded-xl overflow-hidden border flex items-stretch ${
+                isAppLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-950 border-slate-800'
+              }`}>
+                {/* Brand strip */}
+                <div className="absolute top-2 left-3 h-2.5 w-24 rounded-full bg-amber-400/80" />
+                <div className="absolute top-2 left-30 h-2 w-40 rounded-full bg-slate-400/50" />
+                {/* Left: stem card (top) + writing space (center) */}
+                <div className="flex-1 flex flex-col gap-2 p-3 pr-0">
+                  <div className="h-5 rounded-md border border-slate-500/50 bg-slate-700/30 mt-3" />
+                  <div className="flex-1 min-h-[28px] rounded-md border border-dashed border-amber-400/70 bg-slate-800/40 flex items-center justify-center">
+                    <span className="text-[7px] font-black uppercase tracking-widest text-amber-300/70">✏️ Writing Space</span>
+                  </div>
+                </div>
+                {/* Right: options stacked vertically */}
+                <div className="w-[26%] p-3 pl-2 flex flex-col gap-1.5 justify-center">
+                  <div className="h-2.5 rounded-full bg-slate-500/60" />
+                  <div className="h-2.5 rounded-full bg-slate-500/60" />
+                  <div className="h-2.5 rounded-full bg-slate-500/60" />
+                  <div className="h-2.5 rounded-full bg-amber-400/70" />
+                </div>
+              </div>
               <div className="flex items-center justify-between">
-                <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>✏️ Classroom / Live Writing Mode (Rakib's Classroom Style)</span>
+                <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>📐 Classroom View</span>
                 {config.layoutMode === 'class_mode' && <CheckCircle2 className="w-4 h-4 text-amber-400" />}
               </div>
               <p className={`text-sm leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>

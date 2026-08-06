@@ -13,7 +13,7 @@ import { X, ChevronRight, ChevronLeft, Sparkles, Presentation } from 'lucide-rea
 // advance/exit the tour.
 // ---------------------------------------------------------------------------
 
-export type TourTab = 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
+export type TourTab = 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
 
 export interface TourStep {
   target: string; // CSS selector to highlight
@@ -75,8 +75,8 @@ export const defaultTourSteps: TourStep[] = [
   },
   {
     target: '[data-tour="nav-settings"]',
-    title: 'Deck Settings',
-    body: 'Tune brand name, header/footer, watermark, colors, and slide layout. Tip: theme edits in the Theme tab apply to the active slide only.',
+    title: 'Global Settings',
+    body: 'Set app-wide defaults — default deck name, template, question numbering, and app theme. Deck-level branding, layout, fonts & banners now live in Slide Studio → Deck Settings.',
     navigateTab: 'settings',
   },
   {

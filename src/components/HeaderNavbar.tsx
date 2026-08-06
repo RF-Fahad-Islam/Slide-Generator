@@ -210,8 +210,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
                 >
                   <Sliders className="w-4 h-4 text-amber-400" />
                   <div>
-                    <div className="font-extrabold">Deck & Font Settings</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Typography, Banners & Logo</div>
+                    <div className="font-extrabold">Global Settings</div>
+                    <div className="text-[10px] text-slate-400 font-normal">App defaults, theme & preferences</div>
                   </div>
                 </button>
               </div>

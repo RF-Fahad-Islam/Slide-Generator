@@ -20,11 +20,12 @@ import {
   ChevronRight,
   LayoutTemplate,
   HelpCircle,
+  Library,
 } from 'lucide-react';
 
 interface SidebarNavProps {
-  activeTab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
-  setActiveTab: (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => void;
+  activeTab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
+  setActiveTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => void;
   questionCount: number;
   onOpenExportModal: () => void;
   isSyncing?: boolean;
@@ -34,13 +35,14 @@ interface SidebarNavProps {
   onStartTour?: () => void;
 }
 
-type NavTab = 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
+type NavTab = 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
 
 const NAV_GROUPS: { label: string; items: { id: NavTab; label: string; icon: typeof Layers }[] }[] = [
   {
     label: 'Workspace',
     items: [
       { id: 'home', label: 'Home', icon: LayoutGrid },
+      { id: 'decks', label: 'My Decks', icon: Library },
       { id: 'preview', label: 'Slide Studio', icon: Layers },
       { id: 'social', label: 'Social Posts', icon: Share2 },
       { id: 'bank', label: 'Question Bank', icon: Database },
@@ -56,7 +58,7 @@ const NAV_GROUPS: { label: string; items: { id: NavTab; label: string; icon: typ
   {
     label: 'Manage',
     items: [
-      { id: 'settings', label: 'Deck Settings', icon: Sliders },
+      { id: 'settings', label: 'Settings', icon: Sliders },
       { id: 'templates', label: 'Template Creator', icon: LayoutTemplate },
       { id: 'ai-keys', label: 'AI Keys', icon: Key },
     ],
@@ -180,7 +182,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   );
 
   // ------- Nav item -------
-  const renderNavItem = (item: { id: NavTab; label: string; icon: typeof Layers }, badge: number | null) => {
+  const renderNavItem = (item: { id: NavTab; label: string; icon: typeof Layers }, badge: number | null, collapsed: boolean) => {
     const Icon = item.icon;
     const isActive = activeTab === item.id;
     return (
@@ -190,29 +192,39 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         onClick={() => handleNavClick(item.id)}
         aria-current={isActive ? 'page' : undefined}
         className={`relative w-full flex items-center rounded-2xl font-bold text-sm transition-all duration-200 cursor-pointer outline-none ${
-          isCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'
+          collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'
         } ${
           isActive
             ? isAppLight
               ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 shadow-lg shadow-amber-500/30'
               : 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 text-slate-950 shadow-lg shadow-amber-500/30'
+            : collapsed
+            ? isAppLight
+              ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900'
+              : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white'
             : isAppLight
             ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             : 'text-slate-400 hover:bg-white/5 hover:text-white'
         }`}
-        title={isCollapsed ? item.label : undefined}
+        title={collapsed ? item.label : undefined}
       >
         {/* Active edge indicator */}
-        {isActive && !isCollapsed && (
+        {isActive && !collapsed && (
           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full bg-slate-950/40" />
         )}
 
         {/* Icon tile */}
         <span
           className={`flex items-center justify-center rounded-xl shrink-0 transition-all duration-200 ${
-            isCollapsed ? 'w-9 h-9' : 'w-8 h-8'
+            collapsed ? 'w-9 h-9' : 'w-8 h-8'
           } ${
-            isActive
+            collapsed
+              ? isActive
+                ? 'text-slate-950'
+                : isAppLight
+                ? 'text-amber-600'
+                : 'text-amber-400'
+              : isActive
               ? 'bg-slate-950/20 text-slate-950'
               : isAppLight
               ? 'bg-white text-amber-600 border border-slate-200 shadow-sm'
@@ -222,7 +234,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           <Icon className="stroke-[2]" style={{ width: 18, height: 18 }} />
         </span>
 
-        {!isCollapsed && (
+        {!collapsed && (
           <>
             <span className="flex-1 text-left leading-tight">{item.label}</span>
             {badge !== null && (
@@ -249,6 +261,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     disabled,
     title,
     dataTour,
+    collapsed,
   }: {
     icon: typeof Sun;
     label: string;
@@ -257,6 +270,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     disabled?: boolean;
     title?: string;
     dataTour?: string;
+    collapsed: boolean;
   }) => (
     <button
       onClick={onClick}
@@ -264,7 +278,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       title={title}
       data-tour={dataTour}
       className={`w-full flex items-center rounded-2xl font-bold text-sm transition-all duration-200 cursor-pointer ${
-        isCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'
+        collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'
       } ${
         accent === 'amber'
           ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 hover:brightness-110'
@@ -275,30 +289,40 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     >
       <span
         className={`flex items-center justify-center rounded-xl shrink-0 ${
-          isCollapsed ? 'w-9 h-9' : 'w-8 h-8'
+          collapsed ? 'w-9 h-9' : 'w-8 h-8'
         } ${
-          accent === 'amber' ? 'bg-slate-950/20 text-slate-950' : isAppLight ? 'bg-white text-amber-600 shadow-sm border border-slate-200' : 'bg-white/10 text-amber-400'
+          collapsed
+            ? accent === 'amber'
+              ? 'text-slate-950'
+              : isAppLight
+              ? 'text-amber-600'
+              : 'text-amber-400'
+            : accent === 'amber'
+            ? 'bg-slate-950/20 text-slate-950'
+            : isAppLight
+            ? 'bg-white text-amber-600 shadow-sm border border-slate-200'
+            : 'bg-white/10 text-amber-400'
         }`}
       >
         <Icon className="stroke-[2]" style={{ width: 18, height: 18 }} />
       </span>
-      {!isCollapsed && <span className="text-left leading-tight">{label}</span>}
+      {!collapsed && <span className="text-left leading-tight">{label}</span>}
     </button>
   );
 
   // ------- Main sidebar content -------
-  const SidebarContent = () => (
+  const SidebarContent = ({ collapsed }: { collapsed: boolean }) => (
     <div className="flex flex-col h-full">
       {/* Brand Logo Section */}
-      <div className={`border-b ${isAppLight ? 'border-slate-200' : 'border-white/5'} ${isCollapsed ? 'p-4' : 'p-5'}`}>
-        <BrandLockup compact={isCollapsed} />
+      <div className={`border-b ${isAppLight ? 'border-slate-200' : 'border-white/5'} ${collapsed ? 'p-4' : 'p-5'}`}>
+        <BrandLockup compact={collapsed} />
       </div>
 
       {/* Navigation Items */}
-      <nav className={`flex-1 overflow-y-auto ${isCollapsed ? 'p-3 space-y-1.5' : 'p-4 space-y-6'}`}>
+      <nav className={`flex-1 overflow-y-auto ${collapsed ? 'p-3 space-y-1.5' : 'p-4 space-y-6'}`}>
         {NAV_GROUPS.map((group) => (
           <div key={group.label} className="space-y-1">
-            {!isCollapsed && (
+            {!collapsed && (
               <p className={`px-3 pb-1 text-[9px] font-black uppercase tracking-[0.18em] ${
                 isAppLight ? 'text-slate-400' : 'text-slate-600'
               }`}>
@@ -307,20 +331,21 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             )}
             {group.items.map((item) => {
               const badge = item.id === 'preview' && questionCount > 0 ? questionCount : null;
-              return renderNavItem(item, badge);
+              return renderNavItem(item, badge, collapsed);
             })}
           </div>
         ))}
       </nav>
 
       {/* Bottom Actions */}
-      <div className={`border-t space-y-1.5 ${isAppLight ? 'border-slate-200' : 'border-white/5'} ${isCollapsed ? 'p-3' : 'p-4'}`}>
+      <div className={`border-t space-y-1.5 ${isAppLight ? 'border-slate-200' : 'border-white/5'} ${collapsed ? 'p-3' : 'p-4'}`}>
         {/* Start Tour */}
         {onStartTour && renderBottomAction({
           icon: HelpCircle,
           label: 'Start Tour',
           onClick: onStartTour,
           title: 'Start Tour',
+          collapsed,
         })}
 
         {/* Theme Toggle */}
@@ -330,6 +355,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             label: isAppLight ? 'Dark Mode' : 'Light Mode',
             onClick: onToggleAppTheme,
             title: isAppLight ? 'Switch to Dark Mode' : 'Switch to Light Mode',
+            collapsed,
           })}
 
         {/* Export Button */}
@@ -341,6 +367,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           accent: 'amber',
           title: 'Export Slides',
           dataTour: 'studio-export',
+          collapsed,
         })}
       </div>
     </div>
@@ -358,7 +385,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             : 'bg-slate-950/90 border-white/5 shadow-2xl shadow-black/40'
         } backdrop-blur-2xl`}
       >
-        <SidebarContent />
+        <SidebarContent collapsed={isCollapsed} />
 
         {/* Collapse/Expand Toggle Button */}
         <button
@@ -465,7 +492,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
               <X className="w-5 h-5" />
             </button>
 
-            <SidebarContent />
+            <SidebarContent collapsed={false} />
           </div>
         </div>
       )}

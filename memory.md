@@ -1,45 +1,51 @@
-# Memory — Slide-Specific Themes, Question Paper PDF, Onboarding Tour
+# Memory — Settings Restructure (Global Prefs Page + Deck Settings Modal)
 
 Last updated: 2026-08-06
 
 ## What was built
 
-**Session 6 (this session)** — 6 commits on `main` (`cacd697`, `8d426cd`, `4ee3e1c`, `5509139`, `41d0b86`), HEAD `41d0b86`, working tree clean. `npm run lint` (= `tsc --noEmit`) and `npx vite build` both green. Dev server on http://localhost:9000.
+**This session — committed on `feat/ingestion-local-stream`** as `bca8246` (also carried the previously-uncommitted Session 8 work: export scope, Deck Question Paper modal, editable-PPTX-layers default, Question Bank card theme fix, My Decks page, bulk parser fixes).
 
-- **WS1 — Template Creator fixes** (`src/components/TemplateCreator.tsx`, `src/components/SlideCanvas.tsx`): "Theme Gallery" cards now preview with their OWN theme; background presets blend over the base theme (~55% opacity, readability/opacity sliders shown only when `bgPreset !== 'none'`); accent swatch applies only on user pick with a "✕ Default" reset chip. `SlideCanvas` consumes `accentColorCustom` for brand logo box, number badges, prompt text, source badges, correct-option highlight + badge key + checkmark, footer watermark avatar border + tag — zero change when no accent override.
-- **WS2 — slide-specific theme application** (`src/App.tsx`, `src/components/DeckSettings.tsx`, `src/components/SlideDecksHome.tsx`): ALL theme choosers now write to the active slide's `items[i].customConfig` only — Home "Active Slide Theme Picker" (`onSelectTheme`/`onResetSlideTheme`, Preset Themes grid + My Templates via `getTemplatePresets()`, "Reset Slide to Deck Theme" chip), Deck Settings Theme & Preview tab (always slide-scope via `onUpdateActiveSlideConfig`, "apply to active slide only (Slide #N)" banner, `themeEffectiveConfig = { ...config, ...(activeSlideConfig || {}) }`), and the Slide Studio quick Light/Dark toggle. `App.tsx` helpers: `applyThemeToActiveSlide(ThemeSelection)`, `resetActiveSlideTheme()`.
-- **WS3 — Question Paper PDF + JSON export**: new `src/utils/mcqJson.ts` (`sanitizeOption`, `normalizeMCQ`, `normalizeMCQs` accepting `MCQItem[]` / `{items}` / `{questions}` / `{data}` / `{mcqs}` / `{questionBank}`, `downloadJSON`). `src/components/QuestionPaperPage.tsx` (new): hidden A4 portrait 794×1123 renders, `forwardRef` + `useImperativeHandle` exposing `renderPdf(onProgress)`; uses slide header/footer branding (brandName/headerTitle/badgeTag/watermarkHandle/footerTag, page x/y, optional answer-key page, MathText, jsPDF via `toPng` pixelRatio 2). `QuestionBankView.tsx`: JSON import (unique IDs, name-your-deck form → `db.questionDecks.put`) + per-deck "JSON" export. `ExportModal.tsx`: "Question Paper (PDF)" card (2/3/4/6 MCQs-per-page selector + Include Answer Key toggle) and "Extract MCQs (JSON)" card (clean `MCQItem[]` minus `customConfig`).
-- **WS4 — onboarding tour**: new `src/components/OnboardingTour.tsx` (hand-rolled spotlight, no new deps) with `data-tour="<id>"` anchors, `defaultTourSteps` (11 steps, `TourTab` union, tab navigation via `onNavigate`), scrim + amber spotlight cut-out (`box-shadow` ring), positioned tooltip card, keyboard nav (Enter/→/←/Esc). `App.tsx` auto-launches on first visit (`edtech_tour_done` flag, 900ms delay, `handleCloseTour`), Start Tour buttons on Home hero (`SlideDecksHome` `onStartTour` prop) + SidebarNav bottom help button. Anchors: `home-hero`, `nav-<tab>` on every sidebar item, `studio-toolbar`, `studio-export`, `bank-import`.
-- **Review fixes** (`41d0b86`): tour now polls for target elements (20×150ms) instead of fixed timeouts and falls back to a centered tooltip when the element never appears (mobile nav anchors live in the desktop-only aside); removed dead refs (`pendingNavigate`, `measuringRef`) + unused `FileCode` import; quick Light/Dark toggle uses `getTemplateById(...).themeType === 'light'` instead of `templateId.includes('light')`; `normalizeMCQ` no longer fabricates `options[0]` as answer (empty string when no marker); paper settle time 130→150ms.
+- **Settings tab → global preferences page** (`src/components/GlobalSettings.tsx` + `src/utils/globalDefaults.ts`): default deck name, default template grid, default question numbering (bangla/english/prefix), app light/dark shell toggle. Persisted to localStorage `mcqgen.globalDefaults` (`GlobalDefaults = { defaultDeckName, defaultTemplateId, defaultQuestionNumberFormat }`, defaults `'Untitled Deck'` / `'rakib-dark'` / `'bangla'`). `App.tsx` seeds fresh-deck config (`templateId`, `questionNumberFormat`) + new-deck name from them.
+- **AI keys stay on the separate AI Keys tab** (`SettingsView.tsx` untouched) — user decision.
+- **Deck-scoped settings moved out of the tab into a Slide Studio modal** (`src/components/DeckSettingsModal.tsx`). Opened from: Slide Studio toolbar "Deck Settings" button (`data-tour="studio-deck-settings"`), My Decks card Settings (`Sliders`, passes `deck.id` as 3rd arg → `editingSavedDeckId` persist), home "Branding & Fonts" bento card (`onOpenDeckSettings(currentItems, currentConfig)`).
+  - Modal edits a **draft** `config`/`activeSlideConfig`; nothing commits until **Apply to All**.
+  - **Live preview**: 1920×1080 `SlideCanvas` scaled via ResizeObserver into an `aspect-[16/9]` panel; preview item = real `items[activeSlideIndex]` with `customConfig` = draft slide config, `config` = draft config (SlideCanvas merges `item.customConfig` over `config` itself).
+  - **Unsaved Changes** badge (amber pill) appears on any draft edit; Cancel → `window.confirm('Discard your unsaved Deck Settings changes?')`.
+  - Apply commits `onApplyConfig(draftConfig)` + `onApplyActiveSlideConfig(draftSlideConfig)` (or `onResetActiveSlideConfig()` when the slide draft is empty). Per-slide Theme scope preserved (Theme tab always writes to active slide).
+- **"Classroom / Live Writing Mode" → "📐 Classroom View"** (`DeckSettings.tsx` Layout tab) with a pure-CSS slide-mock graphic (brand strip, dashed writing space, stacked options) — NO image asset file. Clicking calls `onEnforceClassroomView` → `App.handleEnforceClassroomView`: sets `layoutMode:'class_mode'` + `slideTextBoxes: classroomTextBoxes()`, closes modal, opens text-box editor in All-Slides scope. `classroomTextBoxes()` is a new factory in `src/utils/slideElements.ts` (brand/header/stem top-left, wide `✏️ Live Teacher Writing / Stylus Space` center, options right column, footer).
+- **Rewired**: `SidebarNav.tsx` "Deck Settings" → "Settings"; `HeaderNavbar.tsx` tool card "Deck & Font Settings" → "Global Settings"; `OnboardingTour.tsx` settings step retitled/rewritten; `SlideDecksHome.tsx` "Branding & Fonts" card now opens the modal instead of the settings tab.
 
 ## Decisions made
 
-- **Themes are slide-scoped everywhere**: no theme chooser applies deck-wide anymore (user-reported bug: "choosing a theme applies to all slides"). Slides without an override inherit the deck theme; `SlideCanvas` merges `{ ...config, ...(item.customConfig || {}) }`.
-- **Question Paper PDF is a single deck-themed document** (deliberately not per-slide themed): it reuses slide header/footer branding VALUES but uses its own print styling (white background, amber accent `#f59e0b`, hardcoded hex inline styles) — independent of app theme; acceptable because it's a self-contained printable doc.
-- **Tour tooltip is always dark** (`bg-slate-900 text-white`) regardless of app theme — standard spotlight-tour convention.
-- Per AGENTS.md: docs updated (`context/progress-tracker.md` + `context/ui-registry.md`), commit per feature on `main`.
+- Settings tab = global-only prefs; deck branding/layout config lives in the modal (user decisions from the clarifying Q&A).
+- Modal keeps BOTH scopes: deck-wide AND per-active-slide (Theme tab writes to active slide only).
+- Classroom View selection = apply class_mode + classroom text boxes to the deck AND immediately hand off to the box editor (no confirm).
+- Global defaults live in localStorage, seeded only into NEW decks (changing them doesn't alter the current deck).
+- `handleEnforceClassroomView` deliberately KEEPS `editingSavedDeckId` so Classroom View persists back to the saved library deck.
+- New UI follows the `appTheme`/`isAppLight` ternary pattern; no Tailwind `dark:`; no hardcoded hex in app chrome.
 
 ## Problems solved
 
-- "Choosing a theme applies the changes to all the slides" — the Slide Studio quick Light/Dark toggle was the last deck-wide writer; now routed through `applyThemeToActiveSlide`.
-- Tour spotlight not appearing on tab-navigation steps (Question Bank mounts from IndexedDB slower than a fixed 320ms timeout) — replaced with element polling + centered fallback.
-- `isActiveSlideLight` used `templateId.includes('light')` which misclassified `custom-theme`/preset slides — now uses the registry `themeType`.
-- Imported JSON with no correct-answer marker was silently marking `options[0]` correct — now leaves the answer empty.
-- Backup Deck JSON card `<h4>` header was accidentally dropped while inserting the two new export cards — restored.
+- Old "Settings" tab mixed global (AI keys) with deck-scoped branding; deck config is now reachable from within Slide Studio, and the tab is a clean global prefs page.
+- `window.innerText`/`innerText` in CDP tests silently omits content clipped by the modal's `overflow-y-auto` scroll container — use `textContent` for clipped-modal assertions.
+- Modal live preview: passing `config=draftConfig` + `item.customConfig=draftSlideConfig` gives correct merge without a second manual spread.
+- Classroom View CDP test initially clicked a `div` wrapper with `cursor-pointer` instead of the actual `<button>` card — click the button element directly.
 
 ## Current state
 
-All WS1–WS4 features complete, reviewed, and committed. `npm run lint` + `npx vite build` green. Docs updated. Working tree clean, HEAD `41d0b86` on `main`.
+All committed (`bca8246`). `npm run lint` (`tsc --noEmit`) + `npm run build` green. Verified end-to-end in headless Chrome (CDP): global prefs page renders; modal opens with live preview + tabs; dirty badge; Apply-to-All commits + persists selection on reopen; Cancel shows confirm; Classroom View closes modal, applies class_mode, opens box editor, canvas shows classroom layout. Dev server http://localhost:9000.
+
+**Known open item:** `src/server/lib/extract-text.ts` + `rasterize.ts` are orphaned, unreferenced experiment files (import a non-bundled `pdf-parse`) — left untracked and excluded from the commit. Delete or wire up.
 
 ## Next session starts with
 
-1. **Browser-verify (manual, agent cannot)** — dev server http://localhost:9000:
-   - Theme picker on Home + Deck Settings Theme tab + Slide Studio Light/Dark toggle affect ONLY the active slide; other slides keep the deck theme; "Reset Slide to Deck Theme" works.
-   - Question Paper PDF export: pick 2/3/4/6 per page + answer key, confirm A4 portrait pages with slide header/footer and no per-slide theme bleeding.
-   - Question Bank JSON import (all shapes) + Extract MCQs round-trip re-import.
-   - Onboarding tour: auto-launch on first visit (clear `edtech_tour_done` to retrigger), spotlight follows each step, Start Tour buttons reopen it.
-2. If all pass, remaining backlog: bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor (architecture parity, deferred).
+1. Manual browser pass (agent can't verify import fidelity): open an exported PPTX in real PowerPoint — confirm editable layers (text/shapes), then the "flattened image" checkbox path; try Google Slides.
+2. Decide on the Classroom View card graphic: CSS mock is in place — confirm acceptable or provide a real PNG/SVG asset.
+3. Clean up `src/server/lib/` orphans (delete or wire into the server).
+4. Remaining backlog: self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor.
 
 ## Open questions
 
-- None blocking. Browser verification of export paths (toPng capture, per-page PDF rasterization) and tour animation remains the highest-risk unverified area.
+- Classroom View card graphic: CSS mock vs. real image asset?
+- Should the two `src/server/lib/*.ts` orphans be deleted?
