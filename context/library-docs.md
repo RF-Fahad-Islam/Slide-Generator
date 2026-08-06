@@ -20,10 +20,12 @@
 | `idb-keyval` | IndexedDB storage | 1 |
 | `@dnd-kit/core` + `@dnd-kit/sortable` | question reorder | 3 |
 | `vitest` | unit tests | 2 |
+| `pdf-parse` v2 | server-side PDF text extraction + page rasterization | 2 |
+| `mammoth` | server-side DOCX text extraction | 2 |
 
 **Explicitly NOT installed in v1:** `react-moveable` (drag-canvas editor deferred, D7),
-Supabase packages (D1), Playwright (D2), `pdfjs-dist` (PDF input is post-spine), any
-OCR package.
+Supabase packages (D1), Playwright (D2), any OCR package (vision OCR runs through the
+provider, not locally).
 
 ## next (App Router)
 
@@ -115,3 +117,24 @@ deprecation notices. Reference: `docs/nextjs-llms.txt`. The API route uses
 ## jszip — Phase 4
 
 - Batch PNG export: `01_q.png`, `01_ans.png`, … naming pattern from the export dialog.
+
+## pdf-parse v2 — server-side local extraction (Phase 2 ingestion)
+
+- **This is v2.x, NOT the classic v1.x** — the API is a rewrite:
+  `new PDFParse({ data: Uint8Array })` → `await parser.getText()` (returns
+  `{ pages: [{num, text}], text, total }`) and `await parser.getScreenshot({ scale })`
+  (returns `{ pages: [{ data: Uint8Array, dataUrl, pageNumber, … }], total }`).
+  `parser.destroy()` must be called after use.
+- Bundled `@napi-rs/canvas` is a **prebuilt native** module (no node-gyp build) — used
+  only by screenshot rendering. Verified working on Windows.
+- Lives ONLY in `src/server/lib/*` (bundled into `dist/server.cjs` via esbuild
+  `--packages=external`; never imported from the client bundle).
+- Bangla text layers: a PDF's text layer is only trusted when it contains clean
+  Unicode Bangla (U+0980–U+09FF ratio ≥ 0.3 and ≥ 100 non-space chars). Otherwise the
+  document is treated as scanned/legacy-encoded and routed to per-page vision OCR.
+
+## mammoth — DOCX extraction (Phase 2 ingestion)
+
+- `mammoth.extractRawText({ buffer })` → `{ value, messages }`.
+- Server-side only, same as pdf-parse. Legacy `.doc` (binary) is NOT supported —
+  the UI accept list includes `.doc` but the parser will treat it as unknown/vision.
