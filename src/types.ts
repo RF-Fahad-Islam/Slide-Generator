@@ -153,29 +153,6 @@ export interface SlideTextBox {
   imageUrl?: string; // image / banner data URL or http(s) (bind === 'image')
 }
 
-export type SocialPostTemplateType = 'reaction_quiz' | 'quiz_time' | 'modern_card' | 'minimal_square';
-export type SocialAspectRatio = '1:1' | '4:5' | '9:16' | '16:9';
-
-export interface SocialPostConfig {
-  id: string;
-  title: string;
-  templateType: SocialPostTemplateType;
-  aspectRatio: SocialAspectRatio;
-  brandName: string;
-  subtitleText: string;
-  callToActionText: string; // e.g. "রিয়্যাক্ট এর মাধ্যমে উত্তর জানিয়ে দাও" / "Comment your answer below 👇"
-  bgGradient: string; // Tailwind gradient class or custom CSS
-  primaryColor: string; // Accent color hex
-  reactionEmojis: {
-    A: string; // 👍 Like
-    B: string; // ❤️ Love
-    C: string; // 🤗 Care
-    D: string; // 😂 Laugh
-  };
-  showAnswer: boolean;
-  watermark: string;
-}
-
 export interface TemplateDefinition {
   id: string;
   name: string;
