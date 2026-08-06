@@ -16,7 +16,8 @@ export const exportDeckToPPTX = async (
   onProgress?: (msg: string) => void,
   slideDataUrls?: string[],
   useImages?: boolean,
-  slides?: PptxSlideSpec[]
+  slides?: PptxSlideSpec[],
+  includeExplanation = true
 ) => {
   onProgress?.('Initializing 16:9 PowerPoint Presentation...');
 
@@ -82,16 +83,89 @@ export const exportDeckToPPTX = async (
       }
       return;
     }
+    if (box.bind === 'explanation' && !includeExplanation) return;
+
+    // OPTIONS — render each option as its own editable pill/card graphic, and
+    // on answer slides give the correct option a highlighted card box + ✓ tick.
+    if (box.bind === 'options') {
+      const opts = item.options || [];
+      if (opts.length === 0) return;
+
+      const optW = (box.w || 600) * PX_TO_IN;
+      const optH = Math.max(0.5, (box.fontSize * 1.8 + 16) * PX_TO_IN);
+      const gapY = 0.09;
+      const radius = box.shape === 'pill' ? 0.5 : box.shape === 'card' ? 0.12 : 0;
+      const fontPt = box.fontSize * PX_TO_PT;
+      const fontFace = getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim();
+
+      opts.forEach((opt, oi) => {
+        if (oi >= 4) return;
+        const isCorrect = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
+        const highlighted = highlight && isCorrect;
+        const y = box.y * PX_TO_IN + oi * (optH + gapY);
+
+        // Option graphic — an editable rounded-rect pill/card (or no shape for plain)
+        if (box.shape && box.shape !== 'plain') {
+          slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
+            x: box.x * PX_TO_IN,
+            y,
+            w: optW,
+            h: optH,
+            fill: {
+              color: highlighted
+                ? colors.optionSelectedBg
+                : (box.bg ? box.bg.replace('#', '') : colors.optionBg),
+            },
+            line: highlighted
+              ? { color: colors.optionSelectedBorder, width: 2 }
+              : { color: 'FFFFFF', transparency: 92, width: 0.75 },
+            rectRadius: radius,
+          });
+        }
+
+        slide.addText(
+          [
+            {
+              text: `${opt.key}) `,
+              options: { bold: true, color: highlighted ? colors.optionSelectedText : colors.titleColor },
+            },
+            {
+              text: cleanLatex(opt.text),
+              options: { color: highlighted ? colors.optionSelectedText : (box.color || '#ffffff').replace('#', '') },
+            },
+          ],
+          {
+            x: box.x * PX_TO_IN + (box.shape !== 'plain' ? 0.18 : 0),
+            y,
+            w: optW - (highlighted ? 0.7 : 0.3),
+            h: optH,
+            fontSize: fontPt,
+            bold: box.bold,
+            align: box.align,
+            fontFace,
+            valign: 'middle',
+          }
+        );
+
+        // Answer tick for the highlighted correct option
+        if (highlighted) {
+          slide.addText('✓', {
+            x: box.x * PX_TO_IN + optW - 0.5,
+            y,
+            w: 0.38,
+            h: optH,
+            fontSize: fontPt,
+            bold: true,
+            color: colors.optionSelectedText,
+            align: 'center',
+            valign: 'middle',
+          });
+        }
+      });
+      return;
+    }
 
     let text = getSlideBoxContent(box, item, cfg, curIdx);
-    if (box.bind === 'options') {
-      text = item.options
-        .map((o) => {
-          const isCorrect = o.isCorrect || o.key.toLowerCase() === item.answer?.toLowerCase();
-          return `${o.key}) ${cleanLatex(o.text)}${isCorrect && highlight ? ' ✓' : ''}`;
-        })
-        .join('\n');
-    }
     if (!text) return;
 
     const lineCount = text.split('\n').length;
@@ -127,6 +201,43 @@ export const exportDeckToPPTX = async (
     });
   };
 
+  // Render the slide background as editable layers (mirrors SlideCanvas):
+  // 1) base canvas color as the slide background, 2) the deck's background
+  // preset/uploaded image as a full-bleed selectable picture, 3) the
+  // readability tint as a translucent rectangle. All are real PowerPoint
+  // objects so the user can select, move, resize or delete them.
+  const renderSlideBackground = (slide: any, cfg: DeckConfig) => {
+    slide.background = { color: colors.bg };
+
+    const bgOpacity = cfg.bgImageOpacity !== undefined ? cfg.bgImageOpacity : 0.85;
+    const overlayDarkness = cfg.bgOverlayDarkness !== undefined ? cfg.bgOverlayDarkness : 0.4;
+    const isLightTmpl = template.themeType === 'light';
+
+    if (bgUrl) {
+      slide.addImage({
+        ...(bgUrl.startsWith('data:') ? { data: bgUrl } : { path: bgUrl }),
+        x: 0,
+        y: 0,
+        w: 13.333,
+        h: 7.5,
+        transparency: Math.round((1 - bgOpacity) * 100),
+      });
+    }
+
+    // Readability tint — editable translucent rectangle over the image
+    slide.addShape(pptx.ShapeType?.rect || 'rect', {
+      x: 0,
+      y: 0,
+      w: 13.333,
+      h: 7.5,
+      fill: {
+        color: isLightTmpl ? 'FFFFFF' : '0F172A',
+        transparency: Math.round((isLightTmpl ? overlayDarkness * 0.4 : overlayDarkness) * 100),
+      },
+      line: { type: 'none' },
+    });
+  };
+
   slideSpecs.forEach(({ item, questionIndex, isAnswerSlide }, pos) => {
     onProgress?.(`Building PPTX slide ${pos + 1} of ${totalSlides}...`);
 
@@ -154,13 +265,7 @@ export const exportDeckToPPTX = async (
     } else {
       if (isBoxedDesign) {
         // Boxed-design mode — background layer + slide text boxes only (mirrors SlideCanvas)
-        if (bgUrl && bgUrl.startsWith('data:image')) {
-          slide.background = { data: bgUrl };
-        } else if (bgUrl && (bgUrl.startsWith('http') || bgUrl.startsWith('data:image'))) {
-          slide.background = { path: bgUrl };
-        } else {
-          slide.background = { color: colors.bg };
-        }
+        renderSlideBackground(slide, effectiveConfig);
         // Answer slide indicator strip (top-center, mirrors SlideCanvas overlay)
         if (isAnswerSlide && item.answer) {
           slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
@@ -189,13 +294,7 @@ export const exportDeckToPPTX = async (
         }
       } else {
       // Native PPTX shape fallback
-      if (bgUrl && bgUrl.startsWith('data:image')) {
-        slide.background = { data: bgUrl };
-      } else if (bgUrl && (bgUrl.startsWith('http') || bgUrl.startsWith('data:image'))) {
-        slide.background = { path: bgUrl };
-      } else {
-        slide.background = { color: colors.bg };
-      }
+      renderSlideBackground(slide, effectiveConfig);
 
       // TOP HEADER BAR: Brand Logo + Brand Name + Chapter Header + Badge
       if (config.logoUrl) {

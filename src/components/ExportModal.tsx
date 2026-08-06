@@ -4,7 +4,7 @@ import { exportDeckToPPTX, PptxSlideSpec } from '../utils/pptxExport';
 import { SlideCanvas } from './SlideCanvas';
 import { SlideThumb } from './SlideThumb';
 import { DeckQuestionPaperModal } from './DeckQuestionPaperModal';
-import { expandDeckSlides, effectiveAnswerMode, SlideRef } from '../utils/answerSlides';
+import { expandDeckSlides, effectiveAnswerMode, effectiveShowAnswerInSlide, SlideRef } from '../utils/answerSlides';
 import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -80,6 +80,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [pptxEditable, setPptxEditable] = useState<boolean>(true);
   // The slide ref currently being rasterized in the offscreen canvas.
   const [renderSlideRef, setRenderSlideRef] = useState<SlideRef | null>(null);
+  // Whether answer slides include the explanation box (defaults to ON — answer
+  // slides always showed it before; the toggle lets exports drop it).
+  const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
 
   if (!isOpen) return null;
 
@@ -127,10 +130,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     try {
       const specs = toPptxSpecs();
       if (pptxEditable) {
-        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), undefined, false, specs);
+        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), undefined, false, specs, includeExplanation);
       } else {
         const slideDataUrls = await renderSlideDataUrls();
-        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), slideDataUrls, true, specs);
+        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), slideDataUrls, true, specs, includeExplanation);
       }
     } catch (err: any) {
       console.error('PPTX Export Error:', err);
@@ -149,10 +152,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     try {
       const specs = toPptxSpecs();
       if (pptxEditable) {
-        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), undefined, false, specs);
+        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), undefined, false, specs, includeExplanation);
       } else {
         const slideDataUrls = await renderSlideDataUrls();
-        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), slideDataUrls, true, specs);
+        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), slideDataUrls, true, specs, includeExplanation);
       }
       setShowGoogleSlidesGuide(true);
     } catch (err: any) {
@@ -544,18 +547,65 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </button>
             </div>
 
-            {/* Live PNG preview of the current slide — exact render that will be downloaded */}
-            <div className={`rounded-xl overflow-hidden border ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              {currentSlide && (
-                <SlideThumb
-                  item={currentSlide.item}
-                  config={config}
-                  index={currentSlide.questionIndex}
-                  totalCount={items.length}
-                  isAnswerRevealMode={config.showAnswerInSlide}
-                  slideVariant={currentSlide.isAnswerSlide ? 'answer' : 'question'}
-                />
-              )}
+            {/* Include Explanation toggle — controls the explanation box on the
+                answer slide preview AND every export (PPTX/PDF/ZIP/PNG). */}
+            <label className={`flex items-center gap-2.5 text-xs font-bold cursor-pointer select-none ${
+              isAppLight ? 'text-slate-700' : 'text-slate-300'
+            }`}>
+              <input
+                type="checkbox"
+                checked={includeExplanation}
+                onChange={(e) => setIncludeExplanation(e.target.checked)}
+                className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+              />
+              Include Explanation on answer slides
+            </label>
+
+            {/* Live 2-slide preview — question slide + answer slide (answer mark
+                graphics / tick / key shown on the answer variant). */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Question slide preview */}
+              <div>
+                <div className={`flex items-center justify-between mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <span className="text-[10px] font-black uppercase tracking-wider">Question</span>
+                  <span className="text-[10px] font-mono">#{currentSlide ? currentSlide.questionIndex + 1 : ''}</span>
+                </div>
+                <div className={`rounded-xl overflow-hidden border ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
+                  {currentSlide && (
+                    <SlideThumb
+                      item={currentSlide.item}
+                      config={config}
+                      index={currentSlide.questionIndex}
+                      totalCount={items.length}
+                      isAnswerRevealMode={effectiveShowAnswerInSlide(config)}
+                      slideVariant="question"
+                    />
+                  )}
+                </div>
+              </div>
+              {/* Answer slide preview */}
+              <div>
+                <div className={`flex items-center justify-between mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
+                    isAppLight ? 'text-emerald-700' : 'text-emerald-300'
+                  }`}>
+                    <CheckCircle2 className="w-3 h-3" /> Answer
+                  </span>
+                  <span className="text-[10px] font-mono">{currentSlide?.item.answer || ''}</span>
+                </div>
+                <div className={`rounded-xl overflow-hidden border ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
+                  {currentSlide && (
+                    <SlideThumb
+                      item={currentSlide.item}
+                      config={config}
+                      index={currentSlide.questionIndex}
+                      totalCount={items.length}
+                      slideVariant="answer"
+                      forceShowExplanation={includeExplanation}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -657,6 +707,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             totalCount={items.length}
             isAnswerRevealMode={false}
             slideVariant={renderSlideRef.isAnswerSlide ? 'answer' : 'question'}
+            forceShowExplanation={renderSlideRef.isAnswerSlide ? includeExplanation : undefined}
           />
         )}
       </div>

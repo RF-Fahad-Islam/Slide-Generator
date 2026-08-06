@@ -9,6 +9,7 @@ interface SlideThumbProps {
   totalCount: number;
   isAnswerRevealMode?: boolean;
   slideVariant?: 'question' | 'answer';
+  forceShowExplanation?: boolean;
   className?: string;
 }
 
@@ -22,6 +23,7 @@ export const SlideThumb: React.FC<SlideThumbProps> = ({
   totalCount,
   isAnswerRevealMode = false,
   slideVariant = 'question',
+  forceShowExplanation,
   className = '',
 }) => {
   const thumbRef = useRef<HTMLDivElement>(null);
@@ -56,6 +58,7 @@ export const SlideThumb: React.FC<SlideThumbProps> = ({
             totalCount={totalCount}
             isAnswerRevealMode={isAnswerRevealMode}
             slideVariant={slideVariant}
+            forceShowExplanation={forceShowExplanation}
           />
         </div>
       )}

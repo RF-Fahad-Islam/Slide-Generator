@@ -17,6 +17,9 @@ interface SlideCanvasProps {
   // visible "উত্তর" label + explanation). Defaults to 'question'.
   slideVariant?: 'question' | 'answer';
   scale?: number; // CSS scale transform for viewport scaling
+  // Export override — when provided (true/false) it forces the explanation box
+  // on/off regardless of config/answer-variant. Undefined keeps default behavior.
+  forceShowExplanation?: boolean;
 }
 
 export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
@@ -27,6 +30,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   isAnswerRevealMode = false,
   slideVariant = 'question',
   scale = 1,
+  forceShowExplanation,
 }, ref) => {
   // Merge global deck config with slide-specific scope overrides (item.customConfig)
   const effectiveConfig: DeckConfig = {
@@ -143,7 +147,10 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
 
   const isAnswerVariant = slideVariant === 'answer';
   const showAnswerHighlight = effectiveConfig.showAnswerInSlide || isAnswerRevealMode || isAnswerVariant;
-  const showExplanation = effectiveConfig.showExplanationInSlide || isAnswerRevealMode || isAnswerVariant;
+  const showExplanation =
+    forceShowExplanation !== undefined
+      ? forceShowExplanation
+      : effectiveConfig.showExplanationInSlide || isAnswerRevealMode || isAnswerVariant;
   const isClassMode = effectiveConfig.layoutMode === 'class_mode';
 
   const slideTextBoxes = effectiveConfig.slideTextBoxes || [];
