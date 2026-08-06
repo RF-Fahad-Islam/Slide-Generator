@@ -2,30 +2,35 @@ import React, { useState, useRef, useEffect } from 'react';
 import { DeckConfig, MCQItem } from './types';
 import { SAMPLE_DECKS } from './utils/bulkParser';
 import { useIndexedDBSync } from './hooks/useIndexedDBSync';
+import { db } from './db/dexie';
 import { SidebarNav } from './components/SidebarNav';
 import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
 import { AIUploader } from './components/AIUploader';
 import { DeckManager } from './components/DeckManager';
-import { DeckSettings } from './components/DeckSettings';
+import { DeckSettingsModal } from './components/DeckSettingsModal';
 import { ExportModal } from './components/ExportModal';
 import { TemplateLibraryModal } from './components/TemplateLibraryModal';
 import { EditQuestionModal } from './components/EditQuestionModal';
 import { TemplateCreator } from './components/TemplateCreator';
 import { QuestionBankView } from './components/QuestionBankView';
+import { MyDecksView } from './components/MyDecksView';
 import { SlideDecksHome, ThemeSelection } from './components/SlideDecksHome';
 import { SocialPostGenerator } from './components/SocialPostGenerator';
 import { SlideTextBoxOverlay } from './components/SlideTextBoxOverlay';
 import { SlideTextBoxPanel } from './components/SlideTextBoxPanel';
 import { SlideThumb } from './components/SlideThumb';
 import { SettingsView } from './components/SettingsView';
+import { GlobalSettings } from './components/GlobalSettings';
 import { MathText } from './components/MathText';
 import { OnboardingTour, defaultTourSteps, TourTab } from './components/OnboardingTour';
 import { getTemplateById } from './templates/registry';
 import { defaultSlideTextBoxes } from './utils/slideTextBoxes';
+import { classroomTextBoxes } from './utils/slideElements';
+import { loadGlobalDefaults } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, LayoutTemplate, Copy, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, LayoutTemplate, Copy, FileText, Download, Sliders } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
 
@@ -34,11 +39,23 @@ export default function App() {
   const [items, setItems] = useState<MCQItem[]>(SAMPLE_DECKS[0].items);
   const [reviewItems, setReviewItems] = useState<MCQItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys'>('home');
   const [isAnswerRevealMode, setIsAnswerRevealMode] = useState<boolean>(false);
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+  // Export scope per entry point — sidebar "Export Slides" = all, Slide Studio Download = current slide only
+  const [exportScope, setExportScope] = useState<'all' | 'current'>('all');
+  // Export override — when downloading a saved deck from "My Decks", the modal
+  // exports THAT deck's items/config instead of the active workspace deck.
+  const [exportDeckOverride, setExportDeckOverride] = useState<{ items: MCQItem[]; config: DeckConfig } | null>(null);
+  // Saved-deck id currently being edited in Deck Settings — edits made there get
+  // persisted back to that deck's row in db.questionDecks (see effect below).
+  const [editingSavedDeckId, setEditingSavedDeckId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+
+  // Deck-scoped settings modal — opened from Slide Studio (or Home / My Decks).
+  // Edits a draft config with a live preview; applied only on "Apply to All".
+  const [isDeckSettingsModalOpen, setIsDeckSettingsModalOpen] = useState<boolean>(false);
 
   // Inline question edit modal (opened from the deck list) + handoff to the dedicated editor
   const [editingQuestion, setEditingQuestion] = useState<MCQItem | null>(null);
@@ -89,8 +106,9 @@ export default function App() {
   };
 
   // Deck Branding Config State
+  const globalDefaults = loadGlobalDefaults();
   const [config, setConfig] = useState<DeckConfig>({
-    templateId: 'rakib-dark',
+    templateId: globalDefaults.defaultTemplateId,
     brandName: "RAKIB'S CLASSROOM",
     logoUrl: '',
     logoSize: 'md',
@@ -103,7 +121,7 @@ export default function App() {
     aspectRatio: '16:9',
     showAnswerInSlide: false,
     showExplanationInSlide: false,
-    questionNumberFormat: 'bangla',
+    questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
     fontFamily: "'Kalpurush', serif",
     bgPreset: 'none',
     bgImageOpacity: 1.0,
@@ -121,6 +139,25 @@ export default function App() {
     config,
     setConfig
   );
+
+  // Persist Deck Settings edits back to the saved deck row in the library.
+  // When a deck was opened into Settings from "My Decks", any items/config
+  // change is written to that deck's db.questionDecks entry (debounced).
+  useEffect(() => {
+    if (!editingSavedDeckId) return;
+    const timer = setTimeout(async () => {
+      try {
+        await db.questionDecks.update(editingSavedDeckId, {
+          items,
+          config,
+          updatedAt: Date.now(),
+        });
+      } catch (err) {
+        console.error('Failed to persist settings edits to saved deck:', err);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [editingSavedDeckId, items, config]);
 
   // Canvas DOM ref for PNG screenshot export
   const slideRef = useRef<HTMLDivElement>(null);
@@ -341,15 +378,22 @@ export default function App() {
   };
 
   const handleCreateNewDeckFromSelection = (selectedItems: MCQItem[]) => {
+    setEditingSavedDeckId(null);
     setItems(ensureUniqueIds(selectedItems));
     setSelectedIndex(0);
     setActiveTab('preview');
-    setDeckName('Untitled Deck');
+    setDeckName(globalDefaults.defaultDeckName);
+    setConfig((prev) => ({
+      ...prev,
+      templateId: globalDefaults.defaultTemplateId,
+      questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
+    }));
     alert(`Created new presentation deck with ${selectedItems.length} selected questions!`);
   };
 
   const handleLoadSample = (sampleIndex: number) => {
     const sample = SAMPLE_DECKS[sampleIndex] || SAMPLE_DECKS[0];
+    setEditingSavedDeckId(null);
     setItems(ensureUniqueIds(sample.items));
     setSelectedIndex(0);
     setActiveTab('preview');
@@ -357,6 +401,7 @@ export default function App() {
   };
 
   const handleOpenDeck = (deckItems: MCQItem[], deckTitle?: string) => {
+    setEditingSavedDeckId(null);
     setItems(ensureUniqueIds(deckItems));
     setSelectedIndex(0);
     if (deckTitle) {
@@ -366,12 +411,33 @@ export default function App() {
     setActiveTab('preview');
   };
 
-  const handleOpenDeckSettings = (deckItems: MCQItem[], newConfig?: DeckConfig) => {
+  const handleOpenDeckSettings = (deckItems: MCQItem[], newConfig?: DeckConfig, savedDeckId?: string) => {
     setItems(ensureUniqueIds(deckItems));
     if (newConfig) {
       setConfig(newConfig);
     }
-    setActiveTab('settings');
+    // Track which library deck is being edited so Settings changes persist back
+    // to it. Opening settings from Home (no id) clears any prior target.
+    setEditingSavedDeckId(savedDeckId ?? null);
+    setActiveTab('preview');
+    setIsDeckSettingsModalOpen(true);
+  };
+
+  // Classroom View quick action (Deck Settings → Layout) — enforce class_mode +
+  // classroom text boxes on the whole deck, then hand off to the box editor so
+  // the user can immediately start changing text boxes. Keeps editingSavedDeckId
+  // intact so the change still persists back to the saved library deck.
+  const handleEnforceClassroomView = () => {
+    setConfig((prev) => ({
+      ...prev,
+      layoutMode: 'class_mode',
+      slideTextBoxes: classroomTextBoxes(),
+    }));
+    setIsDeckSettingsModalOpen(false);
+    setActiveTab('preview');
+    setIsTextBoxEditMode(true);
+    setTextBoxScope('global');
+    setSelectedTextBoxId(null);
   };
 
   // Slide-specific theme application — writes theme fields into the ACTIVE slide's
@@ -439,6 +505,7 @@ export default function App() {
   };
 
   const handleOpenSocialGenerator = (deckItems: MCQItem[]) => {
+    setEditingSavedDeckId(null);
     setItems(ensureUniqueIds(deckItems));
     setActiveTab('social');
   };
@@ -448,6 +515,13 @@ export default function App() {
     setItems(prev => (prev.some(q => q.id === question.id) ? prev : ensureUniqueIds([...prev, question])));
     setSocialTargetId(question.id);
     setActiveTab('social');
+  };
+
+  // Download a saved deck from "My Decks" — export modal targets that deck's items/config
+  const handleDownloadDeck = ({ items: deckItems, config: deckConfig }: { items: MCQItem[]; config: DeckConfig }) => {
+    setExportDeckOverride({ items: deckItems, config: deckConfig });
+    setExportScope('all');
+    setIsExportModalOpen(true);
   };
 
   const handleClearAll = () => {
@@ -490,7 +564,10 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         questionCount={items.length}
-        onOpenExportModal={() => setIsExportModalOpen(true)}
+        onOpenExportModal={() => {
+          setExportScope('all');
+          setIsExportModalOpen(true);
+        }}
         isSyncing={isSyncing}
         lastSavedTime={lastSavedTime}
         appTheme={appTheme}
@@ -515,6 +592,20 @@ export default function App() {
             onLoadSample={handleLoadSample}
             appTheme={appTheme}
             onStartTour={() => setIsTourOpen(true)}
+          />
+        )}
+
+        {/* TAB 0.5: MY PRESENTATION DECKS */}
+        {activeTab === 'decks' && (
+          <MyDecksView
+            currentItems={items}
+            currentConfig={config}
+            onOpenDeck={handleOpenDeck}
+            onOpenDeckSettings={handleOpenDeckSettings}
+            onOpenSocialGenerator={handleOpenSocialGenerator}
+            onDownloadDeck={handleDownloadDeck}
+            onNavigateTab={setActiveTab}
+            appTheme={appTheme}
           />
         )}
 
@@ -806,6 +897,43 @@ export default function App() {
                         <span className="hidden sm:inline">Templates</span>
                       </button>
 
+                      {/* Deck Settings — deck-scoped branding/layout modal (draft + live preview + Apply to All) */}
+                      <button
+                        onClick={() => {
+                          setEditingSavedDeckId(null);
+                          setIsDeckSettingsModalOpen(true);
+                        }}
+                        data-tour="studio-deck-settings"
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                          isAppLight
+                            ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                        }`}
+                        title="Open Deck Settings — branding, fonts, layout mode, background & banners for this deck"
+                      >
+                        <Sliders className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="hidden sm:inline">Deck Settings</span>
+                      </button>
+
+                      {/* Download Current Slide — Export modal scoped to the active slide only */}
+                      <button
+                        onClick={() => {
+                          setExportScope('current');
+                          setIsExportModalOpen(true);
+                        }}
+                        disabled={items.length === 0}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                          isAppLight
+                            ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                            : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        title="Download the current slide — PPTX, PDF, PNG, ZIP (current slide only)"
+                        data-tour="studio-download"
+                      >
+                        <Download className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="hidden sm:inline">Download</span>
+                      </button>
+
                       {/* Previous / Next Slide Nav */}
                       <div className="flex items-center gap-1.5">
                         <button
@@ -1025,37 +1153,11 @@ export default function App() {
           />
         )}
 
-        {/* TAB 5: DECK BRANDING & TEMPLATE SETTINGS */}
+        {/* TAB 5: GLOBAL SETTINGS — app-wide defaults (deck settings live in Slide Studio modal) */}
         {activeTab === 'settings' && (
-          <DeckSettings
-            config={config}
-            onUpdateConfig={setConfig}
-            activeSlideIndex={selectedIndex}
-            activeSlideConfig={items[selectedIndex]?.customConfig}
-            onUpdateActiveSlideConfig={(slideConfigOverride) => {
-              setItems((prev) => {
-                const updated = [...prev];
-                if (updated[selectedIndex]) {
-                  updated[selectedIndex] = {
-                    ...updated[selectedIndex],
-                    customConfig: slideConfigOverride,
-                  };
-                }
-                return updated;
-              });
-            }}
-            onResetActiveSlideConfig={() => {
-              setItems((prev) => {
-                const updated = [...prev];
-                if (updated[selectedIndex]) {
-                  const copy = { ...updated[selectedIndex] };
-                  delete copy.customConfig;
-                  updated[selectedIndex] = copy;
-                }
-                return updated;
-              });
-            }}
+          <GlobalSettings
             appTheme={appTheme}
+            onToggleAppTheme={() => setAppTheme(t => t === 'dark' ? 'light' : 'dark')}
           />
         )}
 
@@ -1074,12 +1176,52 @@ export default function App() {
       {/* Export Modal */}
       <ExportModal
         isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        items={items}
-        config={config}
-        currentIndex={selectedIndex}
+        onClose={() => {
+          setIsExportModalOpen(false);
+          setExportDeckOverride(null);
+        }}
+        items={exportDeckOverride?.items ?? items}
+        config={exportDeckOverride?.config ?? config}
+        currentIndex={exportDeckOverride ? 0 : selectedIndex}
         slideRef={slideRef}
         appTheme={appTheme}
+        scope={exportScope}
+      />
+
+      {/* Deck Settings Modal — deck-scoped branding/layout with draft + live preview */}
+      <DeckSettingsModal
+        isOpen={isDeckSettingsModalOpen}
+        onClose={() => setIsDeckSettingsModalOpen(false)}
+        config={config}
+        onApplyConfig={setConfig}
+        activeSlideIndex={selectedIndex}
+        activeSlideConfig={items[selectedIndex]?.customConfig}
+        onApplyActiveSlideConfig={(slideConfigOverride) => {
+          setItems((prev) => {
+            const updated = [...prev];
+            if (updated[selectedIndex]) {
+              updated[selectedIndex] = {
+                ...updated[selectedIndex],
+                customConfig: slideConfigOverride,
+              };
+            }
+            return updated;
+          });
+        }}
+        onResetActiveSlideConfig={() => {
+          setItems((prev) => {
+            const updated = [...prev];
+            if (updated[selectedIndex]) {
+              const copy = { ...updated[selectedIndex] };
+              delete copy.customConfig;
+              updated[selectedIndex] = copy;
+            }
+            return updated;
+          });
+        }}
+        items={items}
+        appTheme={appTheme}
+        onEnforceClassroomView={handleEnforceClassroomView}
       />
 
       {/* Template Store Modal */}

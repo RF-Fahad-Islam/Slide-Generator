@@ -11,7 +11,6 @@ import {
   Search,
   Filter,
   Plus,
-  BookOpen,
   CheckSquare,
   Square,
   Layers,
@@ -536,23 +535,41 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           <div
             onClick={() => setSelectedDeckId('all')}
             className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-              selectedDeckId === 'all'
-                ? 'bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40'
-                : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+              isAppLight
+                ? selectedDeckId === 'all'
+                  ? 'bg-amber-50 border-amber-500 shadow-xl ring-2 ring-amber-400/50'
+                  : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+                : selectedDeckId === 'all'
+                  ? 'bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40'
+                  : 'bg-slate-900 border-slate-800 hover:border-slate-700'
             }`}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <span className="px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-300 text-sm font-bold uppercase tracking-wider font-mono">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className={`px-2.5 py-0.5 rounded-md text-sm font-bold font-mono ${
+                  isAppLight
+                    ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
                   All Questions
                 </span>
-                <h4 className="text-base font-extrabold text-white mt-1">Entire Question Bank</h4>
-                <p className="text-sm text-slate-400">View & filter all {allBankQuestions.length} stored questions across all decks</p>
+                <span className={`p-2 rounded-xl ${
+                  isAppLight ? 'bg-amber-100 text-amber-600' : 'bg-amber-500/15 text-amber-400'
+                }`}>
+                  <Database className="w-5 h-5" />
+                </span>
               </div>
-              <BookOpen className="w-6 h-6 text-amber-400 shrink-0 mt-1" />
+              <h4 className={`text-base font-extrabold leading-snug ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                Entire Question Bank
+              </h4>
+              <p className={`text-sm ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                View &amp; filter all {allBankQuestions.length} stored questions across all decks
+              </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-sm text-amber-300 font-bold">
-              <span>{allBankQuestions.length} Total MCQs</span>
+            <div className={`mt-4 pt-3 border-t flex items-center justify-between text-sm font-bold ${
+              isAppLight ? 'border-slate-200 text-amber-700' : 'border-slate-800/80 text-amber-300'
+            }`}>
+              <span className="font-mono font-extrabold">{allBankQuestions.length} Total MCQs</span>
               <span className="flex items-center gap-1">Browse All →</span>
             </div>
           </div>

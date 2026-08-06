@@ -1,13 +1,15 @@
 import pptxgen from 'pptxgenjs';
-import { DeckConfig, MCQItem } from '../types';
+import { DeckConfig, MCQItem, SlideTextBox } from '../types';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
+import { getSlideBoxContent } from './slideTextBoxes';
 
 export const exportDeckToPPTX = async (
   items: MCQItem[],
   config: DeckConfig,
   onProgress?: (msg: string) => void,
-  slideDataUrls?: string[]
+  slideDataUrls?: string[],
+  useImages?: boolean
 ) => {
   onProgress?.('Initializing 16:9 PowerPoint Presentation...');
 
@@ -41,14 +43,91 @@ export const exportDeckToPPTX = async (
       .replace(/\\theta/g, 'θ');
   };
 
+  // 1920x1080 canvas -> 13.333x7.5in slide
+  const PX_TO_IN = 13.333 / 1920;
+  const PX_TO_PT = PX_TO_IN * 72;
+
+  // Render one slide text-box as a native editable PPTX layer (so fields and
+  // shapes stay editable after import — no flattened image).
+  const renderTextBox = (
+    slide: any,
+    box: SlideTextBox,
+    item: MCQItem,
+    cfg: DeckConfig,
+    curIdx: number
+  ) => {
+    if (box.bind === 'icon') return; // lucide SVGs can't embed as native text — skip
+    if (box.bind === 'image') {
+      if (box.imageUrl) {
+        slide.addImage({
+          ...(box.imageUrl.startsWith('data:') ? { data: box.imageUrl } : { path: box.imageUrl }),
+          x: box.x * PX_TO_IN,
+          y: box.y * PX_TO_IN,
+          w: (box.w || 320) * PX_TO_IN,
+          h: (box.h || 180) * PX_TO_IN,
+        });
+      }
+      return;
+    }
+
+    let text = getSlideBoxContent(box, item, cfg, curIdx);
+    if (box.bind === 'options') {
+      text = item.options
+        .map((o) => {
+          const isCorrect = o.isCorrect || o.key.toLowerCase() === item.answer?.toLowerCase();
+          return `${o.key}) ${cleanLatex(o.text)}${isCorrect && cfg.showAnswerInSlide ? ' ✓' : ''}`;
+        })
+        .join('\n');
+    }
+    if (!text) return;
+
+    const lineCount = text.split('\n').length;
+    const boxW = (box.w || 600) * PX_TO_IN;
+    const boxH = (box.h || lineCount * box.fontSize * 1.45 + 16) * PX_TO_IN;
+    const fill = box.bg ? box.bg.replace('#', '') : undefined;
+
+    // Container shape (pill / card / banner) behind the text — an editable layer
+    if (box.shape && box.shape !== 'plain' && fill) {
+      slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
+        x: box.x * PX_TO_IN,
+        y: box.y * PX_TO_IN,
+        w: boxW,
+        h: boxH,
+        fill: { color: fill },
+        line: { color: 'FFFFFF', transparency: 92, width: 0.75 },
+        rectRadius: box.shape === 'pill' ? 0.5 : box.shape === 'card' ? 0.09 : 0,
+        shadow: box.shape === 'card' ? { type: 'outer', opacity: 0.2, blur: 8, angle: 90, distance: 4 } : undefined,
+      });
+    }
+
+    slide.addText(cleanLatex(text), {
+      x: box.x * PX_TO_IN,
+      y: box.y * PX_TO_IN,
+      w: boxW,
+      h: boxH,
+      fontSize: box.fontSize * PX_TO_PT,
+      color: (box.color || '#ffffff').replace('#', ''),
+      bold: box.bold,
+      align: box.align,
+      valign: 'top',
+    });
+  };
+
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
     onProgress?.(`Building PPTX slide ${idx + 1} of ${items.length}...`);
 
     const slide = pptx.addSlide();
 
+    // Per-slide design override (mirrors SlideCanvas) + boxed-design detection
+    const effectiveConfig: DeckConfig = { ...config, ...(item.customConfig || {}) };
+    const boxes: SlideTextBox[] = effectiveConfig.slideTextBoxes || [];
+    const isBoxedDesign = boxes.length > 0;
+
     // Check if we have pre-rendered high-res slide images from SlideCanvas for exact visual match
-    if (slideDataUrls && slideDataUrls[idx]) {
+    const shouldUseImages = useImages === undefined ? !!(slideDataUrls && slideDataUrls.length > 0) : useImages;
+
+    if (shouldUseImages && slideDataUrls && slideDataUrls[idx]) {
       slide.addImage({
         data: slideDataUrls[idx],
         x: 0,
@@ -57,6 +136,19 @@ export const exportDeckToPPTX = async (
         h: 7.5,
       });
     } else {
+      if (isBoxedDesign) {
+        // Boxed-design mode — background layer + slide text boxes only (mirrors SlideCanvas)
+        if (bgUrl && bgUrl.startsWith('data:image')) {
+          slide.background = { data: bgUrl };
+        } else if (bgUrl && (bgUrl.startsWith('http') || bgUrl.startsWith('data:image'))) {
+          slide.background = { path: bgUrl };
+        } else {
+          slide.background = { color: colors.bg };
+        }
+        for (const box of boxes) {
+          renderTextBox(slide, box, item, effectiveConfig, idx);
+        }
+      } else {
       // Native PPTX shape fallback
       if (bgUrl && bgUrl.startsWith('data:image')) {
         slide.background = { data: bgUrl };
@@ -345,6 +437,7 @@ export const exportDeckToPPTX = async (
         align: 'right',
         valign: 'middle',
       });
+      }
     }
 
     // Always attach Speaker Notes with clean structured text & raw LaTeX source

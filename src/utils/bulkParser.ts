@@ -68,26 +68,34 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
 
     const optMatch = cleanLine.match(optionRegex);
     if (optMatch) {
-      isReadingOptions = true;
       const keyRaw = optMatch[1] || optMatch[2];
       const key = normalizeKey(keyRaw);
-      const text = optMatch[3].trim();
+      const isNumericKey = /^[1-4]$/.test(keyRaw || '');
+      // "1. What is the capital of France?" is a numbered QUESTION line, not an
+      // option — numeric keys only count as options once the options section has
+      // begun, or when the line clearly isn't a question (first line of a block
+      // is the stem, and question lines end in "?").
+      const isNumberedQuestion = isNumericKey && !isReadingOptions && (i === 0 || /[?؟]\s*$/.test(line));
+      if (!isNumberedQuestion) {
+        isReadingOptions = true;
+        const text = optMatch[3].trim();
 
-      options.push({
-        key,
-        text,
-        isCorrect: hasAsterisk,
-      });
+        options.push({
+          key,
+          text,
+          isCorrect: hasAsterisk,
+        });
 
-      if (hasAsterisk) {
-        answerKey = key;
+        if (hasAsterisk) {
+          answerKey = key;
+        }
+        continue;
       }
-      continue;
     }
 
     // Check Roman Statement Line e.g. "i. ইউরেটেরোস্কোপিক"
     const romanMatch = line.match(romanRegex);
-    if (romanMatch && !isReadingOptions) {
+    if (romanMatch && !isReadingOptions && stem && !/[?؟]\s*$/.test(line)) {
       romanItems.push(line); // keep whole line or content
       continue;
     }
@@ -163,13 +171,11 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
       matchedOpt.isCorrect = true;
     }
   } else {
-    // Default first option or marked option
+    // Only honor an explicitly-marked option — never default to the first one.
+    // Removing the "*" must remove the answer mark (option 0 stays unmarked).
     const correctOpt = options.find(o => o.isCorrect);
     if (correctOpt) {
       answerKey = correctOpt.key;
-    } else {
-      answerKey = options[0].key;
-      options[0].isCorrect = true;
     }
   }
 

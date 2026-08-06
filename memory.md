@@ -1,45 +1,45 @@
-# Memory — Slide-Specific Themes, Question Paper PDF, Onboarding Tour
+# Memory — Export Scope, Deck Question Paper Modal, Editable PPTX Layers, Question Bank Card Fix
 
 Last updated: 2026-08-06
 
 ## What was built
 
-**Session 6 (this session)** — 6 commits on `main` (`cacd697`, `8d426cd`, `4ee3e1c`, `5509139`, `41d0b86`), HEAD `41d0b86`, working tree clean. `npm run lint` (= `tsc --noEmit`) and `npx vite build` both green. Dev server on http://localhost:9000.
+**Session 8 (this session)** — NO commits made this session. Working tree has uncommitted changes: `src/App.tsx`, `src/components/ExportModal.tsx`, `src/components/QuestionBankView.tsx`, `src/utils/pptxExport.ts`, `context/progress-tracker.md`, `context/ui-registry.md`, plus a new untracked `src/components/DeckQuestionPaperModal.tsx`. HEAD still `01ff33f` on `main` (Session 7). `npm run lint` (= `tsc --noEmit`) and `npx vite build` both green.
 
-- **WS1 — Template Creator fixes** (`src/components/TemplateCreator.tsx`, `src/components/SlideCanvas.tsx`): "Theme Gallery" cards now preview with their OWN theme; background presets blend over the base theme (~55% opacity, readability/opacity sliders shown only when `bgPreset !== 'none'`); accent swatch applies only on user pick with a "✕ Default" reset chip. `SlideCanvas` consumes `accentColorCustom` for brand logo box, number badges, prompt text, source badges, correct-option highlight + badge key + checkmark, footer watermark avatar border + tag — zero change when no accent override.
-- **WS2 — slide-specific theme application** (`src/App.tsx`, `src/components/DeckSettings.tsx`, `src/components/SlideDecksHome.tsx`): ALL theme choosers now write to the active slide's `items[i].customConfig` only — Home "Active Slide Theme Picker" (`onSelectTheme`/`onResetSlideTheme`, Preset Themes grid + My Templates via `getTemplatePresets()`, "Reset Slide to Deck Theme" chip), Deck Settings Theme & Preview tab (always slide-scope via `onUpdateActiveSlideConfig`, "apply to active slide only (Slide #N)" banner, `themeEffectiveConfig = { ...config, ...(activeSlideConfig || {}) }`), and the Slide Studio quick Light/Dark toggle. `App.tsx` helpers: `applyThemeToActiveSlide(ThemeSelection)`, `resetActiveSlideTheme()`.
-- **WS3 — Question Paper PDF + JSON export**: new `src/utils/mcqJson.ts` (`sanitizeOption`, `normalizeMCQ`, `normalizeMCQs` accepting `MCQItem[]` / `{items}` / `{questions}` / `{data}` / `{mcqs}` / `{questionBank}`, `downloadJSON`). `src/components/QuestionPaperPage.tsx` (new): hidden A4 portrait 794×1123 renders, `forwardRef` + `useImperativeHandle` exposing `renderPdf(onProgress)`; uses slide header/footer branding (brandName/headerTitle/badgeTag/watermarkHandle/footerTag, page x/y, optional answer-key page, MathText, jsPDF via `toPng` pixelRatio 2). `QuestionBankView.tsx`: JSON import (unique IDs, name-your-deck form → `db.questionDecks.put`) + per-deck "JSON" export. `ExportModal.tsx`: "Question Paper (PDF)" card (2/3/4/6 MCQs-per-page selector + Include Answer Key toggle) and "Extract MCQs (JSON)" card (clean `MCQItem[]` minus `customConfig`).
-- **WS4 — onboarding tour**: new `src/components/OnboardingTour.tsx` (hand-rolled spotlight, no new deps) with `data-tour="<id>"` anchors, `defaultTourSteps` (11 steps, `TourTab` union, tab navigation via `onNavigate`), scrim + amber spotlight cut-out (`box-shadow` ring), positioned tooltip card, keyboard nav (Enter/→/←/Esc). `App.tsx` auto-launches on first visit (`edtech_tour_done` flag, 900ms delay, `handleCloseTour`), Start Tour buttons on Home hero (`SlideDecksHome` `onStartTour` prop) + SidebarNav bottom help button. Anchors: `home-hero`, `nav-<tab>` on every sidebar item, `studio-toolbar`, `studio-export`, `bank-import`.
-- **Review fixes** (`41d0b86`): tour now polls for target elements (20×150ms) instead of fixed timeouts and falls back to a centered tooltip when the element never appears (mobile nav anchors live in the desktop-only aside); removed dead refs (`pendingNavigate`, `measuringRef`) + unused `FileCode` import; quick Light/Dark toggle uses `getTemplateById(...).themeType === 'light'` instead of `templateId.includes('light')`; `normalizeMCQ` no longer fabricates `options[0]` as answer (empty string when no marker); paper settle time 130→150ms.
+- **Export scope (all vs current slide) — fixed per entry point, NO global toggle.** `ExportModal.tsx` gains `scope?: 'all' | 'current'` (default `'all'`). Sidebar "Export Slides" → `all`; new Slide Studio toolbar **Download** button (`App.tsx`, `Download` icon, amber outline, `data-tour="studio-download"`) → `current` (active slide only). PPTX / Google Slides / PDF / ZIP now loop over `scopeIndices` / `scopedItems`; ZIP filename becomes `${brand}_Slide_${N}.zip` in current mode. Export modal header shows a scope pill ("Current Slide #N" amber / "Full Deck (N slides)" emerald); card subtitles adapt.
+- **Deck Question Paper modal (new file `src/components/DeckQuestionPaperModal.tsx`)** — opened from the Export modal's "Question Paper (PDF)" card ("Open Paper" button). Same pattern as `QuestionBankPdfModal`: selectable file name (default `${brandName}_Question_Paper`, `fileNameEditedRef` guard), template dropdown (all `TEMPLATES` + custom theme), MCQs-per-page `[2,3,4,6]`, Include Answer Key toggle (appended উত্তরমালা page, themed accent), live scaled Page-1 preview, offscreen `renderSlice` slice-swap `toPng` → jsPDF A4. Receives `scopedItems` (current slide only when opened from studio Download). The old inline per-page/answer-key controls + `QuestionPaperPage` usage were REMOVED from `ExportModal`. `QuestionPaperPage.tsx` is now dead code (kept on disk).
+- **PPTX export is now native editable layers (default) — this was the "can't edit after exporting" fix.** `src/utils/pptxExport.ts`: `exportDeckToPPTX(items, config, onProgress, slideDataUrls?, useImages?)`. New `renderTextBox()` renders each `SlideTextBox` as a native pptxgenjs layer: 1920×1080→13.333×7.5in (`PX_TO_IN`, `PX_TO_PT = 0.5`); `options` bind joins `ক)…খ)…` lines (+ ✓ on correct when `showAnswerInSlide`); `image` binds → native images; `icon` binds skipped; pill/card/banner container shapes → editable rounded-rect layers. **Boxed-design decks** (`slideTextBoxes` present) render background layer + boxes only (mirrors `SlideCanvas`); non-boxed decks keep the existing template-chrome renderer. `ExportModal.tsx` adds `pptxEditable` state (default TRUE) + a checkbox on the PPTX card "Export as editable layers (native text boxes)". ON → `exportDeckToPPTX(..., undefined, false)` (no raster). OFF → old flattened full-bleed `toPng` image path (`useImages: true`).
+- **Question Bank "All Questions / Entire Question Bank" card fixed** (`QuestionBankView.tsx`) — was hardcoded dark (`bg-slate-900 text-white text-slate-400`) so it stayed dark in light mode. Now theme-aware and identical to deck cards (`bg-white border-slate-200 shadow-sm` light / `bg-slate-900 border-slate-800` dark; selected `bg-amber-50 border-amber-500 ring-2 ring-amber-400/50` light / `bg-amber-500/10 ... ring-1` dark), `Database` icon tile (removed now-unused `BookOpen` import), footer "N Total MCQs" (mono extrabold) + "Browse All →".
 
 ## Decisions made
 
-- **Themes are slide-scoped everywhere**: no theme chooser applies deck-wide anymore (user-reported bug: "choosing a theme applies to all slides"). Slides without an override inherit the deck theme; `SlideCanvas` merges `{ ...config, ...(item.customConfig || {}) }`.
-- **Question Paper PDF is a single deck-themed document** (deliberately not per-slide themed): it reuses slide header/footer branding VALUES but uses its own print styling (white background, amber accent `#f59e0b`, hardcoded hex inline styles) — independent of app theme; acceptable because it's a self-contained printable doc.
-- **Tour tooltip is always dark** (`bg-slate-900 text-white`) regardless of app theme — standard spotlight-tour convention.
-- Per AGENTS.md: docs updated (`context/progress-tracker.md` + `context/ui-registry.md`), commit per feature on `main`.
+- **Export scope is fixed per entry point — NO global toggle.** The user explicitly overrode the earlier "global scope toggle" recommendation: sidebar = full deck, Slide Studio Download = current slide only.
+- **PPTX default = editable layers, not flattened image.** Background stays a background layer, text boxes/shapes stay native editable layers (so imports are re-editable in PowerPoint/Google Slides). Flattened exact-image is an opt-in checkbox.
+- Question Paper moved out of the Export modal into its own modal (with file name/template/per-page/answer-key options), mirroring the Question Bank PDF modal.
+- **Sidebar design was redesigned then REVERTED** — the user disliked it ("go back to previous design"). `SidebarNav.tsx` restored to the exact pre-redesign version. Do not redesign the sidebar unless asked.
+- Per AGENTS.md: docs updated (`progress-tracker.md` 2 new rows, `ui-registry.md` notes); still NO commits this session.
 
 ## Problems solved
 
-- "Choosing a theme applies the changes to all the slides" — the Slide Studio quick Light/Dark toggle was the last deck-wide writer; now routed through `applyThemeToActiveSlide`.
-- Tour spotlight not appearing on tab-navigation steps (Question Bank mounts from IndexedDB slower than a fixed 320ms timeout) — replaced with element polling + centered fallback.
-- `isActiveSlideLight` used `templateId.includes('light')` which misclassified `custom-theme`/preset slides — now uses the registry `themeType`.
-- Imported JSON with no correct-answer marker was silently marking `options[0]` correct — now leaves the answer empty.
-- Backup Deck JSON card `<h4>` header was accidentally dropped while inserting the two new export cards — restored.
+- **"After exporting, I can't re-edit the textfields"** — real cause: PPTX export placed a full-bleed raster image per slide (`slideDataUrls` path), so after importing the .pptx nothing was editable. Fixed by making native editable layers the default (see above). Headless CDP confirmed the Export modal leaves NO invisible overlay behind (typing still works after open/close + real PNG export); the OnboardingTour overlay (`z-[9999]`) only renders while actually open.
+- **Question Bank "All Questions" card** was dark-styled in light mode (hardcoded colors) — now theme-aware.
+- **Dead exports / frozen UI hypotheses ruled out** via headless Chrome CDP (`C:\Users\User\AppData\Local\Temp\opencode\cdp-*.mjs`): no Rules-of-Hooks regressions, no stuck overlays, inputs remain editable after export round-trips.
 
 ## Current state
 
-All WS1–WS4 features complete, reviewed, and committed. `npm run lint` + `npx vite build` green. Docs updated. Working tree clean, HEAD `41d0b86` on `main`.
+All Session-8 work is implemented and lint/build green, but **UNCOMMITTED** (7 modified files + 1 new file, see list above). Dev server on http://localhost:9000. The editable-PPTX path, scope behavior, deck question-paper modal, and light-mode card all need real-browser verification. Known non-blocking console noise: html-to-image `SecurityError` for cross-origin Google Fonts/KaTeX CSS during raster exports.
 
 ## Next session starts with
 
-1. **Browser-verify (manual, agent cannot)** — dev server http://localhost:9000:
-   - Theme picker on Home + Deck Settings Theme tab + Slide Studio Light/Dark toggle affect ONLY the active slide; other slides keep the deck theme; "Reset Slide to Deck Theme" works.
-   - Question Paper PDF export: pick 2/3/4/6 per page + answer key, confirm A4 portrait pages with slide header/footer and no per-slide theme bleeding.
-   - Question Bank JSON import (all shapes) + Extract MCQs round-trip re-import.
-   - Onboarding tour: auto-launch on first visit (clear `edtech_tour_done` to retrigger), spotlight follows each step, Start Tour buttons reopen it.
-2. If all pass, remaining backlog: bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor (architecture parity, deferred).
+1. **Commit Session 8** (user hasn't asked to commit yet — confirm first): `src/App.tsx`, `src/components/ExportModal.tsx`, `src/components/DeckQuestionPaperModal.tsx` (new), `src/components/QuestionBankView.tsx`, `src/utils/pptxExport.ts`, `context/progress-tracker.md`, `context/ui-registry.md`.
+2. **Browser-verify (manual, agent cannot)**:
+   - Export PPTX (editable default) → open the .pptx in PowerPoint/Google Slides and confirm text fields + shapes are individually editable layers; toggle the "flattened image" checkbox and confirm the visual-match path still downloads.
+   - Slide Studio **Download** button opens the modal scoped to "Current Slide #N"; sidebar Export opens "Full Deck (N slides)".
+   - Question Paper card → modal with file name/template/2-3-4-6 per page/answer key + live preview + PDF download (Bangla rendering on the paper).
+   - Question Bank "All Questions" card in light + dark mode (selected state included).
+   - Existing Session-6/7 lists: theme pickers slide-scoped, Question Paper, JSON round-trip, onboarding tour (`edtech_tour_done`).
+3. If all pass, remaining backlog: bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor (deferred).
 
 ## Open questions
 
-- None blocking. Browser verification of export paths (toPng capture, per-page PDF rasterization) and tour animation remains the highest-risk unverified area.
+- None blocking. Highest-risk unverified: editable-PPTX layer fidelity in a real PowerPoint/Google Slides import (font sizes, box positions, boxed-design decks), and whether `QuestionPaperPage.tsx` should be deleted (now dead code).
