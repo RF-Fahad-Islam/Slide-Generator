@@ -87,11 +87,17 @@ export const exportDeckToPPTX = async (
 
   // Render a lucide icon as an inline SVG data URL so decorative icon elements
   // export as real, selectable picture layers (matches SlideCanvas visuals).
+  // Must be base64-encoded — PptxGenJS's addImage() rejects (with a silent
+  // console error, no thrown exception) any `data:` URI without a `base64,`
+  // marker, so a plain `;utf8,` + encodeURIComponent URL never renders.
   const iconToDataUrl = (iconName: string, color: string, size: number): string | null => {
     const IconComp = getSlideIcon(iconName);
     if (!IconComp) return null;
     const svg = renderToStaticMarkup(React.createElement(IconComp, { size, color }));
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    const bytes = new TextEncoder().encode(svg);
+    let binary = '';
+    bytes.forEach(b => { binary += String.fromCharCode(b); });
+    return `data:image/svg+xml;base64,${btoa(binary)}`;
   };
 
   // Render one slide text-box as a native editable PPTX layer (so fields and
@@ -240,7 +246,7 @@ export const exportDeckToPPTX = async (
             },
             {
               text: cleanLatex(opt.text),
-              options: { color: hl ? colors.optionSelectedText : (box.color || '#ffffff').replace('#', '') },
+              options: { color: hl ? colors.optionSelectedText : cssColorToHex(box.color || '#ffffff', colors.bg) },
             },
           ],
           {
@@ -307,7 +313,7 @@ export const exportDeckToPPTX = async (
       w: boxW,
       h: boxH,
       fontSize: box.fontSize * PX_TO_PT,
-      color: (box.color || '#ffffff').replace('#', ''),
+      color: cssColorToHex(box.color || '#ffffff', colors.bg),
       bold: box.bold,
       align: box.align,
       fontFace: getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim(),
@@ -328,7 +334,7 @@ export const exportDeckToPPTX = async (
     const slideBgUrl = getBackgroundPresetUrl(cfg.bgPreset, cfg.bgImageUrl);
     const slideIsLight = slideTemplate.themeType === 'light';
 
-    slide.background = { color: slideColors.bg };
+    slide.background = { color: slideBgUrl ? '0F172A' : slideColors.bg };
 
     const bgOpacity = cfg.bgImageOpacity !== undefined ? cfg.bgImageOpacity : 0.85;
     const overlayDarkness = cfg.bgOverlayDarkness !== undefined ? cfg.bgOverlayDarkness : 0.4;
@@ -357,24 +363,26 @@ export const exportDeckToPPTX = async (
       line: { type: 'none' },
     });
 
-    // Decorative ambient radial glows (mirrors SlideCanvas's blurred circles) —
-    // translucent rounded-full shapes at top-right and bottom-left.
-    slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
-      x: 13.333 - 650 * PX_TO_IN,
-      y: 0,
-      w: 650 * PX_TO_IN,
-      h: 650 * PX_TO_IN,
-      fill: { color: slideIsLight ? 'FBBF24' : 'F59E0B', transparency: 90 },
-      line: { type: 'none' },
-    });
-    slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
-      x: 0,
-      y: 7.5 - 550 * PX_TO_IN,
-      w: 550 * PX_TO_IN,
-      h: 550 * PX_TO_IN,
-      fill: { color: slideIsLight ? '3B82F6' : '60A5FA', transparency: 90 },
-      line: { type: 'none' },
-    });
+    // Decorative ambient radial glows — theme decoration, hidden when a
+    // background image replaces the theme (mirrors SlideCanvas).
+    if (!slideBgUrl) {
+      slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
+        x: 13.333 - 650 * PX_TO_IN,
+        y: 0,
+        w: 650 * PX_TO_IN,
+        h: 650 * PX_TO_IN,
+        fill: { color: slideIsLight ? 'FBBF24' : 'F59E0B', transparency: 90 },
+        line: { type: 'none' },
+      });
+      slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
+        x: 0,
+        y: 7.5 - 550 * PX_TO_IN,
+        w: 550 * PX_TO_IN,
+        h: 550 * PX_TO_IN,
+        fill: { color: slideIsLight ? '3B82F6' : '60A5FA', transparency: 90 },
+        line: { type: 'none' },
+      });
+    }
   };
 
   slideSpecs.forEach(({ item, questionIndex, isAnswerSlide }, pos) => {
