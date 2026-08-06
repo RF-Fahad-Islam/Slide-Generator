@@ -101,6 +101,37 @@ export interface DeckConfig {
   bgImageUrl?: string; // Custom uploaded background image Data URL
   bgImageOpacity: number; // 0.0 to 1.0
   bgOverlayDarkness: number; // 0.0 to 0.9 overlay tint for text legibility
+  // Deck-wide text box overlay layer (editable in the preview tab, rendered on every slide)
+  slideTextBoxes?: SlideTextBox[];
+}
+
+export type SlideTextBoxBind =
+  | 'stem'
+  | 'options'
+  | 'answer'
+  | 'explanation'
+  | 'passage'
+  | 'prompt'
+  | 'roman'
+  | 'source'
+  | 'questionNumber'
+  | 'brand'
+  | 'headerTitle'
+  | 'footerTag'
+  | 'watermark'
+  | 'free';
+
+export interface SlideTextBox {
+  id: string;
+  bind: SlideTextBoxBind;
+  text?: string; // free text content (bind === 'free')
+  x: number; // px, 0..1920
+  y: number; // px, 0..1080
+  w: number; // px
+  fontSize: number; // px
+  color: string;
+  align: 'left' | 'center' | 'right';
+  bold: boolean;
 }
 
 export type SocialPostTemplateType = 'reaction_quiz' | 'quiz_time' | 'modern_card' | 'minimal_square';

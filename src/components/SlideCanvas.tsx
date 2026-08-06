@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react';
 import { DeckConfig, MCQItem } from '../types';
 import { getTemplateById } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
+import { getSlideBoxContent } from '../utils/slideTextBoxes';
 import { MathText } from './MathText';
 import { Check, Award, BookOpen, User, Sparkles } from 'lucide-react';
 
@@ -150,6 +151,8 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   const showAnswerHighlight = effectiveConfig.showAnswerInSlide || isAnswerRevealMode;
   const showExplanation = effectiveConfig.showExplanationInSlide || isAnswerRevealMode;
   const isClassMode = effectiveConfig.layoutMode === 'class_mode';
+
+  const slideTextBoxes = effectiveConfig.slideTextBoxes || [];
 
   return (
     <div
@@ -597,6 +600,51 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
           </div>
         )}
       </div>
+
+      {/* DECK-WIDE TEXT BOX OVERLAY LAYER — rendered with the slide so it appears in PNG/PPTX exports */}
+      {slideTextBoxes.length > 0 && (
+        <div className="absolute inset-0 z-20 pointer-events-none">
+          {slideTextBoxes.map(box => {
+            const style: React.CSSProperties = {
+              left: box.x,
+              top: box.y,
+              width: box.w,
+              fontSize: box.fontSize,
+              color: box.color,
+              textAlign: box.align,
+            };
+            if (box.bind === 'options') {
+              return (
+                <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={style}>
+                  <div className="space-y-2.5">
+                    {item.options.map(opt => (
+                      <div key={opt.key} className="flex items-start gap-3">
+                        <span className="font-black shrink-0">{opt.key}.</span>
+                        <span><MathText text={opt.text} /></span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            if (box.bind === 'roman') {
+              return (
+                <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={style}>
+                  {(item.romanItems || []).map((stmt, i) => (
+                    <div key={i} className="my-1"><MathText text={stmt} /></div>
+                  ))}
+                </div>
+              );
+            }
+            const content = getSlideBoxContent(box, item, effectiveConfig, currentIndex);
+            return (
+              <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={style}>
+                <MathText text={content} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 });

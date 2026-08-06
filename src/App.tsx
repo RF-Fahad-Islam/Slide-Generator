@@ -12,10 +12,14 @@ import { ExportModal } from './components/ExportModal';
 import { QuestionBankView } from './components/QuestionBankView';
 import { SlideDecksHome } from './components/SlideDecksHome';
 import { SocialPostGenerator } from './components/SocialPostGenerator';
+import { SlideTextBoxOverlay } from './components/SlideTextBoxOverlay';
+import { SlideTextBoxPanel } from './components/SlideTextBoxPanel';
 import { SettingsView } from './components/SettingsView';
 import { MathText } from './components/MathText';
 import { getTemplateById } from './templates/registry';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon } from 'lucide-react';
+import { defaultSlideTextBoxes } from './utils/slideTextBoxes';
+import { SlideTextBox, SlideTextBoxBind } from './types';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 
 export default function App() {
@@ -27,6 +31,10 @@ export default function App() {
   const [isAnswerRevealMode, setIsAnswerRevealMode] = useState<boolean>(false);
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+
+  // Slide text box edit mode (deck-wide overlay layer)
+  const [isTextBoxEditMode, setIsTextBoxEditMode] = useState<boolean>(false);
+  const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
 
   // Question shared from the Question Bank → preselected in Social Post Generator
   const [socialTargetId, setSocialTargetId] = useState<string | null>(null);
@@ -74,6 +82,52 @@ export default function App() {
   const slideRef = useRef<HTMLDivElement>(null);
   const slideContainerRef = useRef<HTMLDivElement>(null);
   const [slideScale, setSlideScale] = useState<number>(0.4);
+
+  // Slide text box overlay actions (deck-wide, stored in config.slideTextBoxes)
+  const updateSlideBox = (id: string, patch: Partial<SlideTextBox>) => {
+    setConfig(prev => ({
+      ...prev,
+      slideTextBoxes: (prev.slideTextBoxes || []).map(b => (b.id === id ? { ...b, ...patch } : b)),
+    }));
+  };
+
+  const addSlideBox = (bind: SlideTextBoxBind) => {
+    const id = `b_${bind}_${Date.now()}`;
+    const newBox: SlideTextBox = {
+      id,
+      bind,
+      text: bind === 'free' ? 'Type your text here...' : undefined,
+      x: 120,
+      y: 300 + ((config.slideTextBoxes?.length || 0) % 5) * 80,
+      w: 900,
+      fontSize: bind === 'stem' ? 56 : 40,
+      color: '#ffffff',
+      align: 'left',
+      bold: bind === 'stem' || bind === 'brand',
+    };
+    setConfig(prev => ({ ...prev, slideTextBoxes: [...(prev.slideTextBoxes || []), newBox] }));
+    setSelectedTextBoxId(id);
+  };
+
+  const deleteSlideBox = (id: string) => {
+    setConfig(prev => ({ ...prev, slideTextBoxes: (prev.slideTextBoxes || []).filter(b => b.id !== id) }));
+    setSelectedTextBoxId(prev => (prev === id ? null : prev));
+  };
+
+  const duplicateSlideBox = (id: string) => {
+    setConfig(prev => {
+      const src = (prev.slideTextBoxes || []).find(b => b.id === id);
+      if (!src) return prev;
+      const copy: SlideTextBox = { ...src, id: `b_${src.bind}_${Date.now()}`, y: Math.min(src.y + 60, 1020) };
+      return { ...prev, slideTextBoxes: [...(prev.slideTextBoxes || []), copy] };
+    });
+  };
+
+  const resetSlideTextBoxes = () => {
+    if (!window.confirm('Reset the slide text boxes to the default layout?')) return;
+    setConfig(prev => ({ ...prev, slideTextBoxes: defaultSlideTextBoxes() }));
+    setSelectedTextBoxId(null);
+  };
 
   // Auto-recalculate slide scale to fit 1920x1080 canvas into container perfectly
   useEffect(() => {
@@ -530,6 +584,25 @@ export default function App() {
                         {isAnswerRevealMode ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                         <span className="hidden md:inline">{isAnswerRevealMode ? 'Answer Revealed' : 'Hide Answer'}</span>
                       </button>
+
+                      {/* Slide Text Box Edit Mode Toggle */}
+                      <button
+                        onClick={() => {
+                          setIsTextBoxEditMode(prev => !prev);
+                          if (isTextBoxEditMode) setSelectedTextBoxId(null);
+                        }}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                          isTextBoxEditMode
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
+                            : isAppLight
+                            ? 'bg-slate-100 text-slate-700 border-slate-300 hover:text-slate-900'
+                            : 'bg-slate-800 text-slate-200 border-slate-700 hover:text-white'
+                        }`}
+                        title="Add/Edit draggable text boxes over every slide"
+                      >
+                        <PenTool className="w-3.5 h-3.5" />
+                        <span className="hidden md:inline">{isTextBoxEditMode ? 'Editing Text Boxes' : 'Edit Text Boxes'}</span>
+                      </button>
                     </div>
                   </div>
 
@@ -588,10 +661,40 @@ export default function App() {
                             totalCount={items.length}
                             isAnswerRevealMode={isAnswerRevealMode}
                           />
+                          {isTextBoxEditMode && (
+                            <SlideTextBoxOverlay
+                              boxes={config.slideTextBoxes || []}
+                              selectedId={selectedTextBoxId}
+                              item={currentItem}
+                              config={config}
+                              currentIndex={selectedIndex}
+                              scale={slideScale}
+                              onSelect={setSelectedTextBoxId}
+                              onMove={(id, x, y) => updateSlideBox(id, { x, y })}
+                              onResize={(id, w) => updateSlideBox(id, { w })}
+                            />
+                          )}
                         </div>
                       </div>
                     )}
+
                   </div>
+
+                  {isTextBoxEditMode && (
+                    <SlideTextBoxPanel
+                      boxes={config.slideTextBoxes || []}
+                      selectedId={selectedTextBoxId}
+                      item={currentItem}
+                      config={config}
+                      currentIndex={selectedIndex}
+                      appTheme={appTheme}
+                      onAddBox={addSlideBox}
+                      onUpdateBox={updateSlideBox}
+                      onDeleteBox={deleteSlideBox}
+                      onDuplicateBox={duplicateSlideBox}
+                      onReset={resetSlideTextBoxes}
+                    />
+                  )}
                 </div>
 
                 {/* RIGHT 5 COLUMNS: DECK QUESTION LIST MANAGER */}
