@@ -28,6 +28,9 @@ export default function App() {
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
+  // Question shared from the Question Bank → preselected in Social Post Generator
+  const [socialTargetId, setSocialTargetId] = useState<string | null>(null);
+
   // App Shell Theme (Dark / Light)
   const [appTheme, setAppTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('edtech_app_theme') as 'dark' | 'light') || 'dark';
@@ -179,6 +182,13 @@ export default function App() {
     setActiveTab('social');
   };
 
+  const handleOpenInSocial = (question: MCQItem) => {
+    // Ensure the shared question exists in the active deck so the picker can find it
+    setItems(prev => (prev.some(q => q.id === question.id) ? prev : ensureUniqueIds([...prev, question])));
+    setSocialTargetId(question.id);
+    setActiveTab('social');
+  };
+
   const handleClearAll = () => {
     if (window.confirm('Are you sure you want to clear all questions in the current deck?')) {
       setItems([]);
@@ -242,6 +252,7 @@ export default function App() {
             items={items}
             config={config}
             appTheme={appTheme}
+            preselectedItemId={socialTargetId}
           />
         )}
 
@@ -630,6 +641,7 @@ export default function App() {
             currentConfig={config}
             onImportToCurrentDeck={handleImportToCurrentDeck}
             onCreateNewDeckFromSelection={handleCreateNewDeckFromSelection}
+            onOpenInSocial={handleOpenInSocial}
             appTheme={appTheme}
           />
         )}

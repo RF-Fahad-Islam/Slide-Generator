@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Sun,
   Moon,
+  Share2,
 } from 'lucide-react';
 
 interface QuestionBankViewProps {
@@ -31,6 +32,7 @@ interface QuestionBankViewProps {
   currentConfig: DeckConfig;
   onImportToCurrentDeck: (itemsToAdd: MCQItem[]) => void;
   onCreateNewDeckFromSelection: (selectedItems: MCQItem[]) => void;
+  onOpenInSocial: (question: MCQItem) => void;
   appTheme?: 'dark' | 'light';
 }
 
@@ -39,6 +41,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   currentConfig,
   onImportToCurrentDeck,
   onCreateNewDeckFromSelection,
+  onOpenInSocial,
   appTheme = 'dark',
 }) => {
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([]);
@@ -240,13 +243,13 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           <div>
             <h2 className={`text-xl lg:text-2xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
               Question Bank & Deck Library
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-black border ${
+              <span className={`text-sm px-2.5 py-0.5 rounded-full font-mono font-black border ${
                 isAppLight ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
               }`}>
                 {savedDecks.length} Decks • {allBankQuestions.length} Questions
               </span>
             </h2>
-            <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            <p className={`text-sm mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
               Browse saved decks, search questions across subjects & boards, and import selected questions directly into your slides.
             </p>
           </div>
@@ -256,7 +259,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsSavingCurrent(prev => !prev)}
-            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 hover:brightness-110 cursor-pointer transition-all"
+            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-sm flex items-center gap-2 shadow-lg shadow-amber-500/25 hover:brightness-110 cursor-pointer transition-all"
           >
             <FolderPlus className="w-4 h-4" />
             <span>Save Current Presentation to Library</span>
@@ -266,7 +269,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
 
       {/* Success Notification */}
       {successMsg && (
-        <div className={`p-4 rounded-2xl border text-xs flex items-center justify-between font-semibold animate-fadeIn ${
+        <div className={`p-4 rounded-2xl border text-sm flex items-center justify-between font-semibold animate-fadeIn ${
           isAppLight ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
         }`}>
           <div className="flex items-center gap-2">
@@ -286,28 +289,28 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
               <Bookmark className="w-4 h-4 text-amber-400" />
               Save Active Slide Presentation ({currentItems.length} Questions)
             </h3>
-            <span className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Card will be added to your Deck Library</span>
+            <span className={`text-sm ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Card will be added to your Deck Library</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={`block text-xs font-bold mb-1 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>Deck Title Name</label>
+              <label className={`block text-sm font-bold mb-1 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>Deck Title Name</label>
               <input
                 type="text"
                 value={newDeckName}
                 onChange={e => setNewDeckName(e.target.value)}
                 placeholder="e.g. HSC Biology Ch 8 - Excretory System MCQs"
                 required
-                className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:border-amber-500 ${
+                className={`w-full px-3.5 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
                   isAppLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-slate-100'
                 }`}
               />
             </div>
             <div>
-              <label className={`block text-xs font-bold mb-1 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>Subject Category</label>
+              <label className={`block text-sm font-bold mb-1 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>Subject Category</label>
               <select
                 value={newDeckSubject}
                 onChange={e => setNewDeckSubject(e.target.value)}
-                className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:border-amber-500 cursor-pointer ${
+                className={`w-full px-3.5 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 cursor-pointer ${
                   isAppLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-amber-300'
                 }`}
               >
@@ -325,7 +328,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             <button
               type="button"
               onClick={() => setIsSavingCurrent(false)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-sm font-bold cursor-pointer ${
                 isAppLight ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
@@ -333,7 +336,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold shadow-md cursor-pointer"
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-extrabold shadow-md cursor-pointer"
             >
               Confirm Save Deck
             </button>
@@ -344,18 +347,18 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
       {/* SECTION 1: SAVED DECK CARDS GRID */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
-            <Layers className="w-4 h-4 text-amber-400" />
+          <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
+            <Layers className="w-5 h-5 text-amber-400" />
             Saved Deck Cards ({savedDecks.length})
           </h3>
-          <span className="text-xs text-slate-400">Click a deck to view questions or import</span>
+          <span className="text-sm text-slate-400">Click a deck to view questions or import</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Option to show All Decks */}
           <div
             onClick={() => setSelectedDeckId('all')}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+            className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
               selectedDeckId === 'all'
                 ? 'bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40'
                 : 'bg-slate-900 border-slate-800 hover:border-slate-700'
@@ -363,15 +366,15 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase tracking-wider font-mono">
+                <span className="px-2.5 py-1 rounded-md bg-amber-500/20 text-amber-300 text-sm font-bold uppercase tracking-wider font-mono">
                   All Questions
                 </span>
-                <h4 className="text-sm font-extrabold text-white mt-1">Entire Question Bank</h4>
-                <p className="text-xs text-slate-400">View & filter all {allBankQuestions.length} stored questions across all decks</p>
+                <h4 className="text-base font-extrabold text-white mt-1">Entire Question Bank</h4>
+                <p className="text-sm text-slate-400">View & filter all {allBankQuestions.length} stored questions across all decks</p>
               </div>
-              <BookOpen className="w-5 h-5 text-amber-400 shrink-0 mt-1" />
+              <BookOpen className="w-6 h-6 text-amber-400 shrink-0 mt-1" />
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-amber-300 font-bold">
+            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-sm text-amber-300 font-bold">
               <span>{allBankQuestions.length} Total MCQs</span>
               <span className="flex items-center gap-1">Browse All →</span>
             </div>
@@ -386,7 +389,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             return (
               <div
                 key={deck.id}
-                className={`p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
+                className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
                   appTheme === 'light'
                     ? isSelected
                       ? 'bg-amber-50/90 border-amber-500 shadow-xl ring-2 ring-amber-400/50'
@@ -401,14 +404,14 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {/* Subject Tag */}
-                      <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold font-mono border ${
+                      <span className={`px-2.5 py-0.5 rounded-md text-sm font-bold font-mono border ${
                         appTheme === 'light' ? 'bg-slate-100 text-slate-800 border-slate-200' : 'bg-slate-950 text-amber-300 border-slate-800'
                       }`}>
                         📚 {deck.subject || 'Subject'}
                       </span>
 
                       {/* Theme Badge */}
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${
+                      <span className={`px-2 py-0.5 rounded-md text-sm font-bold border flex items-center gap-1 ${
                         isLightTmpl
                           ? 'bg-amber-400/20 text-amber-800 border-amber-300'
                           : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
@@ -433,7 +436,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                   {/* Deck Title */}
                   <h4
                     onClick={() => setSelectedDeckId(deck.id)}
-                    className={`text-sm font-extrabold leading-snug hover:text-amber-500 cursor-pointer ${
+                    className={`text-base font-extrabold leading-snug hover:text-amber-500 cursor-pointer ${
                       appTheme === 'light' ? 'text-slate-900' : 'text-white'
                     }`}
                   >
@@ -444,7 +447,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                   <div className={`p-2.5 rounded-xl border ${
                     appTheme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800/80'
                   } space-y-1.5`}>
-                    <div className="flex items-center justify-between text-[10px] font-bold">
+                    <div className="flex items-center justify-between text-sm font-bold">
                       <span className={appTheme === 'light' ? 'text-slate-600' : 'text-slate-400'}>
                         {deck.badgeTag || deck.subject || 'Subject Badge'}
                       </span>
@@ -455,7 +458,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
 
                     {/* First question sample */}
                     {deck.items[0] && (
-                      <div className={`text-[11px] font-semibold line-clamp-2 ${appTheme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
+                      <div className={`text-sm font-semibold line-clamp-2 ${appTheme === 'light' ? 'text-slate-800' : 'text-slate-200'}`}>
                         <MathText text={deck.items[0].stem} />
                       </div>
                     )}
@@ -466,14 +469,14 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                 <div className={`mt-3 pt-3 border-t flex items-center justify-between gap-2 ${
                   appTheme === 'light' ? 'border-slate-200' : 'border-slate-800/80'
                 }`}>
-                  <span className={`text-xs font-mono font-bold ${appTheme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <span className={`text-sm font-mono font-bold ${appTheme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
                     {deck.items.length} MCQs
                   </span>
 
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => onImportToCurrentDeck(deck.items)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg text-sm font-bold border transition-colors cursor-pointer ${
                         appTheme === 'light'
                           ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
                           : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
@@ -484,7 +487,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                     </button>
                     <button
                       onClick={() => onCreateNewDeckFromSelection(deck.items)}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-extrabold shadow-sm cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-extrabold shadow-sm cursor-pointer"
                       title="Open this deck as active presentation"
                     >
                       Open Slide Deck
@@ -498,13 +501,13 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
       </div>
 
       {/* SECTION 2: QUESTION BANK FILTER & SEARCH BAR */}
-      <div className={`p-6 rounded-3xl border space-y-5 shadow-2xl ${
+      <div className={`p-6 lg:p-8 rounded-3xl border space-y-6 shadow-2xl ${
         isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
       }`}>
-        <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-4 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
+        <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-5 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
           <div className="flex items-center gap-3">
-            <Filter className="w-5 h-5 text-amber-500" />
-            <h3 className={`text-sm font-extrabold uppercase tracking-wider ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+            <Filter className="w-6 h-6 text-amber-500" />
+            <h3 className={`text-lg font-extrabold uppercase tracking-wider ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
               Filter Questions in Bank ({filteredQuestions.length} Found)
             </h3>
           </div>
@@ -512,7 +515,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={selectAllFiltered}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-colors ${
+              className={`px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer border transition-colors ${
                 isAppLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
               }`}
             >
@@ -521,7 +524,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             {selectedQuestionIds.size > 0 && (
               <button
                 onClick={clearSelection}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-colors ${
+                className={`px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer border transition-colors ${
                   isAppLight ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200' : 'bg-slate-800 hover:bg-slate-700 text-rose-300 border-slate-700'
                 }`}
               >
@@ -533,13 +536,13 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
-            <Search className={`w-4 h-4 absolute left-3.5 top-3 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
+            <Search className={`w-5 h-5 absolute left-4 top-3.5 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search Bangla/English questions..."
-              className={`w-full pl-10 pr-4 py-2 rounded-xl border text-xs focus:outline-none focus:border-amber-500 ${
+              className={`w-full pl-11 pr-4 py-3 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
                 isAppLight ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400' : 'bg-slate-950 border-slate-800 text-white placeholder-slate-500'
               }`}
             />
@@ -548,7 +551,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           <select
             value={subjectFilter}
             onChange={e => setSubjectFilter(e.target.value)}
-            className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
+            className={`w-full px-3.5 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
               isAppLight ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-amber-300'
             }`}
           >
@@ -562,7 +565,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           <select
             value={boardFilter}
             onChange={e => setBoardFilter(e.target.value)}
-            className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
+            className={`w-full px-3.5 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
               isAppLight ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-amber-300'
             }`}
           >
@@ -576,7 +579,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           <select
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
-            className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
+            className={`w-full px-3.5 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
               isAppLight ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-amber-300'
             }`}
           >
@@ -589,16 +592,16 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
 
         {/* Selected Items Floating Command Bar */}
         {selectedQuestionIds.size > 0 && (
-          <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 animate-fadeIn ${
+          <div className={`p-5 rounded-2xl border flex flex-wrap items-center justify-between gap-4 animate-fadeIn ${
             isAppLight
               ? 'bg-amber-50 border-amber-300'
               : 'bg-gradient-to-r from-amber-500/20 via-slate-900 to-amber-500/20 border-amber-500/40'
           }`}>
             <div className="flex items-center gap-3">
-              <span className="p-2 rounded-xl bg-amber-500 text-slate-950 font-black text-xs font-mono">
+              <span className="p-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-sm font-mono">
                 {selectedQuestionIds.size} Selected
               </span>
-              <span className={`text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
+              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
                 Ready to import into slide presentation deck
               </span>
             </div>
@@ -606,18 +609,18 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             <div className="flex items-center gap-3">
               <button
                 onClick={handleImportSelected}
-                className={`px-4 py-2 rounded-xl font-bold text-xs border cursor-pointer flex items-center gap-1.5 transition-colors ${
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm border cursor-pointer flex items-center gap-2 transition-colors ${
                   isAppLight ? 'bg-white hover:bg-slate-50 text-amber-700 border-amber-300' : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
                 }`}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 <span>+ Append to Current Presentation ({selectedQuestionIds.size})</span>
               </button>
               <button
                 onClick={handleCreateNewFromSelected}
-                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md cursor-pointer flex items-center gap-1.5"
+                className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm shadow-md cursor-pointer flex items-center gap-2"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-5 h-5" />
                 <span>Create New Slide Presentation ({selectedQuestionIds.size}) →</span>
               </button>
             </div>
@@ -629,7 +632,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           {filteredQuestions.length === 0 ? (
             <div className={`text-center py-12 space-y-3 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`}>
               <Database className={`w-12 h-12 mx-auto stroke-[1.2] ${isAppLight ? 'text-slate-300' : 'text-slate-600'}`} />
-              <p className={`text-sm font-semibold ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>No questions match your current search or filters.</p>
+              <p className={`text-base font-semibold ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>No questions match your current search or filters.</p>
               <button
                 onClick={() => {
                   setSearchQuery('');
@@ -637,7 +640,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                   setBoardFilter('all');
                   setTypeFilter('all');
                 }}
-                className={`text-xs px-3 py-1.5 rounded-lg font-bold border transition-colors ${
+                className={`text-sm px-4 py-2 rounded-lg font-bold border transition-colors ${
                   isAppLight ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200' : 'bg-slate-800 text-amber-300 border-slate-700'
                 }`}
               >
@@ -652,7 +655,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                 <div
                   key={`${question.id}_${idx}`}
                   onClick={() => toggleQuestionSelect(question.id)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
+                  className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
                     isChecked
                       ? isAppLight
                         ? 'bg-amber-50 border-amber-400 shadow-md ring-1 ring-amber-400/30'
@@ -673,32 +676,48 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                         className="hover:scale-110 transition-transform cursor-pointer"
                       >
                         {isChecked ? (
-                          <CheckSquare className="w-5 h-5 text-amber-500 fill-amber-500/20" />
+                          <CheckSquare className="w-6 h-6 text-amber-500 fill-amber-500/20" />
                         ) : (
-                          <Square className={`w-5 h-5 ${isAppLight ? 'text-slate-300' : 'text-slate-600'}`} />
+                          <Square className={`w-6 h-6 ${isAppLight ? 'text-slate-300' : 'text-slate-600'}`} />
                         )}
                       </button>
 
-                      <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold border ${
+                      <span className={`px-2.5 py-1 rounded font-mono text-sm font-bold border ${
                         isAppLight ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-slate-900 text-amber-300 border-slate-800'
                       }`}>
                         #{idx + 1}
                       </span>
 
-                      <span className={`text-xs font-medium ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <span className={`text-sm font-medium ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                         Deck: <strong className={isAppLight ? 'text-slate-900' : 'text-slate-200'}>{deckName}</strong>
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px]">
+                    <div className="flex items-center gap-2 text-sm">
+                      <button
+                        type="button"
+                        title="Open in Social Post Generator"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenInSocial(question);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer font-bold shrink-0 hover:scale-105 ${
+                          isAppLight
+                            ? 'bg-white text-amber-700 border-slate-200 hover:bg-amber-50 hover:border-amber-300'
+                            : 'bg-slate-900 text-amber-300 border-slate-800 hover:border-amber-500/40'
+                        }`}
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share
+                      </button>
                       {question.source && (
-                        <span className={`px-2.5 py-0.5 rounded-full font-bold border ${
+                        <span className={`px-2.5 py-1 rounded-full font-bold border ${
                           isAppLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                         }`}>
                           {question.source}
                         </span>
                       )}
-                      <span className={`px-2 py-0.5 rounded uppercase font-mono text-[10px] border ${
+                      <span className={`px-2.5 py-1 rounded uppercase font-mono text-sm border ${
                         isAppLight ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-slate-900 text-slate-400 border-slate-800'
                       }`}>
                         {question.questionType}
@@ -706,12 +725,12 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                     </div>
                   </div>
 
-                  <div className={`pl-8 text-sm font-bold leading-relaxed ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                  <div className={`pl-8 text-base font-bold leading-relaxed ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
                     <MathText text={question.stem} />
                   </div>
 
                   {question.romanItems && question.romanItems.length > 0 && (
-                    <div className={`ml-8 p-2.5 rounded-xl border text-xs space-y-1 font-medium ${
+                    <div className={`ml-8 p-3 rounded-xl border text-sm space-y-1 font-medium ${
                       isAppLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800/80 text-slate-300'
                     }`}>
                       {question.romanItems.map((r, rIdx) => (
@@ -722,13 +741,13 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                     </div>
                   )}
 
-                  <div className="ml-8 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="ml-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm">
                     {question.options.map(opt => {
                       const isCorrect = opt.isCorrect || opt.key.toLowerCase() === question.answer?.toLowerCase();
                       return (
                         <div
                           key={opt.key}
-                          className={`p-2 rounded-xl border flex items-center gap-2 font-semibold ${
+                          className={`p-2.5 rounded-xl border flex items-center gap-2 font-semibold ${
                             isCorrect
                               ? isAppLight
                                 ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
@@ -738,7 +757,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                                 : 'bg-slate-900 border-slate-800 text-slate-300'
                           }`}
                         >
-                          <span className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] font-mono ${
+                          <span className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-sm font-mono ${
                             isCorrect ? 'bg-emerald-500 text-white' : isAppLight ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400'
                           }`}>
                             {opt.key}
