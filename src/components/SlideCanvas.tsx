@@ -3,6 +3,7 @@ import { DeckConfig, MCQItem } from '../types';
 import { getTemplateById } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { getSlideBoxContent, formatSlideQNumber } from '../utils/slideTextBoxes';
+import { getSlideIcon } from '../utils/slideElements';
 import { MathText } from './MathText';
 import { Check, Award, BookOpen, User, Sparkles } from 'lucide-react';
 
@@ -602,7 +603,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
       {slideTextBoxes.length > 0 && (
         <div className="absolute inset-0 z-20 pointer-events-none">
           {slideTextBoxes.map(box => {
-            const style: React.CSSProperties = {
+            const base: React.CSSProperties = {
               left: box.x,
               top: box.y,
               width: box.w,
@@ -610,32 +611,143 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               color: box.color,
               textAlign: box.align,
             };
+
+            // ICON ELEMENT (decorative lucide icon, sized by fontSize)
+            if (box.bind === 'icon') {
+              const IconComp = getSlideIcon(box.iconName || '');
+              return (
+                <div
+                  key={box.id}
+                  className={`absolute flex items-center justify-center ${box.shape === 'card' || box.shape === 'banner' ? 'rounded-3xl' : ''}`}
+                  style={{
+                    ...base,
+                    height: box.h || box.fontSize * 1.4,
+                    backgroundColor: box.shape === 'card' || box.shape === 'banner' ? box.bg : undefined,
+                    border: box.shape === 'card' || box.shape === 'banner' ? '1px solid rgba(255,255,255,0.12)' : undefined,
+                    boxShadow: box.shape === 'card' || box.shape === 'banner' ? '0 20px 40px rgba(0,0,0,0.15)' : undefined,
+                  }}
+                >
+                  {IconComp && <IconComp size={box.fontSize} style={{ color: box.color }} />}
+                </div>
+              );
+            }
+
+            // IMAGE ELEMENT (banner / uploaded picture)
+            if (box.bind === 'image') {
+              return box.imageUrl ? (
+                <div
+                  key={box.id}
+                  className="absolute rounded-3xl overflow-hidden"
+                  style={{
+                    ...base,
+                    height: box.h || 380,
+                    backgroundColor: box.bg,
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    boxShadow: '0 25px 50px rgba(0,0,0,0.2)',
+                  }}
+                >
+                  <img
+                    src={box.imageUrl}
+                    alt="Slide Banner"
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                </div>
+              ) : null;
+            }
+
+            // OPTIONS with pre-designed shapes
             if (box.bind === 'options') {
               return (
-                <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={style}>
-                  <div className="space-y-2.5">
-                    {item.options.map(opt => (
-                      <div key={opt.key} className="flex items-start gap-3">
-                        <span className="font-black shrink-0">{opt.key}.</span>
-                        <span><MathText text={opt.text} /></span>
-                      </div>
-                    ))}
+                <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={base}>
+                  <div className={box.shape === 'pill' ? 'flex flex-wrap gap-3' : 'space-y-2.5'}>
+                    {item.options.map(opt => {
+                      if (box.shape === 'pill') {
+                        return (
+                          <span
+                            key={opt.key}
+                            className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full"
+                            style={{ backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.15)' }}
+                          >
+                            <span className="font-black">{opt.key}.</span>
+                            <span><MathText text={opt.text} /></span>
+                          </span>
+                        );
+                      }
+                      if (box.shape === 'card') {
+                        return (
+                          <div
+                            key={opt.key}
+                            className="flex items-start gap-3 px-5 py-3.5 rounded-2xl"
+                            style={{ backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.12)' }}
+                          >
+                            <span className="font-black shrink-0">{opt.key}.</span>
+                            <span><MathText text={opt.text} /></span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={opt.key} className="flex items-start gap-3">
+                          <span className="font-black shrink-0">{opt.key}.</span>
+                          <span><MathText text={opt.text} /></span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
             }
+
+            // ROMAN STATEMENTS
             if (box.bind === 'roman') {
               return (
-                <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={style}>
+                <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={base}>
                   {(item.romanItems || []).map((stmt, i) => (
                     <div key={i} className="my-1"><MathText text={stmt} /></div>
                   ))}
                 </div>
               );
             }
+
+            // TEXT BINDS WITH PRE-DESIGNED SHAPES
             const content = getSlideBoxContent(box, item, effectiveConfig, currentIndex);
+            const textBase = {
+              fontSize: box.fontSize,
+              color: box.color,
+              textAlign: box.align,
+              backgroundColor: box.bg,
+              border: box.shape && box.shape !== 'plain' ? '1px solid rgba(255,255,255,0.12)' : undefined,
+            } as React.CSSProperties;
+
+            if (box.shape === 'pill') {
+              return (
+                <div key={box.id} className="absolute" style={{ left: box.x, top: box.y, width: box.w }}>
+                  <div
+                    className="inline-flex items-center px-7 py-2.5 rounded-full whitespace-pre-wrap leading-snug"
+                    style={{ ...textBase, textAlign: 'center', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' }}
+                  >
+                    <MathText text={content} />
+                  </div>
+                </div>
+              );
+            }
+
+            if (box.shape === 'card' || box.shape === 'banner') {
+              return (
+                <div
+                  key={box.id}
+                  className={`absolute px-7 py-5 whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'} ${
+                    box.shape === 'card' ? 'rounded-2xl' : 'rounded-3xl'
+                  }`}
+                  style={{ ...base, ...textBase, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
+                >
+                  <MathText text={content} />
+                </div>
+              );
+            }
+
             return (
-              <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={style}>
+              <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={base}>
                 <MathText text={content} />
               </div>
             );

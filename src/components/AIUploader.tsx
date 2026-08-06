@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MCQItem } from '../types';
-import { Sparkles, Upload, FileText, AlertCircle, CheckCircle2, Loader2, ArrowRight, Edit3 } from 'lucide-react';
+import { Sparkles, Upload, FileText, AlertCircle, CheckCircle2, Loader2, Edit3, KeyRound, Wand2 } from 'lucide-react';
 
 interface AIUploaderProps {
   onAddMCQs: (items: MCQItem[]) => void;
@@ -14,20 +14,18 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
   appTheme = 'dark',
 }) => {
   const isAppLight = appTheme === 'light';
-  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
-    return localStorage.getItem('mcqgen.geminiKey') || '';
-  });
+  const storedProvider = (localStorage.getItem('mcqgen.provider') as 'gemini' | 'openrouter') || 'gemini';
+  const storedModel = localStorage.getItem('mcqgen.openrouterModel') || 'google/gemini-2.5-flash';
+  const hasAnyKey = !!(
+    (localStorage.getItem('mcqgen.geminiKey') || '').trim() ||
+    (localStorage.getItem('mcqgen.openrouterKey') || '').trim()
+  );
   const [promptText, setPromptText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [fileBase64, setFileBase64] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [parsedResult, setParsedResult] = useState<MCQItem[] | null>(null);
-
-  const handleApiKeyChange = (key: string) => {
-    setGeminiApiKey(key);
-    localStorage.setItem('mcqgen.geminiKey', key);
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -64,7 +62,7 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
 
     try {
       const activeProvider = (localStorage.getItem('mcqgen.provider') as 'gemini' | 'openrouter') || 'gemini';
-      const storedGeminiKey = localStorage.getItem('mcqgen.geminiKey') || geminiApiKey;
+      const storedGeminiKey = localStorage.getItem('mcqgen.geminiKey') || '';
       const storedOpenrouterKey = localStorage.getItem('mcqgen.openrouterKey') || '';
       const storedOpenrouterModel = localStorage.getItem('mcqgen.openrouterModel') || 'google/gemini-2.5-flash';
 
@@ -75,12 +73,12 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
 
       if (activeProvider === 'gemini') {
         if (!storedGeminiKey.trim()) {
-          throw new Error('Gemini API Key is missing. Please enter your API key in Settings.');
+          throw new Error('No Gemini API Key found. Add one in the Keys tab first.');
         }
         headers['x-gemini-key'] = storedGeminiKey.trim();
       } else {
         if (!storedOpenrouterKey.trim()) {
-          throw new Error('OpenRouter API Key is missing. Please enter your API key in Settings.');
+          throw new Error('No OpenRouter API Key found. Add one in the Keys tab first.');
         }
         headers['x-openrouter-key'] = storedOpenrouterKey.trim();
         headers['x-openrouter-model'] = storedOpenrouterModel;
@@ -170,30 +168,38 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Left Column: Input Form */}
         <div className="flex flex-col gap-6">
-          {/* Gemini API Key BYOK Input */}
-          <div>
-            <label className={`block text-sm font-extrabold mb-2.5 flex items-center justify-between ${isAppLight ? 'text-slate-800' : 'text-slate-300'}`}>
-              <span>Gemini / OpenRouter API Key (BYOK):</span>
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noreferrer"
-                className={`text-xs font-bold hover:underline ${isAppLight ? 'text-amber-700' : 'text-amber-400'}`}
-              >
-                Get Free Key ↗
-              </a>
-            </label>
-            <input
-              type="password"
-              value={geminiApiKey}
-              onChange={(e) => handleApiKeyChange(e.target.value)}
-              placeholder="Paste your API Key (e.g. AIzaSy...)"
-              className={`w-full px-4 py-3.5 rounded-2xl border focus:outline-none focus:border-amber-500 font-mono text-sm font-semibold transition-all ${
-                isAppLight
-                  ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
-                  : 'bg-slate-950 border-slate-800 text-slate-100 placeholder:text-slate-600'
-              }`}
-            />
+          {/* AI Provider / Key Status (from Keys tab) */}
+          <div
+            className={`p-4 rounded-2xl border text-sm flex items-start gap-3 ${
+              isAppLight
+                ? 'bg-amber-50/70 border-amber-200'
+                : 'bg-slate-950/60 border-amber-500/20'
+            }`}
+          >
+            <div className={`p-2 rounded-xl shrink-0 ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <p className={`font-black text-xs uppercase tracking-wider ${isAppLight ? 'text-amber-700' : 'text-amber-400'}`}>
+                AI Provider: {storedProvider === 'gemini' ? 'Google Gemini' : 'OpenRouter'}
+              </p>
+              <p className={`mt-1 text-xs leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                {hasAnyKey ? (
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    API key connected from the Keys tab. {storedProvider === 'gemini' ? 'Uses ' : 'Uses model '}
+                    <code className={`px-1 py-0.5 rounded font-mono text-[10px] ${isAppLight ? 'bg-slate-100 text-slate-700' : 'bg-slate-900 text-slate-300'}`}>
+                      {storedProvider === 'gemini' ? 'gemini-2.5-flash' : storedModel || 'google/gemini-2.5-flash'}
+                    </code>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                    No API key saved yet. Add one in the Keys tab to enable AI parsing.
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
 
           {/* Text Input */}
@@ -297,12 +303,60 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
             </h3>
 
             {!parsedResult && !isLoading && (
-              <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-slate-400">
-                <FileText className="w-12 h-12 stroke-[1.5] mb-2 text-slate-400" />
-                <p className="text-sm">No items processed yet.</p>
-                <p className="text-xs mt-1 text-slate-400">
-                  Upload a PDF or paste text on the left to extract questions into slides.
-                </p>
+              <div className="h-full min-h-[320px] flex flex-col items-center justify-center text-center p-4 text-slate-400 space-y-5">
+                {/* Mock: 2-Stage extraction pipeline preview */}
+                <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-2xl text-left">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5" /> Stage 1 · Vision OCR
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500">scan.pdf</span>
+                  </div>
+                  {/* Mock scanned question paper page */}
+                  <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950 p-3">
+                    <div className="h-1.5 w-2/3 rounded bg-slate-700" />
+                    <div className="h-1.5 w-full rounded bg-slate-700" />
+                    <div className="h-1.5 w-5/6 rounded bg-slate-700" />
+                    <div className="flex gap-1.5 pt-1">
+                      <div className="flex-1 h-1.5 rounded bg-slate-800" />
+                      <div className="flex-1 h-1.5 rounded bg-slate-800" />
+                      <div className="flex-1 h-1.5 rounded bg-slate-800" />
+                      <div className="flex-1 h-1.5 rounded bg-amber-500/60" />
+                    </div>
+                    {/* OCR extraction highlight beams */}
+                    <div className="pt-1 space-y-1">
+                      <div className="h-px w-1/2 bg-gradient-to-r from-amber-500/80 to-transparent" />
+                      <div className="h-px w-2/3 bg-gradient-to-r from-amber-500/80 to-transparent" />
+                    </div>
+                  </div>
+                  <div className="my-3 flex items-center gap-2">
+                    <div className="flex-1 h-px bg-gradient-to-r from-amber-500/60 to-transparent" />
+                    <Wand2 className="w-4 h-4 text-amber-400" />
+                    <div className="flex-1 h-px bg-gradient-to-l from-emerald-500/60 to-transparent" />
+                  </div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Stage 2 · Structuring
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500">4 MCQs</span>
+                  </div>
+                  {/* Mock structured MCQ output */}
+                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-1.5">
+                    <div className="h-2 w-3/4 rounded bg-slate-200/80" />
+                    <div className="grid grid-cols-2 gap-1.5 pt-1">
+                      <div className="h-2 rounded bg-slate-800" />
+                      <div className="h-2 rounded bg-slate-800" />
+                      <div className="h-2 rounded bg-slate-800" />
+                      <div className="h-2 rounded bg-emerald-500/60" />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-300">No items processed yet.</p>
+                  <p className="text-xs mt-1 text-slate-400 max-w-[240px]">
+                    Upload a PDF or paste text on the left to run the 2-Stage AI extraction.
+                  </p>
+                </div>
               </div>
             )}
 

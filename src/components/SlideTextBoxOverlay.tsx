@@ -2,6 +2,8 @@ import React, { useRef } from 'react';
 import { MCQItem, DeckConfig, SlideTextBox } from '../types';
 import { getSlideBoxContent, clamp, SLIDE_W, SLIDE_H } from '../utils/slideTextBoxes';
 
+type ResizePatch = Partial<Pick<SlideTextBox, 'w' | 'h'>>;
+
 interface SlideTextBoxOverlayProps {
   boxes: SlideTextBox[];
   selectedId: string | null;
@@ -11,7 +13,7 @@ interface SlideTextBoxOverlayProps {
   scale: number; // slideScale — converts client px deltas into 1920x1080 canvas px
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
-  onResize: (id: string, w: number) => void;
+  onResize: (id: string, patch: ResizePatch) => void;
 }
 
 export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
@@ -42,7 +44,16 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
       if (d.type === 'move') {
         onMove(d.boxId, clamp(d.orig.x + dx, 0, SLIDE_W - d.orig.w), clamp(d.orig.y + dy, 0, SLIDE_H - 40));
       } else {
-        onResize(d.boxId, clamp(d.orig.w + dx, 60, SLIDE_W - d.orig.x));
+        const isElement = d.orig.bind === 'icon' || d.orig.bind === 'image';
+        const newW = clamp(d.orig.w + dx, 60, SLIDE_W - d.orig.x);
+        if (isElement) {
+          // Aspect-locked resize: keep the box's original width:height ratio
+          const ratio = d.orig.h && d.orig.h > 0 ? d.orig.w / d.orig.h : 16 / 9;
+          const newH = clamp(newW / ratio, 40, SLIDE_H - d.orig.y);
+          onResize(d.boxId, { w: newW, h: newH });
+        } else {
+          onResize(d.boxId, { w: newW });
+        }
       }
     };
     const handleUp = () => {
@@ -73,6 +84,8 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
         </div>
       );
     }
+    if (box.bind === 'icon') return ' ';
+    if (box.bind === 'image') return ' ';
     return getSlideBoxContent(box, item, config, currentIndex);
   };
 
@@ -80,19 +93,24 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
     <div className="absolute inset-0 z-30">
       {boxes.map(box => {
         const selected = box.id === selectedId;
+        const isElement = box.bind === 'icon' || box.bind === 'image';
         return (
           <div
             key={box.id}
             onPointerDown={(e) => startDrag(e, box.id, 'move')}
             className="absolute cursor-move"
-            style={{ left: box.x, top: box.y, width: box.w }}
+            style={{ left: box.x, top: box.y, width: box.w, height: isElement ? box.h : undefined }}
           >
             <div
               className={`relative w-full h-full border rounded-lg pointer-events-none transition-colors ${selected ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-white/40'}`}
               style={{ fontSize: box.fontSize }}
             >
-              <div className="invisible whitespace-pre-wrap leading-snug font-bold">
-                {renderInvisible(box)}
+              <div className={`${isElement ? 'invisible h-full' : 'invisible whitespace-pre-wrap leading-snug font-bold'}`}>
+                {isElement ? (
+                  <div className="h-full w-full" />
+                ) : (
+                  renderInvisible(box)
+                )}
               </div>
               <span className={`absolute left-0 text-xs font-black uppercase px-2 py-1 rounded leading-none ${
                 box.y < 40 ? 'top-full mt-1' : '-top-7'

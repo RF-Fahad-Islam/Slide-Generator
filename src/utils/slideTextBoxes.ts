@@ -64,5 +64,7 @@ export const getSlideBoxContent = (
     case 'watermark': return config.watermarkHandle || 'Hasnat Shuvro';
     case 'free': return box.text || '';
     case 'options': return '';
+    case 'icon': return '';
+    case 'image': return '';
   }
 };

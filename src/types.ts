@@ -119,7 +119,12 @@ export type SlideTextBoxBind =
   | 'headerTitle'
   | 'footerTag'
   | 'watermark'
-  | 'free';
+  | 'free'
+  | 'icon'
+  | 'image';
+
+// Container styling for pre-designed slide elements
+export type SlideBoxShape = 'plain' | 'pill' | 'card' | 'banner';
 
 export interface SlideTextBox {
   id: string;
@@ -128,10 +133,16 @@ export interface SlideTextBox {
   x: number; // px, 0..1920
   y: number; // px, 0..1080
   w: number; // px
-  fontSize: number; // px
+  h?: number; // px height — set for icon/image/styled elements; text boxes stay auto-height
+  fontSize: number; // px (icons: rendered size)
   color: string;
   align: 'left' | 'center' | 'right';
   bold: boolean;
+  // Pre-designed element extras
+  shape?: SlideBoxShape; // container style: pill / card / banner (default 'plain' = no container)
+  bg?: string; // container fill color for pill/card/banner shapes
+  iconName?: string; // lucide icon key (bind === 'icon')
+  imageUrl?: string; // image / banner data URL or http(s) (bind === 'image')
 }
 
 export type SocialPostTemplateType = 'reaction_quiz' | 'quiz_time' | 'modern_card' | 'minimal_square';

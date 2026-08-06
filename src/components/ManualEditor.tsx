@@ -14,11 +14,13 @@ import {
   Upload,
   Download,
   Edit2,
+  Edit3,
   ArrowRight,
   Layers,
   Check,
   X,
-  ListOrdered
+  ListOrdered,
+  Eye
 } from 'lucide-react';
 
 interface ManualEditorProps {
@@ -73,6 +75,9 @@ iii. অস্ত্রোপচার
 গ) i ও iii
 ঘ) i, ii ও iii
 [চট্টগ্রাম বোর্ড ২০১৭]`);
+
+  // Live preview of whatever the parser would extract from the current bulk text
+  const parsedPreview = parseBulkTextToMCQs(bulkText);
 
   // Single Question / Editor Form State
   const [editingItemTarget, setEditingItemTarget] = useState<'none' | 'queue' | 'deck'>('none');
@@ -250,6 +255,28 @@ iii. অস্ত্রোপচার
           : 'bg-slate-900/80 border-slate-800'
       }`}
     >
+      {/* Page Header Identity Bar */}
+      <div className="flex items-center gap-4 pb-2">
+        <div className="p-4 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25 shrink-0">
+          <Edit3 className="w-8 h-8 stroke-[2.5]" />
+        </div>
+        <div>
+          <h2 className={`text-2xl lg:text-3xl font-black tracking-tight flex items-center gap-3 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+            Bulk MCQ Input & Editor
+            <span className={`text-xs px-3 py-1 rounded-full font-mono font-black uppercase border ${
+              isAppLight
+                ? 'bg-amber-100 text-amber-700 border-amber-300'
+                : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+            }`}>
+              Bangla · LaTeX · CSV
+            </span>
+          </h2>
+          <p className={`text-sm mt-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            Paste raw exam text, import CSV spreadsheets, or craft single questions — every MCQ passes through the review queue before joining your deck.
+          </p>
+        </div>
+      </div>
+
       {/* Header Bar & Tab Switcher */}
       <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-4 ${isAppLight ? 'border-slate-200' : 'border-slate-700/50'}`}>
         <div className={`flex flex-wrap items-center gap-2 p-1.5 rounded-2xl border ${
@@ -407,10 +434,66 @@ iii. অস্ত্রোপচার
               >
                 <Sparkles className="w-5 h-5 fill-slate-950" />
                 <span>
-                  Parse Questions into Review Creator ({parseBulkTextToMCQs(bulkText).length}{' '}
+                  Parse Questions into Review Creator ({parsedPreview.length}{' '}
                   MCQs) →
                 </span>
               </button>
+            </div>
+
+            {/* Live Parse Preview — mock slide of the first parsed question */}
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+            }`}>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                  <Eye className="w-4 h-4" /> Live Parse Preview
+                </label>
+                <span className="text-[11px] font-mono text-slate-400">
+                  {parsedPreview.length > 0
+                    ? `${parsedPreview.length} MCQ${parsedPreview.length > 1 ? 's' : ''} ready for review`
+                    : 'Waiting for a valid format…'}
+                </span>
+              </div>
+
+              {parsedPreview.length > 0 ? (
+                <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 shadow-inner">
+                  <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-amber-500/20 blur-3xl" />
+                  <div className="absolute inset-0 p-4 flex flex-col justify-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded bg-amber-500 text-slate-950 text-[9px] font-black flex items-center justify-center shrink-0">
+                        ১
+                      </span>
+                      <div className="flex-1 text-xs font-bold text-white truncate">
+                        <MathText text={parsedPreview[0].stem} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 mt-1">
+                      {parsedPreview[0].options.map((opt) => {
+                        const isCorrect = opt.isCorrect || opt.key.toLowerCase() === parsedPreview[0].answer?.toLowerCase();
+                        return (
+                          <div
+                            key={opt.key}
+                            className={`px-2 py-1 rounded-lg border text-[10px] font-semibold truncate ${
+                              isCorrect
+                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                                : 'bg-white/5 border-white/10 text-slate-300'
+                            }`}
+                          >
+                            <span className="font-mono font-bold mr-1">{opt.key}.</span>
+                            <MathText text={opt.text} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className={`rounded-xl border border-dashed p-4 text-center text-xs ${
+                  isAppLight ? 'border-slate-300 text-slate-400' : 'border-slate-800 text-slate-500'
+                }`}>
+                  A mini slide preview of the first parsed question appears here as you type a valid format.
+                </div>
+              )}
             </div>
           </div>
 

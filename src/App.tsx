@@ -18,6 +18,7 @@ import { SettingsView } from './components/SettingsView';
 import { MathText } from './components/MathText';
 import { getTemplateById } from './templates/registry';
 import { defaultSlideTextBoxes } from './utils/slideTextBoxes';
+import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
@@ -108,6 +109,23 @@ export default function App() {
     };
     setConfig(prev => ({ ...prev, slideTextBoxes: [...(prev.slideTextBoxes || []), newBox] }));
     setSelectedTextBoxId(id);
+  };
+
+  const addElementBox = (elementId: string, extra?: { imageUrl?: string; iconName?: string }) => {
+    const def = SLIDE_ELEMENT_DEFS.find(d => d.id === elementId);
+    if (!def) return;
+    const newBox = def.build(extra);
+    setConfig(prev => ({ ...prev, slideTextBoxes: [...(prev.slideTextBoxes || []), newBox] }));
+    setSelectedTextBoxId(newBox.id);
+  };
+
+  const addLayoutToDeck = (layoutId: string) => {
+    const layout = SLIDE_LAYOUTS.find(l => l.id === layoutId);
+    if (!layout) return;
+    if (window.confirm(`Apply the "${layout.name}" layout? This replaces the current slide text boxes on every slide.`)) {
+      setConfig(prev => ({ ...prev, slideTextBoxes: layout.build() }));
+      setSelectedTextBoxId(null);
+    }
   };
 
   const deleteSlideBox = (id: string) => {
@@ -678,7 +696,7 @@ export default function App() {
                               scale={slideScale}
                               onSelect={setSelectedTextBoxId}
                               onMove={(id, x, y) => updateSlideBox(id, { x, y })}
-                              onResize={(id, w) => updateSlideBox(id, { w })}
+                              onResize={(id, patch) => updateSlideBox(id, patch)}
                             />
                           )}
                         </div>
@@ -693,6 +711,8 @@ export default function App() {
                       selectedId={selectedTextBoxId}
                       appTheme={appTheme}
                       onAddBox={addSlideBox}
+                      onAddElement={addElementBox}
+                      onAddLayout={addLayoutToDeck}
                       onUpdateBox={updateSlideBox}
                       onDeleteBox={deleteSlideBox}
                       onDuplicateBox={duplicateSlideBox}

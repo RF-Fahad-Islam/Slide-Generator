@@ -1,13 +1,52 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { SlideTextBox, SlideTextBoxBind } from '../types';
 import { SLIDE_BOX_BINDS, SLIDE_BOX_COLOR_PRESETS } from '../utils/slideTextBoxes';
-import { Layers, Palette } from 'lucide-react';
+import {
+  SLIDE_ICON_LIBRARY,
+  SLIDE_ELEMENT_DEFS,
+  SLIDE_LAYOUTS,
+  SLIDE_SHAPE_OPTIONS,
+} from '../utils/slideElements';
+import {
+  Layers,
+  Palette,
+  ImagePlus,
+  Wand2,
+  SquareStack,
+  LayoutTemplate,
+  Shapes,
+  FileImage,
+  Plus,
+  Trash2,
+  Copy,
+} from 'lucide-react';
+
+const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
+  stem: Layers,
+  options: Shapes,
+  answer: Layers,
+  explanation: Layers,
+  passage: Layers,
+  prompt: Layers,
+  roman: Layers,
+  source: Layers,
+  questionNumber: Layers,
+  brand: Layers,
+  headerTitle: Layers,
+  footerTag: Layers,
+  watermark: Layers,
+  free: Plus,
+  icon: Shapes,
+  image: FileImage,
+};
 
 interface SlideTextBoxPanelProps {
   boxes: SlideTextBox[];
   selectedId: string | null;
   appTheme: 'dark' | 'light';
   onAddBox: (bind: SlideTextBoxBind) => void;
+  onAddElement: (elementId: string, extra?: { imageUrl?: string; iconName?: string }) => void;
+  onAddLayout: (layoutId: string) => void;
   onUpdateBox: (id: string, patch: Partial<SlideTextBox>) => void;
   onDeleteBox: (id: string) => void;
   onDuplicateBox: (id: string) => void;
@@ -20,6 +59,8 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   selectedId,
   appTheme,
   onAddBox,
+  onAddElement,
+  onAddLayout,
   onUpdateBox,
   onDeleteBox,
   onDuplicateBox,
@@ -28,6 +69,23 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
 }) => {
   const isAppLight = appTheme === 'light';
   const selectedBox = boxes.find(b => b.id === selectedId) || null;
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (selectedBox?.bind === 'image') {
+        onUpdateBox(selectedBox.id, { imageUrl: dataUrl });
+      } else {
+        onAddElement('banner_image', { imageUrl: dataUrl });
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   return (
     <div
@@ -40,7 +98,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
         Slide Text Box Editor
       </label>
 
-      {/* Add box buttons */}
+      {/* Add text box buttons */}
       <div className={`p-4 rounded-2xl border space-y-3 ${
         isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
       }`}>
@@ -48,21 +106,158 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
           Add Text Box (auto-fills from the current slide)
         </span>
         <div className="flex flex-wrap gap-2">
-          {SLIDE_BOX_BINDS.map(btn => (
+          {SLIDE_BOX_BINDS.map(btn => {
+            const Icon = BIND_ICONS[btn.bind];
+            return (
+              <button
+                key={btn.bind}
+                type="button"
+                onClick={() => onAddBox(btn.bind)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 flex items-center gap-1.5 ${
+                  isAppLight
+                    ? 'bg-white border-slate-300 text-amber-700 hover:bg-amber-50 hover:border-amber-300'
+                    : 'bg-slate-900 border-slate-700 text-amber-300 hover:border-amber-500/40'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {btn.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Design Elements */}
+      <div className={`p-4 rounded-2xl border space-y-3 ${
+        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+      }`}>
+        <span className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+          <Wand2 className="w-4 h-4 text-amber-500" />
+          Design Elements
+        </span>
+        <div className="grid grid-cols-2 gap-2">
+          {SLIDE_ELEMENT_DEFS.map(el => (
             <button
-              key={btn.bind}
+              key={el.id}
               type="button"
-              onClick={() => onAddBox(btn.bind)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 ${
+              onClick={() => {
+                if (el.id === 'banner_image') {
+                  imageInputRef.current?.click();
+                } else if (el.id === 'icon') {
+                  onAddElement('icon', { iconName: SLIDE_ICON_LIBRARY[0].name });
+                } else {
+                  onAddElement(el.id);
+                }
+              }}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer hover:scale-[1.03] group ${
                 isAppLight
-                  ? 'bg-white border-slate-300 text-amber-700 hover:bg-amber-50 hover:border-amber-300'
-                  : 'bg-slate-900 border-slate-700 text-amber-300 hover:border-amber-500/40'
+                  ? 'bg-white border-slate-300 hover:border-amber-300 hover:bg-amber-50/60'
+                  : 'bg-slate-900 border-slate-700 hover:border-amber-500/40'
               }`}
             >
-              {btn.label}
+              <div className={`p-1.5 rounded-lg w-fit mb-1.5 ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>
+                <el.icon className="w-4 h-4" />
+              </div>
+              <span className={`block text-xs font-extrabold ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>{el.label}</span>
+              <span className={`block text-[10px] font-semibold leading-tight mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>{el.desc}</span>
             </button>
           ))}
         </div>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => imageInputRef.current?.click()}
+          className={`w-full px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+            isAppLight
+              ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+          }`}
+        >
+          <ImagePlus className="w-4 h-4" />
+          Upload Image / Banner
+        </button>
+      </div>
+
+      {/* Icon picker */}
+      <div className={`p-4 rounded-2xl border space-y-3 ${
+        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+      }`}>
+        <span className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+          <Shapes className="w-4 h-4 text-amber-500" />
+          Icon Library
+          <span className="text-[10px] font-mono text-slate-500">({SLIDE_ICON_LIBRARY.length} lucide icons)</span>
+        </span>
+        <div className="grid grid-cols-6 gap-1.5 max-h-36 overflow-y-auto pr-1">
+          {SLIDE_ICON_LIBRARY.map(ic => {
+            const isActive = selectedBox?.bind === 'icon' && selectedBox.iconName === ic.name;
+            return (
+              <button
+                key={ic.name}
+                type="button"
+                title={ic.label}
+                onClick={() => {
+                  if (selectedBox?.bind === 'icon') {
+                    onUpdateBox(selectedBox.id, { iconName: ic.name });
+                  } else {
+                    onAddElement('icon', { iconName: ic.name });
+                  }
+                }}
+                className={`p-2 rounded-lg border transition-all cursor-pointer hover:scale-110 flex flex-col items-center gap-1 ${
+                  isActive
+                    ? 'bg-amber-500 border-amber-400 text-slate-950'
+                    : isAppLight
+                    ? 'bg-white border-slate-300 text-slate-600 hover:border-amber-300 hover:text-amber-700'
+                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-amber-500/40 hover:text-amber-300'
+                }`}
+              >
+                <ic.icon className="w-4 h-4" />
+                <span className="text-[7px] font-bold uppercase leading-none truncate w-full text-center">{ic.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quick Layouts */}
+      <div className={`p-4 rounded-2xl border space-y-3 ${
+        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+      }`}>
+        <span className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+          <LayoutTemplate className="w-4 h-4 text-amber-500" />
+          Quick Layouts
+        </span>
+        <div className="grid grid-cols-1 gap-2">
+          {SLIDE_LAYOUTS.map(layout => (
+            <button
+              key={layout.id}
+              type="button"
+              onClick={() => onAddLayout(layout.id)}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer hover:scale-[1.02] group flex items-center gap-3 ${
+                isAppLight
+                  ? 'bg-white border-slate-300 hover:border-amber-300 hover:bg-amber-50/60'
+                  : 'bg-slate-900 border-slate-700 hover:border-amber-500/40'
+              }`}
+            >
+              <div className={`p-2 rounded-lg shrink-0 ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>
+                <SquareStack className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <span className={`block text-xs font-extrabold ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>{layout.name}</span>
+                <span className={`block text-[10px] font-semibold leading-tight mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>{layout.desc}</span>
+              </div>
+              <Plus className={`w-4 h-4 shrink-0 ${isAppLight ? 'text-amber-600' : 'text-amber-500'} group-hover:rotate-90 transition-transform`} />
+            </button>
+          ))}
+        </div>
+        <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+          Applying a layout replaces the deck's current text boxes with a complete pre-designed set for every slide.
+        </p>
       </div>
 
       {/* Selected box style panel */}
@@ -78,19 +273,21 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
               <button
                 type="button"
                 onClick={() => onDuplicateBox(selectedBox.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
                   isAppLight ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100' : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white'
                 }`}
               >
+                <Copy className="w-3.5 h-3.5" />
                 Duplicate
               </button>
               <button
                 type="button"
                 onClick={() => onDeleteBox(selectedBox.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
                   isAppLight ? 'bg-white border-rose-300 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-rose-500/40 text-rose-300 hover:border-rose-500'
                 }`}
               >
+                <Trash2 className="w-3.5 h-3.5" />
                 Delete
               </button>
             </div>
@@ -125,6 +322,138 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
             </div>
           )}
 
+          {selectedBox.bind === 'icon' && (
+            <div>
+              <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Icon:</label>
+              <div className="flex flex-wrap gap-1.5">
+                {SLIDE_ICON_LIBRARY.map(ic => (
+                  <button
+                    key={ic.name}
+                    type="button"
+                    title={ic.label}
+                    onClick={() => onUpdateBox(selectedBox.id, { iconName: ic.name })}
+                    className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                      selectedBox.iconName === ic.name
+                        ? 'bg-amber-500 border-amber-400 text-slate-950'
+                        : isAppLight
+                        ? 'bg-white border-slate-300 text-slate-600 hover:border-amber-300'
+                        : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-amber-500/40'
+                    }`}
+                  >
+                    <ic.icon className="w-4 h-4" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedBox.bind === 'image' && (
+            <div>
+              <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                Image / Banner:
+              </label>
+              {selectedBox.imageUrl && (
+                <img
+                  src={selectedBox.imageUrl}
+                  alt="banner preview"
+                  className="w-full h-24 object-cover rounded-xl border mb-2"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                className={`w-full px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  isAppLight
+                    ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                    : 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                <ImagePlus className="w-4 h-4 text-amber-500" />
+                {selectedBox.imageUrl ? 'Replace Image' : 'Choose Image'}
+              </button>
+              <div className="mt-2">
+                <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Image URL:</label>
+                <input
+                  type="text"
+                  value={selectedBox.imageUrl || ''}
+                  onChange={(e) => onUpdateBox(selectedBox.id, { imageUrl: e.target.value })}
+                  placeholder="https://... or data:image/..."
+                  className={`w-full border rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 ${
+                    isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                  }`}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Shape control for styled containers */}
+          {selectedBox.bind !== 'image' && (
+            <div>
+              <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Shape:</label>
+              <div className="flex flex-wrap gap-1.5">
+                {SLIDE_SHAPE_OPTIONS.map(s => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => onUpdateBox(selectedBox.id, { shape: s.value })}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      (selectedBox.shape || 'plain') === s.value
+                        ? 'bg-amber-500 text-slate-950 border-amber-400'
+                        : isAppLight
+                        ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
+                        : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(selectedBox.shape && selectedBox.shape !== 'plain' || selectedBox.bind === 'image') && (
+            <div>
+              <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <span className="inline-flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Container Fill:</span>
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="color"
+                  value={selectedBox.bg || '#1e293b'}
+                  onChange={(e) => onUpdateBox(selectedBox.id, { bg: e.target.value })}
+                  className="w-8 h-8 rounded-lg cursor-pointer border border-white/20 bg-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={() => onUpdateBox(selectedBox.id, { bg: 'rgba(255,255,255,0.06)' })}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    isAppLight ? 'bg-white border-slate-300 text-slate-600' : 'bg-slate-900 border-slate-700 text-slate-300'
+                  }`}
+                >
+                  Subtle White
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdateBox(selectedBox.id, { bg: 'rgba(251,191,36,0.14)' })}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    isAppLight ? 'bg-white border-slate-300 text-slate-600' : 'bg-slate-900 border-slate-700 text-slate-300'
+                  }`}
+                >
+                  Amber Glow
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdateBox(selectedBox.id, { bg: 'rgba(56,189,248,0.12)' })}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    isAppLight ? 'bg-white border-slate-300 text-slate-600' : 'bg-slate-900 border-slate-700 text-slate-300'
+                  }`}
+                >
+                  Sky Glow
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
               Font Size: {selectedBox.fontSize}px
@@ -139,6 +468,23 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
               className="w-full accent-amber-500 cursor-pointer"
             />
           </div>
+
+          {(selectedBox.bind === 'icon' || selectedBox.bind === 'image') && (
+            <div>
+              <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                Box Height: {selectedBox.h || 'auto'}px
+              </label>
+              <input
+                type="range"
+                min={60}
+                max={900}
+                step={10}
+                value={selectedBox.h || 200}
+                onChange={(e) => onUpdateBox(selectedBox.id, { h: parseInt(e.target.value) })}
+                className="w-full accent-amber-500 cursor-pointer"
+              />
+            </div>
+          )}
 
           <div>
             <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
@@ -198,7 +544,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
           </div>
 
           <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-            Drag a box on the slide to move it. Use the corner handle to resize. Bound boxes update automatically when you change the selected slide.
+            Drag a box on the slide to move it. Use the corner handle to resize — icon &amp; image boxes scale proportionally. Bound boxes update automatically when you change the selected slide.
           </p>
         </div>
       )}

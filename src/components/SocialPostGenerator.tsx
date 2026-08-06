@@ -22,6 +22,12 @@ import {
   BookOpen,
   Search,
   Filter,
+  List,
+  Heading,
+  PenLine,
+  GraduationCap,
+  Landmark,
+  LayoutGrid,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
@@ -532,25 +538,26 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {([
-                      { bind: 'stem', label: '+ Question' },
-                      { bind: 'options', label: '+ Options' },
-                      { bind: 'answer', label: '+ Answer' },
-                      { bind: 'explanation', label: '+ Explanation' },
-                      { bind: 'brand', label: '+ Brand Name' },
-                      { bind: 'headerTitle', label: '+ Header Title' },
-                      { bind: 'free', label: '+ Free Text' },
+                      { bind: 'stem', label: 'Question', Icon: Type },
+                      { bind: 'options', label: 'Options', Icon: List },
+                      { bind: 'answer', label: 'Answer', Icon: CheckCircle2 },
+                      { bind: 'explanation', label: 'Explanation', Icon: Sparkles },
+                      { bind: 'brand', label: 'Brand Name', Icon: GraduationCap },
+                      { bind: 'headerTitle', label: 'Header Title', Icon: Heading },
+                      { bind: 'free', label: 'Free Text', Icon: PenLine },
                     ] as const).map(btn => (
                       <button
                         key={btn.bind}
                         type="button"
                         onClick={() => addBox(btn.bind)}
-                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 ${
+                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 flex items-center gap-1.5 ${
                           isAppLight
                             ? 'bg-white border-slate-300 text-amber-700 hover:bg-amber-50 hover:border-amber-300'
                             : 'bg-slate-900 border-slate-700 text-amber-300 hover:border-amber-500/40'
                         }`}
                       >
-                        {btn.label}
+                        <btn.Icon className="w-3.5 h-3.5" />
+                        + {btn.label}
                       </button>
                     ))}
                   </div>
@@ -922,52 +929,61 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <select
-                  value={pickerSubject}
-                  onChange={(e) => setPickerSubject(e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
-                    isAppLight
-                      ? 'bg-slate-50 border-slate-300 text-slate-800'
-                      : 'bg-slate-950 border-slate-800 text-amber-300'
-                  }`}
-                >
-                  <option value="all">📚 All Subjects</option>
-                  <option value="biology">Biology</option>
-                  <option value="math">Higher Math</option>
-                  <option value="physics">Physics</option>
-                  <option value="chemistry">Chemistry</option>
-                </select>
+                <div className="relative">
+                  <BookOpen className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <select
+                    value={pickerSubject}
+                    onChange={(e) => setPickerSubject(e.target.value)}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-800'
+                        : 'bg-slate-950 border-slate-800 text-amber-300'
+                    }`}
+                  >
+                    <option value="all">All Subjects</option>
+                    <option value="biology">Biology</option>
+                    <option value="math">Higher Math</option>
+                    <option value="physics">Physics</option>
+                    <option value="chemistry">Chemistry</option>
+                  </select>
+                </div>
 
-                <select
-                  value={pickerBoard}
-                  onChange={(e) => setPickerBoard(e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
-                    isAppLight
-                      ? 'bg-slate-50 border-slate-300 text-slate-800'
-                      : 'bg-slate-950 border-slate-800 text-amber-300'
-                  }`}
-                >
-                  <option value="all">🏛️ All Boards</option>
-                  <option value="চট্টগ্রাম">Chittagong Board</option>
-                  <option value="ঢাকা">Dhaka Board</option>
-                  <option value="রাজশাহী">Rajshahi Board</option>
-                  <option value="admission">Admission</option>
-                </select>
+                <div className="relative">
+                  <Landmark className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <select
+                    value={pickerBoard}
+                    onChange={(e) => setPickerBoard(e.target.value)}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-800'
+                        : 'bg-slate-950 border-slate-800 text-amber-300'
+                    }`}
+                  >
+                    <option value="all">All Boards</option>
+                    <option value="চট্টগ্রাম">Chittagong Board</option>
+                    <option value="ঢাকা">Dhaka Board</option>
+                    <option value="রাজশাহী">Rajshahi Board</option>
+                    <option value="admission">Admission</option>
+                  </select>
+                </div>
 
-                <select
-                  value={pickerType}
-                  onChange={(e) => setPickerType(e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
-                    isAppLight
-                      ? 'bg-slate-50 border-slate-300 text-slate-800'
-                      : 'bg-slate-950 border-slate-800 text-amber-300'
-                  }`}
-                >
-                  <option value="all">🧩 All Types</option>
-                  <option value="standard">Standard MCQ</option>
-                  <option value="roman_statements">Roman Statements</option>
-                  <option value="passage">Shared Passage</option>
-                </select>
+                <div className="relative">
+                  <LayoutGrid className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <select
+                    value={pickerType}
+                    onChange={(e) => setPickerType(e.target.value)}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-800'
+                        : 'bg-slate-950 border-slate-800 text-amber-300'
+                    }`}
+                  >
+                    <option value="all">All Types</option>
+                    <option value="standard">Standard MCQ</option>
+                    <option value="roman_statements">Roman Statements</option>
+                    <option value="passage">Shared Passage</option>
+                  </select>
+                </div>
               </div>
             </div>
 

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { MCQItem, DeckConfig } from '../types';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { getTemplateById, TEMPLATES } from '../templates/registry';
+import { SlideCanvas } from './SlideCanvas';
 import {
   Presentation,
   Share2,
@@ -11,16 +12,17 @@ import {
   Sparkles,
   Edit3,
   BookOpen,
+  Calculator,
   CheckCircle2,
   ArrowRight,
   Database,
   Calendar,
   FileText,
   Palette,
-  FolderPlus,
   Zap,
-  HelpCircle,
-  Code2
+  PlayCircle,
+  Sigma,
+  Wand2,
 } from 'lucide-react';
 
 interface SlideDecksHomeProps {
@@ -34,6 +36,80 @@ interface SlideDecksHomeProps {
   onLoadSample?: (sampleIndex: number) => void;
   appTheme: 'dark' | 'light';
 }
+
+// Real first-slide thumbnail — renders the deck's slide 1 at card scale
+const DeckSlideThumb: React.FC<{ items: MCQItem[]; config: DeckConfig; isCurrent: boolean; templateName: string }> = ({
+  items,
+  config,
+  isCurrent,
+  templateName,
+}) => {
+  const thumbRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+
+  useEffect(() => {
+    const el = thumbRef.current;
+    if (!el) return;
+    const update = () => {
+      if (el.clientWidth > 0) setScale(el.clientWidth / 1920);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={thumbRef}
+      className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-lg group-hover:scale-[1.02] transition-transform"
+    >
+      {items.length > 0 && scale > 0 ? (
+        <div
+          className="absolute top-0 left-0 origin-top-left"
+          style={{ width: 1920, height: 1080, transform: `scale(${scale})` }}
+        >
+          <SlideCanvas item={items[0]} config={config} currentIndex={0} totalCount={items.length} />
+        </div>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-slate-950">
+          <span className="text-[11px] font-bold text-slate-500">No slides yet</span>
+        </div>
+      )}
+
+      {/* Active deck badge */}
+      {isCurrent && (
+        <span className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 text-[10px] font-black shadow-md z-10">
+          <CheckCircle2 className="w-3 h-3" /> Active
+        </span>
+      )}
+
+      {/* Template name badge */}
+      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/55 text-white backdrop-blur text-[10px] font-bold z-10">
+        {templateName}
+      </span>
+    </div>
+  );
+};
+
+// Pill-style CTA link for tool cards (replaces the old underline links)
+const CtaPill: React.FC<{ label: string; accent: 'amber' | 'indigo' | 'emerald' | 'violet' }> = ({ label, accent }) => {
+  const accents = {
+    amber: 'bg-amber-500/15 border-amber-500/40 text-amber-500 group-hover:bg-amber-500 group-hover:text-slate-950',
+    indigo: 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white',
+    emerald: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-slate-950',
+    violet: 'bg-violet-500/15 border-violet-500/40 text-violet-400 group-hover:bg-violet-500 group-hover:text-white',
+  }[accent];
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-black transition-all duration-200 cursor-pointer shadow-md ${accents}`}
+    >
+      <span>{label}</span>
+      <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+    </span>
+  );
+};
 
 export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
   currentItems,
@@ -76,18 +152,36 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
     })),
   ];
 
+  const heroChips = [
+    { icon: Presentation, label: '1920×1080 HD' },
+    { icon: Sigma, label: 'LaTeX Math' },
+    { icon: FileText, label: 'PNG · PPTX · PDF' },
+    { icon: Wand2, label: '2-Stage Vision AI' },
+  ];
+
   return (
     <div className="space-y-10 animate-fadeIn">
       {/* SECTION 1: HERO DASHBOARD HEADER HUB */}
       <div
-        className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-8 lg:p-10 relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 ${
-          isAppLight
-            ? 'border-amber-200 text-slate-900'
-            : 'bg-gradient-to-r from-amber-500/20 via-slate-950 to-slate-900 border-amber-500/30 text-white'
+        className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-8 lg:p-12 relative overflow-hidden flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10 ${
+          isAppLight ? 'border-amber-200 text-slate-900' : 'text-white'
         }`}
       >
-        <div className="space-y-4 max-w-2xl z-10">
-          <div className="flex items-center gap-3">
+        {/* Ambient aurora glows */}
+        <div
+          className={`absolute -top-28 -right-20 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
+            isAppLight ? 'bg-amber-200/60' : 'bg-amber-500/20'
+          }`}
+        />
+        <div
+          className={`absolute -bottom-32 -left-20 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
+            isAppLight ? 'bg-indigo-200/50' : 'bg-indigo-500/10'
+          }`}
+        />
+        <div className="absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+
+        <div className="space-y-5 max-w-2xl z-10">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="px-3.5 py-1 rounded-full text-xs font-black font-mono bg-amber-500 text-slate-950 uppercase tracking-wider shadow-md">
               EdTech Studio Central Hub
             </span>
@@ -98,15 +192,35 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
           </div>
 
           <h1 className="text-3xl lg:text-4xl font-black tracking-tight leading-tight">
-            Create HD Presentation Slides & Social Media Graphics
+            Create HD Presentation Slides{' '}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-amber-300">
+              & Social Media Graphics
+            </span>
           </h1>
           <p className={`text-sm lg:text-base leading-relaxed ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
             Welcome! Convert raw question papers into 16:9 HD presentation slides, social media graphics, or parse Board exam PDFs with 2-Stage Vision AI!
           </p>
 
+          {/* Feature chips */}
+          <div className="flex flex-wrap gap-2">
+            {heroChips.map((chip) => (
+              <span
+                key={chip.label}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${
+                  isAppLight
+                    ? 'bg-white text-slate-700 border-slate-200'
+                    : 'bg-slate-950/70 text-slate-300 border-slate-800'
+                }`}
+              >
+                <chip.icon className="w-3.5 h-3.5 text-amber-400" />
+                {chip.label}
+              </span>
+            ))}
+          </div>
+
           {/* Quick Preset Sample Loaders */}
           {onLoadSample && (
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-1">
               <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider">
                 Quick Samples:
               </span>
@@ -115,92 +229,175 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                 onClick={() => onLoadSample(0)}
                 className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-black transition-all cursor-pointer flex items-center gap-2 shadow-sm"
               >
-                <span>🧬 Biology Sample</span>
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Biology Sample</span>
               </button>
               <button
                 type="button"
                 onClick={() => onLoadSample(1)}
                 className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-black transition-all cursor-pointer flex items-center gap-2 shadow-sm"
               >
-                <span>📐 Math / Physics LaTeX</span>
+                <Calculator className="w-3.5 h-3.5" />
+                <span>Math / Physics LaTeX</span>
               </button>
             </div>
           )}
+
+          {/* Primary + secondary CTAs */}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              onClick={() => onNavigateTab('manual')}
+              className="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer transition-all"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Start a New Deck</span>
+            </button>
+            <button
+              onClick={() => onNavigateTab('preview')}
+              className={`px-5 py-2.5 rounded-2xl border font-extrabold text-xs flex items-center gap-2 cursor-pointer transition-all ${
+                isAppLight
+                  ? 'bg-white hover:bg-amber-50 text-slate-800 border-slate-300'
+                  : 'bg-slate-950 hover:bg-slate-800 text-slate-200 border-slate-700'
+              }`}
+            >
+              <PlayCircle className="w-4 h-4 text-amber-400" />
+              <span>Open Slide Studio</span>
+            </button>
+          </div>
         </div>
 
         {/* Quick Active Deck Stats Box */}
-        <div className={`p-6 rounded-3xl border shrink-0 space-y-4 z-10 min-w-[240px] ${
-          isAppLight ? 'bg-white border-amber-300 shadow-xl' : 'bg-slate-950 border-slate-800 shadow-2xl'
+        <div className={`p-6 rounded-3xl border shrink-0 space-y-5 z-10 min-w-[260px] ${
+          isAppLight ? 'bg-white/80 backdrop-blur border-amber-300 shadow-xl' : 'bg-slate-950/80 backdrop-blur border-slate-800 shadow-2xl'
         }`}>
           <div className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
             Active Workspace Deck
           </div>
-          <div className="text-3xl font-black text-amber-400 flex items-baseline gap-2">
-            <span>{currentItems.length}</span>
-            <span className="text-sm font-semibold text-slate-400">Questions</span>
+          <div>
+            <div className="text-4xl font-black text-amber-400 flex items-baseline gap-2">
+              <span>{currentItems.length}</span>
+              <span className="text-sm font-semibold text-slate-400">Questions</span>
+            </div>
+            <p className={`text-xs mt-1 line-clamp-2 font-medium ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              {currentConfig.headerTitle || 'No title set yet'}
+            </p>
           </div>
-          <button
-            onClick={() => onNavigateTab('preview')}
-            className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-all"
-          >
-            <Presentation className="w-4 h-4 stroke-[2.5]" />
-            <span>Open Slide Studio →</span>
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={() => onNavigateTab('preview')}
+              className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-all"
+            >
+              <Presentation className="w-4 h-4 stroke-[2.5]" />
+              <span>Open Slide Studio</span>
+            </button>
+            <button
+              onClick={() => onOpenSocialGenerator(currentItems)}
+              className={`w-full py-2.5 px-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                isAppLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+                  : 'bg-slate-900 hover:bg-slate-800 text-indigo-300 border-slate-800'
+              }`}
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Social Posts</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* SECTION 2: MAIN STUDIO TOOL MODULES (ALL TOOLS DIRECTLY ACCESSIBLE) */}
+      {/* SECTION 2: MAIN STUDIO TOOL MODULES (BENTO GRID) */}
       <div className="space-y-6">
-        <h2 className="text-xl font-black flex items-center gap-2.5">
-          <Zap className="w-6 h-6 text-amber-400" />
-          <span>Main Studio Tools & Modules</span>
-        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-black flex items-center gap-2.5">
+            <Zap className="w-6 h-6 text-amber-400" />
+            <span>Main Studio Tools & Modules</span>
+          </h2>
+          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold">
+            6 Tools
+          </span>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Tool 1: 16:9 Slide Presentation Generator */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+          {/* Tool 1 (FEATURED): 16:9 Slide Presentation Generator */}
           <div
             onClick={() => onNavigateTab('preview')}
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} md:col-span-2 lg:col-span-4 p-7 lg:p-8 border transition-all cursor-pointer group overflow-hidden relative ${
               isAppLight
                 ? 'hover:border-amber-400'
                 : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="p-3.5 rounded-2xl bg-amber-500 text-slate-950 font-black shadow-lg group-hover:scale-110 transition-transform">
-                  <Presentation className="w-7 h-7 stroke-[2.5]" />
+            <div
+              className={`absolute -bottom-24 -right-24 w-72 h-72 rounded-full blur-3xl pointer-events-none ${
+                isAppLight ? 'bg-amber-200/40' : 'bg-amber-500/10'
+              }`}
+            />
+            <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+              <div className="flex-1 space-y-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="p-3.5 rounded-2xl bg-amber-500 text-slate-950 font-black shadow-lg group-hover:scale-110 transition-transform">
+                    <Presentation className="w-7 h-7 stroke-[2.5]" />
+                  </div>
+                  <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                    16:9 HD Slides
+                  </span>
                 </div>
-                <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                  16:9 HD Slides
-                </span>
+                <div>
+                  <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                    <span>16:9 Slide Studio</span>
+                    <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
+                  </h3>
+                  <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Full-screen 1920x1080 slide deck generator with answer reveal, live writing classroom mode, LaTeX math, and PNG export.
+                  </p>
+                </div>
+                <div>
+                  <CtaPill label="Open Slide Studio" accent="amber" />
+                </div>
               </div>
-              <div>
-                <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                  <span>16:9 Slide Studio</span>
-                  <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
-                </h3>
-                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Full-screen 1920x1080 slide deck generator with answer reveal, live writing classroom mode, LaTeX math, and PNG export.
-                </p>
+
+              {/* Mini slide mock */}
+              <div className="w-full max-w-sm flex-shrink-0">
+                <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 border border-white/10 shadow-2xl ring-1 ring-white/10 group-hover:scale-[1.02] transition-transform duration-300">
+                  <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-amber-500/25 blur-3xl" />
+                  <div className="absolute inset-0 p-3.5 flex flex-col justify-center gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="h-1.5 w-1/3 rounded-full bg-amber-400/90" />
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                      </div>
+                    </div>
+                    <div className="h-3 w-2/3 rounded-md bg-white/15" />
+                    <div className="grid grid-cols-2 gap-1.5 mt-1">
+                      <div className="h-3 rounded-lg bg-white/10 border border-white/15" />
+                      <div className="h-3 rounded-lg bg-amber-400/20 border border-amber-400/40" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div className="h-3 rounded-lg bg-white/10 border border-white/15" />
+                      <div className="h-3 rounded-lg bg-white/10 border border-white/15" />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="text-sm font-black text-amber-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
-              <span>Open Slide Studio</span>
-              <ArrowRight className="w-4 h-4" />
             </div>
           </div>
 
-          {/* Tool 2: Social Media Posting Card Generator */}
+          {/* Tool 2 (FEATURED): Social Media Posting Card Generator */}
           <div
             onClick={() => onNavigateTab('social')}
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} md:col-span-2 lg:col-span-2 p-7 lg:p-8 border transition-all cursor-pointer group overflow-hidden relative flex flex-col justify-between gap-6 ${
               isAppLight
                 ? 'hover:border-indigo-400'
                 : 'bg-slate-900/80 border-slate-800 hover:border-indigo-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-4">
+            <div
+              className={`absolute -top-20 -right-16 w-56 h-56 rounded-full blur-3xl pointer-events-none ${
+                isAppLight ? 'bg-indigo-200/50' : 'bg-indigo-500/15'
+              }`}
+            />
+            <div className="space-y-4 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="p-3.5 rounded-2xl bg-indigo-600 text-white font-black shadow-lg group-hover:scale-110 transition-transform">
                   <Share2 className="w-7 h-7 stroke-[2.5]" />
@@ -211,24 +408,41 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
               </div>
               <div>
                 <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                  <span>Social Posts Generator</span>
+                  <span>Social Posts</span>
                   <ArrowRight className="w-5 h-5 text-indigo-400 group-hover:translate-x-1 transition-transform" />
                 </h3>
                 <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Create viral Facebook, Instagram feed cards & 9:16 Story graphics with custom watermarks, branding & explanations.
+                  Viral Facebook & Instagram feed cards and 9:16 Story graphics with custom watermarks.
                 </p>
               </div>
             </div>
-            <div className="text-sm font-black text-indigo-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
-              <span>Open Social Generator</span>
-              <ArrowRight className="w-4 h-4" />
+
+            {/* Mini portrait post mock */}
+            <div className="relative z-10 self-end">
+              <div className="w-24 aspect-[4/5] rounded-xl overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-800 to-slate-900 border border-white/15 shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-300">
+                <div className="absolute -top-8 -right-8 w-20 h-20 rounded-full bg-white/15 blur-2xl" />
+                <div className="absolute inset-0 p-2.5 flex flex-col justify-center gap-1.5">
+                  <div className="h-1.5 w-3/4 rounded-full bg-white/70" />
+                  <div className="h-1 w-1/2 rounded-full bg-white/40" />
+                  <div className="h-1.5 w-full rounded bg-white/15 mt-1" />
+                  <div className="h-1.5 w-5/6 rounded bg-white/15" />
+                  <div className="mt-1 flex gap-1">
+                    <span className="h-2 w-6 rounded-full bg-indigo-300/70" />
+                    <span className="h-2 w-4 rounded-full bg-amber-300/70" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative z-10">
+              <CtaPill label="Open Social Generator" accent="indigo" />
             </div>
           </div>
 
           {/* Tool 3: AI PDF & Image Parser */}
           <div
             onClick={() => onNavigateTab('ai')}
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group lg:col-span-2 ${
               isAppLight
                 ? 'hover:border-emerald-400'
                 : 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50 shadow-xl'
@@ -253,16 +467,15 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                 </p>
               </div>
             </div>
-            <div className="text-sm font-black text-emerald-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
-              <span>Upload PDF or Text</span>
-              <ArrowRight className="w-4 h-4" />
+            <div>
+              <CtaPill label="Upload PDF or Text" accent="emerald" />
             </div>
           </div>
 
           {/* Tool 4: Bulk MCQ Input & Editor */}
           <div
             onClick={() => onNavigateTab('manual')}
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group lg:col-span-2 ${
               isAppLight
                 ? 'hover:border-amber-400'
                 : 'bg-slate-900/80 border-slate-800 hover:border-amber-500/50 shadow-xl'
@@ -283,20 +496,19 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                   <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
                 </h3>
                 <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Manual text input & Multiselect (বহুপদী). Paste raw questions or enter them one by one with full Bangla support.
+                  Manual text input & Multiselect. Paste raw questions with full Bangla support.
                 </p>
               </div>
             </div>
-            <div className="text-sm font-black text-amber-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
-              <span>Open Bulk Editor</span>
-              <ArrowRight className="w-4 h-4" />
+            <div>
+              <CtaPill label="Open Bulk Editor" accent="amber" />
             </div>
           </div>
 
           {/* Tool 5: Question Bank Archive */}
           <div
             onClick={() => onNavigateTab('bank')}
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group lg:col-span-2 ${
               isAppLight
                 ? 'hover:border-indigo-400'
                 : 'bg-slate-900/80 border-slate-800 hover:border-indigo-500/50 shadow-xl'
@@ -321,43 +533,54 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                 </p>
               </div>
             </div>
-            <div className="text-sm font-black text-indigo-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
-              <span>Open Question Bank</span>
-              <ArrowRight className="w-4 h-4" />
+            <div>
+              <CtaPill label="Open Question Bank" accent="indigo" />
             </div>
           </div>
 
-          {/* Tool 6: Deck Branding & Font Customization */}
+          {/* Tool 6 (BANNER): Deck Branding & Font Customization */}
           <div
             onClick={() => onNavigateTab('settings')}
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group ${
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} md:col-span-2 lg:col-span-6 p-6 lg:p-8 border transition-all cursor-pointer group relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 ${
               isAppLight
                 ? 'hover:border-violet-400'
                 : 'bg-slate-900/80 border-slate-800 hover:border-violet-500/50 shadow-xl'
             }`}
           >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="p-3.5 rounded-2xl bg-violet-600 text-white font-black shadow-lg group-hover:scale-110 transition-transform">
-                  <Sliders className="w-7 h-7 stroke-[2.5]" />
-                </div>
-                <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/30">
-                  Branding
-                </span>
+            <div
+              className={`absolute -bottom-24 -left-16 w-64 h-64 rounded-full blur-3xl pointer-events-none ${
+                isAppLight ? 'bg-violet-200/40' : 'bg-violet-500/10'
+              }`}
+            />
+            <div className="flex items-center gap-5 relative z-10">
+              <div className="p-4 rounded-2xl bg-violet-600 text-white font-black shadow-lg group-hover:scale-110 transition-transform">
+                <Sliders className="w-7 h-7 stroke-[2.5]" />
               </div>
               <div>
                 <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                   <span>Branding & Fonts</span>
                   <ArrowRight className="w-5 h-5 text-violet-400 group-hover:translate-x-1 transition-transform" />
                 </h3>
-                <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <p className={`text-sm mt-1.5 leading-relaxed max-w-xl ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                   Custom Bangla fonts, logo positioning, header/footer banners, background presets & per-slide overrides.
                 </p>
               </div>
             </div>
-            <div className="text-sm font-black text-violet-400 group-hover:underline pt-3 border-t border-slate-800/80 flex items-center gap-1">
-              <span>Configure Branding</span>
-              <ArrowRight className="w-4 h-4" />
+
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="flex gap-1.5">
+                {['bg-amber-500', 'bg-indigo-500', 'bg-emerald-500', 'bg-violet-500'].map((dot, i) => (
+                  <span
+                    key={i}
+                    className={`w-8 h-8 rounded-full ${dot} shadow-lg ${
+                      isAppLight ? 'ring-2 ring-white' : 'ring-2 ring-slate-900'
+                    } group-hover:scale-110 transition-transform`}
+                  />
+                ))}
+              </div>
+              <div>
+                <CtaPill label="Configure Branding" accent="violet" />
+              </div>
             </div>
           </div>
         </div>
@@ -365,10 +588,10 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
 
       {/* SECTION 3: QUICK THEME STYLE SELECTOR DIRECTLY ON HOME */}
       {onSelectTemplate && (
-        <div className={`p-6 rounded-3xl border shadow-xl space-y-4 ${
+        <div className={`p-6 rounded-3xl border shadow-xl space-y-5 ${
           isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-amber-500 flex items-center gap-2">
               <Palette className="w-4 h-4 text-amber-400" />
               Active Slide Theme Picker
@@ -386,7 +609,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                   key={tmpl.id}
                   type="button"
                   onClick={() => onSelectTemplate(tmpl.id)}
-                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-between gap-2 ${
+                  className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-2 ${
                     isSelected
                       ? 'bg-amber-500/15 border-amber-400 text-amber-300 font-extrabold ring-2 ring-amber-400/40 shadow-lg'
                       : isAppLight
@@ -394,8 +617,8 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
                   }`}
                 >
+                  <span className={`h-8 w-full rounded-lg bg-gradient-to-br ${tmpl.previewGradient} border border-white/20`} />
                   <span className="text-[11px] font-bold truncate w-full">{tmpl.name}</span>
-                  <span className={`w-3 h-3 rounded-full border ${tmpl.themeType === 'light' ? 'bg-amber-100 border-amber-300' : 'bg-slate-900 border-slate-700'}`} />
                 </button>
               );
             })}
@@ -438,7 +661,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
             return (
               <div
                 key={deck.id}
-                className={`p-6 rounded-3xl border transition-all flex flex-col justify-between space-y-6 group ${
+                className={`p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-5 group ${
                   deck.isCurrent
                     ? isAppLight
                       ? 'bg-amber-50/90 border-amber-400 shadow-xl ring-2 ring-amber-400/40'
@@ -448,7 +671,15 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                     : 'glass-card-fatty bg-slate-900/90 border-slate-800 hover:border-slate-700'
                 }`}
               >
-                <div className="space-y-4">
+                {/* Real first-slide thumbnail */}
+                <DeckSlideThumb
+                  items={deck.items}
+                  config={deck.config}
+                  isCurrent={deck.isCurrent}
+                  templateName={tmpl.name}
+                />
+
+                <div className="space-y-3">
                   {/* Card Top Badge Header */}
                   <div className={`flex items-center justify-between gap-2 border-b pb-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800/60'}`}>
                     <div className="flex items-center gap-2">
@@ -461,11 +692,6 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                       }`}>
                         {deck.questionCount} Questions
                       </span>
-                      {deck.isCurrent && (
-                        <span className={`text-[10px] font-bold uppercase flex items-center gap-1 ${isAppLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Active Deck
-                        </span>
-                      )}
                     </div>
 
                     <span className={`text-[10px] font-bold flex items-center gap-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
