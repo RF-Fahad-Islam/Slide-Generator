@@ -223,15 +223,25 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   };
 
   const handleCustomBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        if (evt.target?.result) {
-          setCustomDesign(prev => ({ ...prev, bgImageUrl: evt.target.result as string }));
-        }
-      };
-      reader.readAsDataURL(e.target.files[0]);
-    }
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (evt.target?.result) {
+        setCustomDesign(prev => ({ ...prev, bgImageUrl: evt.target.result as string }));
+      }
+    };
+    reader.onerror = () => {
+      alert('Failed to read the image file. Please try another file.');
+      e.target.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const resetDesign = () => {
+    if (!window.confirm('Reset the custom design to its default layout? This clears your background image and all text boxes.')) return;
+    setCustomDesign({ bgImageUrl: '', boxes: defaultCustomBoxes() });
+    setSelectedBoxId(null);
   };
 
   const startBoxDrag = (e: React.PointerEvent, boxId: string, type: 'move' | 'resize') => {
@@ -529,6 +539,17 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     ))}
                   </div>
                 </div>
+
+                {/* Reset design */}
+                <button
+                  type="button"
+                  onClick={resetDesign}
+                  className={`w-full px-4 py-2.5 rounded-2xl text-sm font-bold border transition-all cursor-pointer ${
+                    isAppLight ? 'bg-white border-rose-300 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-rose-500/40 text-rose-300 hover:border-rose-500'
+                  }`}
+                >
+                  Reset Design to Defaults
+                </button>
 
                 {/* Selected box style panel */}
                 {selectedBox && (
