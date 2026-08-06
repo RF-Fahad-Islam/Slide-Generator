@@ -5,6 +5,12 @@ import { X, ChevronRight, ChevronLeft, Sparkles, Presentation } from 'lucide-rea
 // OnboardingTour — hand-rolled spotlight tour (no new dependencies).
 // Anchors target elements via data-tour="<id>" attributes; each step can also
 // navigate the app to a specific tab before highlighting.
+//
+// The dimming is drawn as four clickable quadrants around the target instead of
+// one full-screen backdrop, so the focused element is NEVER covered by a dim or
+// blur layer (it stays razor sharp) and clicks inside the focus hole pass
+// through to the real UI — interacting with the highlighted control does not
+// advance/exit the tour.
 // ---------------------------------------------------------------------------
 
 export type TourTab = 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
@@ -95,8 +101,28 @@ interface Rect {
   height: number;
 }
 
-const SPOT_RADIUS = 14;
-const GAP = 14;
+const PAD = 10; // extra padding around the focused element (the "hole")
+const GAP = 16; // gap between the hole and the tooltip card
+const TIP_H = 168; // estimated tooltip height for placement flips
+const MAX_TIP_W = 360;
+const POLS_INTERVAL = 150;
+const POLS_MAX = 24;
+
+// Skip the global Enter/Arrow shortcut when the user is interacting with a real
+// control (button / input / select / link) — pressing Enter there must not
+// accidentally advance or exit the tour.
+const isInteractiveTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return (
+    tag === 'BUTTON' ||
+    tag === 'A' ||
+    tag === 'INPUT' ||
+    tag === 'TEXTAREA' ||
+    tag === 'SELECT' ||
+    target.isContentEditable
+  );
+};
 
 export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, onNavigate, steps = defaultTourSteps }) => {
   const [current, setCurrent] = useState(0);
@@ -106,31 +132,26 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
 
   const step = steps[Math.min(current, steps.length - 1)];
 
+  // Plain measurement — no scrollIntoView here. Scrolling is triggered only on
+  // step changes, otherwise scroll/resize events (including the smooth-scroll
+  // animation itself) would fight the user and cause jitter.
   const measure = useCallback(() => {
     if (!step) return false;
     const el = document.querySelector(step.target) as HTMLElement | null;
     if (!el) return false;
     const r = el.getBoundingClientRect();
-    const pad = 8;
-    const set = (rr: DOMRect) =>
-      setRect({
-        top: rr.top - pad,
-        left: rr.left - pad,
-        width: rr.width + pad * 2,
-        height: rr.height + pad * 2,
-      });
-    set(r);
-    el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
-    requestAnimationFrame(() => {
-      const r2 = el.getBoundingClientRect();
-      set(r2);
+    if (r.width < 1 || r.height < 1) return false;
+    setRect({
+      top: r.top - PAD,
+      left: r.left - PAD,
+      width: r.width + PAD * 2,
+      height: r.height + PAD * 2,
     });
     return true;
   }, [step]);
 
   // Poll for the target element (it may not be in the DOM yet after a tab
-  // navigation), then fall back to a centered tooltip if it never appears
-  // (e.g. a nav anchor hidden on mobile).
+  // navigation), then fall back to a centered tooltip if it never appears.
   const tryMeasure = useCallback(() => {
     let attempts = 0;
     const poll = () => {
@@ -139,26 +160,32 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
         setIsMissing(false);
         return;
       }
-      if (attempts >= 20) {
+      if (attempts >= POLS_MAX) {
         setIsMissing(true);
         setRect(null);
         return;
       }
-      setTimeout(poll, 150);
+      window.setTimeout(poll, POLS_INTERVAL);
     };
     poll();
   }, [measure]);
 
-  // Jump to a step (navigates to the step's tab when needed)
+  // Scroll the target into view ONCE per step, then measure.
+  const revealAndMeasure = useCallback(() => {
+    if (!step) return;
+    const el = document.querySelector(step.target) as HTMLElement | null;
+    if (el) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+    window.setTimeout(tryMeasure, 220);
+  }, [step, tryMeasure]);
+
   const goTo = useCallback(
     (index: number) => {
       setCurrent(Math.max(0, Math.min(steps.length - 1, index)));
-      setTimeout(tryMeasure, 260);
     },
-    [steps, tryMeasure]
+    [steps.length]
   );
 
-  // When the step changes: navigate to its tab (if any) and measure
+  // When the step changes: navigate to its tab (if any), reveal + measure
   useEffect(() => {
     if (!open) return;
     const s = steps[current];
@@ -166,11 +193,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     if (s.navigateTab) {
       onNavigate(s.navigateTab);
     }
-    const t = setTimeout(tryMeasure, 260);
-    return () => clearTimeout(t);
-  }, [current, open, steps, onNavigate, tryMeasure]);
+    const t = window.setTimeout(revealAndMeasure, 260);
+    return () => window.clearTimeout(t);
+  }, [current, open, steps, onNavigate, revealAndMeasure]);
 
-  // Reposition on resize / scroll
+  // Reposition on resize / scroll (measure only — never scroll into view here)
   useEffect(() => {
     if (!open) return;
     window.addEventListener('resize', measure);
@@ -185,10 +212,10 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
   useEffect(() => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const tipW = Math.min(360, vw - 24);
+    const tipW = Math.min(MAX_TIP_W, vw - 24);
     if (!rect) {
       if (isMissing) {
-        setTipRect({ top: vh / 2 - 100, left: (vw - tipW) / 2, placement: 'center' });
+        setTipRect({ top: vh / 2 - 110, left: (vw - tipW) / 2, placement: 'center' });
       } else {
         setTipRect(null);
       }
@@ -199,20 +226,24 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     left = Math.max(12, Math.min(vw - tipW - 12, left));
     let top: number;
     let placement = pl;
-    if (pl === 'bottom' && rect.top + rect.height + GAP + 150 > vh) placement = 'top';
-    if (pl === 'top' && rect.top - GAP - 150 < 0) placement = 'bottom';
+    if (pl === 'bottom' && rect.top + rect.height + GAP + TIP_H > vh) placement = 'top';
+    if (pl === 'top' && rect.top - GAP - TIP_H < 0) placement = 'bottom';
     if (placement === 'bottom') top = rect.top + rect.height + GAP;
-    else if (placement === 'top') top = rect.top - GAP - 150;
-    else top = rect.top + rect.height / 2 - 75;
+    else if (placement === 'top') top = rect.top - GAP - TIP_H;
+    else top = rect.top + rect.height / 2 - 78;
     setTipRect({ top, left, placement });
   }, [rect, step, isMissing]);
 
-  // Keyboard controls
+  // Keyboard controls — ignored while a real control has focus
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      else if (e.key === 'Enter' || e.key === 'ArrowRight') goTo(current + 1);
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (isInteractiveTarget(e.target)) return;
+      if (e.key === 'Enter' || e.key === 'ArrowRight') goTo(current + 1);
       else if (e.key === 'ArrowLeft') goTo(current - 1);
     };
     window.addEventListener('keydown', onKey);
@@ -223,22 +254,49 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
 
   const isLast = current === steps.length - 1;
   const isFirst = current === 0;
+  const advance = () => (isLast ? onClose() : goTo(current + 1));
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Four dim quadrants around the focus hole. The hole itself has NO overlay,
+  // so the target stays perfectly sharp and is fully interactive.
+  const quadrants = rect
+    ? [
+        { top: 0, left: 0, width: vw, height: Math.max(0, rect.top) },
+        { top: rect.top + rect.height, left: 0, width: vw, height: Math.max(0, vh - rect.top - rect.height) },
+        { top: rect.top, left: 0, width: Math.max(0, rect.left), height: rect.height },
+        { top: rect.top, left: rect.left + rect.width, width: Math.max(0, vw - rect.left - rect.width), height: rect.height },
+      ]
+    : [];
 
   return (
-    <div className="fixed inset-0 z-[9999]">
-      {/* Dark backdrop — clicking advances the tour */}
-      <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[2px]" onClick={() => (isLast ? onClose() : goTo(current + 1))} />
+    <div className="fixed inset-0 z-[9999] overflow-hidden">
+      {/* Dim + blur, or the four-quadrant mask around the focus hole */}
+      {rect ? (
+        quadrants.map((q, i) => (
+          <div
+            key={i}
+            className="absolute bg-slate-950/80 backdrop-blur-[2px] transition-all duration-300"
+            style={{ top: q.top, left: q.left, width: q.width, height: q.height }}
+            onClick={advance}
+          />
+        ))
+      ) : (
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[2px]" onClick={advance} />
+      )}
 
-      {/* Spotlight cut-out */}
+      {/* Sharp focus ring around the hole — layered glow so the target clearly pops */}
       {rect && (
         <div
-          className="absolute rounded-3xl border-2 border-amber-400 transition-all duration-300"
+          className="absolute rounded-2xl border-2 border-amber-400 pointer-events-none transition-all duration-300"
           style={{
             top: rect.top,
             left: rect.left,
             width: rect.width,
             height: rect.height,
-            boxShadow: '0 0 0 9999px rgba(2,6,23,0.78), 0 0 0 4px rgba(245,158,11,0.25), 0 24px 60px rgba(0,0,0,0.55)',
+            boxShadow:
+              '0 0 0 3px rgba(245,158,11,0.35), 0 0 0 9px rgba(245,158,11,0.12), 0 0 42px rgba(245,158,11,0.5)',
           }}
         />
       )}
@@ -289,7 +347,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
                   </button>
                 )}
                 <button
-                  onClick={() => (isLast ? onClose() : goTo(current + 1))}
+                  onClick={advance}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all cursor-pointer"
                 >
                   {isLast ? (

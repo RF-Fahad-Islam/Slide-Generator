@@ -25,7 +25,7 @@ import { getTemplateById } from './templates/registry';
 import { defaultSlideTextBoxes } from './utils/slideTextBoxes';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, LayoutTemplate } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, LayoutTemplate, Copy, FileText } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
 
@@ -110,6 +110,9 @@ export default function App() {
     bgOverlayDarkness: 0.0,
     slideTextBoxes: defaultSlideTextBoxes(),
   });
+
+  // Current deck's display name (shown at the top of Slide Studio).
+  const [deckName, setDeckName] = useState<string>(SAMPLE_DECKS[0]?.name || 'Untitled Deck');
 
   // IndexedDB Auto-Sync Hook
   const { isSyncing, lastSavedTime } = useIndexedDBSync(
@@ -341,6 +344,7 @@ export default function App() {
     setItems(ensureUniqueIds(selectedItems));
     setSelectedIndex(0);
     setActiveTab('preview');
+    setDeckName('Untitled Deck');
     alert(`Created new presentation deck with ${selectedItems.length} selected questions!`);
   };
 
@@ -349,6 +353,7 @@ export default function App() {
     setItems(ensureUniqueIds(sample.items));
     setSelectedIndex(0);
     setActiveTab('preview');
+    setDeckName(sample.name || 'Untitled Deck');
   };
 
   const handleOpenDeck = (deckItems: MCQItem[], deckTitle?: string) => {
@@ -356,6 +361,7 @@ export default function App() {
     setSelectedIndex(0);
     if (deckTitle) {
       setConfig(prev => ({ ...prev, headerTitle: deckTitle }));
+      setDeckName(deckTitle);
     }
     setActiveTab('preview');
   };
@@ -409,6 +415,27 @@ export default function App() {
       updated[slideIdx] = copy;
       return updated;
     });
+  };
+
+  // Promotes the ACTIVE slide's design (theme + text-box layout) to the whole
+  // deck: its customConfig becomes the deck-wide config, and every per-slide
+  // override is cleared so all slides render exactly like the current one.
+  const applyActiveSlideDesignToAll = () => {
+    const slideIdx = selectedIndex;
+    const slide = items[slideIdx];
+    if (!slide) return;
+    const cc = slide.customConfig || {};
+    if (
+      !window.confirm(
+        'Apply this slide\u2019s theme and text-box layout to every slide?\n\nThis makes the active slide the deck-wide design and clears any other per-slide overrides.'
+      )
+    ) {
+      return;
+    }
+    setConfig(prev => ({ ...prev, ...cc }));
+    setItems(prev => prev.map(it => (it.customConfig ? { ...it, customConfig: undefined } : it)));
+    setTextBoxScope('global');
+    setSelectedTextBoxId(null);
   };
 
   const handleOpenSocialGenerator = (deckItems: MCQItem[]) => {
@@ -509,6 +536,37 @@ export default function App() {
         {/* TAB 1: SLIDE PREVIEW & DECK MANAGER */}
         {activeTab === 'preview' && (
           <div className="space-y-6">
+            {/* DECK NAME — shown on top of the studio, always visible */}
+            <div className={`p-5 rounded-3xl border shadow-xl flex flex-wrap items-center gap-x-4 gap-y-2 ${
+              isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+            }`}>
+              <div className={`p-3 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 shadow-lg shadow-amber-500/25 flex items-center justify-center shrink-0`}>
+                <FileText className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${isAppLight ? 'text-amber-600' : 'text-amber-500'}`}>
+                    Active Deck
+                  </span>
+                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full border ${
+                    isAppLight ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  }`}>
+                    {items.length} slide{items.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <h1 className={`text-base sm:text-lg font-black tracking-tight leading-tight truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                  {deckName}
+                </h1>
+              </div>
+              <div className={`hidden md:flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl border ${
+                isAppLight ? 'bg-slate-50 text-slate-700 border-slate-200' : 'bg-slate-950 text-slate-300 border-slate-800'
+              }`}>
+                <Presentation className={`w-3.5 h-3.5 ${isLightTemplate ? 'text-amber-500' : 'text-indigo-400'}`} />
+                <span className="text-slate-400 font-medium">Theme:</span>
+                <span className="text-amber-500">{activeTemplate.name}</span>
+              </div>
+            </div>
+
             {/* OVERVIEW GRID MODE vs SINGLE SLIDE PREVIEW MODE */}
             {isOverviewMode ? (
               /* ALL CREATED SLIDES GRID OVERVIEW */
@@ -720,6 +778,20 @@ export default function App() {
                         )}
                       </button>
 
+                      {/* Apply the active slide's design (theme + box layout) to every slide */}
+                      <button
+                        onClick={applyActiveSlideDesignToAll}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                          isAppLight
+                            ? 'bg-white text-slate-700 border-slate-300 hover:border-amber-400 hover:text-amber-700'
+                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-amber-500/60 hover:text-amber-300'
+                        }`}
+                        title="Make this slide's theme and text-box layout the design for every slide in the deck"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="hidden xl:inline">Apply Slide Design to All</span>
+                      </button>
+
                       {/* Template Store Modal Opener */}
                       <button
                         onClick={() => setIsTemplateModalOpen(true)}
@@ -884,6 +956,7 @@ export default function App() {
                         hasTextBoxOverride={hasTextBoxOverride}
                         onChangeTextBoxScope={changeTextBoxScope}
                         onRevertTextBoxOverride={revertTextBoxOverride}
+                        onApplySlideLayoutToAll={applyActiveSlideDesignToAll}
                         onAddBox={addSlideBox}
                         onAddElement={addElementBox}
                         onAddLayout={addLayoutToDeck}

@@ -70,6 +70,7 @@ interface SlideTextBoxPanelProps {
   hasTextBoxOverride: boolean;
   onChangeTextBoxScope: (scope: 'global' | 'slide') => void;
   onRevertTextBoxOverride: () => void;
+  onApplySlideLayoutToAll: () => void;
   onAddBox: (bind: SlideTextBoxBind) => void;
   onAddElement: (elementId: string, extra?: { imageUrl?: string; iconName?: string }) => void;
   onAddLayout: (layoutId: string) => void;
@@ -92,6 +93,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   hasTextBoxOverride,
   onChangeTextBoxScope,
   onRevertTextBoxOverride,
+  onApplySlideLayoutToAll,
   onAddBox,
   onAddElement,
   onAddLayout,
@@ -231,6 +233,23 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
             </button>
           )}
         </div>
+
+        {/* Promote this slide's design to every slide */}
+        {hasTextBoxOverride && (
+          <button
+            type="button"
+            onClick={onApplySlideLayoutToAll}
+            className={`w-full px-3 py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+              isAppLight
+                ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                : 'bg-amber-500/10 border-amber-500/40 text-amber-300 hover:bg-amber-500/20'
+            }`}
+            title="Make this slide's theme and text-box layout the design for every slide in the deck"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            Use This Layout for All Slides
+          </button>
+        )}
 
         {/* Canva-style tab bar */}
         <div className={`flex items-center gap-1 p-1 rounded-2xl border overflow-x-auto ${
