@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MCQItem, DeckConfig } from '../types';
+﻿import React, { useState, useRef, useEffect } from 'react';
+import { MCQItem, DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
 import { MathText } from './MathText';
 import {
   Share2,
@@ -17,7 +17,6 @@ import {
   Type,
   Award,
   RefreshCw,
-  Copy,
   User,
   BookOpen,
   Search,
@@ -31,6 +30,11 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
+import { SlideTextBoxLayer } from './SlideTextBoxLayer';
+import { SlideTextBoxOverlay } from './SlideTextBoxOverlay';
+import { SlideTextBoxPanel } from './SlideTextBoxPanel';
+import { getSlideBoxContent } from '../utils/slideTextBoxes';
+import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from '../utils/slideElements';
 
 interface SocialPostGeneratorProps {
   items: MCQItem[];
@@ -39,55 +43,74 @@ interface SocialPostGeneratorProps {
   preselectedItemId?: string | null;
 }
 
-type CustomBoxBind =
-  | 'stem'
-  | 'options'
-  | 'answer'
-  | 'explanation'
-  | 'brand'
-  | 'headerTitle'
-  | 'footerTag'
-  | 'free';
-
-interface CustomTextBox {
-  id: string;
-  bind: CustomBoxBind;
-  text?: string;
-  x: number;         // % left of canvas
-  y: number;         // % top of canvas
-  w: number;         // % width of canvas
-  fontSize: number;  // % of canvas width
-  color: string;
-  align: 'left' | 'center' | 'right';
-  bold: boolean;
-}
-
 interface CustomPostDesign {
   bgImageUrl: string;
-  boxes: CustomTextBox[];
+  boxes: SlideTextBox[];
 }
+
+// Social posts use a fixed 1080px-tall design space so the exact same
+// SlideTextBox px-coordinate system (fonts, box positions) as Slide Studio is
+// reused. Width derives from the chosen aspect ratio.
+const POST_DESIGN_HEIGHT = 1080;
+const POST_DESIGN_WIDTH: Record<'1:1' | '4:5' | '9:16', number> = {
+  '1:1': 1080,
+  '4:5': 864,
+  '9:16': 608,
+};
 
 const CUSTOM_DESIGN_STORAGE_KEY = 'social_post_custom_design_v1';
 
-const defaultCustomBoxes = (): CustomTextBox[] => [
-  { id: 'b_brand', bind: 'brand', x: 8, y: 6, w: 70, fontSize: 3.4, color: '#fbbf24', align: 'left', bold: true },
-  { id: 'b_header', bind: 'headerTitle', x: 8, y: 12, w: 84, fontSize: 2.8, color: '#ffffff', align: 'left', bold: false },
-  { id: 'b_stem', bind: 'stem', x: 8, y: 26, w: 84, fontSize: 4.2, color: '#ffffff', align: 'left', bold: true },
-  { id: 'b_options', bind: 'options', x: 8, y: 56, w: 84, fontSize: 3, color: '#ffffff', align: 'left', bold: false },
-  { id: 'b_footer', bind: 'footerTag', x: 8, y: 90, w: 60, fontSize: 2.4, color: '#fbbf24', align: 'left', bold: true },
+const pct = (v: number, size: number) => Math.max(0, Math.round((v / 100) * size));
+
+const defaultCustomBoxes = (w: number, h: number): SlideTextBox[] => [
+  { id: 'b_brand', bind: 'brand', x: pct(8, w), y: pct(6, h), w: pct(70, w), fontSize: pct(3.4, w), color: '#fbbf24', align: 'left', bold: true },
+  { id: 'b_header', bind: 'headerTitle', x: pct(8, w), y: pct(12, h), w: pct(84, w), fontSize: pct(2.8, w), color: '#ffffff', align: 'left', bold: false },
+  { id: 'b_stem', bind: 'stem', x: pct(8, w), y: pct(26, h), w: pct(84, w), fontSize: pct(4.2, w), color: '#ffffff', align: 'left', bold: true },
+  { id: 'b_options', bind: 'options', x: pct(8, w), y: pct(56, h), w: pct(84, w), fontSize: pct(3, w), color: '#ffffff', align: 'left', bold: false },
+  { id: 'b_footer', bind: 'footerTag', x: pct(8, w), y: pct(90, h), w: pct(60, w), fontSize: pct(2.4, w), color: '#fbbf24', align: 'left', bold: true },
 ];
 
-const loadSavedDesign = (): CustomPostDesign => {
+// Older saved designs stored boxes as %-based CustomTextBox entries. Migrate
+// them into the px-based SlideTextBox space so existing designs keep working.
+interface StoredPostDesign {
+  version?: number;
+  bgImageUrl: string;
+  boxes: SlideTextBox[];
+}
+
+const loadSavedDesign = (w: number, h: number): CustomPostDesign => {
   try {
     const raw = localStorage.getItem(CUSTOM_DESIGN_STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as CustomPostDesign;
-      if (parsed && Array.isArray(parsed.boxes)) return parsed;
+      const parsed = JSON.parse(raw) as StoredPostDesign;
+      if (parsed && Array.isArray(parsed.boxes)) {
+        const isLegacy = parsed.version !== 2;
+        const boxes: SlideTextBox[] = parsed.boxes
+          .filter((b: any) => b && typeof b.x === 'number')
+          .map((b: any): SlideTextBox => {
+            if (!isLegacy) return b as SlideTextBox;
+            return {
+              id: b.id || `b_${b.bind}_${Date.now()}`,
+              bind: (b.bind || 'free') as SlideTextBoxBind,
+              text: b.bind === 'free' ? (b.text || 'Type your text here...') : undefined,
+              x: pct(b.x, w),
+              y: pct(b.y, h),
+              w: pct(b.w, w),
+              fontSize: Math.max(14, pct(b.fontSize, w)),
+              color: b.color || '#ffffff',
+              align: (b.align || 'left') as 'left' | 'center' | 'right',
+              bold: !!b.bold,
+            };
+          });
+        if (boxes.length > 0) {
+          return { bgImageUrl: parsed.bgImageUrl || '', boxes };
+        }
+      }
     }
   } catch {
     // ignore corrupted storage
   }
-  return { bgImageUrl: '', boxes: defaultCustomBoxes() };
+  return { bgImageUrl: '', boxes: defaultCustomBoxes(w, h) };
 };
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -123,7 +146,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     'edtech_quiz' | 'minimal_card' | 'flashcard' | 'exam_highlight'
   >('edtech_quiz');
   const [postBgColor, setPostBgColor] = useState<string>('gradient_amber');
-  const [customHeaderTitle, setCustomHeaderTitle] = useState<string>('আজকের কুইজ');
+  const [customHeaderTitle, setCustomHeaderTitle] = useState<string>('à¦†à¦œà¦•à§‡à¦° à¦•à§à¦‡à¦œ');
   const [showAnswerKey, setShowAnswerKey] = useState<boolean>(true);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -131,28 +154,35 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   // Custom Design Editor State
   const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
   const [isBoxEditMode, setIsBoxEditMode] = useState<boolean>(false);
-  const [customDesign, setCustomDesign] = useState<CustomPostDesign>(loadSavedDesign);
+  const postDesignW = POST_DESIGN_WIDTH[aspectRatio];
+  const postDesignH = POST_DESIGN_HEIGHT;
+  const [customDesign, setCustomDesign] = useState<CustomPostDesign>(() =>
+    loadSavedDesign(POST_DESIGN_WIDTH[aspectRatio], POST_DESIGN_HEIGHT)
+  );
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [canvasWidth, setCanvasWidth] = useState<number>(500);
 
   const postCanvasRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ type: 'move' | 'resize'; boxId: string; startX: number; startY: number; orig: CustomTextBox } | null>(null);
+  const postFrameRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ type: 'move' | 'resize'; boxId: string; startX: number; startY: number; orig: SlideTextBox } | null>(null);
 
-  // Measure canvas width so %-font sizes resolve to real px for html2canvas
+  // Measure the preview frame width so the fixed-size design space (px) can be
+  // scaled to fit, and %-font equivalents resolve for html2canvas.
   useEffect(() => {
-    const el = postCanvasRef.current;
+    const el = postFrameRef.current;
     if (!el) return;
     const update = () => setCanvasWidth(el.getBoundingClientRect().width);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [isCustomMode]);
+  }, [isCustomMode, aspectRatio]);
 
   // Persist the custom design across tab switches (component remounts each visit)
   useEffect(() => {
     try {
-      localStorage.setItem(CUSTOM_DESIGN_STORAGE_KEY, JSON.stringify(customDesign));
+      const stored: StoredPostDesign = { version: 2, bgImageUrl: customDesign.bgImageUrl, boxes: customDesign.boxes };
+      localStorage.setItem(CUSTOM_DESIGN_STORAGE_KEY, JSON.stringify(stored));
     } catch {
       // storage may be full from data-URL images; ignore
     }
@@ -167,42 +197,79 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const currentItem = items[selectedQuestionIndex] || {
     id: 'sample',
     questionType: 'standard',
-    stem: 'রুই মাছের হৃদপিণ্ডে কয়টি প্রকোষ্ঠ থাকে?',
+    stem: 'à¦°à§à¦‡ à¦®à¦¾à¦›à§‡à¦° à¦¹à§ƒà¦¦à¦ªà¦¿à¦£à§à¦¡à§‡ à¦•à¦¯à¦¼à¦Ÿà¦¿ à¦ªà§à¦°à¦•à§‹à¦·à§à¦  à¦¥à¦¾à¦•à§‡?',
     options: [
-      { key: 'ক', text: '২টি' },
-      { key: 'খ', text: '৪টি' },
-      { key: 'গ', text: '৩টি' },
-      { key: 'ঘ', text: '১টি' },
+      { key: 'à¦•', text: 'à§¨à¦Ÿà¦¿' },
+      { key: 'à¦–', text: 'à§ªà¦Ÿà¦¿' },
+      { key: 'à¦—', text: 'à§©à¦Ÿà¦¿' },
+      { key: 'à¦˜', text: 'à§§à¦Ÿà¦¿' },
     ],
-    answer: 'ক',
-    explanation: 'রুই মাছের হৃদপিণ্ড দুই প্রকোষ্ঠ বিশিষ্ট (এক অলিন্দ ও এক নিলয়)।',
+    answer: 'à¦•',
+    explanation: 'à¦°à§à¦‡ à¦®à¦¾à¦›à§‡à¦° à¦¹à§ƒà¦¦à¦ªà¦¿à¦£à§à¦¡ à¦¦à§à¦‡ à¦ªà§à¦°à¦•à§‹à¦·à§à¦  à¦¬à¦¿à¦¶à¦¿à¦·à§à¦Ÿ (à¦à¦• à¦…à¦²à¦¿à¦¨à§à¦¦ à¦“ à¦à¦• à¦¨à¦¿à¦²à¦¯à¦¼)à¥¤',
   };
 
   const selectedBox = customDesign.boxes.find(b => b.id === selectedBoxId) || null;
 
-  const updateBox = (id: string, patch: Partial<CustomTextBox>) => {
+  const updateBox = (id: string, patch: Partial<SlideTextBox>) => {
     setCustomDesign(prev => ({
       ...prev,
       boxes: prev.boxes.map(b => (b.id === id ? { ...b, ...patch } : b)),
     }));
   };
 
-  const addBox = (bind: CustomBoxBind) => {
+  const addBox = (bind: SlideTextBoxBind) => {
     const id = `b_${bind}_${Date.now()}`;
-    const newBox: CustomTextBox = {
+    const newBox: SlideTextBox = {
       id,
       bind,
       text: bind === 'free' ? 'Type your text here...' : undefined,
-      x: 8,
-      y: 40 + (customDesign.boxes.length % 4) * 12,
-      w: 84,
-      fontSize: bind === 'stem' ? 4.2 : bind === 'options' ? 3 : 3,
+      x: pct(8, postDesignW),
+      y: pct(40, postDesignH) + (customDesign.boxes.length % 4) * pct(12, postDesignH),
+      w: pct(84, postDesignW),
+      fontSize: bind === 'stem' ? pct(4.2, postDesignW) : bind === 'options' ? pct(3, postDesignW) : pct(3, postDesignW),
       color: '#ffffff',
       align: 'left',
       bold: bind === 'stem' || bind === 'brand',
     };
     setCustomDesign(prev => ({ ...prev, boxes: [...prev.boxes, newBox] }));
     setSelectedBoxId(id);
+  };
+
+  const addElement = (elementId: string, extra?: { imageUrl?: string; iconName?: string }) => {
+    const def = SLIDE_ELEMENT_DEFS.find(d => d.id === elementId);
+    if (!def) return;
+    const built = def.build(extra);
+    // The SlideTextBox system is designed for a 1920x1080 space â€” rescale the
+    // factory-produced boxes to the post's design space.
+    const scaleX = postDesignW / 1920;
+    const scaleY = postDesignH / 1080;
+    const scaled: SlideTextBox = {
+      ...built,
+      x: Math.round(built.x * scaleX),
+      y: Math.round(built.y * scaleY),
+      w: Math.round((built.w || 300) * scaleX),
+      h: built.h ? Math.round(built.h * scaleY) : built.h,
+      fontSize: Math.round(built.fontSize * scaleX),
+    };
+    setCustomDesign(prev => ({ ...prev, boxes: [...prev.boxes, scaled] }));
+    setSelectedBoxId(scaled.id);
+  };
+
+  const addLayout = (layoutId: string) => {
+    const def = SLIDE_LAYOUTS.find(l => l.id === layoutId);
+    if (!def) return;
+    const scaleX = postDesignW / 1920;
+    const scaleY = postDesignH / 1080;
+    const scaled: SlideTextBox[] = def.build().map(b => ({
+      ...b,
+      x: Math.round(b.x * scaleX),
+      y: Math.round(b.y * scaleY),
+      w: Math.round((b.w || 600) * scaleX),
+      h: b.h ? Math.round(b.h * scaleY) : b.h,
+      fontSize: Math.round(b.fontSize * scaleX),
+    }));
+    setCustomDesign(prev => ({ ...prev, boxes: scaled }));
+    setSelectedBoxId(null);
   };
 
   const deleteBox = (id: string) => {
@@ -214,22 +281,21 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     setCustomDesign(prev => {
       const src = prev.boxes.find(b => b.id === id);
       if (!src) return prev;
-      const copy: CustomTextBox = { ...src, id: `b_${src.bind}_${Date.now()}`, y: Math.min(src.y + 5, 92) };
+      const copy: SlideTextBox = { ...src, id: `b_${src.bind}_${Date.now()}`, y: Math.min(src.y + 5, postDesignH - 40) };
       return { ...prev, boxes: [...prev.boxes, copy] };
     });
   };
 
-  const getBoxContent = (box: CustomTextBox): string => {
-    switch (box.bind) {
-      case 'stem': return currentItem.stem;
-      case 'answer': return currentItem.answer || '';
-      case 'explanation': return currentItem.explanation || '';
-      case 'brand': return config.brandName || "RAKIB'S CLASSROOM";
-      case 'headerTitle': return customHeaderTitle || config.headerTitle || 'আজকের কুইজ';
-      case 'footerTag': return config.footerTag || 'BIOMISSION';
-      case 'free': return box.text || '';
-      case 'options': return '';
-    }
+  const reorderBox = (id: string, dir: 'up' | 'down') => {
+    setCustomDesign(prev => {
+      const idx = prev.boxes.findIndex(b => b.id === id);
+      if (idx < 0) return prev;
+      const target = dir === 'up' ? idx + 1 : idx - 1;
+      if (target < 0 || target >= prev.boxes.length) return prev;
+      const boxes = [...prev.boxes];
+      [boxes[idx], boxes[target]] = [boxes[target], boxes[idx]];
+      return { ...prev, boxes };
+    });
   };
 
   const handleCustomBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,41 +316,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
   const resetDesign = () => {
     if (!window.confirm('Reset the custom design to its default layout? This clears your background image and all text boxes.')) return;
-    setCustomDesign({ bgImageUrl: '', boxes: defaultCustomBoxes() });
+    setCustomDesign({ bgImageUrl: '', boxes: defaultCustomBoxes(postDesignW, postDesignH) });
     setSelectedBoxId(null);
-  };
-
-  const startBoxDrag = (e: React.PointerEvent, boxId: string, type: 'move' | 'resize') => {
-    e.stopPropagation();
-    const box = customDesign.boxes.find(b => b.id === boxId);
-    if (!box) return;
-    setSelectedBoxId(boxId);
-    dragRef.current = { type, boxId, startX: e.clientX, startY: e.clientY, orig: { ...box } };
-
-    const onMove = (ev: PointerEvent) => {
-      const d = dragRef.current;
-      const el = postCanvasRef.current;
-      if (!d || !el) return;
-      const rect = el.getBoundingClientRect();
-      if (rect.width === 0) return;
-      const dx = ((ev.clientX - d.startX) / rect.width) * 100;
-      const dy = ((ev.clientY - d.startY) / rect.height) * 100;
-      if (d.type === 'move') {
-        updateBox(d.boxId, {
-          x: clamp(d.orig.x + dx, 0, 100 - d.orig.w),
-          y: clamp(d.orig.y + dy, 0, 96),
-        });
-      } else {
-        updateBox(d.boxId, { w: clamp(d.orig.w + dx, 12, 100 - d.orig.x) });
-      }
-    };
-    const onUp = () => {
-      dragRef.current = null;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
   };
 
   // Filter the picker list using the same search/filter rules as the Question Bank
@@ -474,7 +507,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
                 }`}
               >
-                {isCustomMode ? '🎨 Custom Mode ON' : 'Enable Custom Mode'}
+                {isCustomMode ? 'ðŸŽ¨ Custom Mode ON' : 'Enable Custom Mode'}
               </button>
             </div>
 
@@ -499,7 +532,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }))}
                         className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-sm font-bold leading-none hover:bg-rose-600 shadow"
                       >
-                        ✕
+                        âœ•
                       </button>
                     </div>
                   ) : (
@@ -529,197 +562,32 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   </div>
                 </div>
 
-                {/* Add text box buttons */}
-                <div className={`p-4 rounded-2xl border space-y-3 ${
-                  isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                }`}>
-                  <span className={`text-sm font-extrabold block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                    Add Text Box (auto-fills from selected question)
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {([
-                      { bind: 'stem', label: 'Question', Icon: Type },
-                      { bind: 'options', label: 'Options', Icon: List },
-                      { bind: 'answer', label: 'Answer', Icon: CheckCircle2 },
-                      { bind: 'explanation', label: 'Explanation', Icon: Sparkles },
-                      { bind: 'brand', label: 'Brand Name', Icon: GraduationCap },
-                      { bind: 'headerTitle', label: 'Header Title', Icon: Heading },
-                      { bind: 'free', label: 'Free Text', Icon: PenLine },
-                    ] as const).map(btn => (
-                      <button
-                        key={btn.bind}
-                        type="button"
-                        onClick={() => addBox(btn.bind)}
-                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-105 flex items-center gap-1.5 ${
-                          isAppLight
-                            ? 'bg-white border-slate-300 text-amber-700 hover:bg-amber-50 hover:border-amber-300'
-                            : 'bg-slate-900 border-slate-700 text-amber-300 hover:border-amber-500/40'
-                        }`}
-                      >
-                        <btn.Icon className="w-3.5 h-3.5" />
-                        + {btn.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* The SAME text editor as Slide Studio â€” text box panel with
+                    Style / Text / Elements / Photos / Layouts tabs. Boxes live in
+                    the shared SlideTextBox coordinate space (scaled to the post). */}
+                <SlideTextBoxPanel
+                  boxes={customDesign.boxes}
+                  selectedId={selectedBoxId}
+                  appTheme={appTheme}
+                  config={{ ...config, headerTitle: customHeaderTitle }}
+                  textBoxScope="global"
+                  hasTextBoxOverride={false}
+                  onChangeTextBoxScope={() => {}}
+                  onRevertTextBoxOverride={() => {}}
+                  onApplySlideLayoutToAll={() => {}}
+                  onAddBox={addBox}
+                  onAddElement={addElement}
+                  onAddLayout={addLayout}
+                  onUpdateBox={updateBox}
+                  onDeleteBox={deleteBox}
+                  onDuplicateBox={duplicateBox}
+                  onReorderBox={reorderBox}
+                  onSelectBox={setSelectedBoxId}
+                  onReset={resetDesign}
+                  onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
+                  onClose={() => setIsBoxEditMode(false)}
+                />
 
-                {/* Reset design */}
-                <button
-                  type="button"
-                  onClick={resetDesign}
-                  className={`w-full px-4 py-2.5 rounded-2xl text-sm font-bold border transition-all cursor-pointer ${
-                    isAppLight ? 'bg-white border-rose-300 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-rose-500/40 text-rose-300 hover:border-rose-500'
-                  }`}
-                >
-                  Reset Design to Defaults
-                </button>
-
-                {/* Selected box style panel */}
-                {selectedBox && (
-                  <div className={`p-4 rounded-2xl border space-y-4 ${
-                    isAppLight ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-950 border-amber-500/40'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-extrabold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
-                        Style: <span className="uppercase">{selectedBox.bind}</span> box
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => duplicateBox(selectedBox.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            isAppLight ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100' : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white'
-                          }`}
-                        >
-                          Duplicate
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteBox(selectedBox.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            isAppLight ? 'bg-white border-rose-300 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-rose-500/40 text-rose-300 hover:border-rose-500'
-                          }`}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Bind To:</label>
-                      <select
-                        value={selectedBox.bind}
-                        onChange={(e) => updateBox(selectedBox.id, { bind: e.target.value as CustomBoxBind })}
-                        className={`w-full border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-amber-500 ${
-                          isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
-                        }`}
-                      >
-                        <option value="stem">Question Stem</option>
-                        <option value="options">Options List</option>
-                        <option value="answer">Answer</option>
-                        <option value="explanation">Explanation</option>
-                        <option value="brand">Brand Name</option>
-                        <option value="headerTitle">Header Title</option>
-                        <option value="footerTag">Footer Tag</option>
-                        <option value="free">Free Text</option>
-                      </select>
-                    </div>
-
-                    {selectedBox.bind === 'free' && (
-                      <div>
-                        <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Text Content:</label>
-                        <textarea
-                          value={selectedBox.text || ''}
-                          onChange={(e) => updateBox(selectedBox.id, { text: e.target.value })}
-                          rows={2}
-                          className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500 ${
-                            isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
-                          }`}
-                        />
-                      </div>
-                    )}
-
-                    <div>
-                      <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                        Font Size: {selectedBox.fontSize.toFixed(1)}% width
-                      </label>
-                      <input
-                        type="range"
-                        min={1.5}
-                        max={9}
-                        step={0.1}
-                        value={selectedBox.fontSize}
-                        onChange={(e) => updateBox(selectedBox.id, { fontSize: parseFloat(e.target.value) })}
-                        className="w-full accent-amber-500 cursor-pointer"
-                      />
-                    </div>
-
-                    <div>
-                      <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Text Color:</label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {BOX_COLOR_PRESETS.map(c => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => updateBox(selectedBox.id, { color: c })}
-                            className={`w-6 h-6 rounded-lg border transition-transform hover:scale-110 ${
-                              selectedBox.color === c ? 'ring-2 ring-amber-400 scale-110' : ''
-                            } ${c === '#000000' ? 'border-slate-500' : 'border-white/20'}`}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                        <input
-                          type="color"
-                          value={selectedBox.color}
-                          onChange={(e) => updateBox(selectedBox.id, { color: e.target.value })}
-                          className="w-8 h-8 rounded-lg cursor-pointer border border-white/20 bg-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className={`flex items-center gap-1 p-1 rounded-xl border ${
-                        isAppLight ? 'bg-white border-slate-300' : 'bg-slate-900 border-slate-700'
-                      }`}>
-                        {(['left', 'center', 'right'] as const).map(a => (
-                          <button
-                            key={a}
-                            type="button"
-                            onClick={() => updateBox(selectedBox.id, { align: a })}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
-                              selectedBox.align === a ? 'bg-amber-500 text-slate-950' : isAppLight ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-white'
-                            }`}
-                          >
-                            {a}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => updateBox(selectedBox.id, { bold: !selectedBox.bold })}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${
-                          selectedBox.bold
-                            ? 'bg-amber-500 text-slate-950 border-amber-400'
-                            : isAppLight
-                            ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
-                            : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white'
-                        }`}
-                      >
-                        B
-                      </button>
-                    </div>
-
-                    <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-                      Drag a box on the canvas to move it. Use the corner handle to resize. Bound boxes update automatically when you change the selected question.
-                    </p>
-                  </div>
-                )}
-
-                {!selectedBox && (
-                  <p className={`text-xs text-center py-2 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Click a box on the canvas to edit its style.
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -813,10 +681,10 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               {[
-                { id: 'gradient_amber', name: '🌙 Midnight Gold', bg: 'from-slate-950 to-amber-950' },
-                { id: 'gradient_blue', name: '📘 Cyber Blue', bg: 'from-slate-950 to-indigo-950' },
-                { id: 'gradient_emerald', name: '🌿 Forest Emerald', bg: 'from-slate-950 to-emerald-950' },
-                { id: 'clean_light', name: '☀️ Warm Light', bg: 'from-slate-50 to-amber-50' },
+                { id: 'gradient_amber', name: 'ðŸŒ™ Midnight Gold', bg: 'from-slate-950 to-amber-950' },
+                { id: 'gradient_blue', name: 'ðŸ“˜ Cyber Blue', bg: 'from-slate-950 to-indigo-950' },
+                { id: 'gradient_emerald', name: 'ðŸŒ¿ Forest Emerald', bg: 'from-slate-950 to-emerald-950' },
+                { id: 'clean_light', name: 'â˜€ï¸ Warm Light', bg: 'from-slate-50 to-amber-50' },
               ].map((b) => (
                 <button
                   key={b.id}
@@ -863,7 +731,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   type="text"
                   value={customHeaderTitle}
                   onChange={(e) => setCustomHeaderTitle(e.target.value)}
-                  placeholder="e.g. আজকের কুইজ | এইচএসসি জীববিজ্ঞান"
+                  placeholder="e.g. à¦†à¦œà¦•à§‡à¦° à¦•à§à¦‡à¦œ | à¦à¦‡à¦šà¦à¦¸à¦¸à¦¿ à¦œà§€à¦¬à¦¬à¦¿à¦œà§à¦žà¦¾à¦¨"
                   className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
                     isAppLight
                       ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
@@ -911,7 +779,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               </label>
             </div>
 
-            {/* Question picker filter bar — mirrors the Question Bank filter */}
+            {/* Question picker filter bar â€” mirrors the Question Bank filter */}
             <div className="space-y-2.5">
               <div className="relative">
                 <Search className={`w-5 h-5 absolute left-3.5 top-3.5 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
@@ -960,9 +828,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     }`}
                   >
                     <option value="all">All Boards</option>
-                    <option value="চট্টগ্রাম">Chittagong Board</option>
-                    <option value="ঢাকা">Dhaka Board</option>
-                    <option value="রাজশাহী">Rajshahi Board</option>
+                    <option value="à¦šà¦Ÿà§à¦Ÿà¦—à§à¦°à¦¾à¦®">Chittagong Board</option>
+                    <option value="à¦¢à¦¾à¦•à¦¾">Dhaka Board</option>
+                    <option value="à¦°à¦¾à¦œà¦¶à¦¾à¦¹à§€">Rajshahi Board</option>
                     <option value="admission">Admission</option>
                   </select>
                 </div>
@@ -1085,7 +953,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         {config.brandName || "RAKIB'S CLASSROOM"}
                       </h3>
                       <p className="text-xs font-bold text-amber-400 mt-0.5">
-                        {customHeaderTitle || config.headerTitle || 'আজকের কুইজ'}
+                        {customHeaderTitle || config.headerTitle || 'à¦†à¦œà¦•à§‡à¦° à¦•à§à¦‡à¦œ'}
                       </p>
                     </div>
                   </div>
@@ -1104,7 +972,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                       {selectedQuestionIndex + 1}
                     </span>
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                      প্রশ্নঃ
+                      à¦ªà§à¦°à¦¶à§à¦¨à¦ƒ
                     </span>
                   </div>
 
@@ -1142,7 +1010,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   {/* Optional Explanation */}
                   {showExplanation && currentItem.explanation && (
                     <div className="p-3 rounded-xl bg-white/10 border border-white/20 text-xs text-amber-200 mt-2">
-                      <strong>ব্যাখ্যা:</strong> <MathText text={currentItem.explanation} />
+                      <strong>à¦¬à§à¦¯à¦¾à¦–à§à¦¯à¦¾:</strong> <MathText text={currentItem.explanation} />
                     </div>
                   )}
                 </div>
@@ -1160,10 +1028,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="relative">
-                  {/* Export node: static in-flow card (captured by html2canvas — same structure as the 4 template cards) */}
+                <div className="relative" ref={postFrameRef}>
+                  {/* Export node: static in-flow card (captured by html2canvas â€” same structure as the 4 template cards) */}
                   <div
-                    ref={postCanvasRef}
                     style={{
                       fontFamily: config.fontFamily || "'Kalpurush', serif",
                       ...(customDesign.bgImageUrl
@@ -1176,94 +1043,58 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         : {}),
                     }}
                     className={`w-full mx-auto ${getAspectClass()} ${customDesign.bgImageUrl ? 'bg-slate-900' : getBgStyle()} rounded-3xl border border-slate-700/80 shadow-2xl relative overflow-hidden select-none`}
+                    ref={postCanvasRef}
                   >
-                    <div className="relative w-full h-full p-4">
-                      {customDesign.boxes.map(box => {
-                        const fs = Math.max(8, Math.round((box.fontSize / 100) * canvasWidth));
-                        const style: React.CSSProperties = {
-                          left: `${box.x}%`,
-                          top: `${box.y}%`,
-                          width: `${box.w}%`,
-                          fontSize: fs,
-                          textAlign: box.align,
-                          color: box.color,
-                        };
-                        if (box.bind === 'options') {
-                          return (
-                            <div key={box.id} className={`absolute leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={style}>
-                              <div className="space-y-1.5">
-                                {currentItem.options.map(opt => (
-                                  <div key={opt.key} className="flex items-start gap-1.5">
-                                    <span className="font-black shrink-0">{opt.key}.</span>
-                                    <span><MathText text={opt.text} /></span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={style}>
-                            <MathText text={getBoxContent(box)} />
-                          </div>
-                        );
-                      })}
+                    {/* Boxes render in the shared SlideTextBoxLayer (exact same
+                        text-box engine as Slide Studio), scaled from the fixed
+                        design space into the displayed card. */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: postDesignW,
+                        height: postDesignH,
+                        transform: `scale(${canvasWidth > 0 ? canvasWidth / postDesignW : 1})`,
+                        transformOrigin: 'top left',
+                      }}
+                    >
+                      <SlideTextBoxLayer
+                        boxes={customDesign.boxes}
+                        item={currentItem}
+                        config={{ ...config, headerTitle: customHeaderTitle }}
+                        currentIndex={selectedQuestionIndex}
+                        showAnswerHighlight={showAnswerKey}
+                      />
                     </div>
                   </div>
 
-                  {/* Editor overlay (NOT captured on export) — only visible in Edit Design mode */}
+                  {/* Editor overlay (NOT captured on export) â€” only visible in Edit Design mode */}
                   {isBoxEditMode && (
                     <div className="absolute inset-0 z-20">
-                    {customDesign.boxes.map(box => {
-                      const selected = box.id === selectedBoxId;
-                      const fs = Math.max(8, Math.round((box.fontSize / 100) * canvasWidth));
-                      return (
-                        <div
-                          key={box.id}
-                          onPointerDown={(e) => startBoxDrag(e, box.id, 'move')}
-                          className="absolute cursor-move"
-                          style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%` }}
-                        >
-                          <div
-                            className={`relative w-full h-full border rounded-md pointer-events-none transition-colors ${selected ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-white/30'}`}
-                            style={{ fontSize: fs }}
-                          >
-                            <div className="invisible whitespace-pre-wrap leading-snug font-bold">
-                              {box.bind === 'options'
-                                ? (
-                                  <div className="space-y-1.5">
-                                    {currentItem.options.map(o => (
-                                      <div key={o.key}>{o.key}. {o.text}</div>
-                                    ))}
-                                  </div>
-                                )
-                                : getBoxContent(box)}
-                            </div>
-                            <span className={`absolute -top-3 left-0 text-[9px] font-black uppercase px-1.5 py-0.5 rounded leading-none ${
-                              selected ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-amber-300 border border-white/20'
-                            }`}>
-                              {box.bind}
-                            </span>
-                          </div>
-                          <span
-                            onPointerDown={(e) => startBoxDrag(e, box.id, 'resize')}
-                            className={`absolute -bottom-2 -right-2 w-4 h-4 rounded-md cursor-nwse-resize border-2 border-slate-950 shadow ${
-                              selected ? 'bg-amber-400' : 'bg-amber-500'
-                            }`}
-                          />
-                        </div>
-                      );
-                    })}
+                      <SlideTextBoxOverlay
+                        boxes={customDesign.boxes}
+                        selectedId={selectedBoxId}
+                        item={currentItem}
+                        config={{ ...config, headerTitle: customHeaderTitle }}
+                        currentIndex={selectedQuestionIndex}
+                        scale={canvasWidth > 0 ? postDesignW / canvasWidth : 1}
+                        onSelect={setSelectedBoxId}
+                        onMove={(id, x, y) => updateBox(id, { x, y })}
+                        onResize={(id, patch) => updateBox(id, patch)}
+                        designW={postDesignW}
+                        designH={postDesignH}
+                      />
                     </div>
                   )}
                 </div>
                 {isBoxEditMode ? (
                   <p className={`text-xs text-center leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Drag a box to move it — resize from the bottom-right handle. Click a box to edit its style. Your design saves automatically in this browser.
+                    Drag a box to move it â€” resize from the bottom-right handle. Click a box to edit its style. Your design saves automatically in this browser.
                   </p>
                 ) : (
                   <p className={`text-xs text-center leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Clean preview of your custom design — click "Edit Design" to show and adjust the text boxes.
+                    Clean preview of your custom design â€” click "Edit Design" to show and adjust the text boxes.
                   </p>
                 )}
               </div>

@@ -57,6 +57,7 @@ export type AspectRatio = '16:9' | '4:5' | '9:16';
 
 export interface DeckConfig {
   templateId: string;
+  deckName?: string; // Active deck display name (persisted with the deck config)
   customTheme?: CustomThemeColors;
   brandName: string;
   logoUrl: string;
@@ -122,6 +123,7 @@ export type SlideTextBoxBind =
   | 'questionNumber'
   | 'brand'
   | 'headerTitle'
+  | 'badgeTag'
   | 'footerTag'
   | 'watermark'
   | 'free'

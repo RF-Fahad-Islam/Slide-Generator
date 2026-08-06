@@ -28,12 +28,12 @@ import { IngestionProvider } from './ingestion/ingestionStore';
 import { MathText } from './components/MathText';
 import { OnboardingTour, defaultTourSteps, TourTab } from './components/OnboardingTour';
 import { getTemplateById } from './templates/registry';
-import { defaultSlideTextBoxes } from './utils/slideTextBoxes';
+import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
 import { loadGlobalDefaults } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, LayoutTemplate, Copy, FileText, Download, Sliders } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
 import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
@@ -112,33 +112,50 @@ export default function App() {
     setIsTourOpen(false);
   };
 
-  // Deck Branding Config State
+  // Deck Branding Config State — the preset template's default layout is built
+  // as editable text boxes (templateToTextBoxes) so opening Edit Text Boxes in
+  // Slide Studio lets the user move/resize/restyle every element.
   const globalDefaults = loadGlobalDefaults();
-  const [config, setConfig] = useState<DeckConfig>({
-    templateId: globalDefaults.defaultTemplateId,
-    brandName: "RAKIB'S CLASSROOM",
-    logoUrl: '',
-    logoSize: 'md',
-    logoPosition: 'top-left',
-    headerTitle: 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
-    badgeTag: '৯ম-১০ম শ্রেণি | জীববিজ্ঞান',
-    footerTag: 'BIOMISSION',
-    watermarkAvatar: '',
-    watermarkHandle: 'Hasnat Shuvro',
-    aspectRatio: '16:9',
-    showAnswerInSlide: false,
-    answerMode: 'hidden',
-    showExplanationInSlide: false,
-    questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
-    fontFamily: "'Kalpurush', serif",
-    bgPreset: 'none',
-    bgImageOpacity: 1.0,
-    bgOverlayDarkness: 0.0,
-    slideTextBoxes: defaultSlideTextBoxes(),
+  const [config, setConfig] = useState<DeckConfig>(() => {
+    const base: DeckConfig = {
+      templateId: globalDefaults.defaultTemplateId,
+      brandName: "RAKIB'S CLASSROOM",
+      logoUrl: '',
+      logoSize: 'md',
+      logoPosition: 'top-left',
+      headerTitle: 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
+      badgeTag: '৯ম-১০ম শ্রেণি | জীববিজ্ঞান',
+      footerTag: 'BIOMISSION',
+      watermarkAvatar: '',
+      watermarkHandle: 'Hasnat Shuvro',
+      aspectRatio: '16:9',
+      showAnswerInSlide: false,
+      answerMode: 'hidden',
+      showExplanationInSlide: false,
+      questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
+      fontFamily: "'Kalpurush', serif",
+      bgPreset: 'none',
+      bgImageOpacity: 1.0,
+      bgOverlayDarkness: 0.0,
+      deckName: SAMPLE_DECKS[0]?.name || 'Untitled Deck',
+    };
+    return { ...base, slideTextBoxes: templateToTextBoxes(base) };
   });
 
-  // Current deck's display name (shown at the top of Slide Studio).
-  const [deckName, setDeckName] = useState<string>(SAMPLE_DECKS[0]?.name || 'Untitled Deck');
+  // Deck rename UI — deckName lives on the config so it persists via autosave
+  // and with the saved library deck row.
+  const [isEditingDeckName, setIsEditingDeckName] = useState(false);
+  const [deckNameDraft, setDeckNameDraft] = useState('');
+  const startEditingDeckName = () => {
+    setDeckNameDraft(config.deckName || '');
+    setIsEditingDeckName(true);
+  };
+  const commitDeckName = () => {
+    setIsEditingDeckName(false);
+    const name = deckNameDraft.trim();
+    if (!name) return;
+    setConfig(prev => (prev.deckName === name ? prev : { ...prev, deckName: name }));
+  };
 
   // Expanded physical slides — in 'separate_slide' answer mode every question is
   // followed by its answer slide, so selectedIndex addresses THIS expanded list.
@@ -171,6 +188,7 @@ export default function App() {
         await db.questionDecks.update(editingSavedDeckId, {
           items,
           config,
+          ...(config.deckName ? { name: config.deckName } : {}),
           updatedAt: Date.now(),
         });
       } catch (err) {
@@ -316,8 +334,8 @@ export default function App() {
   };
 
   const resetSlideTextBoxes = () => {
-    if (!window.confirm('Reset the slide text boxes to the default layout?')) return;
-    setTextBoxes(() => defaultSlideTextBoxes());
+    if (!window.confirm('Reset the slide text boxes to the preset template layout?')) return;
+    setTextBoxes(() => templateToTextBoxes(config));
     setSelectedTextBoxId(null);
   };
 
@@ -403,12 +421,15 @@ export default function App() {
     setItems(ensureUniqueIds(selectedItems));
     setSelectedIndex(0);
     setActiveTab('preview');
-    setDeckName(globalDefaults.defaultDeckName);
-    setConfig((prev) => ({
-      ...prev,
-      templateId: globalDefaults.defaultTemplateId,
-      questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
-    }));
+    setConfig((prev) => {
+      const merged = {
+        ...prev,
+        deckName: globalDefaults.defaultDeckName,
+        templateId: globalDefaults.defaultTemplateId,
+        questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
+      };
+      return { ...merged, slideTextBoxes: templateToTextBoxes(merged) };
+    });
     alert(`Created new presentation deck with ${selectedItems.length} selected questions!`);
   };
 
@@ -418,7 +439,10 @@ export default function App() {
     setItems(ensureUniqueIds(sample.items));
     setSelectedIndex(0);
     setActiveTab('preview');
-    setDeckName(sample.name || 'Untitled Deck');
+    setConfig((prev) => {
+      const merged = { ...prev, deckName: sample.name || 'Untitled Deck' };
+      return { ...merged, slideTextBoxes: templateToTextBoxes(merged) };
+    });
   };
 
   const handleOpenDeck = (deckItems: MCQItem[], deckTitle?: string) => {
@@ -426,8 +450,7 @@ export default function App() {
     setItems(ensureUniqueIds(deckItems));
     setSelectedIndex(0);
     if (deckTitle) {
-      setConfig(prev => ({ ...prev, headerTitle: deckTitle }));
-      setDeckName(deckTitle);
+      setConfig(prev => ({ ...prev, headerTitle: deckTitle, deckName: deckTitle }));
     }
     setActiveTab('preview');
   };
@@ -435,7 +458,7 @@ export default function App() {
   const handleOpenDeckSettings = (deckItems: MCQItem[], newConfig?: DeckConfig, savedDeckId?: string) => {
     setItems(ensureUniqueIds(deckItems));
     if (newConfig) {
-      setConfig(newConfig);
+      setConfig(prev => ({ ...newConfig, deckName: newConfig.deckName || prev.deckName }));
     }
     // Track which library deck is being edited so Settings changes persist back
     // to it. Opening settings from Home (no id) clears any prior target.
@@ -668,9 +691,36 @@ export default function App() {
                     {expandedSlides.length} slide{expandedSlides.length === 1 ? '' : 's'}
                   </span>
                 </div>
-                <h1 className={`text-base sm:text-lg font-black tracking-tight leading-tight truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                  {deckName}
-                </h1>
+                <div className="flex items-center gap-2 min-w-0">
+                  {isEditingDeckName ? (
+                    <input
+                      autoFocus
+                      value={deckNameDraft}
+                      onChange={(e) => setDeckNameDraft(e.target.value)}
+                      onBlur={commitDeckName}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitDeckName();
+                        if (e.key === 'Escape') setIsEditingDeckName(false);
+                      }}
+                      className={`w-full max-w-md text-base sm:text-lg font-black tracking-tight rounded-lg px-2 py-1 border outline-none ${
+                        isAppLight ? 'bg-white border-amber-300 text-slate-900' : 'bg-slate-950 border-amber-500/50 text-white'
+                      }`}
+                    />
+                  ) : (
+                    <h1 className={`text-base sm:text-lg font-black tracking-tight leading-tight truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                      {config.deckName || 'Untitled Deck'}
+                    </h1>
+                  )}
+                  <button
+                    onClick={startEditingDeckName}
+                    title="Rename deck"
+                    className={`shrink-0 p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      isAppLight ? 'text-slate-400 hover:text-amber-600 hover:bg-slate-100' : 'text-slate-500 hover:text-amber-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    <PenLine className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div className={`hidden md:flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl border ${
                 isAppLight ? 'bg-slate-50 text-slate-700 border-slate-200' : 'bg-slate-950 text-slate-300 border-slate-800'

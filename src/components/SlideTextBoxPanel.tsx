@@ -43,6 +43,7 @@ const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
   questionNumber: Layers,
   brand: Layers,
   headerTitle: Layers,
+  badgeTag: Layers,
   footerTag: Layers,
   watermark: Layers,
   free: Plus,
@@ -855,7 +856,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
             isAppLight ? 'bg-white border-amber-300 text-amber-700 hover:bg-amber-50' : 'bg-slate-900 border-amber-500/40 text-amber-300 hover:border-amber-500'
           }`}
         >
-          Reset to Default Layout
+          Reset to Template Layout
         </button>
         <button
           type="button"

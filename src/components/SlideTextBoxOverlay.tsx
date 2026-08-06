@@ -14,6 +14,10 @@ interface SlideTextBoxOverlayProps {
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
   onResize: (id: string, patch: ResizePatch) => void;
+  // Optional design-space bounds for canvases that are NOT 1920x1080
+  // (e.g. the social post generator uses a square/portrait canvas).
+  designW?: number;
+  designH?: number;
 }
 
 export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
@@ -26,6 +30,8 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
   onSelect,
   onMove,
   onResize,
+  designW = SLIDE_W,
+  designH = SLIDE_H,
 }) => {
   const dragRef = useRef<{ type: 'move' | 'resize'; boxId: string; startX: number; startY: number; orig: SlideTextBox } | null>(null);
 
@@ -42,14 +48,14 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
       const dx = (ev.clientX - d.startX) / scale;
       const dy = (ev.clientY - d.startY) / scale;
       if (d.type === 'move') {
-        onMove(d.boxId, clamp(d.orig.x + dx, 0, SLIDE_W - d.orig.w), clamp(d.orig.y + dy, 0, SLIDE_H - 40));
+        onMove(d.boxId, clamp(d.orig.x + dx, 0, designW - d.orig.w), clamp(d.orig.y + dy, 0, designH - 40));
       } else {
         const isElement = d.orig.bind === 'icon' || d.orig.bind === 'image';
-        const newW = clamp(d.orig.w + dx, 60, SLIDE_W - d.orig.x);
+        const newW = clamp(d.orig.w + dx, 60, designW - d.orig.x);
         if (isElement) {
           // Aspect-locked resize: keep the box's original width:height ratio
           const ratio = d.orig.h && d.orig.h > 0 ? d.orig.w / d.orig.h : 16 / 9;
-          const newH = clamp(newW / ratio, 40, SLIDE_H - d.orig.y);
+          const newH = clamp(newW / ratio, 40, designH - d.orig.y);
           onResize(d.boxId, { w: newW, h: newH });
         } else {
           onResize(d.boxId, { w: newW });
@@ -98,13 +104,13 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
         // when the box is near the top (so it never pokes toward the controls bar),
         // and above the box only when below would clip at the slide bottom.
         const boxH = box.h || 40;
-        const chipBelow = box.y < 56 || box.y + boxH + 28 <= SLIDE_H;
+        const chipBelow = box.y < 56 || box.y + boxH + 28 <= designH;
         return (
           <div
             key={box.id}
             onPointerDown={(e) => startDrag(e, box.id, 'move')}
             className="absolute cursor-move"
-            style={{ left: box.x, top: box.y, width: box.w, height: isElement ? box.h : undefined }}
+            style={{ left: box.x, top: box.y, width: box.w, height: box.h || undefined }}
           >
             <div
               className={`relative w-full h-full border rounded-lg pointer-events-none transition-colors ${selected ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-white/40'}`}

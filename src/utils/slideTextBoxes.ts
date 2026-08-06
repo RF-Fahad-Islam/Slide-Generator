@@ -12,6 +12,7 @@ export const SLIDE_BOX_BINDS: { bind: SlideTextBoxBind; label: string }[] = [
   { bind: 'questionNumber', label: '+ Question No.' },
   { bind: 'brand', label: '+ Brand Name' },
   { bind: 'headerTitle', label: '+ Header Title' },
+  { bind: 'badgeTag', label: '+ Badge Tag' },
   { bind: 'footerTag', label: '+ Footer Tag' },
   { bind: 'watermark', label: '+ Watermark' },
   { bind: 'free', label: '+ Free Text' },
@@ -32,6 +33,7 @@ export const getBoxFontFamily = (box: SlideTextBox, config: DeckConfig): string 
   switch (box.bind) {
     case 'headerTitle':
     case 'brand':
+    case 'badgeTag':
       return config.headerFont || def;
     case 'options':
     case 'answer':
@@ -80,6 +82,7 @@ export const getSlideBoxContent = (
     case 'questionNumber': return formatSlideQNumber(currentIndex, config.questionNumberFormat);
     case 'brand': return config.brandName || "RAKIB'S CLASSROOM";
     case 'headerTitle': return config.headerTitle || 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া';
+    case 'badgeTag': return config.badgeTag || '';
     case 'footerTag': return config.footerTag || 'BIOMISSION';
     case 'watermark': return config.watermarkHandle || 'Hasnat Shuvro';
     case 'free': return box.text || '';

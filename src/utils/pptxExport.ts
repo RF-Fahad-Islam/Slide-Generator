@@ -1,8 +1,11 @@
 import pptxgen from 'pptxgenjs';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { DeckConfig, MCQItem, SlideTextBox } from '../types';
 import { getSlideBoxContent, getBoxFontFamily } from './slideTextBoxes';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
+import { getSlideIcon } from './slideElements';
 
 export interface PptxSlideSpec {
   item: MCQItem;
@@ -30,7 +33,6 @@ export const exportDeckToPPTX = async (
 
   const template = getTemplateById(config.templateId);
   const colors = template.styles.hexColors;
-  const bgUrl = getBackgroundPresetUrl(config.bgPreset, config.bgImageUrl);
 
   // Physical slide list — explicit (question + answer pairs) or one per item.
   const slideSpecs: PptxSlideSpec[] = slides ?? items.map((item, i) => ({ item, questionIndex: i, isAnswerSlide: false }));
@@ -60,6 +62,38 @@ export const exportDeckToPPTX = async (
   const PX_TO_IN = 13.333 / 1920;
   const PX_TO_PT = PX_TO_IN * 72;
 
+  // Convert a CSS color (hex, hex8, rgb, rgba) to a solid 6-digit hex for PPTX.
+  // rgba() is composited over the slide's base background so the editable shape
+  // approximates the translucent tint SlideCanvas renders.
+  const cssColorToHex = (css: string, baseBg: string = '0F172A'): string => {
+    const s = (css || '').trim();
+    const hex6 = s.match(/^#([0-9a-fA-F]{6})/);
+    if (hex6) return hex6[1].toUpperCase();
+    const hex3 = s.match(/^#([0-9a-fA-F]{3})\b/);
+    if (hex3) {
+      const [r, g, b] = hex3[1];
+      return (r + r + g + g + b + b).toUpperCase();
+    }
+    const rgba = s.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?\s*\)/i);
+    if (rgba) {
+      const [r, g, b] = [parseFloat(rgba[1]), parseFloat(rgba[2]), parseFloat(rgba[3])];
+      const a = rgba[4] === undefined ? 1 : (rgba[4].endsWith('%') ? parseFloat(rgba[4]) / 100 : parseFloat(rgba[4]));
+      const base = [parseInt(baseBg.slice(0, 2), 16), parseInt(baseBg.slice(2, 4), 16), parseInt(baseBg.slice(4, 6), 16)];
+      const blend = base.map((c, i) => Math.round(([r, g, b][i] * a) + c * (1 - a)));
+      return blend.map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+    return s.replace(/^#/, '').toUpperCase();
+  };
+
+  // Render a lucide icon as an inline SVG data URL so decorative icon elements
+  // export as real, selectable picture layers (matches SlideCanvas visuals).
+  const iconToDataUrl = (iconName: string, color: string, size: number): string | null => {
+    const IconComp = getSlideIcon(iconName);
+    if (!IconComp) return null;
+    const svg = renderToStaticMarkup(React.createElement(IconComp, { size, color }));
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  };
+
   // Render one slide text-box as a native editable PPTX layer (so fields and
   // shapes stay editable after import — no flattened image).
   const renderTextBox = (
@@ -70,7 +104,36 @@ export const exportDeckToPPTX = async (
     curIdx: number,
     highlight: boolean
   ) => {
-    if (box.bind === 'icon') return; // lucide SVGs can't embed as native text — skip
+    if (box.bind === 'icon') {
+      // Decorative lucide icon — embed as an SVG image layer (matches SlideCanvas)
+      const iconW = (box.w || box.fontSize * 1.5) * PX_TO_IN;
+      const iconH = (box.h || box.fontSize * 1.5) * PX_TO_IN;
+      // Container shape (pill / card / banner) behind the icon — editable layer
+      if (box.shape && box.shape !== 'plain' && box.bg) {
+        slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
+          x: box.x * PX_TO_IN,
+          y: box.y * PX_TO_IN,
+          w: iconW,
+          h: iconH,
+          fill: { color: cssColorToHex(box.bg, colors.bg) },
+          line: { color: 'FFFFFF', transparency: 92, width: 0.75 },
+          rectRadius: box.shape === 'pill' ? 0.5 : box.shape === 'card' ? 0.16 : 0.16,
+          shadow: { type: 'outer', opacity: 0.2, blur: 8, angle: 90, distance: 4 },
+        });
+      }
+      const iconUrl = iconToDataUrl(box.iconName || 'GraduationCap', box.color || '#fbbf24', box.fontSize);
+      if (iconUrl) {
+        const iconSize = Math.min(box.fontSize, box.w || box.fontSize) * PX_TO_IN;
+        slide.addImage({
+          data: iconUrl,
+          x: box.x * PX_TO_IN + (iconW - iconSize) / 2,
+          y: box.y * PX_TO_IN + (iconH - iconSize) / 2,
+          w: iconSize,
+          h: iconSize,
+        });
+      }
+      return;
+    }
     if (box.bind === 'image') {
       if (box.imageUrl) {
         slide.addImage({
@@ -87,36 +150,82 @@ export const exportDeckToPPTX = async (
 
     // OPTIONS — render each option as its own editable pill/card graphic, and
     // on answer slides give the correct option a highlighted card box + ✓ tick.
+    // Mirrors SlideCanvas: 'pill' options flow left-to-right in a wrapping row,
+    // 'card'/'plain' options stack vertically.
     if (box.bind === 'options') {
       const opts = item.options || [];
       if (opts.length === 0) return;
 
-      const optW = (box.w || 600) * PX_TO_IN;
+      const boxW = (box.w || 600) * PX_TO_IN;
       const optH = Math.max(0.5, (box.fontSize * 1.8 + 16) * PX_TO_IN);
-      const gapY = 0.09;
       const radius = box.shape === 'pill' ? 0.5 : box.shape === 'card' ? 0.12 : 0;
       const fontPt = box.fontSize * PX_TO_PT;
       const fontFace = getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim();
+      const isPills = box.shape === 'pill';
 
-      opts.forEach((opt, oi) => {
-        if (oi >= 4) return;
+      // Estimate the rendered width of an option's text so pills wrap exactly
+      // like the canvas flex-wrap row (~0.55 * fontSize per character).
+      const estimateOptWidth = (opt: MCQItem['options'][number]): number => {
+        const textW = (cleanLatex(opt.text).length + 1) * box.fontSize * 0.55;
+        const keyW = box.fontSize * 1.1;
+        const pad = box.fontSize * 1.6;
+        const tickW = 0;
+        return Math.min(Math.max(textW + keyW + pad + tickW, box.fontSize * 3), (box.w || 600));
+      };
+
+      const placed = opts.map((opt, oi) => {
+        if (oi >= 4) return { opt, oi, x: 0, y: 0, w: 0, h: 0 };
         const isCorrect = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
         const highlighted = highlight && isCorrect;
-        const y = box.y * PX_TO_IN + oi * (optH + gapY);
+
+        if (isPills) {
+          // Wrapping row layout — pill width is estimated, then flowed left-to-right
+          const pillW = estimateOptWidth(opt) * PX_TO_IN;
+          const pillH = optH;
+          const gapX = 12 * PX_TO_IN;
+          const gapY = 10 * PX_TO_IN;
+          const boxX = box.x * PX_TO_IN;
+          // Walk the current row to find where this pill lands
+          let rowStart = boxX;
+          let rowY = box.y * PX_TO_IN;
+          for (let pi = 0; pi < oi; pi++) {
+            const prevW = estimateOptWidth(opts[pi]) * PX_TO_IN;
+            if (rowStart + prevW + gapX + pillW > boxX + boxW) {
+              rowStart = boxX;
+              rowY += pillH + gapY;
+            }
+            rowStart += prevW + gapX;
+          }
+          if (rowStart + pillW > boxX + boxW) {
+            rowStart = boxX;
+            rowY += pillH + gapY;
+          }
+          return { opt, oi, x: rowStart, y: rowY, w: pillW, h: pillH, highlighted };
+        }
+
+        // Vertical stack (card / plain) — full box width rows
+        const y = box.y * PX_TO_IN + oi * (optH + 0.09);
+        return { opt, oi, x: box.x * PX_TO_IN, y, w: boxW, h: optH, highlighted };
+      });
+
+      placed.forEach(({ opt, oi, x, y, w, h, highlighted }) => {
+        if (oi >= 4) return;
+        const isCorrect = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
+        const hl = highlight && isCorrect;
 
         // Option graphic — an editable rounded-rect pill/card (or no shape for plain)
         if (box.shape && box.shape !== 'plain') {
           slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
-            x: box.x * PX_TO_IN,
+            x,
             y,
-            w: optW,
-            h: optH,
+            w,
+            h,
             fill: {
-              color: highlighted
+              color: hl
                 ? colors.optionSelectedBg
-                : (box.bg ? box.bg.replace('#', '') : colors.optionBg),
+                : (box.bg ? cssColorToHex(box.bg, colors.bg) : colors.optionBg),
             },
-            line: highlighted
+            line: hl
               ? { color: colors.optionSelectedBorder, width: 2 }
               : { color: 'FFFFFF', transparency: 92, width: 0.75 },
             rectRadius: radius,
@@ -127,18 +236,18 @@ export const exportDeckToPPTX = async (
           [
             {
               text: `${opt.key}) `,
-              options: { bold: true, color: highlighted ? colors.optionSelectedText : colors.titleColor },
+              options: { bold: true, color: hl ? colors.optionSelectedText : colors.titleColor },
             },
             {
               text: cleanLatex(opt.text),
-              options: { color: highlighted ? colors.optionSelectedText : (box.color || '#ffffff').replace('#', '') },
+              options: { color: hl ? colors.optionSelectedText : (box.color || '#ffffff').replace('#', '') },
             },
           ],
           {
-            x: box.x * PX_TO_IN + (box.shape !== 'plain' ? 0.18 : 0),
+            x: x + (box.shape !== 'plain' ? 0.18 : 0),
             y,
-            w: optW - (highlighted ? 0.7 : 0.3),
-            h: optH,
+            w: w - (hl ? 0.7 : 0.3),
+            h,
             fontSize: fontPt,
             bold: box.bold,
             align: box.align,
@@ -148,12 +257,12 @@ export const exportDeckToPPTX = async (
         );
 
         // Answer tick for the highlighted correct option
-        if (highlighted) {
+        if (hl) {
           slide.addText('✓', {
-            x: box.x * PX_TO_IN + optW - 0.5,
+            x: x + w - 0.5,
             y,
             w: 0.38,
-            h: optH,
+            h,
             fontSize: fontPt,
             bold: true,
             color: colors.optionSelectedText,
@@ -166,12 +275,15 @@ export const exportDeckToPPTX = async (
     }
 
     let text = getSlideBoxContent(box, item, cfg, curIdx);
-    if (!text) return;
+    // Container-only boxes (e.g. a template card behind the stem) have no text
+    // but still render their shape layer.
+    const isContainerOnly = !text && box.shape && box.shape !== 'plain' && box.bg;
+    if (!text && !isContainerOnly) return;
 
-    const lineCount = text.split('\n').length;
+    const lineCount = text ? text.split('\n').length : 0;
     const boxW = (box.w || 600) * PX_TO_IN;
     const boxH = (box.h || lineCount * box.fontSize * 1.45 + 16) * PX_TO_IN;
-    const fill = box.bg ? box.bg.replace('#', '') : undefined;
+    const fill = box.bg ? cssColorToHex(box.bg, colors.bg) : undefined;
 
     // Container shape (pill / card / banner) behind the text — an editable layer
     if (box.shape && box.shape !== 'plain' && fill) {
@@ -186,6 +298,8 @@ export const exportDeckToPPTX = async (
         shadow: box.shape === 'card' ? { type: 'outer', opacity: 0.2, blur: 8, angle: 90, distance: 4 } : undefined,
       });
     }
+
+    if (!text) return;
 
     slide.addText(cleanLatex(text), {
       x: box.x * PX_TO_IN,
@@ -204,18 +318,24 @@ export const exportDeckToPPTX = async (
   // Render the slide background as editable layers (mirrors SlideCanvas):
   // 1) base canvas color as the slide background, 2) the deck's background
   // preset/uploaded image as a full-bleed selectable picture, 3) the
-  // readability tint as a translucent rectangle. All are real PowerPoint
-  // objects so the user can select, move, resize or delete them.
+  // readability tint as a translucent rectangle, 4) the decorative ambient
+  // radial glows. All are real PowerPoint objects so the user can select,
+  // move, resize or delete them. Uses the per-slide effective config so
+  // slide-level (customConfig) background overrides are respected.
   const renderSlideBackground = (slide: any, cfg: DeckConfig) => {
-    slide.background = { color: colors.bg };
+    const slideTemplate = getTemplateById(cfg.templateId, cfg.customTheme);
+    const slideColors = slideTemplate.styles.hexColors;
+    const slideBgUrl = getBackgroundPresetUrl(cfg.bgPreset, cfg.bgImageUrl);
+    const slideIsLight = slideTemplate.themeType === 'light';
+
+    slide.background = { color: slideColors.bg };
 
     const bgOpacity = cfg.bgImageOpacity !== undefined ? cfg.bgImageOpacity : 0.85;
     const overlayDarkness = cfg.bgOverlayDarkness !== undefined ? cfg.bgOverlayDarkness : 0.4;
-    const isLightTmpl = template.themeType === 'light';
 
-    if (bgUrl) {
+    if (slideBgUrl) {
       slide.addImage({
-        ...(bgUrl.startsWith('data:') ? { data: bgUrl } : { path: bgUrl }),
+        ...(slideBgUrl.startsWith('data:') ? { data: slideBgUrl } : { path: slideBgUrl }),
         x: 0,
         y: 0,
         w: 13.333,
@@ -231,9 +351,28 @@ export const exportDeckToPPTX = async (
       w: 13.333,
       h: 7.5,
       fill: {
-        color: isLightTmpl ? 'FFFFFF' : '0F172A',
-        transparency: Math.round((isLightTmpl ? overlayDarkness * 0.4 : overlayDarkness) * 100),
+        color: slideIsLight ? 'FFFFFF' : '0F172A',
+        transparency: Math.round((slideIsLight ? overlayDarkness * 0.4 : overlayDarkness) * 100),
       },
+      line: { type: 'none' },
+    });
+
+    // Decorative ambient radial glows (mirrors SlideCanvas's blurred circles) —
+    // translucent rounded-full shapes at top-right and bottom-left.
+    slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
+      x: 13.333 - 650 * PX_TO_IN,
+      y: 0,
+      w: 650 * PX_TO_IN,
+      h: 650 * PX_TO_IN,
+      fill: { color: slideIsLight ? 'FBBF24' : 'F59E0B', transparency: 90 },
+      line: { type: 'none' },
+    });
+    slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
+      x: 0,
+      y: 7.5 - 550 * PX_TO_IN,
+      w: 550 * PX_TO_IN,
+      h: 550 * PX_TO_IN,
+      fill: { color: slideIsLight ? '3B82F6' : '60A5FA', transparency: 90 },
       line: { type: 'none' },
     });
   };
