@@ -369,22 +369,14 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   // Answer display mode — 3-state (hidden / highlight / separate_slide). The
   // legacy `showAnswerInSlide` boolean is kept in sync so saved decks without
   // `answerMode` still behave correctly (only 'highlight' highlights in-place).
+  // ALWAYS deck-wide: slide expansion (question + answer pairs) is a deck-level
+  // property, so a per-slide answerMode override would silently do nothing.
   const handleAnswerModeChange = (mode: AnswerMode) => {
-    const patch: Partial<DeckConfig> = {
+    onUpdateConfig({
+      ...config,
       answerMode: mode,
       showAnswerInSlide: mode === 'highlight',
-    };
-    if (settingsScope === 'slide') {
-      onUpdateActiveSlideConfig?.({
-        ...(activeSlideConfig || {}),
-        ...patch,
-      });
-    } else {
-      onUpdateConfig({
-        ...config,
-        ...patch,
-      });
-    }
+    });
   };
 
   // Theme field change — always writes to the ACTIVE slide's customConfig,
@@ -2062,6 +2054,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 );
               })}
             </div>
+            <p className={`text-xs font-semibold flex items-center gap-1.5 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+              <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              Applies to the whole deck (answer slides change the total slide count).
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">

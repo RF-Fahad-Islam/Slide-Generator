@@ -143,6 +143,12 @@ export default function App() {
   const activeQuestionIndex =
     activeSlideRef?.questionIndex ?? Math.min(selectedIndex, Math.max(0, items.length - 1));
 
+  // Keep selectedIndex inside the expanded slide list — covers deleting a question
+  // while on its (answer) slide and answer-mode changes that shrink the deck.
+  useEffect(() => {
+    setSelectedIndex(prev => Math.min(prev, Math.max(0, expandedSlides.length - 1)));
+  }, [expandedSlides.length]);
+
   // IndexedDB Auto-Sync Hook
   const { isSyncing, lastSavedTime } = useIndexedDBSync(
     items,

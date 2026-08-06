@@ -656,8 +656,9 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
       {slideTextBoxes.length > 0 && (
         <div className="absolute inset-0 z-20 pointer-events-none">
           {isAnswerVariant && item.answer && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-5 flex items-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl"
-              style={{ backgroundColor: 'rgba(16,185,129,0.2)', borderColor: 'rgba(52,211,153,0.8)', color: '#6ee7b7' }}>
+            <div className={`absolute left-1/2 -translate-x-1/2 top-5 flex items-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl ${
+              isLight ? 'bg-emerald-100 border-emerald-500 text-emerald-900' : 'bg-emerald-500/20 border-emerald-400 text-emerald-100'
+            }`}>
               <Check className="w-5 h-5 stroke-[3]" />
               <span className="text-2xl font-black">উত্তর: {item.answer}</span>
             </div>
@@ -726,7 +727,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                       const isCorrect = showAnswerHighlight && (opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase());
                       const highlight = showAnswerHighlight && isCorrect;
                       const containerStyle: React.CSSProperties = highlight
-                        ? { backgroundColor: 'rgba(245,158,11,0.22)', border: '2px solid rgba(245,158,11,0.85)', color: highlight ? '#fcd34d' : undefined }
+                        ? {
+                            backgroundColor: `${styles.hexColors.optionSelectedBg}38`,
+                            border: `2px solid ${styles.hexColors.optionSelectedBorder}`,
+                            color: styles.hexColors.optionSelectedText,
+                          }
                         : { backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.15)' };
                       if (box.shape === 'pill') {
                         return (
@@ -755,7 +760,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                         );
                       }
                       return (
-                        <div key={opt.key} className="flex items-start gap-3" style={highlight ? { color: '#fcd34d' } : undefined}>
+                        <div key={opt.key} className="flex items-start gap-3" style={highlight ? { color: styles.hexColors.optionSelectedText } : undefined}>
                           <span className="font-black shrink-0">{opt.key}.</span>
                           <span><MathText text={opt.text} /></span>
                           {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}

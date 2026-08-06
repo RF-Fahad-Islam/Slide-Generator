@@ -45,10 +45,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [isDeckPaperOpen, setIsDeckPaperOpen] = useState(false);
   const exportCanvasRef = useRef<HTMLDivElement | null>(null);
 
-  // Expanded physical slides. In 'separate_slide' answer mode every question is
-  // followed by its answer slide. `includeAnswerSlides` is the per-export toggle —
-  // it defaults to following the deck's answer mode but can be flipped per export.
+  // Expanded physical slide lists. `fullSlides` mirrors what the user sees in the
+  // preview (deck's answer mode); `answerSlides` FORCES 'separate_slide' expansion
+  // so the "Include Answer Slides" checkbox adds question + answer pairs even when
+  // the deck itself is in 'hidden' or 'highlight' mode; `questionSlides` is clean
+  // question-only. The checkbox defaults to following the deck mode but can be
+  // flipped per export.
   const fullSlides = useMemo(() => expandDeckSlides(items, config), [items, config]);
+  const answerSlides = useMemo(
+    () => expandDeckSlides(items, { ...config, answerMode: 'separate_slide' }),
+    [items, config]
+  );
   const questionSlides = useMemo(
     () => expandDeckSlides(items, { ...config, answerMode: 'hidden', showAnswerInSlide: false }),
     [items, config]
@@ -58,10 +65,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     currentSlideRef ?? fullSlides[Math.min(currentIndex, Math.max(0, fullSlides.length - 1))] ?? null;
 
   const [includeAnswerSlides, setIncludeAnswerSlides] = useState<boolean>(() => effectiveAnswerMode(config) === 'separate_slide');
-  // Sync the per-export default to the deck's answer mode each time the modal opens
-  // (so a deck switched to 'separate_slide' exports answer slides by default).
+  // Sync the per-export default to the deck's answer mode each time the modal
+  // OPENS (not on every config change while it's open, which would clobber the
+  // user's manual toggle mid-export).
+  const prevOpenRef = useRef(false);
   useEffect(() => {
-    if (isOpen) setIncludeAnswerSlides(effectiveAnswerMode(config) === 'separate_slide');
+    if (isOpen && !prevOpenRef.current) {
+      setIncludeAnswerSlides(effectiveAnswerMode(config) === 'separate_slide');
+    }
+    prevOpenRef.current = isOpen;
   }, [isOpen, config]);
   // PPTX: native editable layers (text boxes / shapes as layers) by default —
   // the flattened exact-image fallback is opt-in.
@@ -78,7 +90,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       ? [currentSlide]
       : []
     : includeAnswerSlides
-    ? fullSlides
+    ? answerSlides
     : questionSlides;
 
   // Question Paper gets the raw items (scoped).
