@@ -136,6 +136,10 @@ function safeError(err: any): string {
   if (/credit|afford|insufficient|top up|balance/i.test(msg)) {
     msg =
       'Your AI provider is out of credits. Switch to Gemini in the Keys tab (Google free tier), or top up your OpenRouter account, then try again.';
+  } else if (/RESOURCE_EXHAUSTED|quota|rate.?limit|429/i.test(msg)) {
+    const retryMatch = msg.match(/retry in ([\d.]+)s/i);
+    const retryHint = retryMatch ? ` Retry in about ${Math.ceil(Number(retryMatch[1]))}s.` : ' Wait a bit and try again.';
+    msg = `Your AI provider's rate limit or free-tier daily quota was reached.${retryHint} Add your own API key in the Keys tab, switch provider, or wait for the quota to reset.`;
   }
   return msg;
 }

@@ -63,8 +63,12 @@ export function sanitizeMCQs(rawQuestions: unknown[], startIndex = 0): SanitizeR
     const rawAnswer = normalizeBanglaNumerals(String(q.answer ?? '').trim());
     const answerKeys = validOptions.map((o) => o.key);
     let answer = answerKeys.includes(rawAnswer) ? rawAnswer : rawAnswer.toUpperCase();
-    if (!answerKeys.includes(answer) && answerKeys.length > 0) {
-      answer = answerKeys[0];
+    // An option flagged isCorrect wins if the answer key itself didn't match
+    // any option (e.g. AI returned "B" but options are keyed "খ"). Otherwise
+    // leave it unresolved rather than silently guessing option 1 is correct.
+    if (!answerKeys.includes(answer)) {
+      const correctOpt = validOptions.find((o) => o.isCorrect);
+      answer = correctOpt ? correctOpt.key : '';
     }
 
     idCounter += 1;
@@ -80,7 +84,7 @@ export function sanitizeMCQs(rawQuestions: unknown[], startIndex = 0): SanitizeR
       answer,
       source: q.source ? String(q.source).trim() : undefined,
       explanation: q.explanation ? String(q.explanation).trim() : undefined,
-      confidence: q.confidence === 'low' ? 'low' : 'high',
+      confidence: q.confidence === 'low' || !answer ? 'low' : 'high',
     });
   });
 

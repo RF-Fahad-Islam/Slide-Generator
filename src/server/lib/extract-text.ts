@@ -22,6 +22,19 @@ export function hasCleanBanglaText(text: string): boolean {
   return nonSpace >= 100 && banglaRatio(text) >= 0.3;
 }
 
+// Legacy Bangla fonts (Bijoy etc.) map Bangla glyphs onto the ASCII range, so a
+// PDF with a broken Bangla text layer still extracts as "printable ASCII" —
+// but it reads as garbled clusters, not real English prose. A genuinely clean
+// English/Latin text layer is near-100% printable ASCII AND has close to zero
+// Bangla codepoints; that combination is what we trust for the local fast path.
+export function hasCleanLatinText(text: string): boolean {
+  const nonSpace = text.replace(/\s+/g, '');
+  if (nonSpace.length < 40) return false;
+  if (banglaRatio(text) >= 0.05) return false;
+  const printableAscii = (nonSpace.match(/[\x20-\x7E]/g) || []).length;
+  return printableAscii / nonSpace.length >= 0.85;
+}
+
 function mimeToKind(mimeType: string | undefined, filename?: string): 'pdf' | 'docx' | 'text' | 'image' | 'doc' | 'unknown' {
   const mt = (mimeType || '').toLowerCase();
   const ext = (filename || '').split('.').pop()?.toLowerCase() || '';
@@ -87,8 +100,10 @@ export async function extractTextFromBuffer(
     const pages = await extractPdfText(buffer);
     const text = pages.map((p) => p.text).join('\n\n').trim();
 
-    // Clean Unicode Bangla text layer → fast local path (no OCR needed).
-    if (hasCleanBanglaText(text)) {
+    // Clean Unicode Bangla text layer, OR a clean English/Latin text layer →
+    // fast local path (no OCR needed). Only genuinely ambiguous/garbled
+    // (likely legacy Bijoy-encoded Bangla) text layers fall through to OCR.
+    if (hasCleanBanglaText(text) || hasCleanLatinText(text)) {
       return { kind: 'text', text, pages, warnings: [] };
     }
 
