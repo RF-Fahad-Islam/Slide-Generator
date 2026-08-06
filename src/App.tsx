@@ -10,6 +10,7 @@ import { AIUploader } from './components/AIUploader';
 import { DeckManager } from './components/DeckManager';
 import { DeckSettingsModal } from './components/DeckSettingsModal';
 import { ExportModal } from './components/ExportModal';
+import { BatchExportModal } from './components/BatchExportModal';
 import { TemplateLibraryModal } from './components/TemplateLibraryModal';
 import { EditQuestionModal } from './components/EditQuestionModal';
 import { TemplateCreator } from './components/TemplateCreator';
@@ -46,8 +47,11 @@ export default function App() {
   const [isAnswerRevealMode, setIsAnswerRevealMode] = useState<boolean>(false);
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
-  // Export scope per entry point — sidebar "Export Slides" = all, Slide Studio Download = current slide only
+  // Export scope per entry point — My Decks card download = all, Slide Studio Download = whole active deck
   const [exportScope, setExportScope] = useState<'all' | 'current'>('all');
+  // Batch deck export modal — opened from the navbar "Export Slides" buttons; lets the
+  // user pick multiple saved decks and download each as its own PPTX.
+  const [isBatchExportModalOpen, setIsBatchExportModalOpen] = useState<boolean>(false);
   // Export override — when downloading a saved deck from "My Decks", the modal
   // exports THAT deck's items/config instead of the active workspace deck.
   const [exportDeckOverride, setExportDeckOverride] = useState<{ items: MCQItem[]; config: DeckConfig } | null>(null);
@@ -585,8 +589,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         questionCount={items.length}
         onOpenExportModal={() => {
-          setExportScope('all');
-          setIsExportModalOpen(true);
+          setIsBatchExportModalOpen(true);
         }}
         isSyncing={isSyncing}
         lastSavedTime={lastSavedTime}
@@ -901,10 +904,10 @@ export default function App() {
                           <span className="hidden 2xl:inline">Deck Settings</span>
                         </button>
 
-                        {/* Download Current Slide — Export modal scoped to the active slide only */}
+                        {/* Download — Export modal scoped to the whole active deck */}
                         <button
                           onClick={() => {
-                            setExportScope('current');
+                            setExportScope('all');
                             setIsExportModalOpen(true);
                           }}
                           disabled={items.length === 0}
@@ -913,7 +916,7 @@ export default function App() {
                               ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
                               : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
                           } disabled:opacity-40 disabled:cursor-not-allowed`}
-                          title="Download the current slide — PPTX, PDF, PNG, ZIP (current slide only)"
+                          title="Download the whole deck — PPTX, PDF, PNG, ZIP"
                           data-tour="studio-download"
                         >
                           <Download className="w-3.5 h-3.5 text-amber-500" />
@@ -1228,6 +1231,14 @@ export default function App() {
         slideRef={slideRef}
         appTheme={appTheme}
         scope={exportScope}
+      />
+
+      {/* Batch Deck Export Modal — navbar "Export Slides": pick multiple decks → PPTX each */}
+      <BatchExportModal
+        isOpen={isBatchExportModalOpen}
+        onClose={() => setIsBatchExportModalOpen(false)}
+        seedConfig={config}
+        appTheme={appTheme}
       />
 
       {/* Deck Settings Modal — deck-scoped branding/layout with draft + live preview */}
