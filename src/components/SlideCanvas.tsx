@@ -147,6 +147,23 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   // (template header/middle/footer are hidden — only background + boxes render).
   const isBoxedDesign = slideTextBoxes.length > 0;
 
+  // Custom accent color override (Template Creator accent picker) — applied via
+  // inline styles so it overrides the default amber branding whenever set.
+  const accentColor = effectiveConfig.accentColorCustom;
+  const accentBgStyle: React.CSSProperties | undefined = accentColor
+    ? { backgroundColor: accentColor }
+    : undefined;
+  const accentTextStyle: React.CSSProperties | undefined = accentColor
+    ? { color: accentColor }
+    : undefined;
+  const accentBorderStyle: React.CSSProperties | undefined = accentColor
+    ? { borderColor: accentColor }
+    : undefined;
+  const accentBgSoft =
+    accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? `${accentColor}26` : undefined;
+  const accentBorderSoft =
+    accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? `${accentColor}66` : undefined;
+
   return (
     <div
       ref={ref}
@@ -236,7 +253,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                   />
                 </div>
               ) : (
-                <div className={`${logoDimensions} rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black text-3xl flex items-center justify-center shadow-xl shadow-amber-500/20 shrink-0`}>
+                <div className={`${logoDimensions} rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black text-3xl flex items-center justify-center shadow-xl shadow-amber-500/20 shrink-0`} style={accentBgStyle}>
                   {effectiveConfig.brandName ? effectiveConfig.brandName.charAt(0).toUpperCase() : 'R'}
                 </div>
               )}
@@ -246,8 +263,8 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                 </h2>
                 {effectiveConfig.headerTitle && (
                   <p className={`text-lg font-bold flex items-center gap-2 mt-1 drop-shadow-sm ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
-                    <BookOpen className={`w-5 h-5 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
-                    {effectiveConfig.headerTitle}
+                    <BookOpen className={`w-5 h-5 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} style={accentTextStyle} />
+                    <span style={accentTextStyle}>{effectiveConfig.headerTitle}</span>
                   </p>
                 )}
               </div>
@@ -286,7 +303,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               <div className={`flex items-start gap-3 ${bodySizeClass} ${bodyWeightClass} ${questionAlignClass} leading-relaxed tracking-wide drop-shadow-sm ${
                 isLight ? 'text-slate-950' : 'text-white'
               }`}>
-                <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xl shrink-0">
+                <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xl shrink-0" style={accentBgStyle}>
                   {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
                 </span>
                 <div className="flex-1">
@@ -301,7 +318,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                     isLight
                       ? 'bg-amber-100 border-amber-300 text-amber-950'
                       : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                  }`}>
+                  }`} style={accentColor ? { backgroundColor: accentBgSoft, borderColor: accentBorderSoft, color: accentColor } : undefined}>
                     <Award className="w-5 h-5" />
                     <span>{item.source}</span>
                   </div>
@@ -394,7 +411,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             {/* Header: Number, Source */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30" style={accentBgStyle}>
                   {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
                 </span>
                 <span className={`text-3xl font-extrabold ${styles.titleColor}`}>
@@ -407,7 +424,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                   isLight
                     ? 'bg-amber-100 border-amber-300 text-amber-950'
                     : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                }`}>
+                }`} style={accentColor ? { backgroundColor: accentBgSoft, borderColor: accentBorderSoft, color: accentColor } : undefined}>
                   <Award className="w-5 h-5" />
                   <span>{item.source}</span>
                 </div>
@@ -453,7 +470,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             {item.prompt && (
               <p className={`mt-4 text-2xl font-bold italic ${
                 isLight ? 'text-amber-800' : 'text-amber-300'
-              }`}>
+              }`} style={accentTextStyle}>
                 {item.prompt}
               </p>
             )}
@@ -476,6 +493,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                           ? 'bg-white border-2 border-slate-200 text-slate-950 shadow-md'
                           : styles.optionBg + ' border-slate-300/40')
                   }`}
+                  style={accentColor && isCorrect ? { backgroundColor: accentBgSoft, borderColor: accentColor } : undefined}
                 >
                   {/* Option Badge Key */}
                   <div
@@ -486,6 +504,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                         ? 'bg-slate-900 text-white border border-slate-800'
                         : 'bg-white/10 text-slate-100 border border-white/15'
                     }`}
+                    style={accentColor && isCorrect ? accentBgStyle : undefined}
                   >
                     {opt.key}
                   </div>
@@ -501,7 +520,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
 
                   {/* Correct Checkmark Indicator */}
                   {isCorrect && (
-                    <div className="w-11 h-11 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-xl animate-pulse">
+                    <div className="w-11 h-11 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-xl animate-pulse" style={accentBgStyle}>
                       <Check className="w-7 h-7 stroke-[3.5]" />
                     </div>
                   )}
@@ -563,11 +582,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                   src={effectiveConfig.watermarkAvatar}
                   alt="Instructor Avatar"
                   className="w-13 h-13 rounded-full object-cover border-2 border-amber-400 shadow-xl"
+                  style={accentBorderStyle}
                 />
               ) : (
                 <div className={`w-13 h-13 rounded-full border-2 border-amber-400 flex items-center justify-center font-bold shadow-lg ${
                   isLight ? 'bg-slate-200 text-slate-900' : 'bg-slate-900 text-amber-300'
-                }`}>
+                }`} style={accentBorderStyle}>
                   <User className="w-6 h-6" />
                 </div>
               )}
@@ -589,7 +609,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             <div className="flex items-center gap-3">
               <span className={`text-3xl font-black tracking-widest uppercase font-mono drop-shadow-md ${
                 isLight ? 'text-amber-800' : 'text-amber-400'
-              }`}>
+              }`} style={accentTextStyle}>
                 {effectiveConfig.footerTag || "BIOMISSION"}
               </span>
             </div>

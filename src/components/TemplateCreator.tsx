@@ -59,18 +59,29 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [templateId, setTemplateId] = useState(config.templateId === 'custom-theme' ? 'rakib-dark' : config.templateId);
-  const [accentColor, setAccentColor] = useState(config.accentColorCustom || '#f59e0b');
+  const [accentColor, setAccentColor] = useState<string | null>(config.accentColorCustom || null);
   const [fontFamily, setFontFamily] = useState(config.fontFamily || FONT_PRESETS[0].family);
   const [bgPreset, setBgPreset] = useState<DeckConfig['bgPreset']>(config.bgPreset || 'none');
+  const [bgImageOpacity, setBgImageOpacity] = useState<number>(
+    config.bgPreset && config.bgPreset !== 'none' ? (config.bgImageOpacity ?? 0.55) : 0.55
+  );
+  const [bgOverlayDarkness, setBgOverlayDarkness] = useState<number>(
+    config.bgPreset && config.bgPreset !== 'none' ? (config.bgOverlayDarkness ?? 0.35) : 0.35
+  );
   const [presets, setPresets] = useState<DeckTemplatePreset[]>(getTemplatePresets());
 
-  // Rebuild the candidate design whenever a knob changes.
+  // Rebuild the candidate design whenever a knob changes. Accent is only emitted
+  // when the user actively picks a color (null = "Default" → theme accent stays).
+  // Backgrounds blend over the base theme (opacity ≈ 0.55) so the theme stays visible.
   const candidateConfig: DeckConfig = {
     ...config,
     templateId,
-    accentColorCustom: accentColor,
     fontFamily,
     bgPreset,
+    accentColorCustom: accentColor || undefined,
+    ...(bgPreset !== 'none'
+      ? { bgImageOpacity, bgOverlayDarkness }
+      : {}),
   };
 
   const previewItem = items[0] || FALLBACK_ITEM;
@@ -146,17 +157,21 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
             />
           </div>
 
-          {/* Base theme */}
+          {/* Theme Gallery — base themes, each card adapts to its OWN light/dark type */}
           <div className={`p-5 rounded-2xl border space-y-3 ${
             isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
           }`}>
             <span className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
               <Palette className="w-4 h-4 text-amber-500" />
-              Base Theme
+              Theme Gallery
             </span>
+            <p className={`text-xs leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              Pick a base theme — dark themes use light text on slate cards, light themes use dark text on white cards.
+            </p>
             <div className="grid grid-cols-2 gap-2">
               {TEMPLATES.filter((t) => t.id !== 'custom-theme').map((tmpl) => {
                 const isSelected = templateId === tmpl.id;
+                const isLightTmpl = tmpl.themeType === 'light';
                 return (
                   <button
                     key={tmpl.id}
@@ -165,17 +180,17 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-amber-500/10 border-amber-400 ring-2 ring-amber-400/40'
-                        : isAppLight
+                        : isLightTmpl
                         ? 'bg-white border-slate-300 hover:border-amber-300'
                         : 'bg-slate-900 border-slate-700 hover:border-amber-500/40'
                     }`}
                   >
                     <div className={`h-8 rounded-lg mb-1.5 ${tmpl.previewGradient} border border-white/10`} />
-                    <span className={`block text-xs font-extrabold truncate ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>{tmpl.name}</span>
+                    <span className={`block text-xs font-extrabold truncate ${isLightTmpl ? 'text-slate-900' : 'text-slate-100'}`}>{tmpl.name}</span>
                     <span className={`block text-[10px] font-bold uppercase mt-0.5 ${
-                      tmpl.themeType === 'light' ? 'text-amber-600' : 'text-indigo-400'
+                      isLightTmpl ? 'text-amber-600' : 'text-indigo-400'
                     }`}>
-                      {tmpl.themeType === 'light' ? '☀️ Light' : '🌙 Dark'}
+                      {isLightTmpl ? '☀️ Light' : '🌙 Dark'}
                     </span>
                   </button>
                 );
@@ -192,6 +207,21 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
               Accent Color
             </span>
             <div className="flex flex-wrap items-center gap-2">
+              {/* Default chip — clears the accent so the base theme's own accent is used */}
+              <button
+                type="button"
+                onClick={() => setAccentColor(null)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                  accentColor === null
+                    ? 'bg-amber-500 text-slate-950 border-amber-400'
+                    : isAppLight
+                    ? 'bg-white border-slate-300 text-slate-600 hover:text-slate-900'
+                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white'
+                }`}
+                title="Use the base theme's built-in accent color"
+              >
+                ✕ Default
+              </button>
               {ACCENT_COLORS.map((c) => (
                 <button
                   key={c}
@@ -205,11 +235,15 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
               ))}
               <input
                 type="color"
-                value={accentColor}
+                value={accentColor || '#f59e0b'}
                 onChange={(e) => setAccentColor(e.target.value)}
                 className="w-8 h-8 rounded-lg cursor-pointer border border-white/20 bg-transparent"
               />
             </div>
+            <p className={`text-[11px] leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              The accent colors the logo box, question number badge, source badge, correct-answer highlight &amp; footer. Leave on
+              "Default" to keep the base theme's accent.
+            </p>
           </div>
 
           {/* Font */}
@@ -239,6 +273,9 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
               <ImageIcon className="w-4 h-4 text-amber-500" />
               Slide Background
             </span>
+            <p className={`text-xs leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              Backgrounds blend OVER the base theme at ~55% opacity so the theme's colors stay visible.
+            </p>
             <div className="grid grid-cols-2 gap-2">
               {BACKGROUND_PRESETS.map((p) => {
                 const isSelected = bgPreset === p.id;
@@ -261,6 +298,44 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
                 );
               })}
             </div>
+
+            {/* Blend opacity slider — only shown when a background is active */}
+            {bgPreset !== 'none' && (
+              <div className={`p-4 rounded-2xl border space-y-3 ${
+                isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
+              }`}>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span className={isAppLight ? 'text-slate-600' : 'text-slate-300'}>Background Blend Opacity</span>
+                    <span className="text-amber-400 font-mono">{Math.round(bgImageOpacity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.05"
+                    value={bgImageOpacity}
+                    onChange={(e) => setBgImageOpacity(parseFloat(e.target.value))}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span className={isAppLight ? 'text-slate-600' : 'text-slate-300'}>Text Readability Overlay</span>
+                    <span className="text-amber-400 font-mono">{Math.round(bgOverlayDarkness * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.0"
+                    max="0.85"
+                    step="0.05"
+                    value={bgOverlayDarkness}
+                    onChange={(e) => setBgOverlayDarkness(parseFloat(e.target.value))}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
