@@ -1,0 +1,7 @@
+
+> react-example@0.0.0 dev
+> tsx server.ts
+
+◇ injected env (1) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+[31mWebSocket server error: Port 24678 is already in use[39m
+EdTech MCQ Slide Generator Server running on http://0.0.0.0:3000

@@ -2,20 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { MCQItem, DeckConfig, SavedDeck } from '../types';
 import { db } from '../db/dexie';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
-import { getTemplateById } from '../templates/registry';
 import { downloadJSON } from '../utils/mcqJson';
-import { DeckSlideThumb } from './DeckSlideThumb';
+import { DeckCard } from './DeckCard';
 import {
   Library,
-  Download,
-  Presentation,
-  Share2,
-  Sliders,
-  Trash2,
   Plus,
   CheckCircle2,
-  Calendar,
-  FileText,
   FolderPlus,
   Sparkles,
   RefreshCw,
@@ -291,144 +283,32 @@ export const MyDecksView: React.FC<MyDecksViewProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {savedDecks.map((deck) => {
-              const tmpl = getTemplateById(deck.config?.templateId || 'rakib-dark');
-              return (
-                <div
-                  key={deck.id}
-                  className={`p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-5 group ${
-                    isAppLight
-                      ? 'glass-card-fatty-light hover:border-amber-400'
-                      : 'glass-card-fatty bg-slate-900/90 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  {/* Real first-slide thumbnail */}
-                  <DeckSlideThumb
-                    items={deck.items}
-                    config={deck.config}
-                    templateName={tmpl.name}
-                  />
-
-                  <div className="space-y-3">
-                    {/* Card Top Badge Header */}
-                    <div className={`flex items-center justify-between gap-2 border-b pb-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800/60'}`}>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono ${
-                          isAppLight ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-slate-800 text-amber-300'
-                        }`}>
-                          {deck.items.length} Questions
-                        </span>
-                        {deck.subject && (
-                          <span className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono border ${
-                            isAppLight ? 'bg-slate-100 text-slate-800 border-slate-200' : 'bg-slate-950 text-slate-300 border-slate-800'
-                          }`}>
-                            {deck.subject}
-                          </span>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={() => handleDeleteDeck(deck.id, deck.name)}
-                        className="text-slate-400 hover:text-rose-500 p-1 rounded transition-colors cursor-pointer"
-                        title="Delete Deck"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    {/* Title */}
-                    <div>
-                      <h3 className={`text-base font-extrabold line-clamp-2 leading-snug ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                        {deck.name}
-                      </h3>
-                      <p className="text-xs font-bold text-amber-500 mt-1">
-                        {deck.badgeTag || deck.subject || 'Presentation Deck'}
-                      </p>
-                    </div>
-
-                    {/* Last Updated */}
-                    <div className={`flex items-center gap-1.5 text-[10px] font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                      <Calendar className="w-3 h-3" />
-                      Updated {new Date(deck.updatedAt).toLocaleDateString()}
-                    </div>
-                  </div>
-
-                  {/* Card Action Buttons */}
-                  <div className="space-y-2 pt-2 border-t border-slate-800/60">
-                    <button
-                      onClick={() => onDownloadDeck({ items: deck.items, config: deck.config })}
-                      disabled={deck.items.length === 0}
-                      className={`w-full py-2.5 px-4 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 shadow transition-all ${
-                        deck.items.length === 0
-                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                          : 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer'
-                      }`}
-                      title={deck.items.length === 0 ? 'This deck has no slides to export' : `Download "${deck.name}" as PPTX / PDF / PNG / ZIP`}
-                    >
-                      <Download className="w-4 h-4 stroke-[2.5]" />
-                      <span>Download Deck</span>
-                    </button>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => onOpenDeck(deck.items, deck.name)}
-                        className={`py-2 px-2 rounded-xl border text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
-                          isAppLight
-                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-                            : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
-                        }`}
-                        title="Open this deck in Slide Studio"
-                      >
-                        <Presentation className="w-3 h-3" />
-                        <span className="truncate">Studio</span>
-                      </button>
-
-                      <button
-                        onClick={() => onOpenSocialGenerator(deck.items)}
-                        className={`py-2 px-2 rounded-xl border text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
-                          isAppLight
-                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-                            : 'bg-slate-950 hover:bg-slate-800 text-indigo-400 border-slate-800'
-                        }`}
-                        title="Create social media posts from this deck"
-                      >
-                        <Share2 className="w-3 h-3" />
-                        <span className="truncate">Social</span>
-                      </button>
-
-                      <button
-                        onClick={() => onOpenDeckSettings(deck.items, deck.config, deck.id)}
-                        className={`py-2 px-2 rounded-xl border text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
-                          isAppLight
-                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-                            : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
-                        }`}
-                        title="Edit this deck's branding & settings"
-                      >
-                        <Sliders className="w-3 h-3" />
-                        <span className="truncate">Settings</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <span className={`text-[10px] font-mono font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-                        {deck.items.length} MCQs
-                      </span>
-                      <button
-                        onClick={() => handleExportDeckJson(deck)}
-                        className={`text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors ${
-                          isAppLight ? 'text-amber-700 hover:text-amber-900' : 'text-amber-400 hover:text-amber-300'
-                        }`}
-                        title="Download this deck as re-importable JSON"
-                      >
-                        <FileText className="w-3 h-3" />
-                        Export JSON
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {savedDecks.map((deck) => (
+              <DeckCard
+                key={deck.id}
+                id={deck.id}
+                title={deck.name}
+                badgeTag={deck.badgeTag || deck.subject || 'Presentation Deck'}
+                questionCount={deck.items.length}
+                items={deck.items}
+                config={deck.config}
+                lastUpdated={`Updated ${new Date(deck.updatedAt).toLocaleDateString()}`}
+                subject={deck.subject}
+                appTheme={appTheme}
+                onOpen={() => onOpenDeck(deck.items, deck.name)}
+                onSettings={() => onOpenDeckSettings(deck.items, deck.config, deck.id)}
+                onSocial={() => onOpenSocialGenerator(deck.items)}
+                onDownload={() => onDownloadDeck({ items: deck.items, config: deck.config })}
+                downloadDisabled={deck.items.length === 0}
+                downloadTitle={
+                  deck.items.length === 0
+                    ? 'This deck has no slides to export'
+                    : `Download "${deck.name}" as PPTX / PDF / PNG / ZIP`
+                }
+                onExportJson={() => handleExportDeckJson(deck)}
+                onDelete={() => handleDeleteDeck(deck.id, deck.name)}
+              />
+            ))}
           </div>
         )}
       </div>

@@ -4,7 +4,7 @@ import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { getTemplateById, TEMPLATES } from '../templates/registry';
 import { getTemplatePresets } from '../utils/templatePresets';
 import { SlideCanvas } from './SlideCanvas';
-import { DeckSlideThumb } from './DeckSlideThumb';
+import { DeckCard } from './DeckCard';
 import {
   Presentation,
   Share2,
@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   ArrowRight,
   Database,
-  Calendar,
   FileText,
   Palette,
   Zap,
@@ -751,111 +750,23 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
 
         {/* Decks Grid Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {decksList.map((deck) => {
-            const tmpl = getTemplateById(deck.config.templateId);
-
-            return (
-              <div
-                key={deck.id}
-                className={`p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-5 group ${
-                  deck.isCurrent
-                    ? isAppLight
-                      ? 'bg-amber-50/90 border-amber-400 shadow-xl ring-2 ring-amber-400/40'
-                      : 'bg-slate-900 border-amber-500/60 shadow-2xl ring-2 ring-amber-500/30'
-                    : isAppLight
-                    ? 'glass-card-fatty-light hover:border-amber-400'
-                    : 'glass-card-fatty bg-slate-900/90 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                {/* Real first-slide thumbnail */}
-                <DeckSlideThumb
-                  items={deck.items}
-                  config={deck.config}
-                  isCurrent={deck.isCurrent}
-                  templateName={tmpl.name}
-                />
-
-                <div className="space-y-3">
-                  {/* Card Top Badge Header */}
-                  <div className={`flex items-center justify-between gap-2 border-b pb-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800/60'}`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono ${
-                        deck.isCurrent
-                          ? 'bg-amber-500 text-slate-950 shadow-sm'
-                          : isAppLight
-                          ? 'bg-slate-100 text-amber-700 border border-amber-300'
-                          : 'bg-slate-800 text-amber-300'
-                      }`}>
-                        {deck.questionCount} Questions
-                      </span>
-                    </div>
-
-                    <span className={`text-[10px] font-bold flex items-center gap-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                      <Calendar className="w-3 h-3" />
-                      {deck.lastUpdated}
-                    </span>
-                  </div>
-
-                  {/* Title & Subject */}
-                  <div>
-                    <h3 className={`text-base font-extrabold line-clamp-2 leading-snug ${
-                      isAppLight ? 'text-slate-900' : 'text-white'
-                    }`}>
-                      {deck.title}
-                    </h3>
-                    <p className="text-xs font-bold text-amber-500 mt-1">
-                      {deck.badgeTag}
-                    </p>
-                  </div>
-
-                  {/* Theme Info */}
-                  <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between ${
-                    isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                  }`}>
-                    <span className="text-slate-400 font-medium">Theme:</span>
-                    <span className="font-bold text-amber-400">{tmpl.name}</span>
-                  </div>
-                </div>
-
-                {/* Card Action Buttons */}
-                <div className="space-y-2 pt-2 border-t border-slate-800/60">
-                  <button
-                    onClick={() => onOpenDeck(deck.items, deck.title)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow cursor-pointer transition-all"
-                  >
-                    <Presentation className="w-4 h-4 stroke-[2.5]" />
-                    <span>Open Slide Studio</span>
-                  </button>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => onOpenDeckSettings(deck.items, deck.config)}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                        isAppLight
-                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-                          : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
-                      }`}
-                    >
-                      <Sliders className="w-3.5 h-3.5" />
-                      <span>Deck Settings</span>
-                    </button>
-
-                    <button
-                      onClick={() => onOpenSocialGenerator(deck.items)}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                        isAppLight
-                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-                          : 'bg-slate-950 hover:bg-slate-800 text-indigo-400 border-slate-800'
-                      }`}
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      <span>Social Posts</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {decksList.map((deck) => (
+            <DeckCard
+              key={deck.id}
+              id={deck.id}
+              title={deck.title}
+              badgeTag={deck.badgeTag}
+              questionCount={deck.questionCount}
+              items={deck.items}
+              config={deck.config}
+              isCurrent={deck.isCurrent}
+              lastUpdated={deck.lastUpdated}
+              appTheme={appTheme}
+              onOpen={() => onOpenDeck(deck.items, deck.title)}
+              onSettings={() => onOpenDeckSettings(deck.items, deck.config)}
+              onSocial={() => onOpenSocialGenerator(deck.items)}
+            />
+          ))}
         </div>
       </div>
     </div>

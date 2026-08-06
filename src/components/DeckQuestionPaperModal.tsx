@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MCQItem, DeckConfig } from '../types';
 import { getTemplateById, TEMPLATES } from '../templates/registry';
+import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { MathText } from './MathText';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -62,12 +63,20 @@ const PaperPage = ({
   const titleInk = isLightTmpl ? '#0f172a' : '#ffffff';
   const cardBorder = isLightTmpl ? '#e2e8f0' : '#334155';
 
+  // Full-page background mirrors the slide: theme bg color for dark templates
+  // + the deck's background preset graphics (cover) + a readability tint layer.
+  const bgUrl = getBackgroundPresetUrl(config.bgPreset, config.bgImageUrl);
+  const bgOpacity = config.bgImageOpacity !== undefined ? config.bgImageOpacity : 0.85;
+  const overlayDarkness = config.bgOverlayDarkness !== undefined ? config.bgOverlayDarkness : 0.4;
+  const pageBg = isLightTmpl ? '#ffffff' : `#${colors.bg || '0F172A'}`;
+
   return (
     <div
       style={{
+        position: 'relative',
         width: PAGE_W,
         height: PAGE_H,
-        background: '#ffffff',
+        background: pageBg,
         color: ink,
         fontFamily: paperFont(config),
         display: 'flex',
@@ -77,9 +86,34 @@ const PaperPage = ({
         overflow: 'hidden',
       }}
     >
+      {/* FULL-PAGE BACKGROUND GRAPHICS — preset image + readability tint (dark themes only) */}
+      {!isLightTmpl && bgUrl && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url("${bgUrl}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: bgOpacity,
+          }}
+        />
+      )}
+      {!isLightTmpl && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: `rgba(15, 23, 42, ${overlayDarkness})`,
+          }}
+        />
+      )}
+
       {/* HEADER — slide header branding themed by template accent */}
       <div
         style={{
+          position: 'relative',
+          zIndex: 1,
           padding: '18px 0 12px',
           borderBottom: `3px solid ${accent}`,
           display: 'flex',
@@ -129,7 +163,7 @@ const PaperPage = ({
       </div>
 
       {/* BODY */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 14, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 14, overflow: 'hidden' }}>
         {answerKey ? (
           /* ANSWER KEY PAGE */
           <div>
@@ -293,6 +327,8 @@ const PaperPage = ({
       {/* FOOTER — slide footer branding themed by template accent */}
       <div
         style={{
+          position: 'relative',
+          zIndex: 1,
           padding: '10px 0 16px',
           borderTop: '1px solid #e2e8f0',
           marginTop: 8,

@@ -1,54 +1,44 @@
-# Memory — Local Big-Document AI Ingestion + Live Streaming (OCR-first Bangla)
+# Memory — Shared DeckCard + Batch Deck Export + MCQ Strip Preview
 
 Last updated: 2026-08-06
 
 ## What was built
 
-**This session — committed on `feat/ingestion-local-stream` as `d794f41`, merged to `main` as merge `72110ad`** (after a plan-review pass + fix round). All committed and green.
+All committed on `feat/answer-slides` (three commits this session):
 
-**Post-merge follow-up (2026-08-06):** (1) `GlobalSettings.tsx` de-nested — the wrapping mega-card removed; now a header row + four flat sections (Default Deck Name / Default Slide Template grid / Default Question Numbering + App Shell Theme side-by-side / footer note), still auto-saving via `update()`. (2) Slide Studio toolbar rebuilt as a **compact 2-row strip** (`App.tsx` `data-tour="studio-toolbar"`): ROW 1 = View All Slides + slide name/stem, plus **Theme toggle · Deck Settings · Download · Prev/Next**; ROW 2 (`border-t`) = Font selector (now always visible) · Apply Slide Design to All · Templates · Answer Reveal · Edit Text Boxes. Labels icon-only below `2xl` (tooltips), so both rows fit one physical line at laptop widths (171px vs 272px at 1366×768). (3) **Deck Settings stays the committed modal** — the full-page/DeckSettingsPage experiment was abandoned and reverted; the modal preview is strict 16:9 (`aspect-[16/9]`, width-scaled). Verified headless Chrome (strip rows, modal open/live-edit/Apply/Cancel-confirm/Classroom-View, flattened settings); `tsc --noEmit` + `vite build` green.
+1. **`6d1540b` — Shared `DeckCard` (visual parity Home ↔ My Decks)** — new `src/components/DeckCard.tsx` is THE single deck-card design, used by BOTH `SlideDecksHome.tsx` Section 4 and `MyDecksView.tsx`. Card = `p-5 rounded-3xl` glass card → real first-slide `DeckSlideThumb` (`getTemplateById(config?.templateId || 'rakib-dark')`), "N Questions" + optional subject chips, optional `lastUpdated`, `line-clamp-2` title, `badgeTag` line, Theme row, solid-amber **Open Slide Studio** CTA, optional 2-col `Deck Settings`/`Social Posts` row (renders only when handler given), and My Decks-only tertiary controls (`onDownload`/`onExportJson`/`onDelete` → `Download Deck` subtle amber, `N MCQs` + `Export JSON` + `Trash2`). Both call sites pass `appTheme`; My Decks keeps the **3-arg** `onOpenDeckSettings(items, config, deck.id)` so `editingSavedDeckId` auto-sync survives, Home keeps **2-arg**.
+2. **`48dbea2` — Navbar batch deck export + Studio whole-deck download** — new `src/components/BatchExportModal.tsx` opened from the navbar "Export Slides" buttons (`SidebarNav` bottom action; `HeaderNavbar` is defined but NOT rendered — only SidebarNav is live). Lists saved decks from `db.questionDecks` (auto-seeds 2 `SAMPLE_DECKS` via `seedConfig` prop when empty, sorted `updatedAt` desc) with checkboxes + Select All/Clear; **Download PPTX (N)** sequentially calls `exportDeckToPPTX(deck.items, deck.config, onProgress)` per selected deck (each triggers its own `.pptx` via `writeFile`), with progress bar + success state; single selection works. `App.tsx`: new `isBatchExportModalOpen` state; `SidebarNav.onOpenExportModal` now opens the batch modal; `<BatchExportModal>` rendered next to `<ExportModal>`. **Slide Studio toolbar Download** flipped `exportScope` `'current'` → **`'all'`** (whole active deck through the existing ExportModal); `'current'` scope remains in ExportModal but no entry point uses it.
+3. **`9f2cc47` — Manual Editor "Live Parse Preview" as MCQ strip** — `ManualEditor.tsx` preview changed from `aspect-video` (16:9, stacked stem + 2×2 options) to a **wide strip** `aspect-[21/6]` (3.5:1): left zone = number chip + `line-clamp-2` stem (42% width), right zone = 4 option pills in one `grid-cols-4` row. Shows only the parsed MCQ, no slide chrome.
 
-- **`src/server/lib/` (new server-side ingestion pipeline, bundled into `dist/server.cjs`):**
-  - `extract-text.ts` — local PDF/DOCX/TXT text extraction. `pdf-parse` **v2** (new API: `new PDFParse({ data })` → `getText()`/`getScreenshot()`/`destroy()`, bundled `@napi-rs/canvas` prebuilt native) + `mammoth` (`extractRawText`). Bangla quality gate: PDF text layer trusted only when clean Unicode Bangla (U+0980–09FF ratio ≥ 0.3 AND ≥ 100 non-space chars); otherwise treated as scanned/legacy-Bijoy and routed to vision OCR. Legacy `.doc` throws a clear "save as .docx" error.
-  - `rasterize.ts` — server-side PDF page rasterization via `getScreenshot({ scale: 2 })`.
-  - `ocr.ts` — high-accuracy Bangla OCR system prompt (conjuncts, ০-৯ numerals preserved, LaTeX, multi-column order). Hybrid batching: per-page up to 10 pages, then 3-page batches. **One result per batch** (C-L2a fix — batches no longer emit per-page duplicated text). Gemini (`abortSignal`) + OpenRouter both supported.
-  - `chunk.ts` — Bangla-aware token estimate (`bangla/2 + other/4`, target ~4000).
-  - `sanitize.ts` — shared MCQ sanitize moved out of `server.ts`: `normalizeBanglaNumerals` (০-৯→0-9, D15 now actually applied), per-item skip with reasons, answer-key matching.
-  - `ai-stream.ts` — `streamParseMCQs()` orchestrator emitting NDJSON `StreamEvent`s. **C-L3a fix:** malformed/truncated structured JSON now **throws** → surfaces as `chunk_error` (no more silent empty `mcqs`). Sanitize skip reasons now shipped on the `mcqs` event (`skipReasons`). Abort: checks `signal.aborted` between chunks; Gemini passes `abortSignal`.
-- **`server.ts`** — `/api/ai/parse-mcqs` rewritten: `Content-Type: application/x-ndjson`, `res.flushHeaders()`, `X-Accel-Buffering: no`, **abort-on-disconnect** via `res.on('close')` → AbortController (checks `res.writableEnded`), `wroteError` guard suppresses post-error events, key-redaction regex on all error paths. Events: `stage1_start` / `stage1_page` (pageNumber is a `number[]` for batches) / `stage1_done` / `chunk_start` / `mcqs` / `chunk_error` / `done` / `error`.
-- **`src/components/AIUploader.tsx`** — rewritten as a `ReadableStream` NDJSON consumer: live progress bar (OCR pages done → chunk counter), growing MCQ list (live append, key = `mcq.id`), Cancel button (AbortController), scanned-doc warning banner, "Items Skipped (N)" card with per-chunk reasons, "Inspect Stage 1 Extracted Text" toggle, `stage1_page` label `[Page N]` / `[Pages 1, 2, 3]`. Uses `isAppLight` ternary pattern exclusively (no `dark:` prefix).
-- **Docs updated:** `context/library-docs.md` (pdf-parse v2 + mammoth sections), `context/progress-tracker.md` (feature row), `context/ui-registry.md` (AIUploader live-streaming section).
+Docs updated each time: `context/progress-tracker.md` + `context/ui-registry.md` (new `BatchExportModal` section; `ExportModal` scope-model entry and ManualEditor Live Parse Preview entry updated; DeckCard section added earlier).
 
 ## Decisions made
 
-- **OCR-first for Bangla (user priority):** vision OCR is the primary path, not the fallback. PDFs with scanned or legacy-Bijoy text layers + image uploads → per-page vision OCR. Local text extraction only when the PDF already has clean Unicode Bangla.
-- **Hybrid page batching:** per-page vision calls up to 10 pages, then 3-page batches (accuracy on the front pages, speed on long bundles).
-- **NDJSON over a single POST** (not SSE) — one JSON object per line, consumed via `fetch` + `ReadableStream`. Kept the existing single-endpoint shape.
-- **Token-estimate chunking** sequential (~4000 tokens), no parallelism (rate-limit safety).
-- **Scan bundles stay capped** at `express.json` 50mb (≈37MB base64) — known limit, not raised this session.
-- **Untrusted text layers are OCR'd:** an English-only PDF (no Bangla chars) also routes to vision — the price of "clean Unicode Bangla" being the only local-extraction shortcut.
+- **One shared `DeckCard`** is the single source of truth for deck cards — no more hand-maintained duplicates.
+- **Two `onOpenDeckSettings` signatures must stay distinct**: Home = `(items, config?)`, My Decks = `(items, config?, savedDeckId?)`. `DeckCard` only forwards the handler.
+- **Single solid CTA per card** — "Open Slide Studio" is the solid amber button; Download Deck is deliberately subtle (amber-500/15).
+- **Navbar download = batch selector; Slide Studio download = whole active deck** (via the ExportModal at scope `all`); studio stays scoped to the active working deck only, NOT a batch.
+- **Design system compliance**: `glass-card-fatty`/`light`, `isAppLight` ternaries, amber accents only — no hardcoded hex/raw colors.
 
 ## Problems solved
 
-- **"Can't process big docs / no live output"** — old flow base64'd the whole file to Gemini in one call, returned one JSON at the end. Now: local extraction where possible, per-page OCR for scans, chunked structuring, everything streamed live.
-- **Bangla OCR accuracy** — dedicated OCR system prompt (conjuncts, numerals, LaTeX, column order) on small per-page inputs instead of one huge vision call.
-- **Batched OCR duplicated MCQs** (C-L2a) — `ocrPages` returned combined batch text once **per page** in the batch → same MCQs emitted N times. Fixed: one `OcrBatchResult` per batch.
-- **Truncated JSON silently dropped questions** (C-L3a) — `JSON.parse` failure returned `[]` and emitted a benign empty `mcqs`. Now throws → `chunk_error` so the client shows `failedChunks`.
-- **`normalizeBanglaNumerals` was declared but never applied** (D15) — now applied in the shared sanitize.
-- **PowerShell test-harness UTF-8 mangling** — `Invoke-WebRequest` + `Set-Content` default encodings turn Bangla into `?`. Test clients must be Node `fetch` with UTF-8 bodies (verified Bangla end-to-end: stems, options, Bangla keys, correct answers all preserved).
+- **Deck cards looked different between Home and My Decks** — two hand-maintained copies of the same markup; fixed by extracting `DeckCard` and deleting both duplicates.
+- **Navbar export only exported the active deck** — added a real multi-deck selector (single or batch), reusing the existing `exportDeckToPPTX` (which already downloads via `pptx.writeFile`).
+- **Slide Studio Download only exported the current slide** — flipped to whole deck; user confirmed it should remain deck-scoped.
+- **Parallel-session note**: the answer-slides parallel session committed (`cba3b74`, `d4b3596`, `4916cd2`) and the old pre-existing `App.tsx` `slideVariant` type error is GONE (their `SlideThumb` now accepts it). tsc is fully clean now. They still have UNCOMMITTED edits in the tree (`DeckQuestionPaperModal.tsx`, `ExportModal.tsx`, `QuestionBankPdfModal.tsx`, `SlideCanvas.tsx`, `SlideThumb.tsx`, `pptxExport.ts`) — do NOT commit those.
 
 ## Current state
 
-- On `main`, HEAD = `72110ad` (merge of `d794f41`). My feature is committed and green (`tsc --noEmit` 0 errors, `vite build` + esbuild server bundle clean). Live-verified: EN + Bangla text extraction (2 MCQs each), per-chunk error on bad key, vision routing + rasterize + OCR.
-- **A parallel session is actively working in this repo** (settings-restructure continued: `App.tsx`, `MyDecksView.tsx`, `OnboardingTour.tsx`, `SidebarNav.tsx`, `SlideDecksHome.tsx` modified, new `DeckSettingsPage.tsx`). They fixed the `GlobalDefaults.defaultTemplateId` type errors from earlier. **Do not pop the stash** — `stash@{0}` holds their earlier WIP snapshot and they are still working.
-- Known non-blocking: html-to-image `SecurityError` for cross-origin Google Fonts/KaTeX CSS during raster exports (pre-existing).
+- On branch `feat/answer-slides`, HEAD = `9f2cc47`. All three features committed and green (`tsc --noEmit` clean project-wide, `vite build` green).
+- CDP-verified: batch modal opens from sidebar (2 deck rows, Select All → "2 / 2 selected" + "Download PPTX (2)", deselect → single, Cancel), studio Download tooltip = "Download the whole deck — PPTX, PDF, PNG, ZIP", Manual Editor strip renders 3.50:1 (717×205) with stem + A–D options.
+- Known non-blocking: html-to-image `SecurityError` for cross-origin Google Fonts/KaTeX during raster exports (pre-existing). PPTX batch download relies on the browser allowing sequential multi-downloads.
 
 ## Next session starts with
 
-1. **Browser-verify (manual, agent cannot):** upload a real scanned Bangla board-exam PDF → confirm per-page OCR progress, live MCQ stream, Bangla accuracy; upload a text-layer Bangla PDF → confirm local shortcut (no OCR); test Cancel mid-run stops the server loop; confirm "Items Skipped" reasons render.
-2. Re-check repo state — the parallel settings-restructure session may have merged or rewritten things; reconcile before starting new work.
+1. **Browser-verify the batch PPTX actually downloads** (manual, agent cannot): open navbar Export Slides → select 1 deck → Download → confirm a real `.pptx` lands; then select 2 decks → confirm 2 files (browser may prompt "allow multiple downloads"). Eyeball the batch modal in light theme.
+2. Reconcile with the parallel session — their answer-slides edits are still uncommitted on this branch; confirm before starting new work.
 3. Remaining backlog (unchanged): bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor; interactive template studio JSON import/export.
 
 ## Open questions
 
-- None blocking for this feature. Highest-risk unverified: real-world scanned-Bangla OCR accuracy (page-by-page) in the browser, and whether `express.json` 50mb needs raising for very large scans.
+- None blocking. The actual `.pptx` download inside the batch loop is the only unverified behavior (logic is identical to the working ExportModal path, but a human should confirm the browser's multi-download handling).

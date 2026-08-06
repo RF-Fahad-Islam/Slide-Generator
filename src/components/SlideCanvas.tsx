@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { DeckConfig, MCQItem } from '../types';
 import { getTemplateById } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
-import { getSlideBoxContent, formatSlideQNumber } from '../utils/slideTextBoxes';
+import { getSlideBoxContent, formatSlideQNumber, getBoxFontFamily } from '../utils/slideTextBoxes';
 import { getSlideIcon } from '../utils/slideElements';
 import { MathText } from './MathText';
 import { Check, Award, BookOpen, User, Sparkles } from 'lucide-react';
@@ -13,7 +13,13 @@ interface SlideCanvasProps {
   currentIndex: number;
   totalCount: number;
   isAnswerRevealMode?: boolean;
+  // 'answer' renders a dedicated answer slide (correct option highlighted +
+  // visible "উত্তর" label + explanation). Defaults to 'question'.
+  slideVariant?: 'question' | 'answer';
   scale?: number; // CSS scale transform for viewport scaling
+  // Export override — when provided (true/false) it forces the explanation box
+  // on/off regardless of config/answer-variant. Undefined keeps default behavior.
+  forceShowExplanation?: boolean;
 }
 
 export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
@@ -22,7 +28,9 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   currentIndex,
   totalCount,
   isAnswerRevealMode = false,
+  slideVariant = 'question',
   scale = 1,
+  forceShowExplanation,
 }, ref) => {
   // Merge global deck config with slide-specific scope overrides (item.customConfig)
   const effectiveConfig: DeckConfig = {
@@ -137,8 +145,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     xl: 'w-24 h-24',
   }[effectiveConfig.logoSize || 'md'];
 
-  const showAnswerHighlight = effectiveConfig.showAnswerInSlide || isAnswerRevealMode;
-  const showExplanation = effectiveConfig.showExplanationInSlide || isAnswerRevealMode;
+  const isAnswerVariant = slideVariant === 'answer';
+  const showAnswerHighlight = effectiveConfig.showAnswerInSlide || isAnswerRevealMode || isAnswerVariant;
+  const showExplanation =
+    forceShowExplanation !== undefined
+      ? forceShowExplanation
+      : effectiveConfig.showExplanationInSlide || isAnswerRevealMode || isAnswerVariant;
   const isClassMode = effectiveConfig.layoutMode === 'class_mode';
 
   const slideTextBoxes = effectiveConfig.slideTextBoxes || [];
@@ -351,6 +363,20 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
 
           {/* RIGHT 5 COLUMNS: Options */}
           <div className="col-span-5 flex flex-col justify-center gap-4 py-2" style={{ fontFamily: optionsFont }}>
+            {/* Answer slide indicator strip */}
+            {isAnswerVariant && item.answer && (
+              <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl border-2 shadow-lg ${
+                isLight
+                  ? 'bg-emerald-100 border-emerald-500 text-emerald-900'
+                  : 'bg-emerald-500/20 border-emerald-400 text-emerald-100'
+              }`}>
+                <span className="p-1.5 rounded-xl bg-emerald-500 text-slate-950">
+                  <Check className="w-5 h-5 stroke-[3]" />
+                </span>
+                <span className="text-2xl font-black">উত্তর: {item.answer}</span>
+              </div>
+            )}
+
             {item.options.map((opt, oIdx) => {
               const isCorrect = showAnswerHighlight && (opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase());
 
@@ -477,6 +503,20 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
           </div>
 
           {/* OPTIONS GRID (CONFIGURABLE 1-COL, 2-COL, 4-COL GRID) */}
+          {isAnswerVariant && item.answer && (
+            <div className="flex justify-center">
+              <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl border-2 shadow-lg ${
+                isLight
+                  ? 'bg-emerald-100 border-emerald-500 text-emerald-900'
+                  : 'bg-emerald-500/20 border-emerald-400 text-emerald-100'
+              }`}>
+                <span className="p-1.5 rounded-xl bg-emerald-500 text-slate-950">
+                  <Check className="w-5 h-5 stroke-[3]" />
+                </span>
+                <span className="text-2xl font-black">উত্তর: {item.answer}</span>
+              </div>
+            </div>
+          )}
           <div className={`grid ${optionsGridClass}`} style={{ fontFamily: optionsFont }}>
             {item.options.map((opt, oIdx) => {
               const isCorrect = showAnswerHighlight && (opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase());
@@ -622,6 +662,14 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
       {/* DECK-WIDE TEXT BOX OVERLAY LAYER — rendered with the slide so it appears in PNG/PPTX exports */}
       {slideTextBoxes.length > 0 && (
         <div className="absolute inset-0 z-20 pointer-events-none">
+          {isAnswerVariant && item.answer && (
+            <div className={`absolute left-1/2 -translate-x-1/2 top-5 flex items-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl ${
+              isLight ? 'bg-emerald-100 border-emerald-500 text-emerald-900' : 'bg-emerald-500/20 border-emerald-400 text-emerald-100'
+            }`}>
+              <Check className="w-5 h-5 stroke-[3]" />
+              <span className="text-2xl font-black">উত্তর: {item.answer}</span>
+            </div>
+          )}
           {slideTextBoxes.map(box => {
             const base: React.CSSProperties = {
               left: box.x,
@@ -630,6 +678,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               fontSize: box.fontSize,
               color: box.color,
               textAlign: box.align,
+              fontFamily: getBoxFontFamily(box, effectiveConfig),
             };
 
             // ICON ELEMENT (decorative lucide icon, sized by fontSize)
@@ -682,15 +731,25 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                 <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={base}>
                   <div className={box.shape === 'pill' ? 'flex flex-wrap gap-3' : 'space-y-2.5'}>
                     {item.options.map(opt => {
+                      const isCorrect = showAnswerHighlight && (opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase());
+                      const highlight = showAnswerHighlight && isCorrect;
+                      const containerStyle: React.CSSProperties = highlight
+                        ? {
+                            backgroundColor: `${styles.hexColors.optionSelectedBg}38`,
+                            border: `2px solid ${styles.hexColors.optionSelectedBorder}`,
+                            color: styles.hexColors.optionSelectedText,
+                          }
+                        : { backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.15)' };
                       if (box.shape === 'pill') {
                         return (
                           <span
                             key={opt.key}
                             className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full"
-                            style={{ backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.15)' }}
+                            style={containerStyle}
                           >
                             <span className="font-black">{opt.key}.</span>
                             <span><MathText text={opt.text} /></span>
+                            {highlight && <Check className="w-6 h-6 stroke-[3.5]" />}
                           </span>
                         );
                       }
@@ -699,17 +758,19 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                           <div
                             key={opt.key}
                             className="flex items-start gap-3 px-5 py-3.5 rounded-2xl"
-                            style={{ backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.12)' }}
+                            style={containerStyle}
                           >
                             <span className="font-black shrink-0">{opt.key}.</span>
                             <span><MathText text={opt.text} /></span>
+                            {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
                           </div>
                         );
                       }
                       return (
-                        <div key={opt.key} className="flex items-start gap-3">
+                        <div key={opt.key} className="flex items-start gap-3" style={highlight ? { color: styles.hexColors.optionSelectedText } : undefined}>
                           <span className="font-black shrink-0">{opt.key}.</span>
                           <span><MathText text={opt.text} /></span>
+                          {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
                         </div>
                       );
                     })}
@@ -735,6 +796,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               fontSize: box.fontSize,
               color: box.color,
               textAlign: box.align,
+              fontFamily: getBoxFontFamily(box, effectiveConfig),
               backgroundColor: box.bg,
               border: box.shape && box.shape !== 'plain' ? '1px solid rgba(255,255,255,0.12)' : undefined,
             } as React.CSSProperties;

@@ -125,6 +125,11 @@ deprecation notices. Reference: `docs/nextjs-llms.txt`. The API route uses
   `{ pages: [{num, text}], text, total }`) and `await parser.getScreenshot({ scale })`
   (returns `{ pages: [{ data: Uint8Array, dataUrl, pageNumber, … }], total }`).
   `parser.destroy()` must be called after use.
+- **Per-page rasterization (live progress):** `getScreenshot({ scale, partial: [n] })`
+  renders a single page — used by `rasterize.ts` (`rasterizePdfPages(buffer, pageCount, onPage)`)
+  to rasterize one page at a time and emit a `stage1_raster` event per page, so the
+  client shows progress during the previously-silent rasterize phase of big scans.
+  `partial` also accepts `[1, 3, 5]`; when omitted every page is rendered at once.
 - Bundled `@napi-rs/canvas` is a **prebuilt native** module (no node-gyp build) — used
   only by screenshot rendering. Verified working on Windows.
 - Lives ONLY in `src/server/lib/*` (bundled into `dist/server.cjs` via esbuild

@@ -69,6 +69,11 @@ export interface DeckConfig {
   watermarkHandle: string; // Instructor name / channel e.g. "Hasnat Shuvro"
   aspectRatio: AspectRatio;
   showAnswerInSlide: boolean; // Toggle for answer key highlighting on slide
+  // Answer display mode — 'hidden' (question only) | 'highlight' (correct option
+  // highlighted in-place on the question slide) | 'separate_slide' (an extra
+  // answer slide after each question slide). Optional: saved decks without it
+  // fall back to the legacy showAnswerInSlide boolean.
+  answerMode?: 'hidden' | 'highlight' | 'separate_slide';
   showExplanationInSlide: boolean; // Toggle for showing explanation box
   questionNumberFormat: 'bangla' | 'english' | 'q_prefix'; // e.g. ১, 1, Q1
   accentColorCustom?: string;
@@ -138,6 +143,7 @@ export interface SlideTextBox {
   color: string;
   align: 'left' | 'center' | 'right';
   bold: boolean;
+  fontFamily?: string; // per-box font override (falls back to deck config.fontFamily)
   // Pre-designed element extras
   shape?: SlideBoxShape; // container style: pill / card / banner (default 'plain' = no container)
   bg?: string; // container fill color for pill/card/banner shapes

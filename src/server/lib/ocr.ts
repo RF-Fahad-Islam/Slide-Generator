@@ -119,13 +119,18 @@ async function ocrBatch(
           ],
         },
       ],
+      max_tokens: 16384,
     }),
     signal,
   });
 
   const data = await response.json();
   if (!response.ok || data.error) {
-    throw new Error(data.error?.message || 'OpenRouter Vision OCR failed.');
+    const msg = String(data.error?.message || 'OpenRouter Vision OCR failed.');
+    if (/credit|afford|insufficient|top up|balance/i.test(msg)) {
+      throw new Error('Your AI provider is out of credits. Switch to Gemini in the Keys tab, or top up your OpenRouter account.');
+    }
+    throw new Error(msg);
   }
   return data.choices?.[0]?.message?.content || '';
 }
