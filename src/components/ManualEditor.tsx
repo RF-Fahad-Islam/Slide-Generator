@@ -500,24 +500,26 @@ iii. অস্ত্রোপচার
               </div>
 
               {parsedPreview.length > 0 ? (
-                <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 shadow-inner">
-                  <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-amber-500/20 blur-3xl" />
-                  <div className="absolute inset-0 p-4 flex flex-col justify-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded bg-amber-500 text-slate-950 text-[9px] font-black flex items-center justify-center shrink-0">
+                <div className="relative aspect-[21/6] rounded-xl overflow-hidden border border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 shadow-inner">
+                  <div className="absolute -top-10 right-10 w-40 h-40 rounded-full bg-amber-500/20 blur-3xl" />
+                  <div className="absolute inset-0 px-4 sm:px-5 flex items-center justify-between gap-4">
+                    {/* Stem zone (left) */}
+                    <div className="flex items-center gap-2.5 min-w-0 w-[42%]">
+                      <span className="w-6 h-6 rounded bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center shrink-0">
                         ১
                       </span>
-                      <div className="flex-1 text-xs font-bold text-white truncate">
+                      <div className="text-xs font-bold text-white line-clamp-2 leading-snug">
                         <MathText text={parsedPreview[0].stem} />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5 mt-1">
+                    {/* Options strip (right) */}
+                    <div className="grid grid-cols-4 gap-1.5 flex-1">
                       {parsedPreview[0].options.map((opt) => {
                         const isCorrect = opt.isCorrect || opt.key.toLowerCase() === parsedPreview[0].answer?.toLowerCase();
                         return (
                           <div
                             key={opt.key}
-                            className={`px-2 py-1 rounded-lg border text-[10px] font-semibold truncate ${
+                            className={`px-2 py-1.5 rounded-lg border text-[10px] font-semibold truncate ${
                               isCorrect
                                 ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
                                 : 'bg-white/5 border-white/10 text-slate-300'
@@ -535,7 +537,7 @@ iii. অস্ত্রোপচার
                 <div className={`rounded-xl border border-dashed p-4 text-center text-xs ${
                   isAppLight ? 'border-slate-300 text-slate-400' : 'border-slate-800 text-slate-500'
                 }`}>
-                  A mini slide preview of the first parsed question appears here as you type a valid format.
+                  A strip preview of the first parsed question appears here as you type a valid format.
                 </div>
               )}
             </div>
