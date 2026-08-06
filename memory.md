@@ -1,44 +1,42 @@
-# Memory — Slide Text Box Editor (Deck-Wide Overlay)
+# Memory — Boxed-Design Mode, Clean Social Preview, Toolbar Fix
 
 Last updated: 2026-08-06
 
 ## What was built
 
-**Session 4 (this session)** — committed on `main`:
+**Session 5 (this session)** — committed on `main` as `2876d33` (8 files, +114/−52):
 
-- `70517a6` — **Social post export hardening** (`SocialPostGenerator.tsx`): custom-mode export node changed from `absolute inset-0` to a **static in-flow card** carrying the aspect class (same structure as the 4 template cards that export reliably). Background image now applied as CSS `background-image` + `background-size: cover` — html2canvas 1.4.1 does NOT support `object-fit` on `<img>`. Added `html-to-image` `toPng` fallback if html2canvas throws. Also added FileReader `onerror` alert + "Reset Design to Defaults" button. **Note: the user reported "generate image is not working" during this session — this commit was the fix, but it has NOT been browser-verified yet.**
-- `5e6d5c2` — **Slide text box editor (deck-wide overlay)**:
-  - `types.ts`: `SlideTextBoxBind` (14 binds: stem, options, answer, explanation, passage, prompt, roman, source, questionNumber, brand, headerTitle, footerTag, watermark, free) + `SlideTextBox` (px `x/y/w/fontSize`, `color`, `align`, `bold`, `text?` for free) + `slideTextBoxes?: SlideTextBox[]` in `DeckConfig`.
-  - `src/utils/slideTextBoxes.ts` — `defaultSlideTextBoxes()` (1920×1080 px default layout: brand/header/stem/options/footer), `clamp`, `SLIDE_W/SLIDE_H`, `SLIDE_BOX_BINDS`, `SLIDE_BOX_COLOR_PRESETS`, `getSlideBoxContent()`, `formatSlideQNumber()`.
-  - `SlideCanvas.tsx` — renders a `pointer-events-none z-20` box layer from `effectiveConfig.slideTextBoxes` (MathText for content binds; options list + roman items rendered with keys). Rendered INSIDE the exported `slideRef` so boxes appear in PNG/PPTX.
-  - `SlideTextBoxOverlay.tsx` — edit handles (drag/resize in px, deltas divided by `slideScale`), label chips, amber selection ring. Rendered as a sibling of SlideCanvas in App.tsx's scaled 1920×1080 wrapper → never exported.
-  - `SlideTextBoxPanel.tsx` — add-box buttons, bind select, free-text textarea, 16–140px font slider, color presets + picker, align, bold, duplicate, delete, reset.
-  - `App.tsx` — `isTextBoxEditMode` + `selectedTextBoxId` state; "Edit Text Boxes" toggle next to Answer Reveal; overlay inside transformed wrapper; panel below the preview (must stay OUTSIDE the `overflow-hidden` flex canvas container); updates via `setConfig` → persists in IndexedDB + deck JSON round-trip.
+- **Boxed-design mode** (`SlideCanvas.tsx`): when `slideTextBoxes.length > 0` the text boxes ARE the slide — template header/middle/footer are wrapped in `{!isBoxedDesign && (…)}` and hidden; template background/chrome layers + the box layer always render. Box layer stays inside `slideRef`, so PNG/PDF/ZIP/PPTX exports include boxes automatically. `isBoxedDesign` opens ~line 181 and closes ~598; box layer ~601 is outside the wrapper.
+- **New decks default to boxed design** (`App.tsx`): fresh config starts with `slideTextBoxes: defaultSlideTextBoxes()`.
+- **Old saved decks stay template-mode** (`useIndexedDBSync.ts`): when a saved config lacks `slideTextBoxes`, the merge sets `merged.slideTextBoxes = []` so pre-feature decks are not silently restyled.
+- **Clean social custom preview** (`SocialPostGenerator.tsx`): `isBoxEditMode` state defaults OFF; the editor overlay renders only when `isBoxEditMode` is on; new "Edit Design"/"Preview" toggle button in the preview header (PenTool/Eye icons); hint text swaps with mode.
+- **Slide Studio toolbar self-overlap fix** (`App.tsx:~466-525`): root cause was the right controls group's `shrink-0` preventing wrap at narrow widths — removed `shrink-0`, added `flex-wrap` to the left group and `gap-x-4 gap-y-3` so the toolbar wraps instead of overlapping.
+- **Review polish**: `SlideTextBoxPanel.tsx` — removed dead `item`/`config`/`currentIndex` props, added `onClearAll` prop + Clear All button (with confirm guard in `App.tsx` via `clearSlideTextBoxes`). `SlideTextBoxOverlay.tsx` — label chip flips below the box (`top-full mt-1`) when `box.y < 40` to avoid clipping. `SlideCanvas.tsx` — local `formatQNumber` replaced with shared `utils/slideTextBoxes.formatSlideQNumber` (single formatter).
 
 ## Decisions made
 
-- **Deck-wide scope**: one set of boxes per deck in `DeckConfig.slideTextBoxes`, overlaid on every slide; bound boxes fill from each slide's own question. (User-confirmed.) Per-slide overrides can come later through `item.customConfig.slideTextBoxes` — `SlideCanvas` already reads via `effectiveConfig`.
-- **px coordinates** (not %) for slides — canvas is fixed 1920×1080; `fontSize` is px (slider 16–140).
-- **Overlay only**: no custom background image for slides; boxes float over the existing template background.
-- **Export boundary pattern** (shared with the social editor): box CONTENT inside the exported node, edit HANDLES in a sibling overlay outside it.
-- **Raw hex** (color presets/picker) is the sanctioned exception — it's user data; presets match Tailwind semantic palette (`#fbbf24` = amber-400).
+- **"Text boxes ARE the design"** (user-confirmed): when a slide has boxes, the template's built-in text is hidden; only template background/chrome + boxes render. Mirrors Social Post Generator behavior.
+- **Boxes are deck-wide** (`config.slideTextBoxes`): newly added slides automatically follow the last slide's box positions.
+- **Old decks must NOT inherit defaults**: `useIndexedDBSync` forces `slideTextBoxes: []` when the saved config lacks the key.
+- **Export boundary pattern** (still the rule): box CONTENT inside the exported node, edit HANDLES in a sibling overlay never exported.
 
 ## Problems solved
 
-- Social custom-mode export: `absolute inset-0` capture node + `<img object-cover>` are both html2canvas hazards → static card + CSS `background-image cover` + `toPng` fallback.
-- App.tsx panel placement bug: was initially inside the `overflow-hidden flex` canvas container; moved outside so it lays out full-width below the preview.
-- `onMove` prop type mismatch (Patch vs x,y) caught by tsc and fixed with a wrapper in App.tsx.
+- Slide Studio toolbar "overlaps itself": the right controls group's `shrink-0` stopped wrapping at narrow widths → removed it and added wrap-friendly gaps.
+- Text box label chip clipped at the top of the slide → chip flips below the box when `box.y < 40`.
+- `formatQNumber` existed twice → consolidated into `utils/slideTextBoxes.ts`.
 
 ## Current state
 
-All green: `npx tsc --noEmit` + `npm run build` pass. HEAD `5e6d5c2` on `main`, working tree clean.
+All green: `npx tsc --noEmit` passes (lint = `tsc --noEmit` per project rules); `npm run build` was green before this session's edits; working tree clean, HEAD `2876d33` on `main`. Docs updated: `context/progress-tracker.md` (4 new dated rows) and `context/ui-registry.md` (control-bar wrapping note + shared text-box overlay/edit-mode toggle section).
 
 ## Next session starts with
 
-1. **Browser-verify the social "Download Social Image" export** (the fix from `70517a6`) — toggle Custom Mode, add a bg image + boxes, export; confirm the PNG matches the preview and has no editor handles.
-2. **Browser-verify the slide text box editor**: Preview tab → "Edit Text Boxes" → add boxes, drag/resize, change slide (bound boxes update), export PNG/PPTX and confirm boxes appear and handles don't.
-3. If both pass, consider per-slide box overrides via `item.customConfig.slideTextBoxes` (already flows through `effectiveConfig`).
+1. **Browser-verify the boxed-design mode** (agent cannot — must be done by hand): a fresh deck previews with text boxes and NO template header/stem/options/footer; "Edit Text Boxes" toggles handles; PNG/PPTX/PDF export shows boxes but no handles.
+2. **Browser-verify old-deck compatibility**: a saved pre-feature deck still shows template text (boxes stay empty).
+3. **Browser-verify social custom mode**: clean design preview by default; "Edit Design" toggles the overlay; exported image has no handles. Also confirm the session-4 export fix (`70517a6`, html2canvas → CSS `background-image` cover + `toPng` fallback) actually works in a browser — still unverified.
+4. If all pass, consider per-slide box overrides via `item.customConfig.slideTextBoxes` (already flows through `effectiveConfig`).
 
 ## Open questions
 
-- None blocking. Both new features are unverified in a real browser (no browser access in this environment) — export paths (html2canvas/html-to-image, `slideRef` capture) are the highest-risk areas.
+- None blocking. All new behavior is unverified in a real browser (no browser access in this environment) — export paths (html2canvas/html-to-image, `slideRef` capture) remain the highest-risk areas.
