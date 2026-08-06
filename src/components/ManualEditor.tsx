@@ -500,44 +500,114 @@ iii. অস্ত্রোপচার
               </div>
 
               {parsedPreview.length > 0 ? (
-                <div className="relative aspect-[21/6] rounded-xl overflow-hidden border border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 shadow-inner">
-                  <div className="absolute -top-10 right-10 w-40 h-40 rounded-full bg-amber-500/20 blur-3xl" />
-                  <div className="absolute inset-0 px-4 sm:px-5 flex items-center justify-between gap-4">
-                    {/* Stem zone (left) */}
-                    <div className="flex items-center gap-2.5 min-w-0 w-[42%]">
-                      <span className="w-6 h-6 rounded bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center shrink-0">
-                        ১
-                      </span>
-                      <div className="text-xs font-bold text-white line-clamp-2 leading-snug">
-                        <MathText text={parsedPreview[0].stem} />
+                <div className={`max-h-96 overflow-y-auto rounded-xl border space-y-3 p-3 ${
+                  isAppLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950'
+                }`}>
+                  {parsedPreview.map((mcq, idx) => (
+                    <div
+                      key={mcq.id}
+                      className={`relative rounded-xl border p-3.5 ${
+                        isAppLight
+                          ? 'border-slate-200 bg-white'
+                          : 'border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40'
+                      }`}
+                    >
+                      {/* Question number badge */}
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 text-[11px] font-black flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <div className={`text-sm font-bold leading-snug ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                            <MathText text={mcq.stem} />
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg shrink-0 ${
+                          mcq.questionType === 'roman_statements'
+                            ? 'bg-violet-500/20 text-violet-400 border border-violet-500/40'
+                            : mcq.questionType === 'passage'
+                              ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
+                              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        }`}>
+                          {mcq.questionType === 'roman_statements'
+                            ? 'বহুপদী'
+                            : mcq.questionType === 'passage'
+                              ? 'Passage'
+                              : 'Standard'}
+                        </span>
+                      </div>
+
+                      {/* Roman statements (i, ii, iii) */}
+                      {mcq.romanItems && mcq.romanItems.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {mcq.romanItems.map((ri, riIdx) => (
+                            <span
+                              key={riIdx}
+                              className={`text-[11px] px-2 py-0.5 rounded-lg border ${
+                                isAppLight
+                                  ? 'bg-slate-100 border-slate-200 text-slate-700'
+                                  : 'bg-white/5 border-white/10 text-slate-300'
+                              }`}
+                            >
+                              <MathText text={ri} />
+                            </span>
+                          ))}
+                          {mcq.prompt && (
+                            <span className={`text-[11px] px-2 py-0.5 rounded-lg border font-semibold ${
+                              isAppLight
+                                ? 'bg-amber-50 border-amber-200 text-amber-700'
+                                : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                            }`}>
+                              <MathText text={mcq.prompt} />
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Options */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {mcq.options.map((opt) => {
+                          const isCorrect = opt.isCorrect || opt.key.toLowerCase() === mcq.answer?.toLowerCase();
+                          return (
+                            <div
+                              key={opt.key}
+                              className={`px-2 py-1 rounded-lg border text-[11px] font-semibold ${
+                                isCorrect
+                                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                                  : isAppLight
+                                    ? 'bg-slate-100 border-slate-200 text-slate-700'
+                                    : 'bg-white/5 border-white/10 text-slate-300'
+                              }`}
+                            >
+                              <span className="font-mono font-bold mr-1">{opt.key}.</span>
+                              <MathText text={opt.text} />
+                              {isCorrect && <CheckCircle2 className="inline w-3 h-3 text-amber-400 ml-1 -mt-0.5" />}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Answer key + source footer */}
+                      <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-dashed ${
+                        isAppLight ? 'border-slate-200' : 'border-slate-800'
+                      }">
+                        <span className={`text-[10px] font-mono font-bold ${isAppLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                          ✓ উত্তর: {mcq.answer}
+                        </span>
+                        {mcq.source && (
+                          <span className={`text-[10px] font-semibold truncate ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                            <MathText text={`[${mcq.source}]`} />
+                          </span>
+                        )}
                       </div>
                     </div>
-                    {/* Options strip (right) */}
-                    <div className="grid grid-cols-4 gap-1.5 flex-1">
-                      {parsedPreview[0].options.map((opt) => {
-                        const isCorrect = opt.isCorrect || opt.key.toLowerCase() === parsedPreview[0].answer?.toLowerCase();
-                        return (
-                          <div
-                            key={opt.key}
-                            className={`px-2 py-1.5 rounded-lg border text-[10px] font-semibold truncate ${
-                              isCorrect
-                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                                : 'bg-white/5 border-white/10 text-slate-300'
-                            }`}
-                          >
-                            <span className="font-mono font-bold mr-1">{opt.key}.</span>
-                            <MathText text={opt.text} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  ))}
                 </div>
               ) : (
                 <div className={`rounded-xl border border-dashed p-4 text-center text-xs ${
                   isAppLight ? 'border-slate-300 text-slate-400' : 'border-slate-800 text-slate-500'
                 }`}>
-                  A strip preview of the first parsed question appears here as you type a valid format.
+                  All parsed MCQs appear here as a scrollable list while you type a valid format.
                 </div>
               )}
             </div>
