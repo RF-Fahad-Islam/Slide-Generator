@@ -13,7 +13,7 @@ import { TemplateLibraryModal } from './components/TemplateLibraryModal';
 import { EditQuestionModal } from './components/EditQuestionModal';
 import { TemplateCreator } from './components/TemplateCreator';
 import { QuestionBankView } from './components/QuestionBankView';
-import { SlideDecksHome } from './components/SlideDecksHome';
+import { SlideDecksHome, ThemeSelection } from './components/SlideDecksHome';
 import { SocialPostGenerator } from './components/SocialPostGenerator';
 import { SlideTextBoxOverlay } from './components/SlideTextBoxOverlay';
 import { SlideTextBoxPanel } from './components/SlideTextBoxPanel';
@@ -340,6 +340,49 @@ export default function App() {
     setActiveTab('settings');
   };
 
+  // Slide-specific theme application — writes theme fields into the ACTIVE slide's
+  // customConfig only, so other slides keep the deck theme (SlideCanvas merges
+  // item.customConfig over config when rendering every slide).
+  const applyThemeToActiveSlide = (selection: ThemeSelection) => {
+    if (!items[selectedIndex]) return;
+    const slideIdx = selectedIndex;
+    setItems(prev => {
+      const updated = [...prev];
+      const cur = updated[slideIdx];
+      if (!cur) return prev;
+      const cc = { ...(cur.customConfig || {}) };
+      cc.templateId = selection.templateId;
+      if (selection.customTheme) cc.customTheme = selection.customTheme;
+      if (selection.design) {
+        const { templateId, customTheme, ...rest } = selection.design;
+        Object.assign(cc, rest);
+      }
+      updated[slideIdx] = { ...cur, customConfig: cc };
+      return updated;
+    });
+  };
+
+  const resetActiveSlideTheme = () => {
+    if (!items[selectedIndex]) return;
+    const slideIdx = selectedIndex;
+    setItems(prev => {
+      const updated = [...prev];
+      const cur = updated[slideIdx];
+      if (!cur) return prev;
+      const copy = { ...cur };
+      if (copy.customConfig) {
+        const cc = { ...copy.customConfig };
+        delete cc.templateId;
+        delete cc.customTheme;
+        delete cc.accentColorCustom;
+        if (Object.keys(cc).length === 0) delete copy.customConfig;
+        else copy.customConfig = cc;
+      }
+      updated[slideIdx] = copy;
+      return updated;
+    });
+  };
+
   const handleOpenSocialGenerator = (deckItems: MCQItem[]) => {
     setItems(ensureUniqueIds(deckItems));
     setActiveTab('social');
@@ -376,6 +419,11 @@ export default function App() {
   const isLightTemplate = activeTemplate.themeType === 'light';
   const isAppLight = appTheme === 'light';
 
+  // Active slide's effective theme (deck config + slide-level override) — used by
+  // the quick Light/Dark toggle so theme choices stay slide-specific.
+  const activeSlideTemplateId = items[selectedIndex]?.customConfig?.templateId || config.templateId;
+  const isActiveSlideLight = activeSlideTemplateId.includes('light');
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
       isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
@@ -399,11 +447,13 @@ export default function App() {
           <SlideDecksHome
             currentItems={items}
             currentConfig={config}
+            activeSlideConfig={items[selectedIndex]?.customConfig}
             onOpenDeck={handleOpenDeck}
             onOpenDeckSettings={handleOpenDeckSettings}
             onOpenSocialGenerator={handleOpenSocialGenerator}
             onNavigateTab={setActiveTab}
-            onSelectTemplate={(id) => setConfig(prev => ({ ...prev, templateId: id }))}
+            onSelectTheme={applyThemeToActiveSlide}
+            onResetSlideTheme={resetActiveSlideTheme}
             onLoadSample={handleLoadSample}
             appTheme={appTheme}
           />
@@ -607,25 +657,23 @@ export default function App() {
                         </select>
                       </div>
 
-                      {/* Quick Theme Toggle (Minimal Light vs Rakib Dark) */}
+                      {/* Quick Theme Toggle (Minimal Light vs Rakib Dark) — applies to the ACTIVE slide only */}
                       <button
                         onClick={() => {
-                          const isCurrentlyLight = config.templateId.includes('light');
-                          setConfig(prev => ({
-                            ...prev,
-                            templateId: isCurrentlyLight ? 'rakib-dark' : 'minimal-light'
-                          }));
+                          applyThemeToActiveSlide({
+                            templateId: isActiveSlideLight ? 'rakib-dark' : 'minimal-light',
+                          });
                         }}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                          config.templateId.includes('light')
+                          isActiveSlideLight
                             ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/20'
                             : isAppLight
                             ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
                             : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
                         }`}
-                        title="Toggle Light / Dark Theme"
+                        title="Toggle Light / Dark Theme (active slide only)"
                       >
-                        {config.templateId.includes('light') ? (
+                        {isActiveSlideLight ? (
                           <>
                             <Sun className="w-3.5 h-3.5 text-slate-950" />
                             <span className="hidden sm:inline">☀️ Light Theme</span>

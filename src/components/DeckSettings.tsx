@@ -339,10 +339,9 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   const [settingsScope, setSettingsScope] = useState<'global' | 'slide'>('global');
   const [settingsTab, setSettingsTab] = useState<'typography' | 'layout' | 'background' | 'theme' | 'header' | 'presets'>('typography');
 
-  // Determine effective config currently being edited in settings
-  const effectiveConfig: DeckConfig = settingsScope === 'slide'
-    ? { ...config, ...(activeSlideConfig || {}) }
-    : config;
+  // Theme & Preview edits ALWAYS target the ACTIVE slide (themes are slide-specific).
+  // All other tabs still respect the Global/Slide scope toggle via handleChange.
+  const themeEffectiveConfig: DeckConfig = { ...config, ...(activeSlideConfig || {}) };
 
   const hasSlideOverride = !!activeSlideConfig && Object.keys(activeSlideConfig).length > 0;
 
@@ -362,42 +361,35 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
     }
   };
 
+  // Theme field change — always writes to the ACTIVE slide's customConfig,
+  // ignoring the Global/Slide scope toggle (themes are slide-specific).
+  const handleThemeFieldChange = (field: keyof DeckConfig, value: any) => {
+    onUpdateActiveSlideConfig?.({
+      ...(activeSlideConfig || {}),
+      [field]: value,
+    });
+  };
+
   const handleCustomThemeChange = (colorField: keyof CustomThemeColors, value: string) => {
-    const existingCustomTheme = effectiveConfig.customTheme || CUSTOM_THEME_PALETTES[0].colors;
+    const existingCustomTheme = themeEffectiveConfig.customTheme || CUSTOM_THEME_PALETTES[0].colors;
     const updatedCustomTheme: CustomThemeColors = {
       ...existingCustomTheme,
       [colorField]: value,
     };
 
-    if (settingsScope === 'slide') {
-      onUpdateActiveSlideConfig?.({
-        ...(activeSlideConfig || {}),
-        templateId: 'custom-theme',
-        customTheme: updatedCustomTheme,
-      });
-    } else {
-      onUpdateConfig({
-        ...config,
-        templateId: 'custom-theme',
-        customTheme: updatedCustomTheme,
-      });
-    }
+    onUpdateActiveSlideConfig?.({
+      ...(activeSlideConfig || {}),
+      templateId: 'custom-theme',
+      customTheme: updatedCustomTheme,
+    });
   };
 
   const handleApplyCustomPalette = (colors: CustomThemeColors) => {
-    if (settingsScope === 'slide') {
-      onUpdateActiveSlideConfig?.({
-        ...(activeSlideConfig || {}),
-        templateId: 'custom-theme',
-        customTheme: colors,
-      });
-    } else {
-      onUpdateConfig({
-        ...config,
-        templateId: 'custom-theme',
-        customTheme: colors,
-      });
-    }
+    onUpdateActiveSlideConfig?.({
+      ...(activeSlideConfig || {}),
+      templateId: 'custom-theme',
+      customTheme: colors,
+    });
   };
 
   const handleImageUpload = (field: 'logoUrl' | 'watermarkAvatar' | 'bgImageUrl' | 'headerBannerUrl' | 'footerBannerUrl', e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1330,6 +1322,17 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           </div>
         </div>
 
+        {/* Slide-scope notice: theme controls always edit the active slide */}
+        <div className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold flex items-start gap-2 ${
+          isAppLight ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+        }`}>
+          <Target className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>
+            Theme changes here always apply to the <strong>active slide (Slide #{activeSlideIndex + 1}) only</strong> —
+            other slides keep the deck theme. This ignores the Global / Slide scope toggle.
+          </span>
+        </div>
+
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
           {/* Left: Template Cards Selection Grid */}
           <div className="xl:col-span-6 space-y-4">
@@ -1337,9 +1340,9 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
               {/* Special Custom Theme Card */}
               <button
                 type="button"
-                onClick={() => handleChange('templateId', 'custom-theme')}
+                onClick={() => handleThemeFieldChange('templateId', 'custom-theme')}
                 className={`relative text-left p-3.5 rounded-2xl border transition-all flex flex-col justify-between space-y-2 group col-span-1 sm:col-span-2 ${
-                  effectiveConfig.templateId === 'custom-theme'
+                  themeEffectiveConfig.templateId === 'custom-theme'
                     ? 'bg-gradient-to-r from-amber-500/20 to-purple-500/20 border-amber-400 shadow-xl ring-2 ring-amber-400/50'
                     : isAppLight
                     ? 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
@@ -1353,13 +1356,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                       ✨ Custom Slide Theme Studio
                     </span>
                   </div>
-                  {effectiveConfig.templateId === 'custom-theme' && (
+                  {themeEffectiveConfig.templateId === 'custom-theme' && (
                     <CheckCircle2 className="w-4 h-4 text-amber-300 drop-shadow" />
                   )}
                 </div>
                 <div>
                   <h4 className={`text-sm font-extrabold ${
-                    effectiveConfig.templateId === 'custom-theme' ? 'text-amber-300' : isAppLight ? 'text-slate-900' : 'text-slate-100'
+                    themeEffectiveConfig.templateId === 'custom-theme' ? 'text-amber-300' : isAppLight ? 'text-slate-900' : 'text-slate-100'
                   }`}>
                     Create Your Own Custom Color Theme
                   </h4>
@@ -1370,14 +1373,14 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
               </button>
 
               {filteredTemplates.map((tmpl) => {
-                const isSelected = effectiveConfig.templateId === tmpl.id;
+                const isSelected = themeEffectiveConfig.templateId === tmpl.id;
                 const isLightTmpl = tmpl.themeType === 'light';
 
                 return (
                   <button
                     key={tmpl.id}
                     type="button"
-                    onClick={() => handleChange('templateId', tmpl.id)}
+                    onClick={() => handleThemeFieldChange('templateId', tmpl.id)}
                     className={`relative text-left p-3.5 rounded-2xl border transition-all flex flex-col justify-between space-y-2 group ${
                       isSelected
                         ? 'bg-amber-500/10 border-amber-400 shadow-lg shadow-amber-500/10 ring-1 ring-amber-400/50'
@@ -1425,7 +1428,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             </div>
 
             {/* CUSTOM THEME COLOR PICKERS PANEL */}
-            {(effectiveConfig.templateId === 'custom-theme' || themeFilter === 'custom') && (
+            {(themeEffectiveConfig.templateId === 'custom-theme' || themeFilter === 'custom') && (
               <div className={`p-5 rounded-2xl border space-y-5 shadow-2xl ${
                 isAppLight ? 'bg-amber-50/90 border-amber-300' : 'bg-slate-900/90 border-amber-500/40'
               }`}>
@@ -1473,13 +1476,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        value={effectiveConfig.customTheme?.bg || '#0f172a'}
+                        value={themeEffectiveConfig.customTheme?.bg || '#0f172a'}
                         onChange={(e) => handleCustomThemeChange('bg', e.target.value)}
                         className="w-7 h-7 rounded cursor-pointer border border-slate-700 bg-transparent"
                       />
                       <input
                         type="text"
-                        value={effectiveConfig.customTheme?.bg || '#0f172a'}
+                        value={themeEffectiveConfig.customTheme?.bg || '#0f172a'}
                         onChange={(e) => handleCustomThemeChange('bg', e.target.value)}
                         className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
@@ -1496,13 +1499,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        value={effectiveConfig.customTheme?.cardBg || '#1e293b'}
+                        value={themeEffectiveConfig.customTheme?.cardBg || '#1e293b'}
                         onChange={(e) => handleCustomThemeChange('cardBg', e.target.value)}
                         className="w-7 h-7 rounded cursor-pointer border border-slate-700 bg-transparent"
                       />
                       <input
                         type="text"
-                        value={effectiveConfig.customTheme?.cardBg || '#1e293b'}
+                        value={themeEffectiveConfig.customTheme?.cardBg || '#1e293b'}
                         onChange={(e) => handleCustomThemeChange('cardBg', e.target.value)}
                         className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
@@ -1519,13 +1522,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        value={effectiveConfig.customTheme?.cardBorder || '#f59e0b'}
+                        value={themeEffectiveConfig.customTheme?.cardBorder || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('cardBorder', e.target.value)}
                         className="w-7 h-7 rounded cursor-pointer border border-slate-700 bg-transparent"
                       />
                       <input
                         type="text"
-                        value={effectiveConfig.customTheme?.cardBorder || '#f59e0b'}
+                        value={themeEffectiveConfig.customTheme?.cardBorder || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('cardBorder', e.target.value)}
                         className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
@@ -1542,13 +1545,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        value={effectiveConfig.customTheme?.titleColor || '#f59e0b'}
+                        value={themeEffectiveConfig.customTheme?.titleColor || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('titleColor', e.target.value)}
                         className="w-7 h-7 rounded cursor-pointer border border-slate-700 bg-transparent"
                       />
                       <input
                         type="text"
-                        value={effectiveConfig.customTheme?.titleColor || '#f59e0b'}
+                        value={themeEffectiveConfig.customTheme?.titleColor || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('titleColor', e.target.value)}
                         className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
@@ -1565,13 +1568,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        value={effectiveConfig.customTheme?.textColor || '#ffffff'}
+                        value={themeEffectiveConfig.customTheme?.textColor || '#ffffff'}
                         onChange={(e) => handleCustomThemeChange('textColor', e.target.value)}
                         className="w-7 h-7 rounded cursor-pointer border border-slate-700 bg-transparent"
                       />
                       <input
                         type="text"
-                        value={effectiveConfig.customTheme?.textColor || '#ffffff'}
+                        value={themeEffectiveConfig.customTheme?.textColor || '#ffffff'}
                         onChange={(e) => handleCustomThemeChange('textColor', e.target.value)}
                         className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
@@ -1588,13 +1591,13 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        value={effectiveConfig.customTheme?.badgeBg || '#f59e0b'}
+                        value={themeEffectiveConfig.customTheme?.badgeBg || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('badgeBg', e.target.value)}
                         className="w-7 h-7 rounded cursor-pointer border border-slate-700 bg-transparent"
                       />
                       <input
                         type="text"
-                        value={effectiveConfig.customTheme?.badgeBg || '#f59e0b'}
+                        value={themeEffectiveConfig.customTheme?.badgeBg || '#f59e0b'}
                         onChange={(e) => handleCustomThemeChange('badgeBg', e.target.value)}
                         className={`w-full text-sm font-mono px-2 py-1 rounded border uppercase font-bold ${
                           isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
@@ -1611,10 +1614,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           <div className={`xl:col-span-6 border p-4 rounded-3xl shadow-xl space-y-3 ${
             isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900/90 border-slate-800'
           }`}>
-            <TemplateThumbnailPreview config={effectiveConfig} />
+            <TemplateThumbnailPreview config={themeEffectiveConfig} />
             <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 font-mono text-sm font-bold text-center flex items-center justify-center gap-2">
               <Eye className="w-3.5 h-3.5" />
-              <span>Editing: {settingsScope === 'global' ? 'Global Presentation Deck Config' : `Slide #${activeSlideIndex + 1} Scope Override`}</span>
+              <span>Theme edits apply to Slide #{activeSlideIndex + 1} (slide-specific)</span>
             </div>
           </div>
         </div>

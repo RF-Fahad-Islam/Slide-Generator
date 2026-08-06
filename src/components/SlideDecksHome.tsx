@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { MCQItem, DeckConfig } from '../types';
+import { MCQItem, DeckConfig, CustomThemeColors } from '../types';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { getTemplateById, TEMPLATES } from '../templates/registry';
+import { getTemplatePresets } from '../utils/templatePresets';
 import { SlideCanvas } from './SlideCanvas';
 import {
   Presentation,
@@ -23,16 +24,28 @@ import {
   PlayCircle,
   Sigma,
   Wand2,
+  Target,
+  RefreshCw,
 } from 'lucide-react';
+
+// A theme selection for the ACTIVE slide: a built-in preset theme, a saved custom
+// template preset, or both (a saved preset carries its own design fields).
+export interface ThemeSelection {
+  templateId: string;
+  customTheme?: CustomThemeColors;
+  design?: Partial<DeckConfig>;
+}
 
 interface SlideDecksHomeProps {
   currentItems: MCQItem[];
   currentConfig: DeckConfig;
+  activeSlideConfig?: Partial<DeckConfig>;
   onOpenDeck: (items: MCQItem[], deckTitle?: string) => void;
   onOpenDeckSettings: (items: MCQItem[], config?: DeckConfig) => void;
   onOpenSocialGenerator: (items: MCQItem[]) => void;
-  onNavigateTab: (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'ai-keys') => void;
-  onSelectTemplate?: (templateId: string) => void;
+  onNavigateTab: (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => void;
+  onSelectTheme?: (selection: ThemeSelection) => void;
+  onResetSlideTheme?: () => void;
   onLoadSample?: (sampleIndex: number) => void;
   appTheme: 'dark' | 'light';
 }
@@ -114,15 +127,31 @@ const CtaPill: React.FC<{ label: string; accent: 'amber' | 'indigo' | 'emerald' 
 export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
   currentItems,
   currentConfig,
+  activeSlideConfig,
   onOpenDeck,
   onOpenDeckSettings,
   onOpenSocialGenerator,
   onNavigateTab,
-  onSelectTemplate,
+  onSelectTheme,
+  onResetSlideTheme,
   onLoadSample,
   appTheme,
 }) => {
   const isAppLight = appTheme === 'light';
+
+  // Effective config for the ACTIVE slide = deck config + slide-level override
+  const effectiveHomeConfig: DeckConfig = { ...currentConfig, ...(activeSlideConfig || {}) };
+  const savedPresets = getTemplatePresets();
+  const activeSavedPreset = savedPresets.find(
+    (p) =>
+      effectiveHomeConfig.templateId === p.design.templateId &&
+      JSON.stringify(effectiveHomeConfig.customTheme) === JSON.stringify(p.design.customTheme)
+  );
+  const isSavedPresetActive = !!activeSavedPreset;
+  const hasThemeOverride = !!(
+    activeSlideConfig &&
+    (activeSlideConfig.templateId || activeSlideConfig.customTheme || activeSlideConfig.accentColorCustom)
+  );
 
   // Sample + Active Slide Decks List
   const decksList = [
@@ -587,7 +616,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
       </div>
 
       {/* SECTION 3: QUICK THEME STYLE SELECTOR DIRECTLY ON HOME */}
-      {onSelectTemplate && (
+      {onSelectTheme && (
         <div className={`p-6 rounded-3xl border shadow-xl space-y-5 ${
           isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}>
@@ -596,33 +625,137 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
               <Palette className="w-4 h-4 text-amber-400" />
               Active Slide Theme Picker
             </h3>
-            <span className="text-xs text-slate-400 font-mono">
-              Current: {getTemplateById(currentConfig.templateId).name}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-slate-400 font-mono">
+                Current: {getTemplateById(effectiveHomeConfig.templateId, effectiveHomeConfig.customTheme).name}
+              </span>
+              {hasThemeOverride && onResetSlideTheme && (
+                <button
+                  type="button"
+                  onClick={onResetSlideTheme}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border transition-all cursor-pointer flex items-center gap-1 ${
+                    isAppLight
+                      ? 'bg-rose-50 border-rose-300 text-rose-600 hover:bg-rose-100'
+                      : 'bg-rose-500/10 border-rose-500/40 text-rose-300 hover:bg-rose-500/20'
+                  }`}
+                  title="Remove this slide's custom theme and revert to the deck theme"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Reset Slide to Deck Theme
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Slide-scope notice */}
+          <div className={`px-3 py-2 rounded-xl border text-xs font-bold flex items-start gap-2 ${
+            isAppLight ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+          }`}>
+            <Target className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>
+              Theme selections apply to the <strong>active slide only</strong> — every other slide keeps the deck
+              theme. Use Deck Settings → Theme &amp; Preview for per-slide custom color palettes.
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-            {TEMPLATES.map((tmpl) => {
-              const isSelected = tmpl.id === currentConfig.templateId;
-              return (
-                <button
-                  key={tmpl.id}
-                  type="button"
-                  onClick={() => onSelectTemplate(tmpl.id)}
-                  className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-2 ${
-                    isSelected
-                      ? 'bg-amber-500/15 border-amber-400 text-amber-300 font-extrabold ring-2 ring-amber-400/40 shadow-lg'
-                      : isAppLight
-                      ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span className={`h-8 w-full rounded-lg bg-gradient-to-br ${tmpl.previewGradient} border border-white/20`} />
-                  <span className="text-[11px] font-bold truncate w-full">{tmpl.name}</span>
-                </button>
-              );
-            })}
+          {/* Group A: Built-in Preset Themes */}
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Preset Themes
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+              {TEMPLATES.map((tmpl) => {
+                const isSelected = effectiveHomeConfig.templateId === tmpl.id && !isSavedPresetActive;
+                return (
+                  <button
+                    key={tmpl.id}
+                    type="button"
+                    onClick={() => onSelectTheme({ templateId: tmpl.id })}
+                    className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-2 ${
+                      isSelected
+                        ? 'bg-amber-500/15 border-amber-400 text-amber-300 font-extrabold ring-2 ring-amber-400/40 shadow-lg'
+                        : isAppLight
+                        ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span className={`h-8 w-full rounded-lg bg-gradient-to-br ${tmpl.previewGradient} border border-white/20`} />
+                    <span className="text-[11px] font-bold truncate w-full">{tmpl.name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Group B: My Saved Templates */}
+          {savedPresets.length > 0 && (
+            <div className={`space-y-2.5 pt-4 border-t ${
+              isAppLight ? 'border-slate-200' : 'border-slate-800'
+            }`}>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                  My Templates
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('templates')}
+                  className="text-[10px] font-extrabold text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  Manage in Template Creator <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                {savedPresets.map((preset) => {
+                  const tmpl = getTemplateById(preset.design.templateId, preset.design.customTheme);
+                  const isSelected =
+                    effectiveHomeConfig.templateId === preset.design.templateId &&
+                    JSON.stringify(effectiveHomeConfig.customTheme) === JSON.stringify(preset.design.customTheme);
+                  const accent = preset.design.customTheme?.accentColor || tmpl.styles.accentColor;
+                  const bg = preset.design.customTheme?.bg || `#${tmpl.styles.hexColors.bg}`;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() =>
+                        onSelectTheme({
+                          templateId: preset.design.templateId,
+                          customTheme: preset.design.customTheme,
+                          design: preset.design,
+                        })
+                      }
+                      className={`p-3 rounded-2xl border text-left transition-all flex flex-col gap-2.5 ${
+                        isSelected
+                          ? 'bg-amber-500/15 border-amber-400 ring-2 ring-amber-400/40 shadow-lg'
+                          : isAppLight
+                          ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                      title={preset.description || tmpl.name}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className="w-9 h-9 rounded-xl border border-white/15 shadow flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: bg }}
+                        >
+                          <span
+                            className="w-4 h-4 rounded-full border-2 border-white/40 shadow"
+                            style={{ backgroundColor: accent }}
+                          />
+                        </div>
+                        <span className="text-[11px] font-bold truncate">{preset.name}</span>
+                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      </div>
+                      {preset.description && (
+                        <p className="text-[10px] leading-snug line-clamp-2 text-slate-500">{preset.description}</p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
