@@ -246,6 +246,14 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Control bar padding:** `p-5 rounded-3xl`
 - **Nav buttons:** `p-2.5 rounded-xl` (prev/next), `px-4 py-2.5` (view all, answer reveal)
 - **Theme toggle button:** `px-3 py-2 rounded-xl`
+- **Control bar wrapping (anti-overlap):** outer `flex flex-wrap items-center justify-between gap-x-4 gap-y-3`; left group `flex flex-wrap items-center gap-3 min-w-0 flex-1`; right controls group `flex flex-wrap items-center gap-3` — **never `shrink-0`** on the controls group, or the buttons overflow the card at narrow widths instead of wrapping.
+
+### Text-box overlay pattern (slide + social, shared look)
+- **Editor overlay:** sibling of the export node (never captured). `absolute inset-0` layer; each box a draggable wrapper + an inner border box.
+- **Box outline:** `border-white/40 rounded-lg` (unselected) → `border-amber-400 ring-2 ring-amber-400/40` (selected).
+- **Label chip:** `absolute -top-7 left-0 text-xs font-black uppercase px-2 py-1 rounded leading-none`; `bg-amber-500 text-slate-950` selected, `bg-slate-900 text-amber-300 border border-white/20` unselected. Slide overlay flips to `top-full mt-1` when `box.y < 40` to avoid clipping against the preview's `overflow-hidden`.
+- **Resize handle:** `absolute -bottom-3 -right-3 w-6 h-6 rounded-md border-2 border-slate-950 shadow cursor-nwse-resize`, `bg-amber-400` selected / `bg-amber-500` unselected.
+- **Edit-mode toggle pattern:** design content renders ALWAYS (it is the export); the editor chrome (overlay + panel) renders only when a toggle is ON. Slide Studio: "Edit Text Boxes". Social custom mode: "Edit Design"/"Preview" (default OFF = clean preview). Exports go through the un-chromed node.
 
 ### `SidebarNav` — `src/components/SidebarNav.tsx`
 - **Background:** `bg-white/95` (light) | `bg-slate-950/85` (dark) with `backdrop-blur-2xl`

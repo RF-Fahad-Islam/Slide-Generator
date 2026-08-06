@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   Image as ImageIcon,
   Layers,
+  PenTool,
+  Eye,
   Sparkles,
   Smartphone,
   Square,
@@ -122,6 +124,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
   // Custom Design Editor State
   const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
+  const [isBoxEditMode, setIsBoxEditMode] = useState<boolean>(false);
   const [customDesign, setCustomDesign] = useState<CustomPostDesign>(loadSavedDesign);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [canvasWidth, setCanvasWidth] = useState<number>(500);
@@ -1011,13 +1014,32 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               <Sparkles className="w-4 h-4 text-amber-400" />
               <span>Live Social Post Preview ({aspectRatio})</span>
             </span>
-            <span className={`text-[10px] font-mono font-black px-2.5 py-1 rounded border ${
-              isAppLight
-                ? 'text-amber-700 bg-amber-100 border-amber-300'
-                : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-            }`}>
-              High Res Export
-            </span>
+            <div className="flex items-center gap-2">
+              {isCustomMode && (
+                <button
+                  type="button"
+                  onClick={() => setIsBoxEditMode(v => !v)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer ${
+                    isBoxEditMode
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
+                      : isAppLight
+                      ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                  }`}
+                  title="Toggle the text box editor handles on/off"
+                >
+                  {isBoxEditMode ? <Eye className="w-3 h-3" /> : <PenTool className="w-3 h-3" />}
+                  {isBoxEditMode ? 'Preview' : 'Edit Design'}
+                </button>
+              )}
+              <span className={`text-[10px] font-mono font-black px-2.5 py-1 rounded border ${
+                isAppLight
+                  ? 'text-amber-700 bg-amber-100 border-amber-300'
+                  : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+              }`}>
+                High Res Export
+              </span>
+            </div>
           </div>
 
           {/* Live Scaled Canvas Card */}
@@ -1173,8 +1195,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     </div>
                   </div>
 
-                  {/* Editor overlay (NOT captured on export) */}
-                  <div className="absolute inset-0 z-20">
+                  {/* Editor overlay (NOT captured on export) — only visible in Edit Design mode */}
+                  {isBoxEditMode && (
+                    <div className="absolute inset-0 z-20">
                     {customDesign.boxes.map(box => {
                       const selected = box.id === selectedBoxId;
                       const fs = Math.max(8, Math.round((box.fontSize / 100) * canvasWidth));
@@ -1215,11 +1238,18 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
+                  )}
                 </div>
-                <p className={`text-xs text-center leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Drag a box to move it — resize from the bottom-right handle. Click a box to edit its style. Your design saves automatically in this browser.
-                </p>
+                {isBoxEditMode ? (
+                  <p className={`text-xs text-center leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Drag a box to move it — resize from the bottom-right handle. Click a box to edit its style. Your design saves automatically in this browser.
+                  </p>
+                ) : (
+                  <p className={`text-xs text-center leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Clean preview of your custom design — click "Edit Design" to show and adjust the text boxes.
+                  </p>
+                )}
               </div>
             )}
           </div>

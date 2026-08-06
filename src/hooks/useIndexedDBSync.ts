@@ -22,7 +22,15 @@ export function useIndexedDBSync(
             setItems(saved.items);
           }
           if (saved.config) {
-            setConfig(prev => ({ ...prev, ...saved.config }));
+            setConfig(prev => {
+              const merged = { ...prev, ...saved.config };
+              // Decks saved before the text-box feature have no slideTextBoxes —
+              // keep them in template mode instead of inheriting the fresh-deck defaults.
+              if (!Array.isArray(saved.config.slideTextBoxes)) {
+                merged.slideTextBoxes = [];
+              }
+              return merged;
+            });
           }
           if (saved.updatedAt) {
             setLastSavedTime(new Date(saved.updatedAt));

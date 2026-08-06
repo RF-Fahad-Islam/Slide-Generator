@@ -94,7 +94,9 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
               <div className="invisible whitespace-pre-wrap leading-snug font-bold">
                 {renderInvisible(box)}
               </div>
-              <span className={`absolute -top-7 left-0 text-xs font-black uppercase px-2 py-1 rounded leading-none ${
+              <span className={`absolute left-0 text-xs font-black uppercase px-2 py-1 rounded leading-none ${
+                box.y < 40 ? 'top-full mt-1' : '-top-7'
+              } ${
                 selected ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-amber-300 border border-white/20'
               }`}>
                 {box.bind}

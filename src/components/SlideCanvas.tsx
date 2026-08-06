@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { DeckConfig, MCQItem } from '../types';
 import { getTemplateById } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
-import { getSlideBoxContent } from '../utils/slideTextBoxes';
+import { getSlideBoxContent, formatSlideQNumber } from '../utils/slideTextBoxes';
 import { MathText } from './MathText';
 import { Check, Award, BookOpen, User, Sparkles } from 'lucide-react';
 
@@ -136,23 +136,15 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     xl: 'w-24 h-24',
   }[effectiveConfig.logoSize || 'md'];
 
-  // Format question number
-  const formatQNumber = (idx: number) => {
-    const num = idx + 1;
-    if (effectiveConfig.questionNumberFormat === 'bangla') {
-      const banglaNums = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-      return num.toString().split('').map(d => banglaNums[parseInt(d)] || d).join('');
-    } else if (effectiveConfig.questionNumberFormat === 'q_prefix') {
-      return `Q${num}`;
-    }
-    return `${num}`;
-  };
-
   const showAnswerHighlight = effectiveConfig.showAnswerInSlide || isAnswerRevealMode;
   const showExplanation = effectiveConfig.showExplanationInSlide || isAnswerRevealMode;
   const isClassMode = effectiveConfig.layoutMode === 'class_mode';
 
   const slideTextBoxes = effectiveConfig.slideTextBoxes || [];
+
+  // Boxed-design mode: when text boxes are present they ARE the slide content
+  // (template header/middle/footer are hidden — only background + boxes render).
+  const isBoxedDesign = slideTextBoxes.length > 0;
 
   return (
     <div
@@ -186,6 +178,9 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
       <div className={`absolute top-0 right-0 w-[650px] h-[650px] rounded-full blur-3xl pointer-events-none z-0 ${isLight ? 'bg-amber-400/10' : 'bg-amber-500/10'}`} />
       <div className={`absolute bottom-0 left-0 w-[550px] h-[550px] rounded-full blur-3xl pointer-events-none z-0 ${isLight ? 'bg-blue-400/10' : 'bg-blue-500/10'}`} />
 
+      {/* Boxed-design mode: when text boxes are present they ARE the slide content — template header/middle/footer are hidden */}
+      {!isBoxedDesign && (
+        <>
       {/* TOP HEADER BAR (Full Width Image Banner OR Default Structured Header) */}
       <div className="relative z-10 shrink-0">
         {isHeaderBannerMode ? (
@@ -291,7 +286,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                 isLight ? 'text-slate-950' : 'text-white'
               }`}>
                 <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xl shrink-0">
-                  {formatQNumber(currentIndex)}
+                  {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
                 </span>
                 <div className="flex-1">
                   <MathText text={item.stem} />
@@ -399,7 +394,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30">
-                  {formatQNumber(currentIndex)}
+                  {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
                 </span>
                 <span className={`text-3xl font-extrabold ${styles.titleColor}`}>
                   প্রশ্ন
@@ -600,6 +595,8 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* DECK-WIDE TEXT BOX OVERLAY LAYER — rendered with the slide so it appears in PNG/PPTX exports */}
       {slideTextBoxes.length > 0 && (

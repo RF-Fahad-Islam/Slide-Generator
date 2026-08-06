@@ -68,6 +68,7 @@ export default function App() {
     bgPreset: 'none',
     bgImageOpacity: 1.0,
     bgOverlayDarkness: 0.0,
+    slideTextBoxes: defaultSlideTextBoxes(),
   });
 
   // IndexedDB Auto-Sync Hook
@@ -126,6 +127,12 @@ export default function App() {
   const resetSlideTextBoxes = () => {
     if (!window.confirm('Reset the slide text boxes to the default layout?')) return;
     setConfig(prev => ({ ...prev, slideTextBoxes: defaultSlideTextBoxes() }));
+    setSelectedTextBoxId(null);
+  };
+
+  const clearSlideTextBoxes = () => {
+    if (!window.confirm('Remove all text boxes from the deck?')) return;
+    setConfig(prev => ({ ...prev, slideTextBoxes: [] }));
     setSelectedTextBoxId(null);
   };
 
@@ -467,11 +474,11 @@ export default function App() {
                 {/* LEFT 7 COLUMNS: LIVE CANVAS DISPLAY */}
                 <div className="xl:col-span-7 flex flex-col gap-8">
                   {/* Slide Name & Controls Bar */}
-                  <div className={`flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl border shadow-2xl ${
+                  <div className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-5 rounded-3xl border shadow-2xl ${
                     isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-slate-800 text-white'
                   }`}>
                     {/* Current Slide Name & Back Button to All Slides */}
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
                       <button
                         onClick={() => setIsOverviewMode(true)}
                         className="px-4 py-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0"
@@ -494,7 +501,7 @@ export default function App() {
                     </div>
 
                     {/* Nav, Font & Theme Quick Controls */}
-                    <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    <div className="flex flex-wrap items-center gap-3">
                       {/* Quick Font Family Selector */}
                       <div className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border ${
                         isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
@@ -684,15 +691,13 @@ export default function App() {
                     <SlideTextBoxPanel
                       boxes={config.slideTextBoxes || []}
                       selectedId={selectedTextBoxId}
-                      item={currentItem}
-                      config={config}
-                      currentIndex={selectedIndex}
                       appTheme={appTheme}
                       onAddBox={addSlideBox}
                       onUpdateBox={updateSlideBox}
                       onDeleteBox={deleteSlideBox}
                       onDuplicateBox={duplicateSlideBox}
                       onReset={resetSlideTextBoxes}
+                      onClearAll={clearSlideTextBoxes}
                     />
                   )}
                 </div>

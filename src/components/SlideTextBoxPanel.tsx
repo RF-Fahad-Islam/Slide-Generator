@@ -1,34 +1,30 @@
 import React from 'react';
-import { MCQItem, DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
+import { SlideTextBox, SlideTextBoxBind } from '../types';
 import { SLIDE_BOX_BINDS, SLIDE_BOX_COLOR_PRESETS } from '../utils/slideTextBoxes';
 import { Layers, Palette } from 'lucide-react';
 
 interface SlideTextBoxPanelProps {
   boxes: SlideTextBox[];
   selectedId: string | null;
-  item: MCQItem;
-  config: DeckConfig;
-  currentIndex: number;
   appTheme: 'dark' | 'light';
   onAddBox: (bind: SlideTextBoxBind) => void;
   onUpdateBox: (id: string, patch: Partial<SlideTextBox>) => void;
   onDeleteBox: (id: string) => void;
   onDuplicateBox: (id: string) => void;
   onReset: () => void;
+  onClearAll: () => void;
 }
 
 export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   boxes,
   selectedId,
-  item,
-  config,
-  currentIndex,
   appTheme,
   onAddBox,
   onUpdateBox,
   onDeleteBox,
   onDuplicateBox,
   onReset,
+  onClearAll,
 }) => {
   const isAppLight = appTheme === 'light';
   const selectedBox = boxes.find(b => b.id === selectedId) || null;
@@ -213,15 +209,27 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={onReset}
-        className={`w-full px-4 py-2.5 rounded-2xl text-sm font-bold border transition-all cursor-pointer ${
-          isAppLight ? 'bg-white border-rose-300 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-rose-500/40 text-rose-300 hover:border-rose-500'
-        }`}
-      >
-        Reset to Default Layout
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onReset}
+          className={`flex-1 px-4 py-2.5 rounded-2xl text-sm font-bold border transition-all cursor-pointer ${
+            isAppLight ? 'bg-white border-amber-300 text-amber-700 hover:bg-amber-50' : 'bg-slate-900 border-amber-500/40 text-amber-300 hover:border-amber-500'
+          }`}
+        >
+          Reset to Default Layout
+        </button>
+        <button
+          type="button"
+          onClick={onClearAll}
+          className={`px-4 py-2.5 rounded-2xl text-sm font-bold border transition-all cursor-pointer ${
+            isAppLight ? 'bg-white border-rose-300 text-rose-600 hover:bg-rose-50' : 'bg-slate-900 border-rose-500/40 text-rose-300 hover:border-rose-500'
+          }`}
+          title="Remove all text boxes from every slide"
+        >
+          Clear All
+        </button>
+      </div>
     </div>
   );
 };
