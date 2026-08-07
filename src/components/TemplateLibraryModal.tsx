@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { DeckConfig } from '../types';
-import { getTemplateById } from '../templates/registry';
+import { DeckConfig, TemplateDefinition } from '../types';
+import { TEMPLATES, getTemplateById } from '../templates/registry';
 import {
   getTemplatePresets,
   saveTemplatePreset,
   deleteTemplatePreset,
+  captureDesign,
   DeckTemplatePreset,
 } from '../utils/templatePresets';
 import { LayoutTemplate, Save, Trash2, CheckCircle2, X, FolderOpen, Sparkles } from 'lucide-react';
@@ -56,6 +57,21 @@ export const TemplateLibraryModal: React.FC<TemplateLibraryModalProps> = ({
     onApply(preset);
     setPresets(getTemplatePresets());
   };
+
+  // Converts a built-in registry template into an applyable preset — switches
+  // the deck to that theme while keeping the rest of the current design.
+  const builtinToPreset = (tmpl: TemplateDefinition): DeckTemplatePreset => ({
+    id: `builtin-${tmpl.id}`,
+    name: tmpl.name,
+    description: tmpl.description,
+    createdAt: 0,
+    updatedAt: 0,
+    design: {
+      ...captureDesign(config),
+      templateId: tmpl.id,
+      customTheme: undefined,
+    },
+  });
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${
@@ -125,6 +141,85 @@ export const TemplateLibraryModal: React.FC<TemplateLibraryModalProps> = ({
           <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
             Captures theme, fonts, layout, background, banners &amp; logo. Question content is NOT saved — saving with an existing name overwrites that template.
           </p>
+        </div>
+
+        {/* Built-in default templates & themes — same one-click apply as saved presets */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              Built-in Templates &amp; Themes ({TEMPLATES.length - 1})
+            </span>
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`}>
+              Default layouts
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {TEMPLATES.filter((t) => t.id !== 'custom-theme').map((tmpl) => {
+              const isLightTmpl = tmpl.themeType === 'light';
+              const isCurrent =
+                config.templateId === tmpl.id && !config.customTheme;
+              return (
+                <div
+                  key={tmpl.id}
+                  className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                    isCurrent
+                      ? isAppLight
+                        ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/50'
+                        : 'bg-amber-500/10 border-amber-500/50 ring-2 ring-amber-500/40'
+                      : isAppLight
+                      ? 'bg-white border-slate-200 hover:border-slate-300'
+                      : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-14 h-14 rounded-2xl border border-white/15 shadow-lg shrink-0 ${tmpl.previewGradient}`}>
+                      <span
+                        className="w-6 h-6 rounded-full border-2 border-white/40 shadow block mx-auto mt-3.5"
+                        style={{ backgroundColor: tmpl.styles.accentColor }}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className={`text-sm font-extrabold truncate ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                          {tmpl.name}
+                        </h4>
+                        {isCurrent && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1 bg-amber-500 text-slate-950">
+                            <CheckCircle2 className="w-3 h-3" /> Active
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs truncate ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                        {tmpl.description}
+                      </p>
+                      <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded inline-block mt-1 ${
+                        isLightTmpl ? 'bg-amber-400 text-slate-950' : 'bg-slate-900 text-amber-300'
+                      }`}>
+                        {isLightTmpl ? '☀️ LIGHT' : '🌙 DARK'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleApply(builtinToPreset(tmpl))}
+                    disabled={isCurrent}
+                    className={`flex-1 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      isCurrent
+                        ? isAppLight
+                          ? 'bg-slate-200 text-slate-500 cursor-default'
+                          : 'bg-slate-800 text-slate-500 cursor-default'
+                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow'
+                    }`}
+                    title={isCurrent ? 'This template is already active' : 'Switch the deck design to this built-in template'}
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    {isCurrent ? 'Active' : 'Use This Template'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* My templates */}

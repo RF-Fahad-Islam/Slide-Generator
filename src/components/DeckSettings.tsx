@@ -471,8 +471,8 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   });
 
   return (
-    <div className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border p-6 lg:p-8 space-y-8 ${
-      isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-slate-800'
+    <div className={`p-6 lg:p-8 space-y-8 ${
+      isAppLight ? 'bg-white/40 border border-slate-200' : 'bg-slate-900/40 border border-slate-800'
     }`}>
       {/* SCOPE SELECTION CONTROL HEADER BAR (GLOBAL VS SLIDE SCOPE) */}
       <div className={`p-5 rounded-3xl border shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
