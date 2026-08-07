@@ -34,7 +34,7 @@ import { classroomTextBoxes } from './utils/slideElements';
 import { loadGlobalDefaults } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, PlusCircle, ArrowRight } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
 import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
@@ -1444,6 +1444,15 @@ export default function App() {
           setActiveTab('manual');
         }}
         appTheme={appTheme}
+      />
+
+      {/* Add Questions chooser modal — 3 source cards (Bank / Manual / Form) */}
+      <AddQuestionsModal
+        isOpen={isAddQuestionsOpen}
+        onClose={() => setIsAddQuestionsOpen(false)}
+        onFromQuestionBank={handleFromQuestionBank}
+        onFromManualEditor={handleFromManualEditor}
+        onFromQuestionForm={handleFromQuestionForm}
       />
 
       {/* Onboarding Tour */}
