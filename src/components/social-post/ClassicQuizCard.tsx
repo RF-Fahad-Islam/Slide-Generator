@@ -10,6 +10,7 @@ interface ClassicQuizCardProps {
   questionNumber: number;
   aspectClass: string;
   bgStyle: string;
+  customBgImageUrl?: string;
   showAnswerKey: boolean;
   showExplanation: boolean;
   brandName?: string;
@@ -22,7 +23,24 @@ interface ClassicQuizCardProps {
 // grid, footer watermark. Extracted verbatim from SocialPostGenerator so it
 // can sit alongside other selectable post templates.
 export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardProps>(
-  ({ item, config, customHeaderTitle, questionNumber, aspectClass, bgStyle, showAnswerKey, showExplanation, brandName, logoUrl, customStem, customOptions }, ref) => {
+  (
+    {
+      item,
+      config,
+      customHeaderTitle,
+      questionNumber,
+      aspectClass,
+      bgStyle,
+      customBgImageUrl,
+      showAnswerKey,
+      showExplanation,
+      brandName,
+      logoUrl,
+      customStem,
+      customOptions,
+    },
+    ref
+  ) => {
     const activeBrand = brandName !== undefined ? brandName : (config.brandName || "NOBEL'S CLASSROOM");
     const activeLogo = logoUrl !== undefined ? logoUrl : config.logoUrl;
     const stemText = customStem !== undefined ? customStem : item.stem;
@@ -31,8 +49,18 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
     return (
       <div
         ref={ref}
-        style={{ fontFamily: config.fontFamily || "'Kalpurush', serif" }}
-        className={`w-full mx-auto ${aspectClass} ${bgStyle} rounded-3xl p-6 lg:p-8 shadow-2xl border border-slate-700/80 flex flex-col justify-between relative overflow-hidden select-none transition-all`}
+        style={{
+          fontFamily: config.fontFamily || "'Kalpurush', serif",
+          ...(customBgImageUrl
+            ? {
+                backgroundImage: `url("${customBgImageUrl}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }
+            : {}),
+        }}
+        className={`w-full mx-auto ${aspectClass} ${customBgImageUrl ? 'bg-slate-950 text-white' : bgStyle} rounded-3xl p-6 lg:p-8 shadow-2xl border border-slate-700/80 flex flex-col justify-between relative overflow-hidden select-none transition-all`}
       >
         {/* Top Brand Banner Bar */}
         <div className="flex items-center justify-between border-b border-white/15 pb-4 z-10">

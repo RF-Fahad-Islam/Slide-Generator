@@ -891,11 +891,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     <div className="flex items-center gap-3">
                       {customLogoUrl ? (
                         <div className="relative shrink-0">
-                          <img src={customLogoUrl} alt="Logo" className="w-14 h-14 rounded-2xl object-cover border border-amber-400 bg-black/40 p-1" />
+                          <img src={customLogoUrl} alt="Logo" className="w-14 h-14 rounded-2xl object-contain border border-amber-400 bg-black/40 p-1" />
                           <button
                             type="button"
                             onClick={() => setCustomLogoUrl('')}
-                            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-xs font-black flex items-center justify-center shadow"
+                            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-xs font-black flex items-center justify-center shadow cursor-pointer"
                           >
                             ✕
                           </button>
@@ -928,13 +928,17 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
                 <div>
                   <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Header Subtitle / Tagline:
+                    Header Subtitle / Wordmark Title:
                   </label>
                   <input
                     type="text"
-                    value={customHeaderTitle}
-                    onChange={(e) => setCustomHeaderTitle(e.target.value)}
-                    placeholder="e.g. আজকের কুইজ / Daily MCQ Prep"
+                    value={postTemplate === 'quiz_time' ? quizTitleText : customHeaderTitle}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomHeaderTitle(val);
+                      setQuizTitleText(val);
+                    }}
+                    placeholder="e.g. Quiz Time / আজকের কুইজ"
                     className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:border-amber-500 focus:outline-none ${
                       isAppLight
                         ? 'bg-slate-50 border-slate-300 text-slate-900'
@@ -967,7 +971,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   <input
                     type="text"
                     value={quizTitleText}
-                    onChange={(e) => setQuizTitleText(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setQuizTitleText(val);
+                      setCustomHeaderTitle(val);
+                    }}
                     className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:border-amber-500 focus:outline-none ${
                       isAppLight
                         ? 'bg-slate-50 border-slate-300 text-slate-900'
@@ -1044,7 +1052,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     Background Theme & Custom Image
                   </h4>
                   <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Pick background colors or upload custom graphics.
+                    Pick background color presets or upload custom background graphics.
                   </p>
                 </div>
 
@@ -1057,15 +1065,18 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                       { id: 'gradient_amber', name: 'Midnight Gold', desc: 'Dark Amber Sweep' },
                       { id: 'gradient_blue', name: 'Cyber Blue', desc: 'Deep Royal Blue' },
                       { id: 'gradient_emerald', name: 'Forest Emerald', desc: 'Emerald Teal' },
-                      { id: 'clean_light', name: 'Warm Light', desc: 'Bright Clean' },
+                      { id: 'clean_light', name: 'Warm Light', desc: 'Bright Clean Light' },
                       { id: 'pure_dark', name: 'Pure Dark', desc: 'Deep Obsidian' },
                     ].map((b) => (
                       <button
                         key={b.id}
                         type="button"
-                        onClick={() => setPostBgColor(b.id)}
+                        onClick={() => {
+                          setPostBgColor(b.id);
+                          setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }));
+                        }}
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                          postBgColor === b.id
+                          postBgColor === b.id && !customDesign.bgImageUrl
                             ? isAppLight
                               ? 'bg-amber-100 text-amber-900 border-amber-400 ring-2 ring-amber-400/40 font-bold'
                               : 'bg-amber-500/20 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 font-bold'
@@ -1081,29 +1092,40 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   </div>
                 </div>
 
-                {isCustomMode && (
-                  <div className={`pt-3 border-t space-y-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
-                    <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                      Custom Background Image (Custom Mode):
-                    </label>
+                <div className={`pt-3 border-t space-y-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
+                  <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                    Upload Custom Background Image:
+                  </label>
+                  <div className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <label className="px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer flex items-center gap-2 border bg-amber-500 text-slate-950 border-amber-400 shadow-md">
+                      <label className="flex-1 px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer flex items-center justify-center gap-2 border bg-amber-500 text-slate-950 border-amber-400 shadow-md hover:brightness-110 transition-all">
                         <Upload className="w-4 h-4 stroke-[2.5]" />
-                        <span>Upload BG File</span>
+                        <span>Upload Custom BG Image</span>
                         <input type="file" accept="image/*" onChange={handleCustomBgUpload} className="hidden" />
                       </label>
                       {customDesign.bgImageUrl && (
                         <button
                           type="button"
                           onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }))}
-                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer"
+                          className="px-3 py-2.5 rounded-xl text-xs font-bold text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer shrink-0"
                         >
                           Clear Image
                         </button>
                       )}
                     </div>
+                    <input
+                      type="text"
+                      value={customDesign.bgImageUrl.startsWith('data:') ? '' : customDesign.bgImageUrl}
+                      onChange={(e) => setCustomDesign(prev => ({ ...prev, bgImageUrl: e.target.value }))}
+                      placeholder="...or paste background image URL"
+                      className={`w-full border rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 ${
+                        isAppLight
+                          ? 'bg-slate-50 border-slate-300 text-slate-800'
+                          : 'bg-slate-950 border-slate-800 text-slate-300'
+                      }`}
+                    />
                   </div>
-                )}
+                </div>
               </div>
             )}
 
@@ -1211,6 +1233,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   ref={postCanvasRef}
                   item={effectiveItem}
                   aspectClass={getAspectClass()}
+                  bgStyle={getBgStyle()}
+                  customBgImageUrl={customDesign.bgImageUrl}
                   brandName={customBrandName}
                   logoUrl={customLogoUrl}
                   titleText={quizTitleText}
@@ -1231,6 +1255,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   questionNumber={selectedQuestionIndex + 1}
                   aspectClass={getAspectClass()}
                   bgStyle={getBgStyle()}
+                  customBgImageUrl={customDesign.bgImageUrl}
                   showAnswerKey={showAnswerKey}
                   showExplanation={showExplanation}
                   brandName={customBrandName}
