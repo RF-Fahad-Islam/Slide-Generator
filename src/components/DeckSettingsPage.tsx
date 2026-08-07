@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { DeckConfig, MCQItem } from '../types';
 import { DeckSettings } from './DeckSettings';
 import { DeckSettingsPreviewModal } from './DeckSettingsPreviewModal';
-import { ChevronLeft, Sliders, CheckCircle2, Eye, RefreshCw } from 'lucide-react';
+import { DeckSettingsCompactPreview } from './DeckSettingsCompactPreview';
+import { ChevronLeft, Sliders, CheckCircle2, Eye, RefreshCw, EyeOff } from 'lucide-react';
 
 interface DeckSettingsPageProps {
   onClose: () => void;
@@ -42,6 +43,8 @@ export const DeckSettingsPage: React.FC<DeckSettingsPageProps> = ({
   const [draftSlideConfig, setDraftSlideConfig] = useState<Partial<DeckConfig> | undefined>(activeSlideConfig);
   const [hasPendingChanges, setHasPendingChanges] = useState<boolean>(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
+  // Toggleable compact sticky slide preview on the right (default ON).
+  const [showCompactPreview, setShowCompactPreview] = useState<boolean>(true);
 
   const activeItem = items[activeSlideIndex] || items[0];
 
@@ -115,6 +118,23 @@ export const DeckSettingsPage: React.FC<DeckSettingsPageProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
+            type="button"
+            onClick={() => setShowCompactPreview((v) => !v)}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
+              isAppLight
+                ? showCompactPreview
+                  ? 'bg-amber-50 text-amber-700 border-amber-300'
+                  : 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                : showCompactPreview
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                  : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
+            }`}
+            title={showCompactPreview ? 'Hide the compact slide preview' : 'Show the compact slide preview'}
+          >
+            {showCompactPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span className="hidden md:inline">{showCompactPreview ? 'Hide Preview' : 'Show Preview'}</span>
+          </button>
+          <button
             onClick={() => setIsPreviewOpen(true)}
             disabled={!activeItem}
             className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
@@ -137,26 +157,47 @@ export const DeckSettingsPage: React.FC<DeckSettingsPageProps> = ({
         </div>
       </div>
 
-      {/* Settings content — full width, preview lives in the modal */}
-      <DeckSettings
-        config={draftConfig}
-        onUpdateConfig={(updated) => {
-          setDraftConfig(updated);
-          handleDirty();
-        }}
-        activeSlideIndex={activeSlideIndex}
-        activeSlideConfig={draftSlideConfig}
-        onUpdateActiveSlideConfig={(updated) => {
-          setDraftSlideConfig(updated);
-          handleDirty();
-        }}
-        onResetActiveSlideConfig={() => {
-          setDraftSlideConfig(undefined);
-          handleDirty();
-        }}
-        appTheme={appTheme}
-        onEnforceClassroomView={handleClassroomEnforce}
-      />
+      {/* Settings content — full width with an optional sticky compact preview column */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        <div className={showCompactPreview ? 'xl:col-span-8' : 'xl:col-span-12'}>
+          <DeckSettings
+            config={draftConfig}
+            onUpdateConfig={(updated) => {
+              setDraftConfig(updated);
+              handleDirty();
+            }}
+            activeSlideIndex={activeSlideIndex}
+            activeSlideConfig={draftSlideConfig}
+            onUpdateActiveSlideConfig={(updated) => {
+              setDraftSlideConfig(updated);
+              handleDirty();
+            }}
+            onResetActiveSlideConfig={() => {
+              setDraftSlideConfig(undefined);
+              handleDirty();
+            }}
+            appTheme={appTheme}
+            onEnforceClassroomView={handleClassroomEnforce}
+          />
+        </div>
+
+        {/* Sticky compact slide preview — toggleable from the header, expands to the modal */}
+        {showCompactPreview && (
+          <div className="xl:col-span-4">
+            <div className="xl:sticky xl:top-20 flex items-start justify-center gap-2">
+              <DeckSettingsCompactPreview
+                config={draftConfig}
+                slideConfig={draftSlideConfig}
+                item={activeItem}
+                activeSlideIndex={activeSlideIndex}
+                totalCount={items.length}
+                appTheme={appTheme}
+                onExpand={() => setIsPreviewOpen(true)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Preview slide modal — draft config + draft slide config */}
       <DeckSettingsPreviewModal
