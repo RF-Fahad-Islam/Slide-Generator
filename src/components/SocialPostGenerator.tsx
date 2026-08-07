@@ -446,9 +446,13 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn relative">
-      {/* CANVA STUDIO TOP HEADER BAR */}
+      {/* CANVA STUDIO TOP HEADER BAR (PAGE-FLAT PANEL) */}
       <div
-        className={`${isAppLight ? 'glass-card-fatty-light border-slate-200 bg-white/95' : 'glass-card-fatty border-white/10 bg-slate-900/90'} p-4 lg:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xl backdrop-blur-xl`}
+        className={`p-4 lg:p-5 border rounded-3xl backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+          isAppLight
+            ? 'bg-white/80 border-slate-200 shadow-sm'
+            : 'bg-slate-900/60 border-slate-800/80 shadow-xl text-white'
+        }`}
       >
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25">
@@ -515,12 +519,16 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       {/* CANVA 2-COLUMN STUDIO GRID */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* ========================================================================= */}
-        {/* LEFT COLUMN (xl:col-span-5): FULL CANVA TOOL DRAWER / SIDEBAR            */}
+        {/* LEFT COLUMN (xl:col-span-5): FULL CANVA TOOL DRAWER / SIDEBAR (PAGE-FLAT) */}
         {/* ========================================================================= */}
-        <div className={`xl:col-span-5 ${isAppLight ? 'glass-card-fatty-light border-slate-200 bg-white' : 'glass-card-fatty border-white/10 bg-slate-900/90'} border rounded-3xl overflow-hidden flex flex-col min-h-[640px] shadow-2xl`}>
+        <div className={`xl:col-span-5 border rounded-3xl overflow-hidden flex flex-col min-h-[640px] backdrop-blur-xl ${
+          isAppLight
+            ? 'bg-white/80 border-slate-200 shadow-sm'
+            : 'bg-slate-900/60 border-slate-800/80 shadow-xl text-white'
+        }`}>
           {/* Tool Drawer Header */}
           <div className={`p-4 border-b flex items-center justify-between ${
-            isAppLight ? 'bg-slate-100/80 border-slate-200' : 'bg-slate-950/60 border-white/10'
+            isAppLight ? 'bg-slate-100/80 border-slate-200' : 'bg-slate-950/60 border-slate-800'
           }`}>
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 rounded-lg bg-amber-500 text-slate-950 font-black">
@@ -554,7 +562,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
           {/* Tool Drawer Scrollable Tab Rail */}
           <div className={`flex items-center border-b p-2 gap-1 overflow-x-auto no-scrollbar ${
-            isAppLight ? 'bg-slate-100/50 border-slate-200' : 'bg-slate-950/40 border-white/10'
+            isAppLight ? 'bg-slate-100/50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
           }`}>
             {drawerTabs.map((t) => {
               const Icon = t.icon;
@@ -613,7 +621,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 )}
 
                 {/* Aspect Ratio Selector */}
-                <div className={`space-y-2 pt-3 border-t ${isAppLight ? 'border-slate-200' : 'border-white/10'}`}>
+                <div className={`space-y-2 pt-3 border-t ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
                   <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Aspect Ratio (Post Dimension):
                   </label>
@@ -758,7 +766,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 </div>
 
                 {/* Display Toggles */}
-                <div className={`pt-3 border-t space-y-2 ${isAppLight ? 'border-slate-200' : 'border-white/10'}`}>
+                <div className={`pt-3 border-t space-y-2 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
                   <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Card Display Options:
                   </label>
@@ -1074,7 +1082,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 </div>
 
                 {isCustomMode && (
-                  <div className={`pt-3 border-t space-y-3 ${isAppLight ? 'border-slate-200' : 'border-white/10'}`}>
+                  <div className={`pt-3 border-t space-y-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
                     <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                       Custom Background Image (Custom Mode):
                     </label>

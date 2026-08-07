@@ -33,8 +33,8 @@ interface PostTemplateSelectorProps {
 export const PostTemplateSelector: React.FC<PostTemplateSelectorProps> = ({ selected, onSelect, isAppLight }) => {
   return (
     <div
-      className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-5 ${
-        isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-slate-800'
+      className={`p-5 rounded-2xl border space-y-4 ${
+        isAppLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-950/60 border-slate-800'
       }`}
     >
       <label className={`text-sm font-black uppercase tracking-wider flex items-center gap-2 ${
@@ -57,8 +57,8 @@ export const PostTemplateSelector: React.FC<PostTemplateSelectorProps> = ({ sele
                     ? 'bg-amber-50 border-amber-400 shadow-md ring-2 ring-amber-400/40'
                     : 'bg-amber-500/10 border-amber-400 shadow-md ring-1 ring-amber-400/50'
                   : isAppLight
-                  ? 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                  : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                  ? 'bg-white border-slate-200 hover:bg-slate-100'
+                  : 'bg-slate-900 border-slate-800 hover:border-slate-700'
               }`}
             >
               <span className={`h-12 w-full rounded-xl bg-gradient-to-br ${opt.swatchClass} flex items-center justify-center`}>

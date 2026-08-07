@@ -15,6 +15,7 @@ import {
 } from '@dnd-kit/sortable';
 import { MCQItem } from '../types';
 import { ValidationPanel } from './ValidationPanel';
+import { AddQuestionsBanner } from './AddQuestionsBanner';
 import { Search } from 'lucide-react';
 import { SortableQuestionCard } from './SortableQuestionCard';
 
@@ -25,6 +26,7 @@ interface DeckManagerProps {
   selectedIndex: number;
   appTheme?: 'dark' | 'light';
   onEditQuestion?: (item: MCQItem) => void;
+  onAddQuestions?: () => void;
 }
 
 export const DeckManager: React.FC<DeckManagerProps> = ({
@@ -34,6 +36,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   selectedIndex,
   appTheme = 'dark',
   onEditQuestion,
+  onAddQuestions,
 }) => {
   const isAppLight = appTheme === 'light';
   const [searchQuery, setSearchQuery] = useState('');
@@ -161,6 +164,11 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
 
       {/* Deck Health Validation Inspector */}
       {items.length > 0 && <ValidationPanel items={items} onSelectItem={onSelectIndex} appTheme={appTheme} />}
+
+      {/* ADD QUESTIONS — green banner right under Deck Health, opens the 3-source chooser modal */}
+      {onAddQuestions && (
+        <AddQuestionsBanner onClick={onAddQuestions} count={items.length} appTheme={appTheme} />
+      )}
 
       {/* Bulk Transformation Bar */}
       <div

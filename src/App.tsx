@@ -8,7 +8,6 @@ import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
 import { AIUploader } from './components/AIUploader';
 import { DeckManager } from './components/DeckManager';
-import { AddQuestionsBanner } from './components/AddQuestionsBanner';
 import { DeckSettingsPage } from './components/DeckSettingsPage';
 import { ExportModal } from './components/ExportModal';
 import { BatchExportModal } from './components/BatchExportModal';
@@ -1270,27 +1269,18 @@ export default function App() {
                       />
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-4">
-                      <DeckManager
-                        items={items}
-                        onUpdateItems={setItems}
-                        onSelectIndex={(idx) => {
-                          setSelectedIndex(questionSlideIndex(expandedSlides, idx));
-                          setIsOverviewMode(false);
-                        }}
-                        selectedIndex={activeQuestionIndex}
-                        appTheme={appTheme}
-                        onEditQuestion={(item) => setEditingQuestion(item)}
-                      />
-
-                      {/* ADD QUESTIONS — green banner under the deck question side panel,
-                          opens the 3-source chooser modal (Bank / Manual / Form) */}
-                      <AddQuestionsBanner
-                        onClick={() => setIsAddQuestionsOpen(true)}
-                        count={expandedSlides.length}
-                        appTheme={appTheme}
-                      />
-                    </div>
+                    <DeckManager
+                      items={items}
+                      onUpdateItems={setItems}
+                      onSelectIndex={(idx) => {
+                        setSelectedIndex(questionSlideIndex(expandedSlides, idx));
+                        setIsOverviewMode(false);
+                      }}
+                      selectedIndex={activeQuestionIndex}
+                      appTheme={appTheme}
+                      onEditQuestion={(item) => setEditingQuestion(item)}
+                      onAddQuestions={() => setIsAddQuestionsOpen(true)}
+                    />
                   )}
                 </div>
               </div>
@@ -1331,6 +1321,7 @@ export default function App() {
             onImportToCurrentDeck={handleImportToCurrentDeck}
             onCreateNewDeckFromSelection={handleCreateNewDeckFromSelection}
             onOpenInSocial={handleOpenInSocial}
+            onAddQuestions={() => setIsAddQuestionsOpen(true)}
             appTheme={appTheme}
           />
         )}

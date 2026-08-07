@@ -59,11 +59,6 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   const [successMsg, setSuccessMsg] = useState<string>('');
   const [isPdfExportOpen, setIsPdfExportOpen] = useState<boolean>(false);
 
-  // Pending JSON import — parsed MCQs waiting for a deck name before saving
-  const [importPending, setImportPending] = useState<{ items: MCQItem[]; sourceName: string } | null>(null);
-  const [importDeckName, setImportDeckName] = useState<string>('');
-  const [importDeckSubject, setImportDeckSubject] = useState<string>('Biology');
-
   // Filters State
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
@@ -143,60 +138,6 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
       } catch (err) {
         console.error('Failed to delete deck:', err);
       }
-    }
-  };
-
-  // Import MCQs from a JSON file (flexible format: MCQItem[] / {items} / {questions} / {data})
-  const handleImportJsonFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      const items = normalizeMCQs(parsed);
-      if (items.length === 0) {
-        alert('No valid MCQs found in that JSON file. Expected an array of questions or an object like { items: [...] }.');
-        return;
-      }
-      setImportDeckName(file.name.replace(/\.json$/i, '').trim());
-      setImportPending({ items, sourceName: file.name });
-    } catch (err) {
-      console.error('Failed to parse MCQ JSON:', err);
-      alert('Failed to parse that JSON file. Make sure it is valid JSON containing MCQ questions.');
-    }
-  };
-
-  const handleConfirmJsonImport = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!importPending || !importDeckName.trim()) return;
-    const items = importPending.items;
-    const seen = new Set<string>();
-    const uniqueItems = items.map((q, idx) => {
-      let id = q.id;
-      if (!id || seen.has(id)) id = `q_${Date.now().toString(36)}_${idx}_${Math.random().toString(36).slice(2, 6)}`;
-      seen.add(id);
-      return { ...q, id };
-    });
-    const newDeck: SavedDeck = {
-      id: `deck_${Date.now()}`,
-      name: importDeckName.trim(),
-      subject: importDeckSubject,
-      badgeTag: importDeckSubject,
-      items: uniqueItems,
-      config: { ...currentConfig },
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    try {
-      await db.questionDecks.put(newDeck);
-      setSavedDecks(prev => [newDeck, ...prev]);
-      setImportPending(null);
-      setImportDeckName('');
-      showTemporarySuccess(`Imported ${uniqueItems.length} MCQs from JSON into "${newDeck.name}"!`);
-    } catch (err) {
-      console.error('Failed to save imported deck:', err);
-      alert('Error saving imported deck to storage.');
     }
   };
 
@@ -329,28 +270,8 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           </div>
         </div>
 
-        {/* Action: Import JSON + Save Current Active Slide Deck as Card */}
+        {/* Action: Save Current Active Slide Deck as Card */}
         <div className="flex items-center gap-3">
-          <button
-            data-tour="bank-import"
-            onClick={() => jsonFileInputRef.current?.click()}
-            className={`px-5 py-3 rounded-2xl border text-sm font-black flex items-center gap-2 shadow-lg transition-all cursor-pointer ${
-              isAppLight
-                ? 'bg-white text-slate-800 border-slate-300 hover:bg-slate-50 hover:border-amber-400'
-                : 'bg-slate-900 text-slate-200 border-slate-700 hover:border-amber-500/40 hover:text-white'
-            }`}
-            title="Import MCQs from a JSON file into your Question Bank"
-          >
-            <UploadCloud className="w-4 h-4 text-amber-400" />
-            <span>Import MCQs (JSON)</span>
-          </button>
-          <input
-            ref={jsonFileInputRef}
-            type="file"
-            accept=".json,application/json"
-            className="hidden"
-            onChange={handleImportJsonFile}
-          />
           <button
             onClick={() => setIsSavingCurrent(prev => !prev)}
             className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-sm flex items-center gap-2 shadow-lg shadow-amber-500/25 hover:brightness-110 cursor-pointer transition-all"
@@ -361,88 +282,8 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
         </div>
       </div>
 
-      {/* JSON Import Confirm Form */}
-      {importPending && (
-        <form onSubmit={handleConfirmJsonImport} className={`p-6 rounded-3xl border shadow-2xl space-y-4 animate-fadeIn ${
-          isAppLight ? 'bg-white border-indigo-300 shadow-indigo-200/30' : 'bg-slate-900 border-indigo-500/40 shadow-2xl'
-        }`}>
-          <div className={`flex items-center justify-between border-b pb-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
-            <h3 className={`text-sm font-extrabold flex items-center gap-2 ${isAppLight ? 'text-indigo-800' : 'text-indigo-300'}`}>
-              <UploadCloud className="w-4 h-4 text-indigo-400" />
-              Import MCQs from JSON
-            </h3>
-            <button
-              type="button"
-              onClick={() => setImportPending(null)}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                isAppLight ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-slate-800'
-              }`}
-              title="Cancel import"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className={`px-3.5 py-2.5 rounded-xl border text-sm font-semibold flex items-center gap-2 ${
-            isAppLight ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-200'
-          }`}>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>
-              Parsed <strong>{importPending.items.length} MCQs</strong> from <code className="font-mono">{importPending.sourceName}</code> — name the deck to save it to your library.
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-bold mb-1 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>Deck Title Name</label>
-              <input
-                type="text"
-                value={importDeckName}
-                onChange={e => setImportDeckName(e.target.value)}
-                placeholder="e.g. Imported Biology MCQs"
-                required
-                className={`w-full px-3.5 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
-                  isAppLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-slate-100'
-                }`}
-              />
-            </div>
-            <div>
-              <label className={`block text-sm font-bold mb-1 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>Subject Category</label>
-              <select
-                value={importDeckSubject}
-                onChange={e => setImportDeckSubject(e.target.value)}
-                className={`w-full px-3.5 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 cursor-pointer ${
-                  isAppLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-amber-300'
-                }`}
-              >
-                <option value="Biology">Biology (জীববিজ্ঞান)</option>
-                <option value="Higher Math">Higher Math (উচ্চতর গণিত)</option>
-                <option value="Physics">Physics (পদার্থবিজ্ঞান)</option>
-                <option value="Chemistry">Chemistry (রসায়ন)</option>
-                <option value="General Science">General Science (বিজ্ঞান)</option>
-                <option value="English">English</option>
-                <option value="ICT">ICT</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setImportPending(null)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold cursor-pointer ${
-                isAppLight ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-extrabold shadow-md cursor-pointer flex items-center gap-2"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Save {importPending.items.length} MCQs to Bank
-            </button>
-          </div>
-        </form>
-      )}
+      {/* ADD QUESTIONS — green banner (shared with Slide Studio) opens the source chooser modal */}
+      <AddQuestionsBanner onClick={onAddQuestions} count={currentItems.length} appTheme={appTheme} />
 
       {/* Success Notification */}
       {successMsg && (
