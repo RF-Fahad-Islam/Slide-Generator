@@ -132,16 +132,13 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   }
 
   // -------------------------------------------------------------------------
-  // Middle — question card. Mirrors the template chrome's hierarchy: a header
-  // row with the number chip and source on the right, then the stem, then the
-  // roman-statement sub-card, then the closing prompt line. The card is sized
-  // for the typical bohupodi (roman-statement) case: a 1–2 line stem, three
-  // single-line i./ii./iii. statements, one prompt line, four options.
+  // Middle — question card. Sized proportionally (280px tall) to host the
+  // number chip, stem, source, roman statements, and prompt.
   // -------------------------------------------------------------------------
   const cardX = PAD;
   const cardW = SLIDE_W - PAD * 2;
-  const cardY = 170;
-  const cardH = 470;
+  const cardY = 150;
+  const cardH = 280;
   const innerX = cardX + 36;
   const innerW = cardW - 72;
   boxes.push({
@@ -164,9 +161,9 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     id: bid('mdl_qnum'),
     bind: 'questionNumber',
     x: innerX,
-    y: cardY + 26,
+    y: cardY + 22,
     w: 72,
-    h: 56,
+    h: 52,
     fontSize: 28,
     color: isLight ? '#ffffff' : '#0f172a',
     align: 'center',
@@ -179,7 +176,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     id: bid('mdl_source'),
     bind: 'source',
     x: SLIDE_W - PAD - 36 - 354,
-    y: cardY + 32,
+    y: cardY + 28,
     w: 354,
     fontSize: 18,
     color: accent,
@@ -191,7 +188,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     id: bid('mdl_stem'),
     bind: 'stem',
     x: innerX,
-    y: cardY + 96,
+    y: cardY + 86,
     w: innerW,
     fontSize: bodySize,
     color: textColor,
@@ -203,7 +200,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     id: bid('mdl_roman'),
     bind: 'roman',
     x: innerX,
-    y: cardY + 192,
+    y: cardY + 155,
     w: innerW,
     fontSize: 20,
     color: textColor,
@@ -217,7 +214,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     id: bid('mdl_prompt'),
     bind: 'prompt',
     x: innerX,
-    y: cardY + 378,
+    y: cardY + 225,
     w: innerW,
     fontSize: 22,
     color: accent,
@@ -227,13 +224,13 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   });
 
   // -------------------------------------------------------------------------
-  // Options — vertical card stack (box renderer has no grid)
+  // Options — sits directly below the question card (y: 450)
   // -------------------------------------------------------------------------
   boxes.push({
     id: bid('mdl_options'),
     bind: 'options',
     x: cardX,
-    y: config.showExplanationInSlide ? 640 : 660,
+    y: config.showExplanationInSlide ? 450 : 460,
     w: cardW,
     fontSize: optionsSize,
     color: textColor,
@@ -245,15 +242,14 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   });
 
   // -------------------------------------------------------------------------
-  // Explanation — shown when the deck has it enabled. Sits above the footer,
-  // which drops toward the bottom edge so the two never collide.
+  // Explanation — shown when the deck has it enabled. Sits above the footer.
   // -------------------------------------------------------------------------
   if (config.showExplanationInSlide) {
     boxes.push({
       id: bid('mdl_explanation'),
       bind: 'explanation',
       x: cardX,
-      y: 940,
+      y: 840,
       w: cardW,
       fontSize: 20,
       color: textColor,
@@ -266,10 +262,9 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   }
 
   // -------------------------------------------------------------------------
-  // Footer — banner image, or watermark + footer tag. With the explanation box
-  // above, the footer drops toward the bottom edge to clear it.
+  // Footer — watermark + footer tag near bottom edge
   // -------------------------------------------------------------------------
-  const footerY = config.showExplanationInSlide ? SLIDE_H - 56 : SLIDE_H - PAD - 44;
+  const footerY = config.showExplanationInSlide ? SLIDE_H - 70 : SLIDE_H - PAD - 44;
   if (config.useFooterBanner && config.footerBannerUrl) {
     boxes.push({
       id: bid('ftr_banner'),

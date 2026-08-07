@@ -188,5 +188,9 @@ export interface TemplateDefinition {
       optionSelectedBorder: string;
       optionSelectedText: string;
     };
+    // Hex approximation of the diagonal (to-br) 3-stop Tailwind gradient in
+    // `bgClass`, for templates whose bgClass is a gradient — [from, via, to].
+    // Omitted for flat (non-gradient) bgClass templates.
+    bgGradientStops?: [string, string, string];
   };
 }

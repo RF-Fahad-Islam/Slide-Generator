@@ -333,8 +333,11 @@ export const exportDeckToPPTX = async (
     const slideColors = slideTemplate.styles.hexColors;
     const slideBgUrl = getBackgroundPresetUrl(cfg.bgPreset, cfg.bgImageUrl);
     const slideIsLight = slideTemplate.themeType === 'light';
+    const gradientStops = slideTemplate.styles.bgGradientStops;
 
-    slide.background = { color: slideBgUrl ? '0F172A' : slideColors.bg };
+    slide.background = {
+      color: slideBgUrl ? '0F172A' : gradientStops ? gradientStops[1] : slideColors.bg,
+    };
 
     const bgOpacity = cfg.bgImageOpacity !== undefined ? cfg.bgImageOpacity : 0.85;
     const overlayDarkness = cfg.bgOverlayDarkness !== undefined ? cfg.bgOverlayDarkness : 0.4;
@@ -347,6 +350,32 @@ export const exportDeckToPPTX = async (
         w: 13.333,
         h: 7.5,
         transparency: Math.round((1 - bgOpacity) * 100),
+      });
+    } else if (gradientStops) {
+      // Approximate bgClass's diagonal (to-br) 3-stop gradient — PptxGenJS has
+      // no native gradient-fill API, so two right-triangle washes split along
+      // the anti-diagonal (top-right to bottom-left) layer the `from` and `to`
+      // stops over the `via` base fill set above: a flipV triangle covers the
+      // top-left half (from-color), a flipH triangle covers the bottom-right
+      // half (to-color), softened with transparency so the seam blends.
+      const [fromHex, , toHex] = gradientStops;
+      slide.addShape(pptx.ShapeType?.rtTriangle || 'rtTriangle', {
+        x: 0,
+        y: 0,
+        w: 13.333,
+        h: 7.5,
+        flipV: true,
+        fill: { color: fromHex, transparency: 45 },
+        line: { type: 'none' },
+      });
+      slide.addShape(pptx.ShapeType?.rtTriangle || 'rtTriangle', {
+        x: 0,
+        y: 0,
+        w: 13.333,
+        h: 7.5,
+        flipH: true,
+        fill: { color: toHex, transparency: 45 },
+        line: { type: 'none' },
       });
     }
 
