@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { DeckConfig, MCQItem, getSourceTags } from '../types';
+import { DeckConfig, MCQItem, getSourceTags, getEffectiveBadgeTag } from '../types';
 import { getTemplateById } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { formatSlideQNumber } from '../utils/slideTextBoxes';
@@ -253,7 +253,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
 
                 <div className="flex items-center gap-4">
                   <div className="px-6 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xl shadow-md">
-                    {effectiveConfig.badgeTag || "৯ম-১০ম শ্রেণি | জীববিজ্ঞান"}
+                    {getEffectiveBadgeTag(effectiveConfig) || "৯ম-১০ম শ্রেণি | জীববিজ্ঞান"}
                   </div>
                   <div className="px-4 py-2 rounded-xl bg-slate-900 text-white border border-slate-700 font-mono font-bold text-lg">
                     {currentIndex + 1} / {totalCount}
@@ -297,9 +297,9 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
 
             {/* Badge Tag & Slide Count */}
             <div className="flex items-center gap-4">
-              {effectiveConfig.badgeTag && (
+              {getEffectiveBadgeTag(effectiveConfig) && (
                 <div className={`px-6 py-2.5 rounded-2xl text-xl font-extrabold shadow-lg backdrop-blur-md border ${styles.badgeBg} ${styles.badgeText}`}>
-                  {effectiveConfig.badgeTag}
+                  {getEffectiveBadgeTag(effectiveConfig)}
                 </div>
               )}
               <div className={`px-5 py-2.5 rounded-2xl border text-lg font-extrabold shadow-md ${

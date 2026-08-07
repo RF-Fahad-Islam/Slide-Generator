@@ -1,10 +1,19 @@
 import React from 'react';
-import { DeckConfig, MCQItem, SlideTextBox } from '../types';
+import { DeckConfig, MCQItem, SlideTextBox, getSourceTags } from '../types';
 import { getSlideBoxContent, getBoxFontFamily } from '../utils/slideTextBoxes';
 import { getSlideIcon } from '../utils/slideElements';
 import { getTemplateById } from '../templates/registry';
 import { MathText } from './MathText';
 import { Check } from 'lucide-react';
+
+// Template-box id prefixes (see templateToTextBoxes.ts) — used to apply the
+// compact standard-MCQ layout at render time without touching user boxes.
+const TPL_CARD_ID = 'mdl_card';
+const TPL_OPTIONS_ID = 'mdl_options';
+// Compact question-card height for plain MCQs (no roman statements / prompt):
+// the 280px template card leaves a large empty region under a short stem.
+const COMPACT_CARD_H = 205;
+const COMPACT_CARD_GAP = 26;
 
 interface SlideTextBoxLayerProps {
   boxes: SlideTextBox[];
@@ -37,6 +46,14 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const isLight = template.themeType === 'light';
   const hex = template.styles.hexColors;
 
+  // Compact standard-MCQ layout: when the deck uses the preset template card
+  // and the current question has no roman statements, the card collapses to a
+  // shorter height and the options slide up right below it — no dead space
+  // inside the question box. Roman/prompt questions keep the tall layout.
+  const cardBox = boxes.find(b => b.id.startsWith(TPL_CARD_ID));
+  const isCompact = !!cardBox && !((item.romanItems || []).length > 0);
+  const compactOptionsY = isCompact ? cardBox.y + COMPACT_CARD_H + COMPACT_CARD_GAP : undefined;
+
   return (
     <div className="absolute inset-0 z-20 pointer-events-none">
       {isAnswerVariant && item.answer && (
@@ -52,6 +69,14 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         </div>
       )}
       {boxes.map(box => {
+        // Skip optional structural boxes that have no content on this slide —
+        // otherwise a deck-wide template box (e.g. roman card) renders as an
+        // empty stray card on plain MCQs.
+        if (box.bind === 'roman' && !(item.romanItems || []).length) return null;
+        if (box.bind === 'prompt' && !item.prompt) return null;
+        if (box.bind === 'explanation' && !item.explanation) return null;
+        if (box.bind === 'source' && getSourceTags(item).length === 0) return null;
+
         const base: React.CSSProperties = {
           left: box.x,
           top: box.y,
@@ -61,6 +86,12 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           textAlign: box.align,
           fontFamily: getBoxFontFamily(box, config),
         };
+
+        // Compact-layout overrides for the preset template card + options boxes.
+        const isTplCard = box.id.startsWith(TPL_CARD_ID);
+        const isTplOptions = box.id.startsWith(TPL_OPTIONS_ID);
+        const boxTop = isTplOptions && compactOptionsY !== undefined ? compactOptionsY : box.y;
+        const boxHeight = isTplCard && isCompact ? COMPACT_CARD_H : box.h;
 
         // ICON ELEMENT (decorative lucide icon, sized by fontSize)
         if (box.bind === 'icon') {
@@ -109,7 +140,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         // OPTIONS with pre-designed shapes
         if (box.bind === 'options') {
           return (
-            <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={base}>
+            <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={{ ...base, top: boxTop }}>
               <div className={box.shape === 'pill' ? 'flex flex-wrap gap-3' : 'space-y-2.5'}>
                 {item.options.map(opt => {
                   const isCorrect = showAnswerHighlight && (opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase());
@@ -216,7 +247,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               className={`absolute px-7 py-5 whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'} ${
                 box.shape === 'card' ? 'rounded-2xl' : 'rounded-3xl'
               }`}
-              style={{ ...base, ...textBase, height: box.h || undefined, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
+              style={{ ...base, ...textBase, height: boxHeight || undefined, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
             >
               <MathText text={content} />
             </div>

@@ -53,6 +53,23 @@ export interface MCQItem {
 }
 
 /**
+ * Resolves the badge shown on a slide. `badgeTag` holds the base
+ * class/subject tag (e.g. "৯ম-১০ম শ্রেণি | জীববিজ্ঞান"); when an optional
+ * `chapterName` is set it is auto-appended so the badge reads
+ * "৯ম-১০ম শ্রেণি | জীববিজ্ঞান | অধ্যায় ৮". The chapter is not duplicated if
+ * it is already a segment of the base badge.
+ */
+export function getEffectiveBadgeTag(config: Pick<DeckConfig, 'badgeTag' | 'chapterName'>): string {
+  const base = (config.badgeTag || '').trim();
+  const chapter = (config.chapterName || '').trim();
+  if (!chapter) return base;
+  if (!base) return chapter;
+  const segments = base.split('|').map((s) => s.trim());
+  if (segments.includes(chapter)) return base;
+  return `${base} | ${chapter}`;
+}
+
+/**
  * Normalizes an MCQ's source into a string[] of source tags.
  * Handles legacy single-string `source` values from older saved decks.
  */
@@ -90,6 +107,9 @@ export interface DeckConfig {
   logoPosition: 'top-left' | 'top-right' | 'header-inline';
   headerTitle: string; // Chapter / Subject e.g. "অধ্যায় ৮ঃ রেচন প্রক্রিয়া"
   badgeTag: string; // e.g. "৯ম-১০ম শ্রেণি | জীববিজ্ঞান"
+  // Optional chapter name — auto-fills `headerTitle` and auto-appends to the
+  // slide badge tag (see `getEffectiveBadgeTag`).
+  chapterName?: string;
   footerTag: string; // e.g. "BIOMISSION"
   watermarkAvatar: string; // Instructor avatar URL
   watermarkHandle: string; // Instructor name / channel e.g. "Hasnat Shuvro"

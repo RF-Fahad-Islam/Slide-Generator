@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DeckConfig, CustomThemeColors } from '../types';
+import { DeckConfig, CustomThemeColors, getEffectiveBadgeTag } from '../types';
 import { TEMPLATES, getTemplateById } from '../templates/registry';
 import { BACKGROUND_PRESETS, getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { FONT_PRESETS, getFontPresetByFamily } from '../utils/fontPresets';
@@ -226,7 +226,7 @@ const TemplateThumbnailPreview: React.FC<{ config: DeckConfig }> = ({ config }) 
               ) : (
                 <div className="w-full h-[32px] rounded bg-gradient-to-r from-teal-900 via-emerald-950 to-slate-900 border border-emerald-400/60 flex items-center justify-between px-2 text-[8px]">
                   <span className="font-black text-white truncate max-w-[130px]">{config.brandName || "NOBEL'S CLASSROOM"}</span>
-                  <span className="bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded text-[7px] truncate max-w-[90px]">{config.badgeTag || "জীববিজ্ঞান"}</span>
+                  <span className="bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded text-[7px] truncate max-w-[90px]">{getEffectiveBadgeTag(config) || "জীববিজ্ঞান"}</span>
                 </div>
               )}
             </div>
@@ -256,9 +256,9 @@ const TemplateThumbnailPreview: React.FC<{ config: DeckConfig }> = ({ config }) 
                 </div>
               </div>
 
-              {config.badgeTag && (
+              {getEffectiveBadgeTag(config) && (
                 <div className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold border shrink-0 truncate max-w-[100px] ${styles.badgeBg} ${styles.badgeText}`}>
-                  {config.badgeTag}
+                  {getEffectiveBadgeTag(config)}
                 </div>
               )}
             </div>
@@ -402,6 +402,16 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         ...patch,
       });
     }
+  };
+
+  // Chapter Name — the Header Chapter Title auto-fills from it and the slide
+  // badge auto-appends it (see getEffectiveBadgeTag). Writing both fields in
+  // one patch keeps the header/badge in sync without stale-clobber.
+  const handleChapterNameChange = (value: string) => {
+    handlePatch({
+      chapterName: value,
+      headerTitle: value || config.headerTitle,
+    });
   };
 
   // Answer display mode — 3-state (hidden / highlight / separate_slide). The
@@ -1977,6 +1987,21 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             Subject Header & Badge
           </label>
           <div>
+            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Chapter Name <span className="font-normal opacity-70">(optional)</span>:</label>
+            <input
+              type="text"
+              value={config.chapterName || ''}
+              onChange={(e) => handleChapterNameChange(e.target.value)}
+              placeholder="e.g. অধ্যায় ৮ঃ রেচন প্রক্রিয়া"
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              }`}
+            />
+            <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              Auto-fills the header title below and appends to the slide badge tag.
+            </p>
+          </div>
+          <div>
             <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Header Chapter Title:</label>
             <input
               type="text"
@@ -1999,6 +2024,15 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             />
+            {config.chapterName ? (
+              <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Slide badge: <span className="font-bold">{getEffectiveBadgeTag(config)}</span>
+              </p>
+            ) : (
+              <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Set a chapter name above to auto-append it to the badge.
+              </p>
+            )}
           </div>
         </div>
 

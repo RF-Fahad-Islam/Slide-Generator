@@ -113,7 +113,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       bold: false,
       fontFamily: headerFont,
     });
-    if (config.badgeTag) {
+    if (config.badgeTag || config.chapterName) {
       boxes.push({
         id: bid('hdr_badge'),
         bind: 'badgeTag',

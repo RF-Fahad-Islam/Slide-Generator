@@ -1,7 +1,7 @@
 import pptxgen from 'pptxgenjs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { DeckConfig, MCQItem, SlideTextBox, getSourceTags } from '../types';
+import { DeckConfig, MCQItem, SlideTextBox, getSourceTags, getEffectiveBadgeTag } from '../types';
 import { getSlideBoxContent, getBoxFontFamily } from './slideTextBoxes';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
@@ -503,8 +503,8 @@ export const exportDeckToPPTX = async (
         { x: brandX, y: 0.35, w: 7.0, h: 0.8, align: 'left', valign: 'top' }
       );
 
-      if (config.badgeTag) {
-        slide.addText(config.badgeTag, {
+      if (getEffectiveBadgeTag(config)) {
+        slide.addText(getEffectiveBadgeTag(config), {
           x: 8.8,
           y: 0.4,
           w: 2.8,

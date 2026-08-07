@@ -530,8 +530,10 @@ export default function App() {
     setEditingSavedDeckId(null);
     setItems(ensureUniqueIds(deckItems));
     setSelectedIndex(0);
+    // Deck name only — the header must keep the chapter title (headerTitle),
+    // not be clobbered by the deck/library title.
     if (deckTitle) {
-      setConfig(prev => ({ ...prev, headerTitle: deckTitle, deckName: deckTitle }));
+      setConfig(prev => (prev.deckName === deckTitle ? prev : { ...prev, deckName: deckTitle }));
     }
     setActiveTab('preview');
   };
@@ -876,7 +878,7 @@ export default function App() {
                       </h2>
                       <div className="flex items-center gap-3 text-xs mt-1 flex-wrap">
                         <span className={isAppLight ? 'text-slate-600' : 'text-slate-400'}>
-                          Subject: <strong className={isAppLight ? 'text-slate-900' : 'text-slate-200'}>{config.badgeTag || config.headerTitle || 'Biology'}</strong>
+                          Subject: <strong className={isAppLight ? 'text-slate-900' : 'text-slate-200'}>{config.badgeTag || config.chapterName || config.headerTitle || 'Biology'}</strong>
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1 font-bold text-amber-500">

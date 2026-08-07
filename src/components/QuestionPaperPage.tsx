@@ -1,5 +1,5 @@
 import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
-import { MCQItem, DeckConfig, getSourceTags } from '../types';
+import { MCQItem, DeckConfig, getSourceTags, getEffectiveBadgeTag } from '../types';
 import { MathText } from './MathText';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -141,7 +141,7 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
                 {config.headerTitle || ''}
               </div>
             </div>
-            {config.badgeTag && (
+            {getEffectiveBadgeTag(config) && (
               <div
                 style={{
                   fontSize: 12,
@@ -157,7 +157,7 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
                   textOverflow: 'ellipsis',
                 }}
               >
-                {config.badgeTag}
+                {getEffectiveBadgeTag(config)}
               </div>
             )}
           </div>

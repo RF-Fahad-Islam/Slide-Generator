@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle2, User } from 'lucide-react';
 import { MathText } from '../MathText';
-import { DeckConfig, MCQItem, BgImageFit } from '../../types';
+import { DeckConfig, MCQItem, BgImageFit, getEffectiveBadgeTag } from '../../types';
 
 interface ClassicQuizCardProps {
   item: MCQItem;
@@ -88,9 +88,9 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
             </div>
           </div>
 
-          {config.badgeTag && (
+          {getEffectiveBadgeTag(config) && (
             <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
-              {config.badgeTag}
+              {getEffectiveBadgeTag(config)}
             </span>
           )}
         </div>

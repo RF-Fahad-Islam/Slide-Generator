@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MCQItem, DeckConfig, getSourceTags } from '../types';
+import { MCQItem, DeckConfig, getSourceTags, getEffectiveBadgeTag } from '../types';
 import { getTemplateById, TEMPLATES } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { MathText } from './MathText';
@@ -142,7 +142,7 @@ const PaperPage = ({
             {config.headerTitle || ''}
           </div>
         </div>
-        {config.badgeTag && (
+        {getEffectiveBadgeTag(config) && (
           <div
             style={{
               fontSize: 12,
@@ -158,7 +158,7 @@ const PaperPage = ({
               textOverflow: 'ellipsis',
             }}
           >
-            {config.badgeTag}
+            {getEffectiveBadgeTag(config)}
           </div>
         )}
       </div>
