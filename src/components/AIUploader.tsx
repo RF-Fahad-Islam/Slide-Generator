@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { MCQItem } from '../types';
 import { useIngestion } from '../ingestion/ingestionStore';
-import { Sparkles, Upload, FileText, AlertCircle, CheckCircle2, Edit3, KeyRound, X, ScanText, Hash, Layers, Copy, ClipboardCheck } from 'lucide-react';
+import { Sparkles, Upload, FileText, AlertCircle, CheckCircle2, Edit3, KeyRound, X, ScanText, Hash, Layers, Copy, ClipboardCheck, Database } from 'lucide-react';
 
 interface AIUploaderProps {
   onAddMCQs: (items: MCQItem[]) => void;
   onReviewMCQs?: (items: MCQItem[]) => void;
+  onImportToQuestionBank?: (items: MCQItem[]) => Promise<boolean>;
   appTheme?: 'dark' | 'light';
 }
 
 export const AIUploader: React.FC<AIUploaderProps> = ({
   onAddMCQs,
   onReviewMCQs,
+  onImportToQuestionBank,
   appTheme = 'dark',
 }) => {
   const isAppLight = appTheme === 'light';
@@ -544,6 +546,22 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <span>Directly Load into Deck (Skip Review)</span>
               </button>
+              {onImportToQuestionBank && (
+                <button
+                  onClick={async () => {
+                    const saved = await onImportToQuestionBank(parsedResult);
+                    if (saved) discard();
+                  }}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border cursor-pointer ${
+                    isAppLight
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+                      : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20'
+                  }`}
+                >
+                  <Database className="w-4 h-4" />
+                  <span>Save to Question Bank ({parsedResult.length} MCQs)</span>
+                </button>
+              )}
             </div>
           )}
         </div>

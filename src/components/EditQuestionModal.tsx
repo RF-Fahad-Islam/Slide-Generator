@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MCQItem, QuestionType } from '../types';
-import { X, Save, Edit3, ArrowUpRight } from 'lucide-react';
+import { X, Save, Edit3, ArrowUpRight, Database } from 'lucide-react';
 
 interface EditQuestionModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface EditQuestionModalProps {
   item: MCQItem | null;
   onSave: (updated: MCQItem) => void;
   onOpenInDedicatedEditor: (item: MCQItem) => void;
+  onSaveToQuestionBank?: (items: MCQItem[]) => Promise<boolean>;
   appTheme: 'dark' | 'light';
 }
 
@@ -17,6 +18,7 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   item,
   onSave,
   onOpenInDedicatedEditor,
+  onSaveToQuestionBank,
   appTheme,
 }) => {
   const isAppLight = appTheme === 'light';
@@ -73,6 +75,12 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     if (!stem.trim()) return;
     onSave(buildUpdatedItem());
     onClose();
+  };
+
+  const handleSaveToBank = async () => {
+    if (!stem.trim() || !onSaveToQuestionBank) return;
+    const saved = await onSaveToQuestionBank([buildUpdatedItem()]);
+    if (saved) onClose();
   };
 
   const handleOpenInDedicated = () => {
@@ -263,6 +271,21 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
             Open in Question Editor
           </button>
           <div className="flex-1" />
+          {onSaveToQuestionBank && (
+            <button
+              type="button"
+              onClick={handleSaveToBank}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
+                isAppLight
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+                  : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20'
+              }`}
+              title="Save this question to the Question Bank (deck library) instead of the active deck"
+            >
+              <Database className="w-4 h-4" />
+              Save to Question Bank
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}

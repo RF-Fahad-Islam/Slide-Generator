@@ -14,7 +14,6 @@ import {
   Share2,
   LayoutGrid,
   X,
-  Menu,
   Key,
   ChevronLeft,
   ChevronRight,
@@ -33,6 +32,8 @@ interface SidebarNavProps {
   appTheme?: 'dark' | 'light';
   onToggleAppTheme?: () => void;
   onStartTour?: () => void;
+  isMobileDrawerOpen?: boolean;
+  onCloseMobileDrawer?: () => void;
 }
 
 type NavTab = 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
@@ -75,9 +76,11 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   appTheme = 'dark',
   onToggleAppTheme,
   onStartTour,
+  isMobileDrawerOpen = false,
+  onCloseMobileDrawer,
 }) => {
   const isAppLight = appTheme === 'light';
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const closeMobileDrawer = () => onCloseMobileDrawer?.();
 
   // Desktop sidebar collapse state — persisted in localStorage
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -100,7 +103,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsMobileDrawerOpen(false);
+        closeMobileDrawer();
       }
     };
     if (isMobileDrawerOpen) {
@@ -123,7 +126,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
   const handleNavClick = (tab: NavTab) => {
     setActiveTab(tab);
-    setIsMobileDrawerOpen(false);
+    closeMobileDrawer();
   };
 
   // ------- Brand lockup -------
@@ -377,13 +380,14 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     <>
       {/* Desktop Sidebar (lg+) — collapsible to icon-only strip */}
       <aside
-        className={`hidden lg:flex flex-col h-screen sticky top-0 border-r relative transition-all duration-300 ease-in-out ${
+        className={`hidden lg:flex flex-col sticky border-r relative transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-24' : 'w-72'
         } ${
           isAppLight
             ? 'bg-white/85 border-slate-200 shadow-xl'
             : 'bg-slate-950/90 border-white/5 shadow-2xl shadow-black/40'
         } backdrop-blur-2xl`}
+        style={{ top: 'var(--nav-h)', height: 'calc(100vh - var(--nav-h))' }}
       >
         <SidebarContent collapsed={isCollapsed} />
 
@@ -400,79 +404,13 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         </button>
       </aside>
 
-      {/* Mobile Top Bar */}
-      <header
-        className={`lg:hidden sticky top-0 z-40 backdrop-blur-2xl border-b px-4 py-3 ${
-          isAppLight ? 'bg-white/90 border-slate-200 shadow-md' : 'bg-slate-950/90 border-white/5 shadow-xl'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-3">
-          {/* Hamburger Menu Button */}
-          <button
-            onClick={() => setIsMobileDrawerOpen(true)}
-            aria-label="Open menu"
-            data-tour="mobile-menu"
-            className={`p-2.5 rounded-xl transition-all cursor-pointer border ${
-              isAppLight
-                ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                : 'bg-white/5 text-amber-300 border-white/10 hover:bg-white/10'
-            }`}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          {/* Brand Logo */}
-          <div onClick={() => handleNavClick('home')} className="flex items-center gap-2.5 cursor-pointer group flex-1 min-w-0">
-            <div className="relative p-2 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 font-black shadow-md shadow-amber-500/25 group-hover:scale-105 transition-transform flex items-center justify-center shrink-0">
-              <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/40" />
-              <Presentation className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <div className="min-w-0">
-              <h1 className={`text-sm font-black tracking-tight ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                EdTech Studio
-              </h1>
-              <div className="flex items-center gap-1 text-[10px]">
-                {isSyncing ? (
-                  <>
-                    <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />
-                    <span className="text-amber-500 font-bold">Syncing…</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="w-1 h-1 rounded-full bg-emerald-500" />
-                    <span className={isAppLight ? 'text-slate-600 font-semibold' : 'text-slate-400'}>Saved</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Export Button */}
-          <button
-            onClick={onOpenExportModal}
-            disabled={questionCount === 0}
-            aria-label="Export slides"
-            data-tour="mobile-export"
-            className={`p-2.5 rounded-xl transition-all border ${
-              questionCount > 0
-                ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 shadow-md shadow-amber-500/25 cursor-pointer'
-                : isAppLight
-                ? 'bg-white text-slate-400 border-slate-200 cursor-not-allowed'
-                : 'bg-white/5 text-slate-600 border-white/10 cursor-not-allowed'
-            }`}
-          >
-            <Download className="w-5 h-5 stroke-[2.5]" />
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Drawer Overlay */}
+      {/* Mobile Drawer Overlay — opened via the global HeaderNavbar hamburger (App-lifted state) */}
       {isMobileDrawerOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setIsMobileDrawerOpen(false)}
+            onClick={closeMobileDrawer}
           />
 
           {/* Drawer Panel */}
@@ -483,7 +421,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           >
             {/* Close Button */}
             <button
-              onClick={() => setIsMobileDrawerOpen(false)}
+              onClick={closeMobileDrawer}
               aria-label="Close menu"
               className={`absolute top-4 right-4 p-2 rounded-xl transition-all cursor-pointer z-10 ${
                 isAppLight

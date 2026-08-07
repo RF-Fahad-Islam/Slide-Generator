@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { DeckConfig, MCQItem } from './types';
+import { DeckConfig, MCQItem, SavedDeck } from './types';
 import { SAMPLE_DECKS } from './utils/bulkParser';
 import { useIndexedDBSync } from './hooks/useIndexedDBSync';
 import { db } from './db/dexie';
 import { SidebarNav } from './components/SidebarNav';
+import { HeaderNavbar } from './components/HeaderNavbar';
 import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
 import { AIUploader } from './components/AIUploader';
@@ -93,6 +94,25 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('edtech_app_theme', appTheme);
   }, [appTheme]);
+
+  // Mobile drawer state — lifted here so the global HeaderNavbar hamburger
+  // can open the same drawer that SidebarNav renders.
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
+
+  // Sticky global navbar height — exposed as a CSS var so the desktop sidebar
+  // sticks exactly below it (measured, so header content changes stay aligned).
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [navHeight, setNavHeight] = useState<number>(80);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => setNavHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Onboarding Tour — auto-launch on first visit, reopenable via Start Tour buttons
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
@@ -469,6 +489,30 @@ export default function App() {
     alert(`Successfully added ${itemsToAdd.length} questions to your active presentation!`);
   };
 
+  // Save parsed/imported MCQs straight into the Question Bank (deck library)
+  // instead of the active deck — used by the bulk editor + every import source.
+  // Returns true only when the deck was actually saved (user confirmed the name),
+  // so callers know whether to clear their queue/results.
+  const handleImportToQuestionBank = async (itemsToAdd: MCQItem[]): Promise<boolean> => {
+    if (itemsToAdd.length === 0) return false;
+    const defaultName = `${itemsToAdd.length} Imported MCQs`;
+    const name = (window.prompt('Name this new Question Bank deck:', defaultName) || '').trim();
+    if (!name) return false;
+    const newDeck: SavedDeck = {
+      id: `deck_${Date.now()}`,
+      name,
+      subject: config.badgeTag || 'General',
+      badgeTag: config.badgeTag,
+      items: ensureUniqueIds(itemsToAdd),
+      config: { ...config, deckName: name },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await db.questionDecks.put(newDeck);
+    alert(`Saved ${itemsToAdd.length} questions to the Question Bank as "${name}"!`);
+    return true;
+  };
+
   const handleCreateNewDeckFromSelection = (selectedItems: MCQItem[]) => {
     setEditingSavedDeckId(null);
     setItems(ensureUniqueIds(selectedItems));
@@ -656,9 +700,32 @@ export default function App() {
 
   return (
     <IngestionProvider>
-    <div className={`min-h-screen transition-colors duration-300 ${
-      isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
-    } flex flex-col lg:flex-row font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}>
+    <div
+      className={`min-h-screen transition-colors duration-300 ${
+        isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
+      } flex flex-col font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}
+      style={{ '--nav-h': `${navHeight}px` } as React.CSSProperties}
+    >
+      {/* Global Sticky Top Navbar — every tab, desktop & mobile */}
+      <div ref={headerRef} className="z-40">
+        <HeaderNavbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          questionCount={items.length}
+          templateId={config.templateId}
+          onSelectTemplate={(id) => setConfig(prev => ({ ...prev, templateId: id }))}
+          onLoadSample={handleLoadSample}
+          onOpenExportModal={() => setIsBatchExportModalOpen(true)}
+          isSyncing={isSyncing}
+          lastSavedTime={lastSavedTime}
+          appTheme={appTheme}
+          onToggleAppTheme={() => setAppTheme(t => t === 'dark' ? 'light' : 'dark')}
+          onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
+        />
+      </div>
+
+      {/* Sidebar (Desktop) + Main Content — stacked below the sticky navbar */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
       {/* Sidebar Navigation (Desktop) + Mobile Drawer */}
       <SidebarNav
         activeTab={activeTab}
@@ -672,6 +739,8 @@ export default function App() {
         appTheme={appTheme}
         onToggleAppTheme={() => setAppTheme(t => t === 'dark' ? 'light' : 'dark')}
         onStartTour={() => setIsTourOpen(true)}
+        isMobileDrawerOpen={isMobileDrawerOpen}
+        onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
       />
 
       {/* Main Content View Container */}
@@ -1274,7 +1343,6 @@ export default function App() {
                         onDeleteBox={deleteSlideBox}
                         onDuplicateBox={duplicateSlideBox}
                         onReorderBox={reorderSlideBox}
-                        onMoveBox={moveSlideBox}
                         onSelectBox={setSelectedTextBoxId}
                         onReset={resetSlideTextBoxes}
                         onClearAll={clearSlideTextBoxes}
@@ -1314,6 +1382,7 @@ export default function App() {
             onClearReviewItems={() => setReviewItems([])}
             prefillEditItem={dedicatedEditItem}
             onPrefillConsumed={() => setDedicatedEditItem(null)}
+            onImportToQuestionBank={handleImportToQuestionBank}
           />
         )}
 
@@ -1322,6 +1391,7 @@ export default function App() {
           <AIUploader
             onAddMCQs={handleAddMCQs}
             onReviewMCQs={handleReviewMCQs}
+            onImportToQuestionBank={handleImportToQuestionBank}
             appTheme={appTheme}
           />
         )}
@@ -1358,6 +1428,7 @@ export default function App() {
           />
         )}
       </main>
+      </div>
 
       {/* Export Modal */}
       <ExportModal
@@ -1428,6 +1499,7 @@ export default function App() {
           setDedicatedEditItem(item);
           setActiveTab('manual');
         }}
+        onSaveToQuestionBank={handleImportToQuestionBank}
         appTheme={appTheme}
       />
 

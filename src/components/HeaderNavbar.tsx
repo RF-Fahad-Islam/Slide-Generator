@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Presentation, Edit3, Sparkles, Sliders, Layers, Download, Database, CheckCircle2, Loader2, Sun, Moon, Share2, LayoutGrid, ChevronDown, Plus } from 'lucide-react';
-import { TEMPLATES } from '../templates/registry';
+import { Presentation, Edit3, Sparkles, Sliders, Layers, Download, Database, CheckCircle2, Loader2, Sun, Moon, Share2, LayoutGrid, ChevronDown, Menu } from 'lucide-react';
 
 interface HeaderNavbarProps {
-  activeTab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings';
-  setActiveTab: (tab: 'home' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings') => void;
+  activeTab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
+  setActiveTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => void;
   questionCount: number;
   templateId: string;
   onSelectTemplate: (id: string) => void;
@@ -14,6 +13,7 @@ interface HeaderNavbarProps {
   lastSavedTime?: Date | null;
   appTheme?: 'dark' | 'light';
   onToggleAppTheme?: () => void;
+  onOpenMobileMenu?: () => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -28,6 +28,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   lastSavedTime,
   appTheme = 'dark',
   onToggleAppTheme,
+  onOpenMobileMenu,
 }) => {
   const isAppLight = appTheme === 'light';
   const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -54,6 +55,22 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
       isAppLight ? 'bg-white/95 border-slate-200 text-slate-900 shadow-md' : 'bg-slate-950/85 border-slate-800/80 text-slate-100 shadow-xl'
     }`}>
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        {/* Mobile Hamburger — opens the sidebar drawer (replaces SidebarNav's mobile top bar) */}
+        {onOpenMobileMenu && (
+          <button
+            onClick={onOpenMobileMenu}
+            aria-label="Open menu"
+            data-tour="mobile-menu"
+            className={`lg:hidden p-2.5 rounded-xl transition-all cursor-pointer border shrink-0 ${
+              isAppLight
+                ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                : 'bg-white/5 text-amber-300 border-white/10 hover:bg-white/10'
+            }`}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Brand Logo & Name */}
         <div
           onClick={() => setActiveTab('home')}
@@ -86,8 +103,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           </div>
         </div>
 
-        {/* Fatty Navigation Bar */}
-        <nav className={`flex items-center gap-1.5 p-1.5 rounded-2xl border ${
+        {/* Fatty Navigation Bar — hidden on mobile, the drawer provides nav there */}
+        <nav className={`hidden lg:flex items-center gap-1.5 p-1.5 rounded-2xl border ${
           isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900/90 border-slate-800/80 shadow-inner'
         }`}>
           {/* 1. Home (Dashboard Hub) */}
@@ -244,6 +261,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           <button
             onClick={onOpenExportModal}
             disabled={questionCount === 0}
+            data-tour="mobile-export"
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-extrabold text-xs shadow-md transition-all ${
               questionCount > 0
                 ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 hover:brightness-110 shadow-amber-500/20 cursor-pointer'

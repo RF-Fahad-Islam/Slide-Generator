@@ -1,7 +1,6 @@
 import React from 'react';
 import { MCQItem } from '../../types';
 import { MathText } from '../MathText';
-import { NavArrowButton } from './NavArrowButton';
 import { ReactionOptionCard } from './ReactionOptionCard';
 import { ReactionEmojiSet, REACTION_ORDER, REACTION_BADGE_COLORS } from './types';
 
@@ -73,9 +72,6 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
           isLightBg ? 'border-slate-300' : 'border-white/10'
         } relative overflow-hidden select-none flex flex-col ${cardBgClass} transition-all`}
       >
-        <NavArrowButton direction="left" />
-        <NavArrowButton direction="right" />
-
         {/* Brand header bar */}
         <div className="px-6 pt-5 pb-4 flex items-center justify-between gap-3 relative z-[1]">
           <div>

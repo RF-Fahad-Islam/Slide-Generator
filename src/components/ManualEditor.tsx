@@ -23,7 +23,8 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
-  ListChecks
+  ListChecks,
+  Database
 } from 'lucide-react';
 
 interface ManualEditorProps {
@@ -36,6 +37,7 @@ interface ManualEditorProps {
   onClearReviewItems?: () => void;
   prefillEditItem?: MCQItem | null; // Question to open in the form (from the deck-list edit modal)
   onPrefillConsumed?: () => void;
+  onImportToQuestionBank?: (items: MCQItem[]) => Promise<boolean>;
 }
 
 export const ManualEditor: React.FC<ManualEditorProps> = ({
@@ -48,6 +50,7 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
   onClearReviewItems,
   prefillEditItem = null,
   onPrefillConsumed,
+  onImportToQuestionBank,
 }) => {
   const isAppLight = appTheme === 'light';
   const [activeSubTab, setActiveSubTab] = useState<'review' | 'bulk' | 'single'>('bulk');
@@ -244,11 +247,8 @@ iii. অস্ত্রোপচার
     if (editingId === id) resetForm();
   };
 
-  // Form submit: Adds a new MCQ OR updates existing item in Queue or Active Deck!
-  const handleAddOrUpdateSingle = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stem.trim()) return;
-
+  // Build the MCQItem from the current form state (shared by submit + bank import)
+  const buildFormItem = (): MCQItem => {
     const keyLabels = ['ক', 'খ', 'গ', 'ঘ'];
     const formattedOptions = options.map((optText, idx) => ({
       key: keyLabels[idx] || `${idx + 1}`,
@@ -256,7 +256,7 @@ iii. অস্ত্রোপচার
       isCorrect: (keyLabels[idx] || '').toLowerCase() === answerKey.toLowerCase(),
     }));
 
-    const updatedItem: MCQItem = {
+    return {
       id: editingId || `mcq_manual_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       questionType,
       stem,
@@ -271,6 +271,14 @@ iii. অস্ত্রোপচার
       explanation: explanation || undefined,
       confidence: 'high',
     };
+  };
+
+  // Form submit: Adds a new MCQ OR updates existing item in Queue or Active Deck!
+  const handleAddOrUpdateSingle = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stem.trim()) return;
+
+    const updatedItem = buildFormItem();
 
     if (editingItemTarget === 'deck' && onUpdateItems) {
       // Update in active deck
@@ -285,6 +293,14 @@ iii. অস্ত্রোপচার
     }
 
     resetForm();
+  };
+
+  // Save the freshly-typed question straight to the Question Bank (not the deck)
+  const handleSaveSingleToBank = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!stem.trim() || !onImportToQuestionBank) return;
+    const saved = await onImportToQuestionBank([buildFormItem()]);
+    if (saved) resetForm();
   };
 
   const insertSnippet = (snippet: string) => {
@@ -746,6 +762,23 @@ iii. অস্ত্রোপচার
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Approve All ({unapprovedQueue.length}) → Active Deck</span>
                 </button>
+                {onImportToQuestionBank && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const saved = await onImportToQuestionBank(unapprovedQueue);
+                      if (!saved) return;
+                      setUnapprovedQueue([]);
+                      if (onClearReviewItems) onClearReviewItems();
+                      resetForm();
+                    }}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5"
+                    title="Save every queued question to the Question Bank (deck library) instead of the active deck"
+                  >
+                    <Database className="w-4 h-4" />
+                    <span>Import All ({unapprovedQueue.length}) → Question Bank</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1135,7 +1168,7 @@ iii. অস্ত্রোপচার
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
               type="submit"
               className="px-8 py-3.5 rounded-2xl bg-amber-500 text-slate-950 font-black text-sm flex items-center gap-2 shadow-lg hover:brightness-110 cursor-pointer"
@@ -1143,6 +1176,21 @@ iii. অস্ত্রোপচার
               {editingId ? <CheckCircle2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
               <span>{editingId ? 'Save & Update Question' : 'Add Question to Active Deck'}</span>
             </button>
+            {!editingId && onImportToQuestionBank && (
+              <button
+                type="button"
+                onClick={handleSaveSingleToBank}
+                className={`px-5 py-3.5 rounded-2xl text-xs font-black flex items-center gap-2 border cursor-pointer transition-all ${
+                  isAppLight
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+                    : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20'
+                }`}
+                title="Save this question to the Question Bank (deck library) instead of the active deck"
+              >
+                <Database className="w-4 h-4" />
+                <span>Save to Question Bank</span>
+              </button>
+            )}
             {editingId && (
               <button
                 type="button"
