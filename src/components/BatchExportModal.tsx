@@ -114,8 +114,8 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className={`absolute inset-0 ${isAppLight ? 'bg-black/40' : 'bg-black/80'} backdrop-blur-sm`} onClick={isExporting ? undefined : onClose} />
-      <div className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} relative w-full max-w-3xl border flex flex-col max-h-[92vh] overflow-hidden ${
+      <div className={`absolute inset-0 ${isAppLight ? 'bg-black/40' : 'bg-black/80'} backdrop-blur-sm animate-modal-backdrop`} onClick={isExporting ? undefined : onClose} />
+      <div className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} relative w-full max-w-3xl border flex flex-col max-h-[92vh] overflow-hidden animate-modal-card ${
         isAppLight ? 'border-slate-200' : 'bg-slate-900/90 border-slate-800'
       }`}>
         {/* Header */}

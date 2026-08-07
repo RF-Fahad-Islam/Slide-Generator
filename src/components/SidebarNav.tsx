@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Presentation,
   Edit3,
@@ -81,6 +81,23 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 }) => {
   const isAppLight = appTheme === 'light';
   const closeMobileDrawer = () => onCloseMobileDrawer?.();
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimer = useRef<number | null>(null);
+
+  const closeDrawer = () => {
+    if (!isMobileDrawerOpen) return;
+    setIsClosing(true);
+    closeTimer.current = window.setTimeout(() => {
+      setIsClosing(false);
+      closeMobileDrawer();
+    }, 200);
+  };
+
+  useEffect(() => {
+    if (isMobileDrawerOpen) setIsClosing(false);
+  }, [isMobileDrawerOpen]);
+
+  useEffect(() => () => { if (closeTimer.current) window.clearTimeout(closeTimer.current); }, []);
 
   // Desktop sidebar collapse state — persisted in localStorage
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -103,7 +120,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        closeMobileDrawer();
+        closeDrawer();
       }
     };
     if (isMobileDrawerOpen) {
@@ -126,7 +143,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
 
   const handleNavClick = (tab: NavTab) => {
     setActiveTab(tab);
-    closeMobileDrawer();
+    closeDrawer();
   };
 
   // ------- Brand lockup -------
@@ -409,19 +426,19 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         <div className="lg:hidden fixed inset-0 z-50">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={closeMobileDrawer}
+            className={`absolute inset-0 bg-black/60 backdrop-blur-sm ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+            onClick={closeDrawer}
           />
 
           {/* Drawer Panel */}
           <div
             className={`absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] shadow-2xl ${
               isAppLight ? 'bg-white' : 'bg-slate-950'
-            } animate-slideInLeft`}
+            } ${isClosing ? 'animate-slideOutLeft' : 'animate-slideInLeft'}`}
           >
             {/* Close Button */}
             <button
-              onClick={closeMobileDrawer}
+              onClick={closeDrawer}
               aria-label="Close menu"
               className={`absolute top-4 right-4 p-2 rounded-xl transition-all cursor-pointer z-10 ${
                 isAppLight

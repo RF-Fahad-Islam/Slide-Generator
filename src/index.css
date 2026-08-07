@@ -28,6 +28,29 @@
   animation: slideInLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+@keyframes slideOutLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(-100%); opacity: 0; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.animate-slideOutLeft {
+  animation: slideOutLeft 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slideOutLeft,
+  .animate-fadeOut { animation-duration: 0.15s; }
+}
+
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
@@ -35,6 +58,80 @@
 
 .animate-slideInRight {
   animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalCardIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modalCardFadeOnly {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropIn 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-modal-card {
+  animation: modalCardIn 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-modal-backdrop { animation: none; }
+  .animate-modal-card { animation-name: modalCardFadeOnly; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(16px); }
+}
+
+.animate-toast-in  { animation: toastIn  250ms cubic-bezier(0.4, 0, 0.2, 1); }
+.animate-toast-out { animation: toastOut 200ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in  { animation: none; }
+  .animate-toast-out { animation-duration: 150ms; }
+}
+
+.btn-icon {
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.btn-icon:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-icon:active { transform: none; }
+}
+
+@keyframes tourTipIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-tour-tip {
+  animation: tourTipIn 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-tour-tip { animation-duration: 150ms; }
 }
 
 /* Fatty Glassmorphism Card (Dark Mode) */
@@ -147,4 +244,36 @@
 
 .light-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(245, 158, 11, 0.5);
+}
+
+/* Reduced motion — keep opacity/color feedback, drop movement */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .animate-fadeIn,
+  .animate-slideInLeft,
+  .animate-slideInRight {
+    animation-duration: 200ms;
+  }
+
+  .glass-card-fatty:hover,
+  .glass-card-fatty-light:hover {
+    transform: none;
+  }
+
+  .btn-fatty-primary:hover {
+    transform: none;
+    filter: none;
+  }
+
+  /* plan 001 owns the modal classes (.animate-modal-*) — do not add them here */
+}
+
+/* Touch devices — neutralise sticky hover transforms (false hover after tap) */
+@media (hover: none) {
+  *:hover {
+    transform: none !important;
+  }
 }
