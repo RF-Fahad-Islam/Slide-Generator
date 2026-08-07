@@ -20,7 +20,6 @@ export const AddQuestionsBanner: React.FC<AddQuestionsBannerProps> = ({
   return (
     <button
       onClick={onClick}
-      data-tour="bank-import"
       className={`w-full rounded-3xl border shadow-2xl p-4 sm:p-5 flex items-center justify-between gap-4 transition-all cursor-pointer group hover:-translate-y-0.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 border-emerald-400 text-slate-950 hover:shadow-emerald-500/30 ${
         isAppLight ? 'shadow-emerald-500/20' : ''
       }`}

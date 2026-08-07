@@ -332,18 +332,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     });
   };
 
-  const moveBox = (dragId: string, overId: string) => {
-    setCustomDesign(prev => {
-      const from = prev.boxes.findIndex(b => b.id === dragId);
-      const to = prev.boxes.findIndex(b => b.id === overId);
-      if (from < 0 || to < 0 || from === to) return prev;
-      const boxes = [...prev.boxes];
-      const [moved] = boxes.splice(from, 1);
-      boxes.splice(to, 0, moved);
-      return { ...prev, boxes };
-    });
-  };
-
   const handleCustomBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -1208,7 +1196,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   onDeleteBox={deleteBox}
                   onDuplicateBox={duplicateBox}
                   onReorderBox={reorderBox}
-                  onMoveBox={moveBox}
                   onSelectBox={setSelectedBoxId}
                   onReset={resetDesign}
                   onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}

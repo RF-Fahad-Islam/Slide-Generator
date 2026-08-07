@@ -21,11 +21,11 @@ export interface TourStep {
   body: string;
   navigateTab?: TourTab;
   placement?: 'bottom' | 'top' | 'left' | 'right';
-  // Alternate anchor used on mobile (<1024px) where the desktop sidebar is
-  // hidden — the nav steps spotlight the mobile menu button instead of
-  // falling into the "target missing" centered fallback.
-  mobileTarget?: string;
 }
+
+export const isSidebarTarget = (targetSelector: string): boolean => {
+  return targetSelector.includes('nav-') || targetSelector.includes('studio-export');
+};
 
 export const defaultTourSteps: TourStep[] = [
   {
@@ -37,14 +37,12 @@ export const defaultTourSteps: TourStep[] = [
     target: '[data-tour="nav-home"]',
     title: 'Home',
     body: 'The Home tab is your launchpad — open a saved deck, browse preset themes, or start a fresh deck from the Question Bank.',
-    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="nav-bank"]',
     title: 'Question Bank',
     body: 'Import questions from a PDF, paste them in, or upload a JSON file. Your library is saved right in your browser.',
     navigateTab: 'bank',
-    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="bank-import"]',
@@ -56,21 +54,18 @@ export const defaultTourSteps: TourStep[] = [
     title: 'AI PDF Parser',
     body: 'Let AI read a question paper PDF and extract MCQs automatically. Paste your own AI key, or use the built-in key.',
     navigateTab: 'ai',
-    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="nav-manual"]',
     title: 'Manual Editor',
     body: 'Prefer hands-on control? The Manual Editor lets you type questions and options one by one.',
     navigateTab: 'manual',
-    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="nav-preview"]',
     title: 'Slide Studio',
     body: 'See your questions rendered as real slides. Toggle answer reveal, switch themes, reorder slides, and fine-tune every element.',
     navigateTab: 'preview',
-    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="studio-toolbar"]',
@@ -81,21 +76,18 @@ export const defaultTourSteps: TourStep[] = [
     target: '[data-tour="studio-export"]',
     title: 'Export Everything',
     body: 'When your deck is ready, export to PowerPoint, PDF, Google Slides, PNG images, or a printable Question Paper with answer key.',
-    mobileTarget: '[data-tour="mobile-export"]',
   },
   {
     target: '[data-tour="nav-settings"]',
     title: 'Global Settings',
     body: 'Set app-wide defaults — default deck name, template, question numbering, and app theme. Deck-level branding, layout, fonts & banners now live in Slide Studio → Deck Settings.',
     navigateTab: 'settings',
-    mobileTarget: '[data-tour="mobile-menu"]',
   },
   {
     target: '[data-tour="nav-home"]',
     title: 'You are all set!',
     body: 'That is the tour. Open a deck and start creating — have fun!',
     navigateTab: 'home',
-    mobileTarget: '[data-tour="mobile-menu"]',
   },
 ];
 
@@ -103,6 +95,7 @@ interface OnboardingTourProps {
   open: boolean;
   onClose: () => void;
   onNavigate: (tab: TourTab) => void;
+  onSetMobileDrawerOpen?: (open: boolean) => void;
   steps?: TourStep[];
 }
 
@@ -121,8 +114,7 @@ const POLS_INTERVAL = 150;
 const POLS_MAX = 16;
 const MIN_TOUR_TOP = 8; // min tooltip inset from the viewport top/bottom
 
-// Desktop sidebar shows at lg (1024px) — below that the nav lives behind the
-// mobile hamburger, so nav steps use step.mobileTarget instead.
+// Desktop sidebar shows at lg (1024px) — below that the nav lives inside the mobile drawer.
 const isMobileViewport = () => window.innerWidth < 1024;
 
 // Skip the global Enter/Arrow shortcut when the user is interacting with a real
@@ -141,7 +133,13 @@ const isInteractiveTarget = (target: EventTarget | null): boolean => {
   );
 };
 
-export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, onNavigate, steps = defaultTourSteps }) => {
+export const OnboardingTour: React.FC<OnboardingTourProps> = ({
+  open,
+  onClose,
+  onNavigate,
+  onSetMobileDrawerOpen,
+  steps = defaultTourSteps,
+}) => {
   const [current, setCurrent] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [tipRect, setTipRect] = useState<{ top: number; left: number; placement: string } | null>(null);
@@ -154,7 +152,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
   // animation itself) would fight the user and cause jitter.
   const measure = useCallback(() => {
     if (!step) return false;
-    const sel = isMobileViewport() && step.mobileTarget ? step.mobileTarget : step.target;
+    const sel = step.target;
     const el = document.querySelector(sel) as HTMLElement | null;
     if (!el) return false;
     const r = el.getBoundingClientRect();
@@ -169,7 +167,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
   }, [step]);
 
   // Poll for the target element (it may not be in the DOM yet after a tab
-  // navigation), then fall back to a centered tooltip if it never appears.
+  // navigation or drawer animation), then fall back to a centered tooltip if it never appears.
   const tryMeasure = useCallback(() => {
     let attempts = 0;
     const poll = () => {
@@ -191,7 +189,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
   // Scroll the target into view ONCE per step, then measure.
   const revealAndMeasure = useCallback(() => {
     if (!step) return;
-    const sel = isMobileViewport() && step.mobileTarget ? step.mobileTarget : step.target;
+    const sel = step.target;
     const el = document.querySelector(sel) as HTMLElement | null;
     if (el) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
     window.setTimeout(tryMeasure, 220);
@@ -204,17 +202,33 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     [steps.length]
   );
 
-  // When the step changes: navigate to its tab (if any), reveal + measure
+  const handleClose = useCallback(() => {
+    if (onSetMobileDrawerOpen) {
+      onSetMobileDrawerOpen(false);
+    }
+    onClose();
+  }, [onClose, onSetMobileDrawerOpen]);
+
+  // When the step changes: toggle mobile drawer, navigate to its tab (if any), reveal + measure
   useEffect(() => {
     if (!open) return;
     const s = steps[current];
     if (!s) return;
+
+    if (isMobileViewport() && onSetMobileDrawerOpen) {
+      if (isSidebarTarget(s.target)) {
+        onSetMobileDrawerOpen(true);
+      } else {
+        onSetMobileDrawerOpen(false);
+      }
+    }
+
     if (s.navigateTab) {
       onNavigate(s.navigateTab);
     }
-    const t = window.setTimeout(revealAndMeasure, 260);
+    const t = window.setTimeout(revealAndMeasure, 280);
     return () => window.clearTimeout(t);
-  }, [current, open, steps, onNavigate, revealAndMeasure]);
+  }, [current, open, steps, onNavigate, revealAndMeasure, onSetMobileDrawerOpen]);
 
   // Reposition on resize / scroll (measure only — never scroll into view here)
   useEffect(() => {
@@ -278,7 +292,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
         return;
       }
       if (isInteractiveTarget(e.target)) return;
@@ -287,13 +301,13 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, current, goTo, onClose]);
+  }, [open, current, goTo, handleClose]);
 
   if (!open || !step) return null;
 
   const isLast = current === steps.length - 1;
   const isFirst = current === 0;
-  const advance = () => (isLast ? onClose() : goTo(current + 1));
+  const advance = () => (isLast ? handleClose() : goTo(current + 1));
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;

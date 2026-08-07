@@ -119,6 +119,11 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Wiring:** `SocialPostGenerator` `mode={isCustomMode ? 'custom' : postTemplate}`; `onSelect` sets `isCustomMode` for `custom`, else `setPostTemplate(m)` + `isCustomMode(false)`. Drawer tab filtering unchanged.
 - **Freeform overlay fix (2026-08-07):** `SlideTextBoxOverlay` now renders INSIDE the `transform: scale()` design wrapper in custom mode (matching `App.tsx` Slide Studio), `scale={canvasWidth / postDesignW}`, and the ResizeObserver measures the actual canvas card (`postCanvasRef`) — fixes mis-positioned draggable boxes, especially at 4:5/9:16.
 
+### `OnboardingTour` — `src/components/OnboardingTour.tsx`
+- **Purpose:** Hand-rolled spotlight onboarding tour with 4-quadrant dimming backdrop, sharp focus hole, and animated tooltip card (`z-[9999]`).
+- **Collapsible Sidebar Integration (2026-08-07):** Automatically toggles mobile sidebar drawer via `onSetMobileDrawerOpen` prop. When a step targets a sidebar control (`isSidebarTarget` = `nav-*` or `studio-export`), the drawer auto-opens on mobile (<1024px) so the nav item is spotlighted inside the drawer. When step targets main page content (`home-hero`, `bank-import`, `studio-toolbar`), the drawer auto-closes. Exiting/dismissing the tour closes the drawer.
+- **Tooltip Card:** `w-[360px] max-w-[90vw] bg-slate-900 border-amber-500/30 text-white rounded-3xl shadow-2xl`, animated entrance (`animate-tour-tip`).
+
 ### `HeaderNavbar` — `src/components/HeaderNavbar.tsx`
 - **Background:** `bg-white/95` (light) | `bg-slate-950/85` (dark)
 - **Border:** `border-slate-200` (light) | `border-slate-800/80` (dark)

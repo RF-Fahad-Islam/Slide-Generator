@@ -1518,6 +1518,7 @@ export default function App() {
         open={isTourOpen}
         onClose={handleCloseTour}
         onNavigate={(tab) => setActiveTab(tab)}
+        onSetMobileDrawerOpen={(open) => setIsMobileDrawerOpen(open)}
         steps={defaultTourSteps}
       />
 
