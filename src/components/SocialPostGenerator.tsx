@@ -164,6 +164,17 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   // Studio Drawer Active Tab State (Full Left Drawer)
   const [activeTab, setActiveTab] = useState<StudioDrawerTab>('templates');
 
+  // Auto-switch tabs when mode changes to ensure no orphaned tabs
+  useEffect(() => {
+    if (postTemplate === 'quiz_time' && !isCustomMode && activeTab === 'layers') {
+      setActiveTab('reactions');
+    } else if (postTemplate === 'classic' && !isCustomMode && (activeTab === 'reactions' || activeTab === 'layers')) {
+      setActiveTab('content');
+    } else if (isCustomMode && activeTab === 'reactions') {
+      setActiveTab('layers');
+    }
+  }, [postTemplate, isCustomMode, activeTab]);
+
   const postCanvasRef = useRef<HTMLDivElement>(null);
   const postFrameRef = useRef<HTMLDivElement>(null);
 
@@ -434,18 +445,23 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     }
   };
 
+  // Dynamic drawer tabs based on active mode
   const drawerTabs: { id: StudioDrawerTab; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'templates', label: 'Templates', icon: LayoutTemplate },
+    { id: 'templates', label: 'Preset', icon: LayoutTemplate },
     { id: 'content', label: 'Question', icon: Type },
     { id: 'deck', label: 'Deck MCQs', icon: BookOpen },
     { id: 'branding', label: 'Brand', icon: User },
-    { id: 'reactions', label: 'Emojis', icon: Smile },
+    ...(postTemplate === 'quiz_time' && !isCustomMode
+      ? [{ id: 'reactions' as StudioDrawerTab, label: 'Emojis', icon: Smile }]
+      : []),
     { id: 'theme', label: 'Theme', icon: Palette },
-    { id: 'layers', label: 'Boxes', icon: Layers },
+    ...(isCustomMode
+      ? [{ id: 'layers' as StudioDrawerTab, label: 'Boxes', icon: Layers }]
+      : []),
   ];
 
   return (
-    <div className="space-y-6 animate-fadeIn relative">
+    <div className="space-y-5 animate-fadeIn relative">
       {/* STUDIO TOP HEADER BAR (PAGE-FLAT PANEL) */}
       <div
         className={`p-4 lg:p-5 border rounded-3xl backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
@@ -516,6 +532,71 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         </div>
       </div>
 
+      {/* DEDICATED SOCIAL POST MODE SELECTOR STRIP */}
+      <div className={`p-2.5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${
+        isAppLight ? 'bg-white/80 border-slate-200 shadow-sm' : 'bg-slate-900/60 border-slate-800 shadow-xl'
+      }`}>
+        <div className="flex items-center gap-2.5 px-3 py-1">
+          <Sparkles className="w-4 h-4 text-amber-500" />
+          <span className={`text-xs font-black uppercase tracking-wider ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+            Social Post Mode:
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setPostTemplate('classic');
+              setIsCustomMode(false);
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              postTemplate === 'classic' && !isCustomMode
+                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/50'
+                : isAppLight
+                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <LayoutTemplate className="w-4 h-4" />
+            <span>Classic Quiz Card</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPostTemplate('quiz_time');
+              setIsCustomMode(false);
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              postTemplate === 'quiz_time' && !isCustomMode
+                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/50'
+                : isAppLight
+                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Smile className="w-4 h-4" />
+            <span>Quiz Time Reactions</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsCustomMode(true)}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              isCustomMode
+                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/50'
+                : isAppLight
+                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Free-Form Drag & Drop</span>
+          </button>
+        </div>
+      </div>
+
       {/* 2-COLUMN STUDIO GRID */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* ========================================================================= */}
@@ -539,25 +620,10 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   Design Tools
                 </h3>
                 <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Select a tool tab below to edit post details
+                  Active mode: <span className="font-bold text-amber-500">{isCustomMode ? 'Free-Form Drag & Drop' : postTemplate === 'quiz_time' ? 'Quiz Time Reactions' : 'Classic Quiz Card'}</span>
                 </p>
               </div>
             </div>
-
-            {/* Quick Custom Mode Badge/Button */}
-            <button
-              type="button"
-              onClick={() => setIsCustomMode(v => !v)}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer ${
-                isCustomMode
-                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
-                  : isAppLight
-                  ? 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200'
-                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-              }`}
-            >
-              {isCustomMode ? '🎨 Custom Mode ON' : 'Standard Templates'}
-            </button>
           </div>
 
           {/* Tool Drawer Scrollable Tab Rail */}
@@ -597,10 +663,10 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 <div className="space-y-1">
                   <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                     <LayoutTemplate className="w-4 h-4" />
-                    1. Post Template Preset
+                    1. Post Template Preset & Aspect Ratio
                   </h4>
                   <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Choose a starting social post design layout or switch to custom canvas mode.
+                    Choose a template layout preset or adjust post dimensions.
                   </p>
                 </div>
 
@@ -615,7 +681,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                       <span>Custom Canvas Drag & Drop Mode Active</span>
                     </p>
                     <p className={`text-[11px] leading-relaxed ${isAppLight ? 'text-amber-800' : 'text-slate-300'}`}>
-                      You are in free-form canvas mode. Add text boxes, custom images, and resize layers freely. Switch off Custom Mode to return to preset cards.
+                      You are in free-form canvas mode. Add text boxes, custom images, and resize layers freely. Switch off Custom Mode in the mode strip to return to preset cards.
                     </p>
                   </div>
                 )}
@@ -649,31 +715,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         }`}>{ratio.desc}</span>
                       </button>
                     ))}
-                  </div>
-                </div>
-
-                {/* Custom Mode Toggle Card */}
-                <div className={`p-4 rounded-2xl border space-y-3 ${
-                  isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className={`text-xs font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Free-Form Custom Mode</p>
-                      <p className={`text-[11px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>Enable draggable box elements & layer editor</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomMode(v => !v)}
-                      className={`px-3 py-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${
-                        isCustomMode
-                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
-                          : isAppLight
-                          ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
-                          : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
-                      }`}
-                    >
-                      {isCustomMode ? 'ON' : 'OFF'}
-                    </button>
                   </div>
                 </div>
               </div>
@@ -765,7 +806,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   })}
                 </div>
 
-                {/* Display Toggles */}
+                {/* Display Toggles (Mode-specific) */}
                 <div className={`pt-3 border-t space-y-2 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
                   <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Card Display Options:
@@ -788,6 +829,28 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                       {showAnswerKey ? 'ON' : 'OFF'}
                     </button>
                   </div>
+
+                  {/* Show Explanation toggle ONLY for Classic Quiz Card mode */}
+                  {postTemplate === 'classic' && !isCustomMode && (
+                    <div className={`flex items-center justify-between p-3 rounded-xl border ${
+                      isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                    }`}>
+                      <span className={`text-xs font-bold ${isAppLight ? 'text-slate-800' : 'text-slate-300'}`}>Show Explanation Box</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowExplanation(v => !v)}
+                        className={`px-3 py-1 rounded-lg text-xs font-black border transition-all cursor-pointer ${
+                          showExplanation
+                            ? 'bg-amber-500 text-slate-950 border-amber-400'
+                            : isAppLight
+                            ? 'bg-white text-slate-600 border-slate-300'
+                            : 'bg-slate-900 text-slate-400 border-slate-800'
+                        }`}
+                      >
+                        {showExplanation ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -950,9 +1013,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             )}
 
             {/* --------------------------------------------------------------------- */}
-            {/* TAB 5: QUIZ TIME REACTION EMOJIS                                      */}
+            {/* TAB 5: QUIZ TIME REACTION EMOJIS (Shown in Quiz Time mode)           */}
             {/* --------------------------------------------------------------------- */}
-            {activeTab === 'reactions' && (
+            {activeTab === 'reactions' && postTemplate === 'quiz_time' && !isCustomMode && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
                   <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
@@ -1093,26 +1156,45 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 </div>
 
                 <div className={`pt-3 border-t space-y-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
-                  <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Upload Custom Background Image:
-                  </label>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <label className="flex-1 px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer flex items-center justify-center gap-2 border bg-amber-500 text-slate-950 border-amber-400 shadow-md hover:brightness-110 transition-all">
-                        <Upload className="w-4 h-4 stroke-[2.5]" />
-                        <span>Upload Custom BG Image</span>
-                        <input type="file" accept="image/*" onChange={handleCustomBgUpload} className="hidden" />
-                      </label>
-                      {customDesign.bgImageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }))}
-                          className="px-3 py-2.5 rounded-xl text-xs font-bold text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer shrink-0"
-                        >
-                          Clear Image
-                        </button>
-                      )}
+                  <div className="flex items-center justify-between">
+                    <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      Upload Custom Background Image:
+                    </label>
+                    {customDesign.bgImageUrl && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        ✓ Custom Image Active
+                      </span>
+                    )}
+                  </div>
+
+                  {customDesign.bgImageUrl ? (
+                    <div className={`p-3 rounded-2xl border flex items-center justify-between gap-3 ${
+                      isAppLight ? 'bg-amber-50 border-amber-300' : 'bg-slate-950 border-amber-500/40'
+                    }`}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img src={customDesign.bgImageUrl} alt="Custom Background" className="w-12 h-12 rounded-xl object-cover border border-amber-400 shrink-0" />
+                        <div className="min-w-0">
+                          <p className={`text-xs font-bold truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Custom BG Graphic</p>
+                          <p className={`text-[10px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>Applied live to card</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }))}
+                        className="px-3 py-1.5 rounded-xl text-xs font-black text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer shrink-0"
+                      >
+                        Clear Image
+                      </button>
                     </div>
+                  ) : null}
+
+                  <div className="space-y-3">
+                    <label className="w-full px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer flex items-center justify-center gap-2 border bg-amber-500 text-slate-950 border-amber-400 shadow-md hover:brightness-110 transition-all">
+                      <Upload className="w-4 h-4 stroke-[2.5]" />
+                      <span>Upload Custom BG Image File</span>
+                      <input type="file" accept="image/*" onChange={handleCustomBgUpload} className="hidden" />
+                    </label>
+
                     <input
                       type="text"
                       value={customDesign.bgImageUrl.startsWith('data:') ? '' : customDesign.bgImageUrl}
@@ -1130,9 +1212,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             )}
 
             {/* --------------------------------------------------------------------- */}
-            {/* TAB 7: LAYERS & TEXT BOXES (CUSTOM MODE)                              */}
+            {/* TAB 7: LAYERS & TEXT BOXES (Shown in Custom Drag & Drop mode)          */}
             {/* --------------------------------------------------------------------- */}
-            {activeTab === 'layers' && (
+            {activeTab === 'layers' && isCustomMode && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
                   <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
@@ -1144,45 +1226,28 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   </p>
                 </div>
 
-                {isCustomMode ? (
-                  <SlideTextBoxPanel
-                    boxes={customDesign.boxes}
-                    selectedId={selectedBoxId}
-                    appTheme={appTheme}
-                    config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
-                    textBoxScope="global"
-                    hasTextBoxOverride={false}
-                    onChangeTextBoxScope={() => {}}
-                    onRevertTextBoxOverride={() => {}}
-                    onApplySlideLayoutToAll={() => {}}
-                    onAddBox={addBox}
-                    onAddElement={addElement}
-                    onAddLayout={addLayout}
-                    onUpdateBox={updateBox}
-                    onDeleteBox={deleteBox}
-                    onDuplicateBox={duplicateBox}
-                    onReorderBox={reorderBox}
-                    onSelectBox={setSelectedBoxId}
-                    onReset={resetDesign}
-                    onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
-                    onClose={() => setActiveTab('templates')}
-                  />
-                ) : (
-                  <div className={`p-5 rounded-2xl border space-y-3 text-center ${
-                    isAppLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
-                  }`}>
-                    <p className="text-xs">
-                      Enable Free-Form Custom Mode to edit individual text boxes and elements freely on the canvas.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomMode(true)}
-                      className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-md cursor-pointer"
-                    >
-                      Enable Custom Canvas Mode
-                    </button>
-                  </div>
-                )}
+                <SlideTextBoxPanel
+                  boxes={customDesign.boxes}
+                  selectedId={selectedBoxId}
+                  appTheme={appTheme}
+                  config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
+                  textBoxScope="global"
+                  hasTextBoxOverride={false}
+                  onChangeTextBoxScope={() => {}}
+                  onRevertTextBoxOverride={() => {}}
+                  onApplySlideLayoutToAll={() => {}}
+                  onAddBox={addBox}
+                  onAddElement={addElement}
+                  onAddLayout={addLayout}
+                  onUpdateBox={updateBox}
+                  onDeleteBox={deleteBox}
+                  onDuplicateBox={duplicateBox}
+                  onReorderBox={reorderBox}
+                  onSelectBox={setSelectedBoxId}
+                  onReset={resetDesign}
+                  onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
+                  onClose={() => setActiveTab('templates')}
+                />
               </div>
             )}
           </div>
