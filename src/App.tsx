@@ -1453,6 +1453,7 @@ export default function App() {
         onFromQuestionBank={handleFromQuestionBank}
         onFromManualEditor={handleFromManualEditor}
         onFromQuestionForm={handleFromQuestionForm}
+        appTheme={appTheme}
       />
 
       {/* Onboarding Tour */}

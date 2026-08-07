@@ -24,13 +24,9 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
   if (!isOpen) return null;
   const isAppLight = appTheme === 'light';
 
-  const cardClass = (active: boolean) =>
+  const cardClass = () =>
     `group relative text-left p-5 rounded-3xl border transition-all cursor-pointer flex flex-col gap-4 ${
-      active
-        ? isAppLight
-          ? 'bg-white border-slate-200 shadow-lg hover:border-amber-400 hover:shadow-amber-500/10'
-          : 'bg-slate-900 border-slate-800 shadow-lg hover:border-amber-500/50 hover:shadow-amber-500/10'
-        : isAppLight
+      isAppLight
         ? 'bg-white border-slate-200 shadow-lg hover:border-amber-400 hover:shadow-amber-500/10'
         : 'bg-slate-900 border-slate-800 shadow-lg hover:border-amber-500/50 hover:shadow-amber-500/10'
     }`;
@@ -84,7 +80,7 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
         <div className="p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
 
           {/* CARD 1 — Question Bank */}
-          <button type="button" onClick={onFromQuestionBank} className={cardClass(false)}>
+          <button type="button" onClick={onFromQuestionBank} className={cardClass()}>
             {/* Mockup: mini question-bank list */}
             <div className={`rounded-2xl border p-3 space-y-1.5 ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
               <div className="flex items-center gap-2">
@@ -117,7 +113,7 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
           </button>
 
           {/* CARD 2 — Manual Editor */}
-          <button type="button" onClick={onFromManualEditor} className={cardClass(false)}>
+          <button type="button" onClick={onFromManualEditor} className={cardClass()}>
             {/* Mockup: bulk paste textarea with lines */}
             <div className={`rounded-2xl border p-3 font-mono space-y-1.5 text-[9px] ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
               <div className="flex items-center gap-1">
@@ -156,7 +152,7 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
           </button>
 
           {/* CARD 3 — Question Creator Form */}
-          <button type="button" onClick={onFromQuestionForm} className={cardClass(false)}>
+          <button type="button" onClick={onFromQuestionForm} className={cardClass()}>
             {/* Mockup: single-question form */}
             <div className={`rounded-2xl border p-3 space-y-2 ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
               <div className={`h-2 rounded-full w-full ${isAppLight ? 'bg-slate-300' : 'bg-slate-700'}`} />
