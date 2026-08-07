@@ -1,48 +1,40 @@
-# Memory — Deck Settings Page + Add Questions Chooser + Nobel Rename
+# Memory — Add Questions Banner Relocation + Question Bank JSON Removal
 
 Last updated: 2026-08-07
 
 ## What was built
 
-All committed on `main` (`ceff1fb` was the parallel session; `22ee2a9` docs; `c849c51` = this session's feature commit). Working tree is clean except the parallel session's uncommitted social-post edits.
+All committed on `main`. HEAD = `45f31a4` (this session's docs commit). Source changes were swept into the parallel session's `b036e3d` ("fix: remove hover-lift effects…") which touched the same files — my work is IN that commit. Working tree is clean except my two docs commits were already made (`45f31a4`); nothing uncommitted remains.
 
-1. **Deck Settings = full page inside Slide Studio** — `src/components/DeckSettingsModal.tsx` DELETED; replaced by `src/components/DeckSettingsPage.tsx` (rendered in place of the studio when `isDeckSettingsOpen` in `App.tsx`'s `activeTab === 'preview'` ternary; header = back button, amber Sliders tile, "Unsaved Changes" badge, **Preview Slide** button, **Apply to All**). Live 16:9 `SlideCanvas` preview column bound to the DRAFT config + draft slide config. `onEnforceClassroomView` passthrough preserved.
-2. **New `src/components/DeckSettingsPreviewModal.tsx`** — opened by "Preview Slide"; large modal rendering the draft slide via ResizeObserver-scaled 1920×1080 `SlideCanvas`.
-3. **Single background-image source** (`DeckSettings.tsx` Background tab) — `hasCustomBgImage = !!themeEffectiveConfig.bgImageUrl`: Theme tab HIDDEN from tab bar while a bg image is active (conditional `as const` spread + auto-switch via `useEffect`), presets grid hidden, second "Upload Image File" button removed (header "Upload Custom Background" is the only upload), URL input + Clear + notice drive `themeEffectiveConfig`. New `handlePatch` = scope-aware multi-field atomic patch (fixes two sequential `handleChange` calls overwriting each other, e.g. `bgImageUrl` + `bgPreset` together).
-4. **`DeckSettings.tsx` outer wrapper is page-flat** (2026-08-07 review fix) — dropped `glass-card-fatty`/`light` (they have `:hover` lift + amber glow) → flat `bg-white/40 border border-slate-200` / `bg-slate-900/40 border border-slate-800` `p-6 lg:p-8`, so it reads as part of the page, not a hoverable card.
-5. **Add Questions chooser modal** — new `src/components/AddQuestionsModal.tsx` (3 source cards: Question Bank / Manual Editor / Question Creator Form, each with a mini mockup; `appTheme` prop). Trigger = **green banner under the `DeckManager` question side panel** (NOT top of studio; wrapped with `DeckManager` in `flex flex-col gap-4` in the right column, single-slide mode only; emerald gradient `from-emerald-500 via-emerald-400 to-teal-400`). Bank → `'bank'` tab; Manual → `'manual'` tab; Form → opens `EditQuestionModal` in CREATE mode.
-6. **Create-mode question form** — `App.tsx`: `isCreatingQuestion` flag + `createEmptyQuestion()` factory (standard type, 4 empty `কখগঘ` options). `EditQuestionModal.onSave` (which itself calls `onClose()`) appends via `ensureUniqueIds([...prev, updated])` instead of `.map`, jumps to `'preview'` + new slide; `onOpenInDedicatedEditor` appends + hands off to Manual Editor. NOTE: `setSelectedIndex(items.length)` in create-save lands on the wrong slide when answer mode is `separate_slide` (expanded list is 2×) — minor, known, unfixed.
-7. **Rakib → Nobel everywhere** — template id `rakib-dark` → `nobel-dark` + name "Nobel's Midnight Gold" in `registry.ts`, with `LEGACY_TEMPLATE_IDS = { 'rakib-dark': 'nobel-dark' }` alias in `getTemplateById` (the ONLY remaining "rakib" reference, intentional so saved decks resolve). `defaultTemplateId: 'nobel-dark'` in `globalDefaults.ts`. Fallback brand `"RAKIB'S CLASSROOM"` → `"NOBEL'S CLASSROOM"` across pptxExport/slideTextBoxes/SlideCanvas/QuestionPaperPage/ClassicQuizCard; placeholder "Nobel Biology Dark"; theme pickers/labels in App/DeckCard/DeckSettings/TemplateCreator/TemplateLibraryModal/QuestionBankView/DeckQuestionPaperModal/QuestionBankPdfModal.
-8. **TemplateLibraryModal now lists built-in templates** — new "Built-in Templates & Themes (N)" section above "My Templates" (excludes `custom-theme`; each card = gradient swatch + accent dot + name + description + LIGHT/DARK chip + "Use This Template"/"Active"). New `builtinToPreset(tmpl)` helper wraps a registry template into a `DeckTemplatePreset` via `captureDesign(config)` + `templateId` override + `customTheme: undefined` → `onApply` → `applyDesignToConfig` switches theme, keeps rest of design.
-9. **Toggleable compact sticky slide preview on Deck Settings** (`a3e139f`) — `DeckSettingsPage.tsx` settings content is now a 12-col grid: `DeckSettings` at `xl:col-span-8` (widens to 12 when hidden) + sticky right column (`xl:col-span-4`, `xl:sticky xl:top-20`) rendering new `src/components/DeckSettingsCompactPreview.tsx` (compact 16:9 ResizeObserver-scaled `SlideCanvas` of the DRAFT config + DRAFT slide config, amber Eye header tile, Maximize2 → opens the full preview modal). Toggled via header button (`showCompactPreview` state, default ON, EyeOff/Eye + "Hide/Show Preview").
+1. **New shared `src/components/AddQuestionsBanner.tsx`** — the green emerald "Add Questions" banner extracted from `App.tsx` into a reusable component (props: `onClick` / `count` / `appTheme`; `from-emerald-500 via-emerald-400 to-teal-400` gradient, `PlusCircle` tile, "N in deck" badge, subtitle "Question Bank · Manual Editor · Question Creator Form", "Choose Source →" CTA).
+2. **Slide Studio: banner moved INSIDE `DeckManager`** — now renders right after the Deck Health `ValidationPanel` and before the Bulk Transformation Bar (`src/components/DeckManager.tsx`). New optional `onAddQuestions?: () => void` prop (App passes `() => setIsAddQuestionsOpen(true)`); `count = items.length`. Removed the sibling banner + `flex flex-col gap-4` wrapper from `App.tsx`; also removed now-unused `PlusCircle`/`ArrowRight` from App's lucide import.
+3. **Question Bank page: JSON import REMOVED** — deleted the "Import MCQs (JSON)" header button, hidden file input, JSON confirm form, `handleImportJsonFile`/`handleConfirmJsonImport` handlers, and `importPending`/`importDeckName`/`importDeckSubject`/`jsonFileInputRef` state from `QuestionBankView.tsx`. Cleaned imports (`normalizeMCQs`, `UploadCloud`, `X`, `useRef`). Per-deck "Download as JSON" export (`handleExportDeckJson`/`downloadJSON`) stays. New required `onAddQuestions: () => void` prop; the shared banner renders right after the page header.
+4. **Home bento cleanup (`SlideDecksHome.tsx`)** — removed the duplicate "16:9 Slide Studio" tool card (a stale copy that navigated to social but rendered identical studio content; the real Social Posts card was kept). "6 Tools" badge → "5 Tools". Removed the extra 16:9 card requested earlier this session.
 
 ## Decisions made
 
-- Deck Settings is a **page, not a modal** — user direction overrode the earlier (parallel-session) revert-to-modal note. Page header keeps the modal-style draft/Apply/Preview flow.
-- **Mutual exclusion for backgrounds** — a custom bg image hides the Theme tab entirely (not just disables it); only one background source selectable.
-- Add Questions banner is **green + sits under the deck question side panel** (user requested location + color).
-- Built-in templates apply as **theme-only switch** (keeps current fonts/layout/bg settings) via `builtinToPreset`.
-- `DeckSettings` inner content must stay **page-flat** (no `glass-card-fatty` hover lift) inside `DeckSettingsPage`.
+- The Add Questions banner is **green + lives inside `DeckManager` right after Deck Health** (user-requested location), and is reused on the Question Bank page via a shared component instead of duplicated markup.
+- JSON import was removed from the Question Bank **header flow** (user request) — per-deck JSON **export** retained. The AddQuestionsModal remains the single entry point for choosing a question source.
+- `DeckManager.onAddQuestions` is optional (banner only renders when the prop is passed) so the component stays reusable.
 
 ## Problems solved
 
-- Two sequential `handleChange` calls dropped fields (stale config spread) → `handlePatch` atomic patch.
-- Two upload buttons for the same bg image → single header upload.
-- `rakib-dark` id change breaking saved decks → legacy id alias in `getTemplateById`.
-- Review flagged (all fixed in `c849c51`): redundant identical ternary on the old wide Add Questions button (removed with the banner), `DeckSettings` hover-lift card styling, `separate_slide` nav target (NOT fixed — accepted as minor).
+- Duplicate/confusing home card: Tool 2 was labeled "Social Media Posting Card Generator" but rendered a copy of the 16:9 Slide Studio card and navigated to social — removed; the real Social Posts card (indigo, Share2, 1:1/4:5/9:16) remains.
+- Orphaned imports after removal (`normalizeMCQs`, `UploadCloud`, `X`, `useRef`, `PlusCircle`, `ArrowRight`) all cleaned; verified `tsc --noEmit` + `vite build` green.
+- /review ran before commit: 0 issues found.
 
 ## Current state
 
-- On `main`, HEAD = `a3e139f`. Committed + green: `npx tsc --noEmit` clean, `vite build` green.
-- Working tree: my work is committed. The **parallel session has UNCOMMITTED edits** in `src/components/social-post/QuizTimeCard.tsx`, `ClassicQuizCard.tsx`, `SocialPostGenerator.tsx` — do NOT commit those (they belong to the social-post worktree session).
-- Earlier context notes (stale): branch is now `main`, not `feat/answer-slides`; the old `App.tsx` `slideVariant` errors are long gone.
+- On `main`, HEAD = `45f31a4`. `npx tsc --noEmit` clean, `vite build` green (only pre-existing chunk-size warning).
+- Working tree clean (source committed in parallel session's `b036e3d`; docs committed in this session's `45f31a4`).
+- Still true from earlier: known minor = create-mode `setSelectedIndex(items.length)` lands on the wrong slide under `separate_slide` answer mode (`App.tsx` EditQuestionModal `onSave`). Backlog unchanged: bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor; interactive template studio JSON import/export.
 
 ## Next session starts with
 
-1. Optionally fix the known minor: create-mode `setSelectedIndex(items.length)` navigates to the wrong slide under `separate_slide` answer mode (`App.tsx` EditQuestionModal `onSave`) — use `questionSlideIndex(expandDeckSlides(...), items.length)`.
-2. Reconcile with the parallel session's uncommitted social-post edits before any new work.
-3. Backlog (unchanged): bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor; interactive template studio JSON import/export.
+1. Optionally fix the known minor: create-mode `setSelectedIndex(items.length)` navigates to the wrong slide under `separate_slide` answer mode — use `questionSlideIndex(expandDeckSlides(...), items.length)`.
+2. If adding CSV / JSON-backup source cards to the AddQuestionsModal (mentioned earlier as a possible follow-up), reuse `parseCSVToMCQs` (`src/utils/csvParser.ts`) and `normalizeMCQs` (`src/utils/mcqJson.ts`).
+3. Run `git pull`/fetch if the parallel social-post session pushes more commits before you continue.
 
 ## Open questions
 
-- None blocking. Only the minor `separate_slide` create-mode nav target (above) is knowingly unresolved.
+- None blocking. Only the minor `separate_slide` create-mode nav target is knowingly unresolved.
