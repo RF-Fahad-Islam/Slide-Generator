@@ -16,17 +16,20 @@ interface QuizTimeCardProps {
   showAnswerKey: boolean;
   reactionEmojis: ReactionEmojiSet;
   fontFamily?: string;
+  customStem?: string;
+  customOptions?: { key: string; text: string; isCorrect?: boolean }[];
 }
 
 // "Quiz Time" reaction-post template — dark navy/gold branded card with a
 // 2x2 emoji-reaction answer grid (engagement-bait format: viewers react with
 // the emoji matching their chosen option instead of the answer being shown).
 export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
-  ({ item, aspectClass, brandName, logoUrl, titleText, ctaText, subCtaText, showAnswerKey, reactionEmojis, fontFamily }, ref) => {
+  ({ item, aspectClass, brandName, logoUrl, titleText, ctaText, subCtaText, showAnswerKey, reactionEmojis, fontFamily, customStem, customOptions }, ref) => {
     const words = titleText.trim().split(/\s+/).filter(Boolean);
     const lastWord = words.pop() || 'Time';
     const leadWords = words.join(' ') || 'Quiz';
-    const options = item.options.slice(0, 4);
+    const stemText = customStem !== undefined ? customStem : item.stem;
+    const optionsList = customOptions && customOptions.length > 0 ? customOptions.slice(0, 4) : item.options.slice(0, 4);
 
     return (
       <div
@@ -49,7 +52,7 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
             </h2>
           </div>
           {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className="w-11 h-11 rounded-full object-cover border-2 border-white/20 shadow shrink-0" />
+            <img src={logoUrl} alt="Logo" className="w-11 h-11 rounded-full object-cover border-2 border-white/20 shadow shrink-0 bg-white/10" />
           ) : (
             <div className="w-11 h-11 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-white font-black text-sm shrink-0">
               {brandName ? brandName.charAt(0).toUpperCase() : 'Q'}
@@ -62,20 +65,20 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
         <div className="px-6 pt-5 relative z-[1]">
           <div className="bg-slate-900/60 border border-white/10 rounded-2xl px-5 py-4 text-center">
             <p className="text-sm sm:text-base font-semibold text-white leading-relaxed">
-              <MathText text={item.stem} />
+              <MathText text={stemText} />
             </p>
           </div>
         </div>
 
         {/* 2x2 reaction option grid */}
         <div className="px-6 pt-5 grid grid-cols-2 gap-3 relative z-[1]">
-          {options.map((opt, i) => {
+          {optionsList.map((opt, i) => {
             const letter = REACTION_ORDER[i];
             if (!letter) return null;
-            const isCorrect = !!opt.isCorrect || opt.key === item.answer;
+            const isCorrect = !!opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
             return (
               <ReactionOptionCard
-                key={opt.key}
+                key={opt.key || letter}
                 option={opt}
                 emoji={reactionEmojis[letter]}
                 badgeColor={REACTION_BADGE_COLORS[letter]}

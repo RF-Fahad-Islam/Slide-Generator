@@ -12,13 +12,22 @@ interface ClassicQuizCardProps {
   bgStyle: string;
   showAnswerKey: boolean;
   showExplanation: boolean;
+  brandName?: string;
+  logoUrl?: string;
+  customStem?: string;
+  customOptions?: { key: string; text: string; isCorrect?: boolean }[];
 }
 
 // The original branded quiz card layout — brand header, stem, stacked option
 // grid, footer watermark. Extracted verbatim from SocialPostGenerator so it
 // can sit alongside other selectable post templates.
 export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardProps>(
-  ({ item, config, customHeaderTitle, questionNumber, aspectClass, bgStyle, showAnswerKey, showExplanation }, ref) => {
+  ({ item, config, customHeaderTitle, questionNumber, aspectClass, bgStyle, showAnswerKey, showExplanation, brandName, logoUrl, customStem, customOptions }, ref) => {
+    const activeBrand = brandName !== undefined ? brandName : (config.brandName || "NOBEL'S CLASSROOM");
+    const activeLogo = logoUrl !== undefined ? logoUrl : config.logoUrl;
+    const stemText = customStem !== undefined ? customStem : item.stem;
+    const optionsList = customOptions && customOptions.length > 0 ? customOptions : item.options;
+
     return (
       <div
         ref={ref}
@@ -28,20 +37,20 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
         {/* Top Brand Banner Bar */}
         <div className="flex items-center justify-between border-b border-white/15 pb-4 z-10">
           <div className="flex items-center gap-3">
-            {config.logoUrl ? (
+            {activeLogo ? (
               <img
-                src={config.logoUrl}
+                src={activeLogo}
                 alt="Logo"
                 className="w-10 h-10 object-contain rounded-xl bg-black/20 p-1 border border-white/20"
               />
             ) : (
               <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-amber-500/30">
-                {config.brandName ? config.brandName.charAt(0).toUpperCase() : 'R'}
+                {activeBrand ? activeBrand.charAt(0).toUpperCase() : 'R'}
               </div>
             )}
             <div>
               <h3 className="text-sm font-black tracking-wide uppercase leading-tight drop-shadow-sm">
-                {config.brandName || "NOBEL'S CLASSROOM"}
+                {activeBrand}
               </h3>
               <p className="text-xs font-bold text-amber-400 mt-0.5">
                 {customHeaderTitle || config.headerTitle || 'আজকের কুইজ'}
@@ -68,12 +77,12 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
           </div>
 
           <h2 className="text-lg sm:text-xl font-extrabold leading-relaxed text-white drop-shadow">
-            <MathText text={item.stem} />
+            <MathText text={stemText} />
           </h2>
 
           {/* Options Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
-            {item.options.map((opt) => {
+            {optionsList.map((opt) => {
               const isCorrect = showAnswerKey && (opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase());
               return (
                 <div

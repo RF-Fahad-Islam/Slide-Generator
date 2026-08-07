@@ -22,13 +22,16 @@ import {
   Filter,
   Landmark,
   LayoutGrid,
+  X,
+  Upload,
+  Smile,
+  Check,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { SlideTextBoxLayer } from './SlideTextBoxLayer';
 import { SlideTextBoxOverlay } from './SlideTextBoxOverlay';
 import { SlideTextBoxPanel } from './SlideTextBoxPanel';
-import { getSlideBoxContent } from '../utils/slideTextBoxes';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from '../utils/slideElements';
 import { PostTemplateSelector } from './social-post/PostTemplateSelector';
 import { ClassicQuizCard } from './social-post/ClassicQuizCard';
@@ -47,9 +50,6 @@ interface CustomPostDesign {
   boxes: SlideTextBox[];
 }
 
-// Social posts use a fixed 1080px-tall design space so the exact same
-// SlideTextBox px-coordinate system (fonts, box positions) as Slide Studio is
-// reused. Width derives from the chosen aspect ratio.
 const POST_DESIGN_HEIGHT = 1080;
 const POST_DESIGN_WIDTH: Record<'1:1' | '4:5' | '9:16', number> = {
   '1:1': 1080,
@@ -69,8 +69,6 @@ const defaultCustomBoxes = (w: number, h: number): SlideTextBox[] => [
   { id: 'b_footer', bind: 'footerTag', x: pct(8, w), y: pct(90, h), w: pct(60, w), fontSize: pct(2.4, w), color: '#fbbf24', align: 'left', bold: true },
 ];
 
-// Older saved designs stored boxes as %-based CustomTextBox entries. Migrate
-// them into the px-based SlideTextBox space so existing designs keep working.
 interface StoredPostDesign {
   version?: number;
   bgImageUrl: string;
@@ -112,8 +110,6 @@ const loadSavedDesign = (w: number, h: number): CustomPostDesign => {
   return { bgImageUrl: '', boxes: defaultCustomBoxes(w, h) };
 };
 
-const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
-
 export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   items,
   config,
@@ -136,8 +132,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       setSelectedQuestionIndex(idx);
       setSelectedItemIds([preselectedItemId]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preselectedItemId]);
+  }, [preselectedItemId, items]);
+
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:5' | '9:16'>('1:1');
   const [postTemplate, setPostTemplate] = useState<PostTemplateId>('classic');
   const [postBgColor, setPostBgColor] = useState<string>('gradient_amber');
@@ -145,6 +141,10 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const [showAnswerKey, setShowAnswerKey] = useState<boolean>(true);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  // Editable Brand Name & Logo
+  const [customBrandName, setCustomBrandName] = useState<string>(config.brandName || "NOBEL'S CLASSROOM");
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>(config.logoUrl || "");
 
   // "Quiz Time" reaction-post template state
   const [quizTitleText, setQuizTitleText] = useState<string>('Quiz Time');
@@ -163,36 +163,12 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [canvasWidth, setCanvasWidth] = useState<number>(500);
 
+  // Canva-Style Studio Right Drawer State
+  const [isCanvaDrawerOpen, setIsCanvaDrawerOpen] = useState<boolean>(false);
+  const [canvaTab, setCanvaTab] = useState<'branding' | 'content' | 'reactions' | 'layers' | 'background'>('content');
+
   const postCanvasRef = useRef<HTMLDivElement>(null);
   const postFrameRef = useRef<HTMLDivElement>(null);
-
-  // Measure the preview frame width so the fixed-size design space (px) can be
-  // scaled to fit, and %-font equivalents resolve for html2canvas.
-  useEffect(() => {
-    const el = postFrameRef.current;
-    if (!el) return;
-    const update = () => setCanvasWidth(el.getBoundingClientRect().width);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [isCustomMode, aspectRatio]);
-
-  // Persist the custom design across tab switches (component remounts each visit)
-  useEffect(() => {
-    try {
-      const stored: StoredPostDesign = { version: 2, bgImageUrl: customDesign.bgImageUrl, boxes: customDesign.boxes };
-      localStorage.setItem(CUSTOM_DESIGN_STORAGE_KEY, JSON.stringify(stored));
-    } catch {
-      // storage may be full from data-URL images; ignore
-    }
-  }, [customDesign]);
-
-  // Question picker filters (mirrors the Question Bank filter bar)
-  const [pickerSearch, setPickerSearch] = useState<string>('');
-  const [pickerSubject, setPickerSubject] = useState<string>('all');
-  const [pickerBoard, setPickerBoard] = useState<string>('all');
-  const [pickerType, setPickerType] = useState<string>('all');
 
   const currentItem = items[selectedQuestionIndex] || {
     id: 'sample',
@@ -207,6 +183,58 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     answer: 'ক',
     explanation: 'রুই মাছের হৃদপিণ্ড দুই প্রকোষ্ঠ বিশিষ্ট (এক অলিন্দ ও এক নিলয়)।',
   };
+
+  // Editable Question Stem & Options (A, B, C, D)
+  const [customStem, setCustomStem] = useState<string>('');
+  const [customOptions, setCustomOptions] = useState<{ key: string; text: string; isCorrect?: boolean }[]>([]);
+  const [customAnswerKey, setCustomAnswerKey] = useState<string>('');
+
+  useEffect(() => {
+    const item = items[selectedQuestionIndex] || currentItem;
+    setCustomStem(item.stem || '');
+    setCustomOptions(
+      (item.options || []).map((o, idx) => ({
+        key: o.key || String.fromCharCode(65 + idx),
+        text: o.text || '',
+        isCorrect: !!o.isCorrect || (item.answer && o.key.toLowerCase() === item.answer.toLowerCase()),
+      }))
+    );
+    setCustomAnswerKey(item.answer || 'ক');
+  }, [selectedQuestionIndex, items]);
+
+  const effectiveItem: MCQItem = {
+    ...currentItem,
+    stem: customStem !== undefined ? customStem : currentItem.stem,
+    options: customOptions.length > 0 ? customOptions.map(o => ({ key: o.key, text: o.text, isCorrect: o.isCorrect })) : currentItem.options,
+    answer: customAnswerKey || currentItem.answer,
+  };
+
+  // Measure canvas width
+  useEffect(() => {
+    const el = postFrameRef.current;
+    if (!el) return;
+    const update = () => setCanvasWidth(el.getBoundingClientRect().width);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isCustomMode, aspectRatio]);
+
+  // Persist custom design
+  useEffect(() => {
+    try {
+      const stored: StoredPostDesign = { version: 2, bgImageUrl: customDesign.bgImageUrl, boxes: customDesign.boxes };
+      localStorage.setItem(CUSTOM_DESIGN_STORAGE_KEY, JSON.stringify(stored));
+    } catch {
+      // ignore
+    }
+  }, [customDesign]);
+
+  // Question picker filters
+  const [pickerSearch, setPickerSearch] = useState<string>('');
+  const [pickerSubject, setPickerSubject] = useState<string>('all');
+  const [pickerBoard, setPickerBoard] = useState<string>('all');
+  const [pickerType, setPickerType] = useState<string>('all');
 
   const updateBox = (id: string, patch: Partial<SlideTextBox>) => {
     setCustomDesign(prev => ({
@@ -237,8 +265,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     const def = SLIDE_ELEMENT_DEFS.find(d => d.id === elementId);
     if (!def) return;
     const built = def.build(extra);
-    // The SlideTextBox system is designed for a 1920x1080 space â€” rescale the
-    // factory-produced boxes to the post's design space.
     const scaleX = postDesignW / 1920;
     const scaleY = postDesignH / 1080;
     const scaled: SlideTextBox = {
@@ -305,9 +331,17 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         setCustomDesign(prev => ({ ...prev, bgImageUrl: evt.target.result as string }));
       }
     };
-    reader.onerror = () => {
-      alert('Failed to read the image file. Please try another file.');
-      e.target.value = '';
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (evt.target?.result) {
+        setCustomLogoUrl(evt.target.result as string);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -318,7 +352,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     setSelectedBoxId(null);
   };
 
-  // Filter the picker list using the same search/filter rules as the Question Bank
   const filteredPickerItems: { question: MCQItem; fullIndex: number }[] = items
     .map((q, idx) => ({ question: q, fullIndex: idx }))
     .filter(({ question }) => {
@@ -338,21 +371,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       return true;
     });
 
-  const toggleSelectItem = (id: string) => {
-    setSelectedItemIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const selectAllItems = () => {
-    setSelectedItemIds(items.map((item) => item.id));
-  };
-
-  const deselectAllItems = () => {
-    setSelectedItemIds([]);
-  };
-
-  // Export single social post PNG image
   const handleExportSinglePNG = async () => {
     if (!postCanvasRef.current) return;
     setIsExporting(true);
@@ -389,7 +407,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     }
   };
 
-  // Background Styles Mapping
   const getBgStyle = () => {
     switch (postBgColor) {
       case 'gradient_amber':
@@ -407,7 +424,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     }
   };
 
-  // Aspect ratio container dimensions
   const getAspectClass = () => {
     switch (aspectRatio) {
       case '1:1':
@@ -422,13 +438,13 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Header Banner */}
+    <div className="space-y-8 animate-fadeIn relative">
+      {/* Top Banner */}
       <div
         className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 lg:p-8 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 ${
           isAppLight
             ? 'border-slate-200'
-            : 'bg-slate-900/80 border-slate-800'
+            : 'bg-slate-900/80 border-white/10 text-white shadow-2xl'
         }`}
       >
         <div className="flex items-center gap-4">
@@ -437,61 +453,64 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           </div>
           <div>
             <h2 className={`text-xl lg:text-2xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-              <span>Social Media Post Generator</span>
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-black border ${
-                isAppLight
-                  ? 'bg-amber-100 text-amber-700 border-amber-300'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-              }`}>
-                FB / Instagram / Story
+              <span>Social Media Post Studio</span>
+              <span className="text-xs px-3 py-1 rounded-full font-mono font-black border bg-amber-500/20 text-amber-300 border-amber-500/30">
+                Canva Mode · Fully Editable
               </span>
             </h2>
             <p className={`text-xs mt-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              Create high-engagement social media cards, daily quiz posts & story banners from your MCQs!
+              Create & edit custom brand logos, stem text, options A–D, emojis, and Canva-style layouts!
             </p>
           </div>
         </div>
 
-        <button
-          onClick={handleExportSinglePNG}
-          disabled={isExporting || items.length === 0}
-          className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-sm flex items-center gap-2.5 shadow-lg shadow-amber-500/25 cursor-pointer disabled:opacity-50 transition-all shrink-0"
-        >
-          {isExporting ? (
-            <RefreshCw className="w-5 h-5 animate-spin" />
-          ) : (
-            <Download className="w-5 h-5 stroke-[2.5]" />
-          )}
-          <span>{isExporting ? 'Generating Image...' : 'Download Social Image'}</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsCanvaDrawerOpen(prev => !prev)}
+            className="px-5 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/40 font-black text-sm flex items-center gap-2.5 shadow-lg shadow-amber-500/10 cursor-pointer transition-all shrink-0"
+          >
+            <Sliders className="w-5 h-5 text-amber-400" />
+            <span>{isCanvaDrawerOpen ? 'Close Canva Drawer' : '🎨 Canva Studio Drawer'}</span>
+          </button>
+
+          <button
+            onClick={handleExportSinglePNG}
+            disabled={isExporting || items.length === 0}
+            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-sm flex items-center gap-2.5 shadow-lg shadow-amber-500/25 cursor-pointer disabled:opacity-50 transition-all shrink-0"
+          >
+            {isExporting ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : (
+              <Download className="w-5 h-5 stroke-[2.5]" />
+            )}
+            <span>{isExporting ? 'Generating Image...' : 'Download Social Image'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-        {/* LEFT 5 COLUMNS: POST CONFIGURATION & CONTROLS */}
+        {/* LEFT 5 COLUMNS: EDITABLE CONTROLS */}
         <div className="xl:col-span-5 space-y-6">
-          {/* Custom Design Editor Toggle */}
+          {/* Custom Mode Switch Card */}
           <div
             className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-4 ${
-              isAppLight
-                ? 'border-slate-200'
-                : 'bg-slate-900/80 border-slate-800'
+              isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-white/10'
             }`}
           >
-            <label className={`text-sm font-black uppercase tracking-wider flex items-center gap-2 ${
-              isAppLight ? 'text-amber-600' : 'text-amber-400'
-            }`}>
+            <label className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-amber-400">
               <Layers className="w-4 h-4" />
-              0. Custom Design Editor
+              0. Custom Layout Mode
             </label>
             <div className={`flex items-center justify-between gap-4 p-4 rounded-2xl border ${
               isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
             }`}>
               <div className="space-y-1">
                 <p className={`text-sm font-extrabold ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>
-                  Upload Your Own Image & Text Boxes
+                  Canva Drag & Drop Mode
                 </p>
                 <p className={`text-xs leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Design a fully custom post: background image + draggable boxes that auto-fill question, options & answers.
+                  Enable free-form text boxes, custom images & drag-and-drop layer position control.
                 </p>
               </div>
               <button
@@ -505,491 +524,232 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
                 }`}
               >
-                {isCustomMode ? 'ðŸŽ¨ Custom Mode ON' : 'Enable Custom Mode'}
+                {isCustomMode ? '🎨 Custom Mode ON' : 'Enable Custom Mode'}
               </button>
             </div>
-
-            {isCustomMode && (
-              <div className="space-y-5">
-                {/* Background image */}
-                <div className={`p-4 rounded-2xl border space-y-3 ${
-                  isAppLight ? 'bg-amber-50/60 border-amber-200' : 'bg-slate-950 border-amber-500/30'
-                }`}>
-                  <span className={`text-sm font-extrabold block ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
-                    Background Image
-                  </span>
-                  {customDesign.bgImageUrl ? (
-                    <div className="relative inline-block">
-                      <img
-                        src={customDesign.bgImageUrl}
-                        alt="Custom Background"
-                        className="h-20 max-w-[220px] object-contain rounded-xl border border-amber-400/50 bg-black/30"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }))}
-                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-sm font-bold leading-none hover:bg-rose-600 shadow"
-                      >
-                        âœ•
-                      </button>
-                    </div>
-                  ) : (
-                    <div className={`h-20 w-48 rounded-xl border border-dashed flex items-center justify-center text-xs text-center p-2 ${
-                      isAppLight ? 'bg-white border-slate-300 text-slate-400' : 'bg-slate-900 border-slate-700 text-slate-500'
-                    }`}>
-                      No background image
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label className={`px-3.5 py-2 rounded-xl text-sm font-bold cursor-pointer flex items-center gap-1.5 border transition-all ${
-                      isAppLight ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' : 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800'
-                    }`}>
-                      <ImageIcon className="w-4 h-4" />
-                      Upload Image
-                      <input type="file" accept="image/*" onChange={handleCustomBgUpload} className="hidden" />
-                    </label>
-                    <input
-                      type="text"
-                      value={customDesign.bgImageUrl.startsWith('data:') ? '' : customDesign.bgImageUrl}
-                      onChange={(e) => setCustomDesign(prev => ({ ...prev, bgImageUrl: e.target.value }))}
-                      placeholder="...or paste image URL"
-                      className={`flex-1 min-w-[140px] border rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 ${
-                        isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-              </div>
-            )}
           </div>
 
-          {/* Post Template Selector */}
+          {/* Template Picker */}
           {!isCustomMode && (
             <PostTemplateSelector selected={postTemplate} onSelect={setPostTemplate} isAppLight={isAppLight} />
           )}
 
-          {/* Aspect Ratio Selector */}
-          <div
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-5 ${
-              isAppLight
-                ? 'border-slate-200'
-                : 'bg-slate-900/80 border-slate-800'
-            }`}
-          >
-            <label className={`text-sm font-black uppercase tracking-wider flex items-center gap-2 ${
-              isAppLight ? 'text-amber-600' : 'text-amber-400'
-            }`}>
-              <Smartphone className="w-4 h-4" />
-              2. Select Aspect Ratio & Platform
-            </label>
-
-            <div className="grid grid-cols-3 gap-3 text-xs">
-              <button
-                type="button"
-                onClick={() => setAspectRatio('1:1')}
-                className={`p-4 rounded-2xl border font-bold flex flex-col items-center gap-2 transition-all ${
-                  aspectRatio === '1:1'
-                    ? isAppLight
-                      ? 'bg-amber-50 border-amber-400 text-amber-700 shadow-md ring-2 ring-amber-400/40'
-                      : 'bg-amber-500/10 border-amber-400 text-amber-400 shadow-md ring-1 ring-amber-400/50'
-                    : isAppLight
-                    ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                }`}
-              >
-                <Square className="w-5 h-5" />
-                <span className="font-black">1:1 Square</span>
-                <span className={`text-[9px] font-mono ${isAppLight ? 'text-slate-500' : 'opacity-80'}`}>(FB / Insta Post)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAspectRatio('4:5')}
-                className={`p-4 rounded-2xl border font-bold flex flex-col items-center gap-2 transition-all ${
-                  aspectRatio === '4:5'
-                    ? isAppLight
-                      ? 'bg-amber-50 border-amber-400 text-amber-700 shadow-md ring-2 ring-amber-400/40'
-                      : 'bg-amber-500/10 border-amber-400 text-amber-400 shadow-md ring-1 ring-amber-400/50'
-                    : isAppLight
-                    ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                }`}
-              >
-                <Maximize className="w-5 h-5" />
-                <span className="font-black">4:5 Portrait</span>
-                <span className={`text-[9px] font-mono ${isAppLight ? 'text-slate-500' : 'opacity-80'}`}>(Insta Feed)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAspectRatio('9:16')}
-                className={`p-4 rounded-2xl border font-bold flex flex-col items-center gap-2 transition-all ${
-                  aspectRatio === '9:16'
-                    ? isAppLight
-                      ? 'bg-amber-50 border-amber-400 text-amber-700 shadow-md ring-2 ring-amber-400/40'
-                      : 'bg-amber-500/10 border-amber-400 text-amber-400 shadow-md ring-1 ring-amber-400/50'
-                    : isAppLight
-                    ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                }`}
-              >
-                <Smartphone className="w-5 h-5" />
-                <span className="font-black">9:16 Story</span>
-                <span className={`text-[9px] font-mono ${isAppLight ? 'text-slate-500' : 'opacity-80'}`}>(Reels / Story)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Background Theme Selector — the Quiz Time template ships its own
-              fixed navy/gold theme, so this only applies to the Classic card
-              (or custom mode, where it's the fallback behind an image). */}
-          {(isCustomMode || postTemplate === 'classic') && (
-          <div
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-5 ${
-              isAppLight
-                ? 'border-slate-200'
-                : 'bg-slate-900/80 border-slate-800'
-            }`}
-          >
-            <label className={`text-sm font-black uppercase tracking-wider flex items-center gap-2 ${
-              isAppLight ? 'text-amber-600' : 'text-amber-400'
-            }`}>
-              <Sliders className="w-4 h-4" />
-              3. Post Background Color & Gradient
-            </label>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              {[
-                { id: 'gradient_amber', name: 'ðŸŒ™ Midnight Gold', bg: 'from-slate-950 to-amber-950' },
-                { id: 'gradient_blue', name: 'ðŸ“˜ Cyber Blue', bg: 'from-slate-950 to-indigo-950' },
-                { id: 'gradient_emerald', name: 'ðŸŒ¿ Forest Emerald', bg: 'from-slate-950 to-emerald-950' },
-                { id: 'clean_light', name: 'â˜€ï¸ Warm Light', bg: 'from-slate-50 to-amber-50' },
-              ].map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => setPostBgColor(b.id)}
-                  className={`p-4 rounded-2xl border font-bold text-left transition-all flex items-center gap-3 ${
-                    postBgColor === b.id
-                      ? isAppLight
-                        ? 'bg-amber-50 border-amber-400 text-amber-700 shadow-md ring-2 ring-amber-400/40'
-                        : 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-md'
-                      : isAppLight
-                      ? 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100'
-                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                  }`}
-                >
-                  <span className={`w-5 h-5 rounded-full bg-gradient-to-r ${b.bg} border shrink-0`} />
-                  <span className="truncate font-black">{b.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          )}
-
-          {/* Custom Text Controls */}
-          <div
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-5 ${
-              isAppLight
-                ? 'border-slate-200'
-                : 'bg-slate-900/80 border-slate-800'
-            }`}
-          >
-            <label className={`text-sm font-black uppercase tracking-wider flex items-center gap-2 ${
-              isAppLight ? 'text-amber-600' : 'text-amber-400'
-            }`}>
-              <Type className="w-4 h-4" />
-              4. Post Banner Header & Display Settings
-            </label>
-
-            {postTemplate === 'quiz_time' && !isCustomMode ? (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Quiz Wordmark Title:
-                </label>
-                <input
-                  type="text"
-                  value={quizTitleText}
-                  onChange={(e) => setQuizTitleText(e.target.value)}
-                  placeholder="Quiz Time"
-                  className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
-                    isAppLight
-                      ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
-                      : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Reaction Call-To-Action:
-                </label>
-                <input
-                  type="text"
-                  value={quizCtaText}
-                  onChange={(e) => setQuizCtaText(e.target.value)}
-                  placeholder="React to give your answer!"
-                  className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
-                    isAppLight
-                      ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
-                      : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Comment Prompt:
-                </label>
-                <input
-                  type="text"
-                  value={quizSubCtaText}
-                  onChange={(e) => setQuizSubCtaText(e.target.value)}
-                  placeholder="COMMENT YOUR ANSWER BELOW"
-                  className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
-                    isAppLight
-                      ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
-                      : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Reaction Emojis (A / B / C / D):
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {REACTION_ORDER.map((letter) => (
-                    <input
-                      key={letter}
-                      type="text"
-                      value={reactionEmojis[letter]}
-                      onChange={(e) => setReactionEmojis(prev => ({ ...prev, [letter]: e.target.value }))}
-                      className={`w-full text-center border rounded-xl px-2 py-2.5 text-lg transition-all focus:outline-none focus:ring-2 ${
-                        isAppLight
-                          ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
-                          : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className={`flex items-center justify-between pt-2 text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                <span>Highlight Correct Answer</span>
-                <input
-                  type="checkbox"
-                  checked={showAnswerKey}
-                  onChange={(e) => setShowAnswerKey(e.target.checked)}
-                  className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
-                />
-              </div>
-            </div>
-            ) : (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-[11px] font-bold mb-2 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Post Header Banner Title:
-                </label>
-                <input
-                  type="text"
-                  value={customHeaderTitle}
-                  onChange={(e) => setCustomHeaderTitle(e.target.value)}
-                  placeholder="e.g. আজকের কুইজ | এইচএসসি জীববিজ্ঞান"
-                  className={`w-full border rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none focus:ring-2 ${
-                    isAppLight
-                      ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-500/20'
-                      : 'bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:ring-amber-500/20'
-                  }`}
-                />
-              </div>
-
-              <div className={`flex items-center justify-between pt-2 text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                <span>Highlight Correct Answer Option</span>
-                <input
-                  type="checkbox"
-                  checked={showAnswerKey}
-                  onChange={(e) => setShowAnswerKey(e.target.checked)}
-                  className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
-                />
-              </div>
-
-              <div className={`flex items-center justify-between text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                <span>Include Short Explanation Text</span>
-                <input
-                  type="checkbox"
-                  checked={showExplanation}
-                  onChange={(e) => setShowExplanation(e.target.checked)}
-                  className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
-                />
-              </div>
-            </div>
-            )}
-          </div>
-
-          {/* Question Selector List */}
+          {/* Editable Brand Logo & Brand Name */}
           <div
             className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-4 ${
-              isAppLight
-                ? 'border-slate-200'
-                : 'bg-slate-900/80 border-slate-800'
+              isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-white/10'
+            }`}
+          >
+            <label className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-amber-400">
+              <User className="w-4 h-4" />
+              1. Brand Name & Custom Logo
+            </label>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-300 mb-1">
+                  Brand Name Text:
+                </label>
+                <input
+                  type="text"
+                  value={customBrandName}
+                  onChange={(e) => setCustomBrandName(e.target.value)}
+                  placeholder="e.g. Physics Plus / Nobel's Classroom"
+                  className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-300 mb-1">
+                  Brand Logo Image:
+                </label>
+                <div className="flex items-center gap-3">
+                  {customLogoUrl ? (
+                    <div className="relative shrink-0">
+                      <img src={customLogoUrl} alt="Logo" className="w-12 h-12 rounded-xl object-cover border border-amber-400 bg-black/40 p-1" />
+                      <button
+                        type="button"
+                        onClick={() => setCustomLogoUrl('')}
+                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-xs font-black flex items-center justify-center shadow"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 font-black text-sm flex items-center justify-center shrink-0">
+                      {customBrandName ? customBrandName.charAt(0).toUpperCase() : 'B'}
+                    </div>
+                  )}
+
+                  <div className="flex-1 flex flex-col gap-2">
+                    <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer flex items-center justify-center gap-2 border bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800 transition-all">
+                      <Upload className="w-4 h-4 text-amber-400" />
+                      <span>Upload Logo File</span>
+                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                    </label>
+                    <input
+                      type="text"
+                      value={customLogoUrl.startsWith('data:') ? '' : customLogoUrl}
+                      onChange={(e) => setCustomLogoUrl(e.target.value)}
+                      placeholder="...or paste image URL"
+                      className="w-full border rounded-xl px-3 py-1.5 text-xs font-mono bg-slate-950 border-slate-800 text-slate-300 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Editable Question Stem & Options A, B, C, D */}
+          <div
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-4 ${
+              isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-white/10'
+            }`}
+          >
+            <label className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-amber-400">
+              <Type className="w-4 h-4" />
+              2. Edit Question & Options A, B, C, D
+            </label>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-300 mb-1">
+                  Question Stem:
+                </label>
+                <textarea
+                  value={customStem}
+                  onChange={(e) => setCustomStem(e.target.value)}
+                  rows={2}
+                  className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-300 mb-2">
+                  Options A / B / C / D (Live Editable):
+                </label>
+                <div className="space-y-2">
+                  {customOptions.map((opt, idx) => {
+                    const isCorr = opt.isCorrect || customAnswerKey.toLowerCase() === opt.key.toLowerCase();
+                    return (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-xl bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow">
+                          {opt.key || String.fromCharCode(65 + idx)}
+                        </span>
+                        <input
+                          type="text"
+                          value={opt.text}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCustomOptions(prev => prev.map((o, i) => i === idx ? { ...o, text: val } : o));
+                          }}
+                          className="flex-1 border rounded-xl px-3 py-2 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomAnswerKey(opt.key);
+                            setCustomOptions(prev => prev.map((o, i) => ({ ...o, isCorrect: i === idx })));
+                          }}
+                          className={`px-3 py-2 rounded-xl text-xs font-extrabold border flex items-center gap-1 transition-all cursor-pointer ${
+                            isCorr
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-black shadow-md'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          {isCorr && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          <span>Correct</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Question Selector */}
+          <div
+            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-4 ${
+              isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-white/10'
             }`}
           >
             <div className="flex items-center justify-between">
-              <label className={`text-sm font-black uppercase tracking-wider flex items-center gap-2 ${
-                isAppLight ? 'text-amber-600' : 'text-amber-400'
-              }`}>
+              <label className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-amber-400">
                 <BookOpen className="w-5 h-5" />
-                5. Select Question To Post ({filteredPickerItems.length} / {items.length})
+                3. Choose From Deck ({filteredPickerItems.length} / {items.length})
               </label>
             </div>
 
-            {/* Question picker filter bar â€” mirrors the Question Bank filter */}
             <div className="space-y-2.5">
               <div className="relative">
-                <Search className={`w-5 h-5 absolute left-3.5 top-3.5 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
+                <Search className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-500" />
                 <input
                   type="text"
                   value={pickerSearch}
                   onChange={(e) => setPickerSearch(e.target.value)}
                   placeholder="Search questions in this deck..."
-                  className={`w-full pl-11 pr-4 py-3 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
-                    isAppLight
-                      ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
-                      : 'bg-slate-950 border-slate-800 text-white placeholder-slate-500'
-                  }`}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border text-sm bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="relative">
-                  <BookOpen className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
-                  <select
-                    value={pickerSubject}
-                    onChange={(e) => setPickerSubject(e.target.value)}
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
-                      isAppLight
-                        ? 'bg-slate-50 border-slate-300 text-slate-800'
-                        : 'bg-slate-950 border-slate-800 text-amber-300'
-                    }`}
-                  >
-                    <option value="all">All Subjects</option>
-                    <option value="biology">Biology</option>
-                    <option value="math">Higher Math</option>
-                    <option value="physics">Physics</option>
-                    <option value="chemistry">Chemistry</option>
-                  </select>
-                </div>
-
-                <div className="relative">
-                  <Landmark className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
-                  <select
-                    value={pickerBoard}
-                    onChange={(e) => setPickerBoard(e.target.value)}
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
-                      isAppLight
-                        ? 'bg-slate-50 border-slate-300 text-slate-800'
-                        : 'bg-slate-950 border-slate-800 text-amber-300'
-                    }`}
-                  >
-                    <option value="all">All Boards</option>
-                    <option value="চট্টগ্রাম">Chittagong Board</option>
-                    <option value="ঢাকা">Dhaka Board</option>
-                    <option value="রাজশাহী">Rajshahi Board</option>
-                    <option value="admission">Admission</option>
-                  </select>
-                </div>
-
-                <div className="relative">
-                  <LayoutGrid className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
-                  <select
-                    value={pickerType}
-                    onChange={(e) => setPickerType(e.target.value)}
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
-                      isAppLight
-                        ? 'bg-slate-50 border-slate-300 text-slate-800'
-                        : 'bg-slate-950 border-slate-800 text-amber-300'
-                    }`}
-                  >
-                    <option value="all">All Types</option>
-                    <option value="standard">Standard MCQ</option>
-                    <option value="roman_statements">Roman Statements</option>
-                    <option value="passage">Shared Passage</option>
-                  </select>
-                </div>
               </div>
             </div>
 
             <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-              {filteredPickerItems.length === 0 ? (
-                <div className={`text-center py-10 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                  <Filter className="w-8 h-8 mx-auto mb-2 opacity-60" />
-                  <p className="text-sm font-semibold">No questions match your filters.</p>
-                </div>
-              ) : (
-                filteredPickerItems.map(({ question: q, fullIndex }) => {
-                  const isSelected = fullIndex === selectedQuestionIndex;
-                  return (
-                    <button
-                      key={q.id || fullIndex}
-                      type="button"
-                      onClick={() => setSelectedQuestionIndex(fullIndex)}
-                      className={`w-full p-3.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-sm ${
-                        isSelected
-                          ? isAppLight
-                            ? 'bg-amber-50 border-amber-400 text-amber-700 font-bold ring-2 ring-amber-400/40'
-                            : 'bg-amber-500/10 border-amber-400 text-amber-300 font-bold'
-                          : isAppLight
-                          ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                      }`}
-                    >
-                      <span className="truncate font-semibold">
-                        #{fullIndex + 1}. <MathText text={q.stem} />
-                      </span>
-                      {isSelected && <CheckCircle2 className="w-5 h-5 text-amber-400 shrink-0" />}
-                    </button>
-                  );
-                })
-              )}
+              {filteredPickerItems.map(({ question: q, fullIndex }) => {
+                const isSelected = fullIndex === selectedQuestionIndex;
+                return (
+                  <button
+                    key={q.id || fullIndex}
+                    type="button"
+                    onClick={() => setSelectedQuestionIndex(fullIndex)}
+                    className={`w-full p-3.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-sm ${
+                      isSelected
+                        ? 'bg-amber-500/15 border-amber-400 text-amber-300 font-bold shadow-md'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="truncate font-semibold">
+                      #{fullIndex + 1}. <MathText text={q.stem} />
+                    </span>
+                    {isSelected && <CheckCircle2 className="w-5 h-5 text-amber-400 shrink-0" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* RIGHT 7 COLUMNS: LIVE SOCIAL POST CARD CANVAS PREVIEW */}
+        {/* RIGHT 7 COLUMNS: LIVE CANVAS PREVIEW & CANVA DRAWER TOGGLE */}
         <div className="xl:col-span-7 flex flex-col items-center justify-center space-y-4">
           <div className="flex items-center justify-between w-full max-w-[500px]">
-            <span className={`text-xs font-bold flex items-center gap-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            <span className="text-xs font-bold flex items-center gap-1.5 text-slate-300">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Live Social Post Preview ({aspectRatio})</span>
+              <span>Live Social Canvas ({aspectRatio})</span>
             </span>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsCanvaDrawerOpen(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Open Canva Drawer</span>
+              </button>
+
               {isCustomMode && (
                 <button
                   type="button"
                   onClick={() => setIsBoxEditMode(v => !v)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer ${
                     isBoxEditMode
-                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
-                      : isAppLight
-                      ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
                       : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
                   }`}
-                  title="Toggle the text box editor handles on/off"
                 >
                   {isBoxEditMode ? <Eye className="w-3 h-3" /> : <PenTool className="w-3 h-3" />}
-                  {isBoxEditMode ? 'Preview' : 'Edit Design'}
+                  {isBoxEditMode ? 'Preview' : 'Edit Boxes'}
                 </button>
               )}
-              <span className={`text-[10px] font-mono font-black px-2.5 py-1 rounded border ${
-                isAppLight
-                  ? 'text-amber-700 bg-amber-100 border-amber-300'
-                  : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-              }`}>
-                High Res Export
-              </span>
             </div>
           </div>
 
@@ -999,34 +759,39 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               postTemplate === 'quiz_time' ? (
                 <QuizTimeCard
                   ref={postCanvasRef}
-                  item={currentItem}
+                  item={effectiveItem}
                   aspectClass={getAspectClass()}
-                  brandName={config.brandName}
-                  logoUrl={config.logoUrl}
+                  brandName={customBrandName}
+                  logoUrl={customLogoUrl}
                   titleText={quizTitleText}
                   ctaText={quizCtaText}
                   subCtaText={quizSubCtaText}
                   showAnswerKey={showAnswerKey}
                   reactionEmojis={reactionEmojis}
                   fontFamily={config.fontFamily}
+                  customStem={customStem}
+                  customOptions={customOptions}
                 />
               ) : (
                 <ClassicQuizCard
                   ref={postCanvasRef}
-                  item={currentItem}
-                  config={config}
+                  item={effectiveItem}
+                  config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl }}
                   customHeaderTitle={customHeaderTitle}
                   questionNumber={selectedQuestionIndex + 1}
                   aspectClass={getAspectClass()}
                   bgStyle={getBgStyle()}
                   showAnswerKey={showAnswerKey}
                   showExplanation={showExplanation}
+                  brandName={customBrandName}
+                  logoUrl={customLogoUrl}
+                  customStem={customStem}
+                  customOptions={customOptions}
                 />
               )
             ) : (
               <div className="space-y-4">
                 <div className="relative" ref={postFrameRef}>
-                  {/* Export node: static in-flow card (captured by html2canvas â€” same structure as the 4 template cards) */}
                   <div
                     style={{
                       fontFamily: config.fontFamily || "'Kalpurush', serif",
@@ -1042,9 +807,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     className={`w-full mx-auto ${getAspectClass()} ${customDesign.bgImageUrl ? 'bg-slate-900' : getBgStyle()} rounded-3xl border border-slate-700/80 shadow-2xl relative overflow-hidden select-none`}
                     ref={postCanvasRef}
                   >
-                    {/* Boxes render in the shared SlideTextBoxLayer (exact same
-                        text-box engine as Slide Studio), scaled from the fixed
-                        design space into the displayed card. */}
                     <div
                       style={{
                         position: 'absolute',
@@ -1058,22 +820,21 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     >
                       <SlideTextBoxLayer
                         boxes={customDesign.boxes}
-                        item={currentItem}
-                        config={{ ...config, headerTitle: customHeaderTitle }}
+                        item={effectiveItem}
+                        config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
                         currentIndex={selectedQuestionIndex}
                         showAnswerHighlight={showAnswerKey}
                       />
                     </div>
                   </div>
 
-                  {/* Editor overlay (NOT captured on export) â€” only visible in Edit Design mode */}
                   {isBoxEditMode && (
                     <div className="absolute inset-0 z-20">
                       <SlideTextBoxOverlay
                         boxes={customDesign.boxes}
                         selectedId={selectedBoxId}
-                        item={currentItem}
-                        config={{ ...config, headerTitle: customHeaderTitle }}
+                        item={effectiveItem}
+                        config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
                         currentIndex={selectedQuestionIndex}
                         scale={canvasWidth > 0 ? postDesignW / canvasWidth : 1}
                         onSelect={setSelectedBoxId}
@@ -1085,56 +846,365 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     </div>
                   )}
                 </div>
-                {isBoxEditMode ? (
-                  <p className={`text-xs text-center leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Drag a box to move it â€” resize from the bottom-right handle. Click a box to edit its style. Your design saves automatically in this browser.
-                  </p>
-                ) : (
-                  <p className={`text-xs text-center leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Clean preview of your custom design â€” click "Edit Design" to show and adjust the text boxes.
-                  </p>
-                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Canva-style right drawer: the shared text box editor opens here
-          instead of cluttering the left configuration column */}
-      {isCustomMode && isBoxEditMode && (
-        <div className="fixed inset-0 z-50">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn"
-            onClick={() => setIsBoxEditMode(false)}
-          />
-          <div
-            className="absolute right-0 top-0 h-full w-[380px] max-w-[92vw] shadow-2xl animate-slideInRight overflow-y-auto"
-          >
-            <SlideTextBoxPanel
-              boxes={customDesign.boxes}
-              selectedId={selectedBoxId}
-              appTheme={appTheme}
-              config={{ ...config, headerTitle: customHeaderTitle }}
-              textBoxScope="global"
-              hasTextBoxOverride={false}
-              onChangeTextBoxScope={() => {}}
-              onRevertTextBoxOverride={() => {}}
-              onApplySlideLayoutToAll={() => {}}
-              onAddBox={addBox}
-              onAddElement={addElement}
-              onAddLayout={addLayout}
-              onUpdateBox={updateBox}
-              onDeleteBox={deleteBox}
-              onDuplicateBox={duplicateBox}
-              onReorderBox={reorderBox}
-              onSelectBox={setSelectedBoxId}
-              onReset={resetDesign}
-              onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
-              onClose={() => setIsBoxEditMode(false)}
-            />
+      {/* CANVA-STYLE COLLAPSIBLE RIGHT STUDIO PANEL (NON-MODAL) */}
+      {isCanvaDrawerOpen && (
+        <div className="fixed right-4 top-24 bottom-6 w-[430px] max-w-[92vw] z-40 bg-slate-950/95 backdrop-blur-2xl border border-white/15 rounded-3xl shadow-2xl flex flex-col animate-slideInRight pointer-events-auto overflow-hidden">
+          {/* Panel Header */}
+          <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-slate-900/60">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500 text-slate-950 font-black shadow-md">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white">Canva Studio Panel</h3>
+                <p className="text-[11px] text-slate-400">Live edit options A–D, brand & layout</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsCanvaDrawerOpen(false)}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-all cursor-pointer"
+              title="Collapse Side Panel"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-        </div>
+
+            {/* Tab Navigation */}
+            <div className="flex items-center border-b border-white/10 p-2 gap-1 overflow-x-auto bg-slate-900/50">
+              {[
+                { id: 'branding', label: 'Brand', icon: User },
+                { id: 'content', label: 'Question', icon: Type },
+                { id: 'reactions', label: 'Emojis', icon: Smile },
+                { id: 'background', label: 'Theme', icon: Sliders },
+                { id: 'layers', label: 'Boxes', icon: Layers },
+              ].map((t) => {
+                const Icon = t.icon;
+                const isActive = canvaTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setCanvaTab(t.id as any)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                      isActive
+                        ? 'bg-amber-500 text-slate-950 shadow-md'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{t.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tab Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+              {/* TAB 1: BRANDING */}
+              {canvaTab === 'branding' && (
+                <div className="space-y-5">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                    Brand Logo & Name Settings
+                  </h4>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                      Brand Name:
+                    </label>
+                    <input
+                      type="text"
+                      value={customBrandName}
+                      onChange={(e) => setCustomBrandName(e.target.value)}
+                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                      Brand Logo Image:
+                    </label>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        {customLogoUrl ? (
+                          <img src={customLogoUrl} alt="Logo" className="w-14 h-14 rounded-2xl object-cover border border-amber-400 bg-black/40 p-1" />
+                        ) : (
+                          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 font-black text-lg flex items-center justify-center">
+                            {customBrandName ? customBrandName.charAt(0).toUpperCase() : 'B'}
+                          </div>
+                        )}
+                        <label className="px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer flex items-center gap-2 border bg-amber-500 text-slate-950 border-amber-400 shadow-md hover:brightness-110 transition-all">
+                          <Upload className="w-4 h-4 stroke-[2.5]" />
+                          <span>Upload Image File</span>
+                          <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                        </label>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={customLogoUrl.startsWith('data:') ? '' : customLogoUrl}
+                        onChange={(e) => setCustomLogoUrl(e.target.value)}
+                        placeholder="...or paste image URL"
+                        className="w-full border rounded-xl px-3 py-2 text-xs font-mono bg-slate-900 border-slate-800 text-slate-300 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                      Header Tagline / Subtitle:
+                    </label>
+                    <input
+                      type="text"
+                      value={customHeaderTitle}
+                      onChange={(e) => setCustomHeaderTitle(e.target.value)}
+                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: CONTENT & OPTIONS */}
+              {canvaTab === 'content' && (
+                <div className="space-y-5">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                    Question Stem & Options A, B, C, D
+                  </h4>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                      Question Stem:
+                    </label>
+                    <textarea
+                      value={customStem}
+                      onChange={(e) => setCustomStem(e.target.value)}
+                      rows={3}
+                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-slate-300">
+                      Options A / B / C / D Text & Correct Answer:
+                    </label>
+                    {customOptions.map((opt, idx) => {
+                      const isCorr = opt.isCorrect || customAnswerKey.toLowerCase() === opt.key.toLowerCase();
+                      return (
+                        <div key={idx} className="space-y-1 p-3 rounded-2xl bg-slate-900 border border-slate-800">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-amber-400">
+                              Option {opt.key || String.fromCharCode(65 + idx)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCustomAnswerKey(opt.key);
+                                setCustomOptions(prev => prev.map((o, i) => ({ ...o, isCorrect: i === idx })));
+                              }}
+                              className={`px-3 py-1 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
+                                isCorr
+                                  ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                              }`}
+                            >
+                              {isCorr ? '✓ Correct Answer' : 'Mark Correct'}
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            value={opt.text}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCustomOptions(prev => prev.map((o, i) => i === idx ? { ...o, text: val } : o));
+                            }}
+                            className="w-full border rounded-xl px-3 py-2 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: REACTIONS */}
+              {canvaTab === 'reactions' && (
+                <div className="space-y-5">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                    Quiz Time Reaction Grid Settings
+                  </h4>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                      Wordmark Header Title:
+                    </label>
+                    <input
+                      type="text"
+                      value={quizTitleText}
+                      onChange={(e) => setQuizTitleText(e.target.value)}
+                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                      Reaction Call-To-Action:
+                    </label>
+                    <input
+                      type="text"
+                      value={quizCtaText}
+                      onChange={(e) => setQuizCtaText(e.target.value)}
+                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                      Comment Prompt Footer:
+                    </label>
+                    <input
+                      type="text"
+                      value={quizSubCtaText}
+                      onChange={(e) => setQuizSubCtaText(e.target.value)}
+                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-2">
+                      Reaction Emojis (A / B / C / D):
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {REACTION_ORDER.map((letter) => (
+                        <div key={letter} className="text-center space-y-1">
+                          <span className="text-[10px] font-mono text-slate-400 uppercase">{letter}</span>
+                          <input
+                            type="text"
+                            value={reactionEmojis[letter]}
+                            onChange={(e) => setReactionEmojis(prev => ({ ...prev, [letter]: e.target.value }))}
+                            className="w-full text-center border rounded-xl px-2 py-2 text-lg bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: LAYERS */}
+              {canvaTab === 'layers' && (
+                <div className="space-y-5">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                    Text Box Layers (Custom Mode)
+                  </h4>
+                  {isCustomMode ? (
+                    <SlideTextBoxPanel
+                      boxes={customDesign.boxes}
+                      selectedId={selectedBoxId}
+                      appTheme={appTheme}
+                      config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
+                      textBoxScope="global"
+                      hasTextBoxOverride={false}
+                      onChangeTextBoxScope={() => {}}
+                      onRevertTextBoxOverride={() => {}}
+                      onApplySlideLayoutToAll={() => {}}
+                      onAddBox={addBox}
+                      onAddElement={addElement}
+                      onAddLayout={addLayout}
+                      onUpdateBox={updateBox}
+                      onDeleteBox={deleteBox}
+                      onDuplicateBox={duplicateBox}
+                      onReorderBox={reorderBox}
+                      onSelectBox={setSelectedBoxId}
+                      onReset={resetDesign}
+                      onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
+                      onClose={() => setIsCanvaDrawerOpen(false)}
+                    />
+                  ) : (
+                    <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 text-center">
+                      <p className="text-xs text-slate-400">
+                        Enable Custom Canva Drag & Drop mode to edit individual text boxes and layers.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomMode(true)}
+                        className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-md"
+                      >
+                        Enable Custom Mode
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 5: BACKGROUND & THEME */}
+              {canvaTab === 'background' && (
+                <div className="space-y-5">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                    Aspect Ratio & Background Theme
+                  </h4>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-2">
+                      Aspect Ratio:
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: '1:1', name: '1:1 Square' },
+                        { id: '4:5', name: '4:5 Feed' },
+                        { id: '9:16', name: '9:16 Story' },
+                      ].map((ratio) => (
+                        <button
+                          key={ratio.id}
+                          type="button"
+                          onClick={() => setAspectRatio(ratio.id as any)}
+                          className={`py-2.5 px-3 rounded-xl border text-xs font-black transition-all ${
+                            aspectRatio === ratio.id
+                              ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          {ratio.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-2">
+                      Background Gradient Preset:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'gradient_amber', name: 'Midnight Gold' },
+                        { id: 'gradient_blue', name: 'Cyber Blue' },
+                        { id: 'gradient_emerald', name: 'Forest Emerald' },
+                        { id: 'clean_light', name: 'Warm Light' },
+                      ].map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setPostBgColor(b.id)}
+                          className={`p-3 rounded-xl border text-xs font-bold transition-all ${
+                            postBgColor === b.id
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-400'
+                              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          {b.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
       )}
     </div>
   );

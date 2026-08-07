@@ -73,12 +73,13 @@ export const DeckSettingsCompactPreview: React.FC<DeckSettingsCompactPreviewProp
         <button
           type="button"
           onClick={onExpand}
-          className={`shrink-0 p-2 rounded-lg cursor-pointer transition-colors ${
+          disabled={!item}
+          className={`shrink-0 p-2 rounded-lg cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
             isAppLight
               ? 'bg-slate-100 text-slate-500 hover:text-amber-600 border border-slate-200'
               : 'bg-slate-950 text-slate-400 hover:text-amber-400 border border-slate-800'
           }`}
-          title="Open full-size preview"
+          title={item ? 'Open full-size preview' : 'No slide to preview'}
         >
           <Maximize2 className="w-4 h-4" />
         </button>
