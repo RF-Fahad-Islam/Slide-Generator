@@ -113,7 +113,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const availableImportSources = CONFIG_IMAGE_SOURCES.filter(src => src.get(config));
 
-  // Canva-like behavior: selecting a box on the canvas jumps to the Style tab.
+  // Studio-like behavior: selecting a box on the canvas jumps to the Style tab.
   const prevSelected = useRef<string | null>(null);
   const [activeTab, setActiveTab] = useState<PanelTab>('text');
   useEffect(() => {
@@ -253,7 +253,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
           </button>
         )}
 
-        {/* Canva-style tab bar */}
+        {/* Studio-style tab bar */}
         <div className={`flex items-center gap-1 p-1 rounded-2xl border overflow-x-auto ${
           isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800'
         }`}>
@@ -265,7 +265,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
         </div>
       </div>
 
-      {/* Body — one tab at a time, Canva-style */}
+      {/* Body — one tab at a time, studio layout */}
       <div className="px-5 pb-5 space-y-4">
         {/* ============ STYLE TAB (contextual, only when a box is selected) ============ */}
         {activeTab === 'style' && selectedBox && (

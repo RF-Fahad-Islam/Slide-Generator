@@ -106,7 +106,7 @@ const loadSavedDesign = (w: number, h: number): CustomPostDesign => {
   return { bgImageUrl: '', boxes: defaultCustomBoxes(w, h) };
 };
 
-export type CanvaDrawerTab = 'templates' | 'content' | 'deck' | 'branding' | 'reactions' | 'theme' | 'layers';
+export type StudioDrawerTab = 'templates' | 'content' | 'deck' | 'branding' | 'reactions' | 'theme' | 'layers';
 
 export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   items,
@@ -161,8 +161,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [canvasWidth, setCanvasWidth] = useState<number>(500);
 
-  // Canva Drawer Active Tab State (Full Left Drawer)
-  const [activeTab, setActiveTab] = useState<CanvaDrawerTab>('templates');
+  // Studio Drawer Active Tab State (Full Left Drawer)
+  const [activeTab, setActiveTab] = useState<StudioDrawerTab>('templates');
 
   const postCanvasRef = useRef<HTMLDivElement>(null);
   const postFrameRef = useRef<HTMLDivElement>(null);
@@ -434,7 +434,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     }
   };
 
-  const drawerTabs: { id: CanvaDrawerTab; label: string; icon: React.FC<{ className?: string }> }[] = [
+  const drawerTabs: { id: StudioDrawerTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'templates', label: 'Templates', icon: LayoutTemplate },
     { id: 'content', label: 'Question', icon: Type },
     { id: 'deck', label: 'Deck MCQs', icon: BookOpen },
@@ -446,7 +446,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn relative">
-      {/* CANVA STUDIO TOP HEADER BAR (PAGE-FLAT PANEL) */}
+      {/* STUDIO TOP HEADER BAR (PAGE-FLAT PANEL) */}
       <div
         className={`p-4 lg:p-5 border rounded-3xl backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
           isAppLight
@@ -461,7 +461,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className={`text-lg lg:text-xl font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                Canva Social Post Studio
+                Social Post Studio
               </h2>
               <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-black border ${
                 isAppLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
@@ -516,10 +516,10 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         </div>
       </div>
 
-      {/* CANVA 2-COLUMN STUDIO GRID */}
+      {/* 2-COLUMN STUDIO GRID */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* ========================================================================= */}
-        {/* LEFT COLUMN (xl:col-span-5): FULL CANVA TOOL DRAWER / SIDEBAR (PAGE-FLAT) */}
+        {/* LEFT COLUMN (xl:col-span-5): FULL TOOL DRAWER / SIDEBAR (PAGE-FLAT)        */}
         {/* ========================================================================= */}
         <div className={`xl:col-span-5 border rounded-3xl overflow-hidden flex flex-col min-h-[640px] backdrop-blur-xl ${
           isAppLight
@@ -536,7 +536,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               </div>
               <div>
                 <h3 className={`text-xs font-black uppercase tracking-wider ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
-                  Canva Design Tools
+                  Design Tools
                 </h3>
                 <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                   Select a tool tab below to edit post details
@@ -658,7 +658,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className={`text-xs font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Canva Custom Mode</p>
+                      <p className={`text-xs font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Free-Form Custom Mode</p>
                       <p className={`text-[11px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>Enable draggable box elements & layer editor</p>
                     </div>
                     <button
@@ -1172,7 +1172,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     isAppLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
                   }`}>
                     <p className="text-xs">
-                      Enable Canva Custom Mode to edit individual text boxes and elements freely on the canvas.
+                      Enable Free-Form Custom Mode to edit individual text boxes and elements freely on the canvas.
                     </p>
                     <button
                       type="button"
