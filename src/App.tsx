@@ -672,6 +672,41 @@ export default function App() {
 
         {/* TAB 1: SLIDE PREVIEW & DECK MANAGER */}
         {activeTab === 'preview' && (
+          isDeckSettingsOpen ? (
+            <DeckSettingsPage
+              onClose={() => setIsDeckSettingsOpen(false)}
+              config={config}
+              onApplyConfig={setConfig}
+              activeSlideIndex={selectedIndex}
+              activeSlideConfig={items[selectedIndex]?.customConfig}
+              onApplyActiveSlideConfig={(slideConfigOverride) => {
+                setItems((prev) => {
+                  const updated = [...prev];
+                  if (updated[selectedIndex]) {
+                    updated[selectedIndex] = {
+                      ...updated[selectedIndex],
+                      customConfig: slideConfigOverride,
+                    };
+                  }
+                  return updated;
+                });
+              }}
+              onResetActiveSlideConfig={() => {
+                setItems((prev) => {
+                  const updated = [...prev];
+                  if (updated[selectedIndex]) {
+                    const copy = { ...updated[selectedIndex] };
+                    delete copy.customConfig;
+                    updated[selectedIndex] = copy;
+                  }
+                  return updated;
+                });
+              }}
+              items={items}
+              appTheme={appTheme}
+              onEnforceClassroomView={handleEnforceClassroomView}
+            />
+          ) : (
           <div className="space-y-6">
             {/* DECK NAME — shown on top of the studio, always visible */}
             <div className={`p-5 rounded-3xl border shadow-xl flex flex-wrap items-center gap-x-4 gap-y-2 ${
