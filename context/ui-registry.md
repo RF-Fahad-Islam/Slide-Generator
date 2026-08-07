@@ -75,6 +75,11 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | `.bg-mesh-gradient` | Dark ambient background mesh |
 | `.bg-mesh-gradient-light` | Light ambient background mesh |
 | `.animate-fadeIn` | Fade + slide-up entrance animation |
+| `.animate-modal-backdrop` / `.animate-modal-card` | Modal overlay fade-in + card fade/scale(0.96) entrance (200ms, repo easing) |
+| `.animate-toast-in` / `.animate-toast-out` | IngestionToast bottom-edge entrance (250ms) / symmetric exit (200ms, `forwards`) |
+| `.animate-slideOutLeft` / `.animate-fadeOut` | Mobile drawer symmetric exit (200ms, `forwards`) |
+| `.animate-tour-tip` | Onboarding tour tooltip entrance (200ms fade + 6px rise) |
+| `.btn-icon` | Icon-button press feedback — `:active` scale(0.96) @120ms + 150ms color transition |
 
 **CRITICAL — `glass-card-fatty` Tailwind v4 gotcha:** The `.glass-card-fatty*` classes are defined as unlayered CSS in `index.css`. In Tailwind v4, unlayered rules have higher specificity than `@layer utilities`. Therefore:
 - Putting `glass-card-fatty` (dark) in the base className and adding `bg-white/95` in the light branch → the DARK background wins → light cards render grey.
