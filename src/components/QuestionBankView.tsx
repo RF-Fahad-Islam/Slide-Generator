@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MCQItem, DeckConfig, SavedDeck, QuestionType } from '../types';
 import { db } from '../db/dexie';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { getTemplateById } from '../templates/registry';
-import { normalizeMCQs, downloadJSON } from '../utils/mcqJson';
+import { downloadJSON } from '../utils/mcqJson';
 import { MathText } from './MathText';
 import { QuestionBankPdfModal } from './QuestionBankPdfModal';
+import { AddQuestionsBanner } from './AddQuestionsBanner';
 import {
   Database,
   Search,
@@ -26,7 +27,6 @@ import {
   Sun,
   Moon,
   Share2,
-  UploadCloud,
   FileText,
   X,
 } from 'lucide-react';
@@ -37,6 +37,7 @@ interface QuestionBankViewProps {
   onImportToCurrentDeck: (itemsToAdd: MCQItem[]) => void;
   onCreateNewDeckFromSelection: (selectedItems: MCQItem[]) => void;
   onOpenInSocial: (question: MCQItem) => void;
+  onAddQuestions: () => void;
   appTheme?: 'dark' | 'light';
 }
 
@@ -46,6 +47,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   onImportToCurrentDeck,
   onCreateNewDeckFromSelection,
   onOpenInSocial,
+  onAddQuestions,
   appTheme = 'dark',
 }) => {
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([]);
@@ -55,7 +57,6 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   const [newDeckName, setNewDeckName] = useState<string>('');
   const [newDeckSubject, setNewDeckSubject] = useState<string>('Biology');
   const [successMsg, setSuccessMsg] = useState<string>('');
-  const jsonFileInputRef = useRef<HTMLInputElement>(null);
   const [isPdfExportOpen, setIsPdfExportOpen] = useState<boolean>(false);
 
   // Pending JSON import — parsed MCQs waiting for a deck name before saving
