@@ -1,7 +1,7 @@
 import pptxgen from 'pptxgenjs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { DeckConfig, MCQItem, SlideTextBox } from '../types';
+import { DeckConfig, MCQItem, SlideTextBox, getSourceTags } from '../types';
 import { getSlideBoxContent, getBoxFontFamily } from './slideTextBoxes';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
@@ -578,8 +578,9 @@ export const exportDeckToPPTX = async (
       });
 
       // Source Tag Badge Pill on top right of question card
-      if (item.source) {
-        slide.addText(item.source, {
+      const pptxSourceTags = getSourceTags(item);
+      if (pptxSourceTags.length > 0) {
+        slide.addText(pptxSourceTags.join(' · '), {
           x: 9.8,
           y: 1.55,
           w: 2.8,

@@ -82,7 +82,11 @@ export function sanitizeMCQs(rawQuestions: unknown[], startIndex = 0): SanitizeR
       prompt: q.prompt ? String(q.prompt).trim() : hasRoman ? 'নিচের কোনটি সঠিক?' : undefined,
       options: validOptions,
       answer,
-      source: q.source ? String(q.source).trim() : undefined,
+      source: q.source
+        ? Array.isArray(q.source)
+          ? (q.source as unknown[]).map((s) => String(s).trim()).filter((s) => s)
+          : [String(q.source).trim()]
+        : undefined,
       explanation: q.explanation ? String(q.explanation).trim() : undefined,
       confidence: q.confidence === 'low' || !answer ? 'low' : 'high',
     });

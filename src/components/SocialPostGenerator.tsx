@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MCQItem, DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
+import { MCQItem, DeckConfig, SlideTextBox, SlideTextBoxBind, getSourceTags } from '../types';
 import { MathText } from './MathText';
 import {
   Share2,
@@ -366,14 +366,14 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     .map((q, idx) => ({ question: q, fullIndex: idx }))
     .filter(({ question }) => {
       if (pickerSearch.trim()) {
-        const qText = (question.stem + ' ' + (question.passage || '') + ' ' + (question.source || '') + ' ' + (question.explanation || '') + ' ' + question.options.map(o => o.text).join(' ')).toLowerCase();
+        const qText = (question.stem + ' ' + (question.passage || '') + ' ' + getSourceTags(question).join(' ') + ' ' + (question.explanation || '') + ' ' + question.options.map(o => o.text).join(' ')).toLowerCase();
         if (!qText.includes(pickerSearch.toLowerCase().trim())) return false;
       }
       if (pickerSubject !== 'all') {
-        if (!(question.source || '').toLowerCase().includes(pickerSubject.toLowerCase())) return false;
+        if (!getSourceTags(question).some(t => t.toLowerCase().includes(pickerSubject.toLowerCase()))) return false;
       }
       if (pickerBoard !== 'all') {
-        if (!(question.source || '').toLowerCase().includes(pickerBoard.toLowerCase())) return false;
+        if (!getSourceTags(question).some(t => t.toLowerCase().includes(pickerBoard.toLowerCase()))) return false;
       }
       if (pickerType !== 'all') {
         if (question.questionType !== pickerType) return false;

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MCQItem, DeckConfig } from '../types';
+import { MCQItem, DeckConfig, getSourceTags } from '../types';
 import { getTemplateById, TEMPLATES } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { MathText } from './MathText';
@@ -235,9 +235,9 @@ const PaperPage = ({
                 ))}
               </div>
 
-              {item.source && (
+              {getSourceTags(item).length > 0 && (
                 <div style={{ margin: '4px 0 0 30px', fontSize: 10, fontWeight: 700, color: inkMuted }}>
-                  {item.source}
+                  {getSourceTags(item).join(' · ')}
                 </div>
               )}
             </div>

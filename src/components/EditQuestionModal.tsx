@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MCQItem, QuestionType } from '../types';
+import { MCQItem, QuestionType, getSourceTags } from '../types';
 import { X, Save, Edit3, ArrowUpRight, Database } from 'lucide-react';
+import { SourceTagsInput } from './SourceTagsInput';
 
 interface EditQuestionModalProps {
   isOpen: boolean;
@@ -29,8 +30,11 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const [prompt, setPrompt] = useState('নিচের কোনটি সঠিক?');
   const [options, setOptions] = useState<string[]>(['', '', '', '']);
   const [answerKey, setAnswerKey] = useState('ক');
-  const [sourceTag, setSourceTag] = useState('');
+  const [sourceTags, setSourceTags] = useState<string[]>([]);
   const [explanation, setExplanation] = useState('');
+  const [tagSubject, setTagSubject] = useState('');
+  const [tagClass, setTagClass] = useState('');
+  const [tagPaper, setTagPaper] = useState('');
 
   useEffect(() => {
     if (isOpen && item) {
@@ -42,8 +46,11 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
       while (optsText.length < 4) optsText.push('');
       setOptions(optsText);
       setAnswerKey(item.answer || 'ক');
-      setSourceTag(item.source || '');
+      setSourceTags(getSourceTags(item));
       setExplanation(item.explanation || '');
+      setTagSubject(item.tags?.subject || '');
+      setTagClass(item.tags?.className || '');
+      setTagPaper(item.tags?.paper || '');
     }
   }, [isOpen, item]);
 
@@ -66,7 +73,12 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
         isCorrect: (keyLabels[idx] || '').toLowerCase() === answerKey.toLowerCase(),
       })),
       answer: answerKey,
-      source: sourceTag || undefined,
+      source: sourceTags.length > 0 ? sourceTags : undefined,
+      tags: {
+        subject: tagSubject || undefined,
+        className: tagClass || undefined,
+        paper: tagPaper || undefined,
+      },
       explanation: explanation || undefined,
     };
   };
@@ -230,18 +242,16 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
             ))}
           </div>
 
-          {/* Source & explanation */}
+          {/* Source, tags & explanation */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
-                Board / Exam Source:
+                Source Tags (Board / Exam):
               </label>
-              <input
-                type="text"
-                value={sourceTag}
-                onChange={(e) => setSourceTag(e.target.value)}
-                placeholder="e.g. ঢাকা বোর্ড ২০২৪"
-                className={inputCls}
+              <SourceTagsInput
+                tags={sourceTags}
+                onChange={setSourceTags}
+                theme={appTheme}
               />
             </div>
             <div>
@@ -253,6 +263,46 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                 value={explanation}
                 onChange={(e) => setExplanation(e.target.value)}
                 placeholder="Optional explanation"
+                className={inputCls}
+              />
+            </div>
+          </div>
+
+          {/* Structured tags */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
+                Subject Tag:
+              </label>
+              <input
+                type="text"
+                value={tagSubject}
+                onChange={(e) => setTagSubject(e.target.value)}
+                placeholder="e.g. Biology"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
+                Class Tag:
+              </label>
+              <input
+                type="text"
+                value={tagClass}
+                onChange={(e) => setTagClass(e.target.value)}
+                placeholder="e.g. SSC / HSC"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
+                Paper Tag:
+              </label>
+              <input
+                type="text"
+                value={tagPaper}
+                onChange={(e) => setTagPaper(e.target.value)}
+                placeholder="e.g. 1st Paper"
                 className={inputCls}
               />
             </div>

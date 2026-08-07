@@ -7,7 +7,7 @@ export interface CSVParseResult {
 
 /**
  * Parses CSV text into MCQItems
- * Header support: stem, type, A, B, C, D, correct, explanation, source
+ * Header support: stem, type, A, B, C, D, correct, explanation, source, subject, class, paper
  */
 export function parseCSVToMCQs(csvText: string): CSVParseResult {
   const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
@@ -29,6 +29,9 @@ export function parseCSVToMCQs(csvText: string): CSVParseResult {
   const correctIdx = header.findIndex(h => h.includes('correct') || h.includes('answer') || h.includes('উত্তর'));
   const expIdx = header.findIndex(h => h.includes('exp') || h.includes('explanation') || h.includes('ব্যাখ্যা'));
   const sourceIdx = header.findIndex(h => h.includes('source') || h.includes('board') || h.includes('বোর্ড'));
+  const subjectIdx = header.findIndex(h => h.includes('subject'));
+  const classIdx = header.findIndex(h => h.includes('class'));
+  const paperIdx = header.findIndex(h => h.includes('paper'));
 
   if (stemIdx === -1) {
     result.errors.push({ row: 0, message: 'Could not find "stem" or "question" column in header.' });
@@ -55,7 +58,11 @@ export function parseCSVToMCQs(csvText: string): CSVParseResult {
 
     const correctRaw = correctIdx !== -1 && cols[correctIdx] ? cols[correctIdx].trim().toUpperCase() : 'A';
     const exp = expIdx !== -1 && cols[expIdx] ? cols[expIdx].trim() : undefined;
-    const source = sourceIdx !== -1 && cols[sourceIdx] ? cols[sourceIdx].trim() : undefined;
+    const sourceRaw = sourceIdx !== -1 && cols[sourceIdx] ? cols[sourceIdx].trim() : '';
+    // Source column may hold one or more tags separated by commas/semicolons
+    const source = sourceRaw
+      ? sourceRaw.split(/[,;，；]+/).map(s => s.trim()).filter(Boolean)
+      : undefined;
 
     // Determine option keying (Bangla vs English)
     const usesBangla = ['ক', 'খ', 'গ', 'ঘ'].includes(correctRaw);
@@ -82,6 +89,11 @@ export function parseCSVToMCQs(csvText: string): CSVParseResult {
       answer: mappedCorrect,
       source,
       explanation: exp,
+      tags: {
+        subject: subjectIdx !== -1 && cols[subjectIdx] ? cols[subjectIdx].trim() : undefined,
+        className: classIdx !== -1 && cols[classIdx] ? cols[classIdx].trim() : undefined,
+        paper: paperIdx !== -1 && cols[paperIdx] ? cols[paperIdx].trim() : undefined,
+      },
       confidence: 'high',
     });
   }
@@ -110,7 +122,7 @@ function parseCSVLine(line: string): string[] {
 }
 
 export function generateSampleCSV(): string {
-  return `stem,type,A,B,C,D,correct,explanation,source
-"মানবদেহের বৃক্কে নেফ্রনের প্রধান কাজ কোনটি?",standard,"রক্ত ছাঁকন ও মূত্র তৈরি","পিত্তরস নিঃসরণ","ইনসুলিন তৈরি","হরমোন পরিহন",ক,"নেফ্রন হলো বৃর্কের গঠনগত ও কার্যগত একক","ঢাকা বোর্ড ২০২৪"
-"যদি $f(x) = x^3 - 3x^2 + 4$ হয়, তবে $f'(x) = 0$ এর মূলদ্বয় কত?",standard,"$x = 0, 2","$x = 1, 3","$x = -1, 2","$x = 0, -2",A,"$f'(x) = 3x^2 - 6x = 0 \\implies x = 0, 2$","DU Admission 2022"`;
+  return `stem,type,A,B,C,D,correct,explanation,source,subject,class,paper
+"মানবদেহের বৃক্কে নেফ্রনের প্রধান কাজ কোনটি?",standard,"রক্ত ছাঁকন ও মূত্র তৈরি","পিত্তরস নিঃসরণ","ইনসুলিন তৈরি","হরমোন পরিহন",ক,"নেফ্রন হলো বৃর্কের গঠনগত ও কার্যগত একক","ঢাকা বোর্ড ২০২৪","জীববিজ্ঞান","১০ম শ্রেণি","পত্র ১"
+"যদি $f(x) = x^3 - 3x^2 + 4$ হয়, তবে $f'(x) = 0$ এর মূলদ্বয় কত?",standard,"$x = 0, 2","$x = 1, 3","$x = -1, 2","$x = 0, -2",A,"$f'(x) = 3x^2 - 6x = 0 \\implies x = 0, 2$","DU Admission 2022","উচ্চতর গণিত","১০ম শ্রেণি","পত্র ১"`;
 }

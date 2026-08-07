@@ -1,5 +1,5 @@
 import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
-import { MCQItem, DeckConfig } from '../types';
+import { MCQItem, DeckConfig, getSourceTags } from '../types';
 import { MathText } from './MathText';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -315,9 +315,9 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
                         ))}
                       </div>
 
-                      {item.source && (
+                      {getSourceTags(item).length > 0 && (
                         <div style={{ margin: '4px 0 0 30px', fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>
-                          {item.source}
+                          {getSourceTags(item).join(' · ')}
                         </div>
                       )}
                     </div>

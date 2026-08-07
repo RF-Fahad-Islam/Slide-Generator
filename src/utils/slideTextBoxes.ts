@@ -1,4 +1,4 @@
-import { MCQItem, SlideTextBox, SlideTextBoxBind, DeckConfig } from '../types';
+import { MCQItem, SlideTextBox, SlideTextBoxBind, DeckConfig, getSourceTags } from '../types';
 
 export const SLIDE_BOX_BINDS: { bind: SlideTextBoxBind; label: string }[] = [
   { bind: 'stem', label: '+ Question' },
@@ -78,7 +78,7 @@ export const getSlideBoxContent = (
     case 'passage': return item.passage || '';
     case 'prompt': return item.prompt || '';
     case 'roman': return (item.romanItems || []).join('\n');
-    case 'source': return item.source || '';
+    case 'source': return getSourceTags(item).join(' · ');
     case 'questionNumber': return formatSlideQNumber(currentIndex, config.questionNumberFormat);
     case 'brand': return config.brandName || "NOBEL'S CLASSROOM";
     case 'headerTitle': return config.headerTitle || 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া';

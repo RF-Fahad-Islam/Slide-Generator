@@ -38,7 +38,11 @@ export const normalizeMCQ = (raw: any, idx: number): MCQItem | null => {
     prompt: raw.prompt ? String(raw.prompt) : undefined,
     options,
     answer,
-    source: raw.source ? String(raw.source) : undefined,
+    source: raw.source
+      ? Array.isArray(raw.source)
+        ? raw.source.map(String).filter(Boolean)
+        : [String(raw.source)]
+      : undefined,
     explanation: raw.explanation ? String(raw.explanation) : undefined,
   };
 };

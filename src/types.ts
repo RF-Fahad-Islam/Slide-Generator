@@ -40,7 +40,7 @@ export interface MCQItem {
   prompt?: string; // e.g., "নিচের কোনটি সঠিক?" or "Which of the following is correct?"
   options: MCQOption[];
   answer: string; // Key of correct option (e.g. "B" or "খ")
-  source?: string[]; // One or more board/exam source tags, e.g. ["চট্টগ্রাম বোর্ড ২০১৭", "DU Admission 2023"]
+  source?: string[] | string; // One or more board/exam source tags, e.g. ["চট্টগ্রাম বোর্ড ২০১৭", "DU Admission 2023"]
   explanation?: string; // Detailed answer explanation
   tags?: MCQTags; // Optional filter tags (subject, class, paper, etc.)
   confidence?: 'high' | 'low';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MCQItem, DeckConfig, SavedDeck, QuestionType } from '../types';
+import { MCQItem, DeckConfig, SavedDeck, QuestionType, getSourceTags } from '../types';
 import { db } from '../db/dexie';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { getTemplateById } from '../templates/registry';
@@ -64,6 +64,8 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
   const [boardFilter, setBoardFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [classFilter, setClassFilter] = useState<string>('all');
+  const [paperFilter, setPaperFilter] = useState<string>('all');
 
   // Load Saved Decks from IndexedDB on mount
   useEffect(() => {
@@ -164,11 +166,18 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
     }
   });
 
+  // Derive distinct tag values present in the bank for the filter dropdowns
+  const distinctSubjectTags = Array.from(new Set(allBankQuestions.map(q => q.question.tags?.subject?.trim()).filter((v): v is string => !!v)));
+  const distinctClassTags = Array.from(new Set(allBankQuestions.map(q => q.question.tags?.className?.trim()).filter((v): v is string => !!v)));
+  const distinctPaperTags = Array.from(new Set(allBankQuestions.map(q => q.question.tags?.paper?.trim()).filter((v): v is string => !!v)));
+
   // Apply Search & Tag Filters
   const filteredQuestions = allBankQuestions.filter(({ question, deckName }) => {
+    const srcTags = getSourceTags(question);
+
     // 1. Text Search
     if (searchQuery.trim()) {
-      const qText = (question.stem + ' ' + (question.passage || '') + ' ' + (question.source || '') + ' ' + (question.explanation || '') + ' ' + question.options.map(o => o.text).join(' ')).toLowerCase();
+      const qText = (question.stem + ' ' + (question.passage || '') + ' ' + srcTags.join(' ') + ' ' + (question.explanation || '') + ' ' + question.options.map(o => o.text).join(' ')).toLowerCase();
       if (!qText.includes(searchQuery.toLowerCase().trim())) {
         return false;
       }
@@ -176,18 +185,28 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
 
     // 2. Subject Filter
     if (subjectFilter !== 'all') {
-      const isMatch = (question.source || '').toLowerCase().includes(subjectFilter.toLowerCase()) ||
-                      deckName.toLowerCase().includes(subjectFilter.toLowerCase());
+      const isMatch = srcTags.some(t => t.toLowerCase().includes(subjectFilter.toLowerCase())) ||
+                      deckName.toLowerCase().includes(subjectFilter.toLowerCase()) ||
+                      (question.tags?.subject || '').toLowerCase().includes(subjectFilter.toLowerCase());
       if (!isMatch) return false;
     }
 
     // 3. Board Filter
     if (boardFilter !== 'all') {
-      const src = (question.source || '').toLowerCase();
-      if (!src.includes(boardFilter.toLowerCase())) return false;
+      if (!srcTags.some(t => t.toLowerCase().includes(boardFilter.toLowerCase()))) return false;
     }
 
-    // 4. Type Filter
+    // 4. Class Filter
+    if (classFilter !== 'all') {
+      if ((question.tags?.className || '').toLowerCase() !== classFilter.toLowerCase()) return false;
+    }
+
+    // 5. Paper Filter
+    if (paperFilter !== 'all') {
+      if ((question.tags?.paper || '').toLowerCase() !== paperFilter.toLowerCase()) return false;
+    }
+
+    // 6. Type Filter
     if (typeFilter !== 'all') {
       if (question.questionType !== typeFilter) return false;
     }
@@ -585,7 +604,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="relative">
             <Search className={`w-5 h-5 absolute left-4 top-3.5 ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`} />
             <input
@@ -611,6 +630,9 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             <option value="math">Higher Math (উচ্চতর গণিত)</option>
             <option value="physics">Physics (পদার্থবিজ্ঞান)</option>
             <option value="chemistry">Chemistry (রসায়ন)</option>
+            {distinctSubjectTags.filter(t => !['biology', 'math', 'physics', 'chemistry'].includes(t.toLowerCase())).map(tag => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
           </select>
 
           <select
@@ -625,6 +647,46 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             <option value="ঢাকা">Dhaka Board (ঢাকা)</option>
             <option value="রাজশাহী">Rajshahi Board (রাজশাহী)</option>
             <option value="admission">University Admission (DU/BUET)</option>
+          </select>
+
+          <select
+            value={classFilter}
+            onChange={e => setClassFilter(e.target.value)}
+            className={`w-full px-3.5 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
+              isAppLight ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-amber-300'
+            }`}
+          >
+            <option value="all">🏫 All Classes</option>
+            {distinctClassTags.map(tag => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+            {distinctClassTags.length === 0 && (
+              <>
+                <option value="SSC">SSC</option>
+                <option value="HSC">HSC</option>
+                <option value="Class 9">Class 9</option>
+                <option value="Class 10">Class 10</option>
+              </>
+            )}
+          </select>
+
+          <select
+            value={paperFilter}
+            onChange={e => setPaperFilter(e.target.value)}
+            className={`w-full px-3.5 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:border-amber-500 cursor-pointer ${
+              isAppLight ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-amber-300'
+            }`}
+          >
+            <option value="all">📄 All Papers</option>
+            {distinctPaperTags.map(tag => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+            {distinctPaperTags.length === 0 && (
+              <>
+                <option value="1st Paper">1st Paper</option>
+                <option value="2nd Paper">2nd Paper</option>
+              </>
+            )}
           </select>
 
           <select
@@ -697,9 +759,11 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
               <button
                 onClick={() => {
                   setSearchQuery('');
-                  setSubjectFilter('all');
-                  setBoardFilter('all');
-                  setTypeFilter('all');
+                 setSubjectFilter('all');
+                 setBoardFilter('all');
+                 setClassFilter('all');
+                 setPaperFilter('all');
+                 setTypeFilter('all');
                 }}
                 className={`text-sm px-4 py-2 rounded-lg font-bold border transition-colors ${
                   isAppLight ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200' : 'bg-slate-800 text-amber-300 border-slate-700'
@@ -771,11 +835,33 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                         <Share2 className="w-4 h-4" />
                         Share
                       </button>
-                      {question.source && (
-                        <span className={`px-2.5 py-1 rounded-full font-bold border ${
+                      {getSourceTags(question).map(tag => (
+                        <span key={tag} className={`px-2.5 py-1 rounded-full font-bold border ${
                           isAppLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                         }`}>
-                          {question.source}
+                          {tag}
+                        </span>
+                      ))}
+                      {/* Optional tag chips */}
+                      {question.tags?.subject && (
+                        <span className={`px-2.5 py-1 rounded-full font-mono text-xs border ${
+                          isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                        }`}>
+                          📌 {question.tags.subject}
+                        </span>
+                      )}
+                      {question.tags?.className && (
+                        <span className={`px-2.5 py-1 rounded-full font-mono text-xs border ${
+                          isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                        }`}>
+                          🏫 {question.tags.className}
+                        </span>
+                      )}
+                      {question.tags?.paper && (
+                        <span className={`px-2.5 py-1 rounded-full font-mono text-xs border ${
+                          isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                        }`}>
+                          📄 {question.tags.paper}
                         </span>
                       )}
                       <span className={`px-2.5 py-1 rounded uppercase font-mono text-sm border ${

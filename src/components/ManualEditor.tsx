@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MCQItem, QuestionType } from '../types';
+import { MCQItem, QuestionType, getSourceTags } from '../types';
 import { parseBulkTextToMCQs } from '../utils/bulkParser';
 import { parseCSVToMCQs, generateSampleCSV } from '../utils/csvParser';
 import { MathText } from './MathText';
+import { SourceTagsInput } from './SourceTagsInput';
 import {
   Plus,
   Sparkles,
@@ -138,8 +139,11 @@ iii. অস্ত্রোপচার
   const [prompt, setPrompt] = useState('নিচের কোনটি সঠিক?');
   const [options, setOptions] = useState<string[]>(['', '', '', '']);
   const [answerKey, setAnswerKey] = useState('ক');
-  const [sourceTag, setSourceTag] = useState('');
+  const [sourceTags, setSourceTags] = useState<string[]>([]);
   const [explanation, setExplanation] = useState('');
+  const [tagSubject, setTagSubject] = useState('');
+  const [tagClass, setTagClass] = useState('');
+  const [tagPaper, setTagPaper] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -158,8 +162,11 @@ iii. অস্ত্রোপচার
     setOptions(optsText);
 
     setAnswerKey(item.answer || 'ক');
-    setSourceTag(item.source || '');
+    setSourceTags(getSourceTags(item));
     setExplanation(item.explanation || '');
+    setTagSubject(item.tags?.subject || '');
+    setTagClass(item.tags?.className || '');
+    setTagPaper(item.tags?.paper || '');
     setActiveSubTab('single');
 
     if (formRef.current) {
@@ -173,7 +180,10 @@ iii. অস্ত্রোপচার
     setStem('');
     setOptions(['', '', '', '']);
     setExplanation('');
-    setSourceTag('');
+    setSourceTags([]);
+    setTagSubject('');
+    setTagClass('');
+    setTagPaper('');
     setQuestionType('standard');
     setRomanItems(['i. ', 'ii. ', 'iii. ']);
     setPrompt('নিচের কোনটি সঠিক?');
@@ -307,7 +317,12 @@ iii. অস্ত্রোপচার
       prompt: questionType === 'roman_statements' ? prompt : undefined,
       options: formattedOptions,
       answer: answerKey,
-      source: sourceTag || undefined,
+      source: sourceTags.length > 0 ? sourceTags : undefined,
+      tags: {
+        subject: tagSubject || undefined,
+        className: tagClass || undefined,
+        paper: tagPaper || undefined,
+      },
       explanation: explanation || undefined,
       confidence: 'high',
     };
@@ -677,9 +692,9 @@ iii. অস্ত্রোপচার
                         <span className={`text-[10px] font-mono font-bold ${isAppLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                           ✓ উত্তর: {mcq.answer}
                         </span>
-                        {mcq.source && (
+                        {getSourceTags(mcq).length > 0 && (
                           <span className={`text-[10px] font-semibold truncate ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-                            <MathText text={`[${mcq.source}]`} />
+                            <MathText text={`[${getSourceTags(mcq).join(' | ')}]`} />
                           </span>
                         )}
                       </div>
@@ -970,11 +985,11 @@ iii. অস্ত্রোপচার
                           <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 font-bold font-mono">
                             Answer: {item.answer}
                           </span>
-                          {item.source && (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                              {item.source}
+                          {getSourceTags(item).map(tag => (
+                            <span key={tag} className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                              {tag}
                             </span>
-                          )}
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -1305,18 +1320,12 @@ iii. অস্ত্রোপচার
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-400 mb-1">
-                Board / Exam Source Tag (Optional):
+                Source Tags (Board / Exam):
               </label>
-              <input
-                type="text"
-                value={sourceTag}
-                onChange={(e) => setSourceTag(e.target.value)}
-                placeholder="e.g. ঢাকা বোর্ড ২০২৪ / DU Admission 2023"
-                className={`w-full px-3 py-2 rounded-xl border text-sm ${
-                  isAppLight
-                    ? 'bg-slate-50 border-slate-300 text-slate-900'
-                    : 'bg-slate-950 border-slate-800 text-white'
-                }`}
+              <SourceTagsInput
+                tags={sourceTags}
+                onChange={setSourceTags}
+                theme={isAppLight ? 'light' : 'dark'}
               />
             </div>
 
@@ -1329,6 +1338,60 @@ iii. অস্ত্রোপচার
                 value={explanation}
                 onChange={(e) => setExplanation(e.target.value)}
                 placeholder="e.g. নেফ্রন হলো বৃক্কের গঠনগত ও কার্যগত একক..."
+                className={`w-full px-3 py-2 rounded-xl border text-sm ${
+                  isAppLight
+                    ? 'bg-slate-50 border-slate-300 text-slate-900'
+                    : 'bg-slate-950 border-slate-800 text-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Structured Tags: Subject / Class / Paper */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">
+                Subject Tag (Optional):
+              </label>
+              <input
+                type="text"
+                value={tagSubject}
+                onChange={(e) => setTagSubject(e.target.value)}
+                placeholder="e.g. Biology / জীববিজ্ঞান"
+                className={`w-full px-3 py-2 rounded-xl border text-sm ${
+                  isAppLight
+                    ? 'bg-slate-50 border-slate-300 text-slate-900'
+                    : 'bg-slate-950 border-slate-800 text-white'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">
+                Class Tag (Optional):
+              </label>
+              <input
+                type="text"
+                value={tagClass}
+                onChange={(e) => setTagClass(e.target.value)}
+                placeholder="e.g. SSC / HSC / Class 9"
+                className={`w-full px-3 py-2 rounded-xl border text-sm ${
+                  isAppLight
+                    ? 'bg-slate-50 border-slate-300 text-slate-900'
+                    : 'bg-slate-950 border-slate-800 text-white'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1">
+                Paper Tag (Optional):
+              </label>
+              <input
+                type="text"
+                value={tagPaper}
+                onChange={(e) => setTagPaper(e.target.value)}
+                placeholder="e.g. 1st Paper / 2nd Paper"
                 className={`w-full px-3 py-2 rounded-xl border text-sm ${
                   isAppLight
                     ? 'bg-slate-50 border-slate-300 text-slate-900'
@@ -1420,7 +1483,7 @@ iii. অস্ত্রোপচার
                       <MathText text={item.stem} />
                     </h4>
                     <span className={`text-[10px] font-mono font-semibold ${isAppLight ? 'text-amber-700' : 'text-amber-500'}`}>
-                      Ans: {item.answer} {item.source ? `• ${item.source}` : ''}
+                      Ans: {item.answer}{getSourceTags(item).length > 0 ? ` • ${getSourceTags(item).join(' | ')}` : ''}
                     </span>
                   </div>
                 </div>

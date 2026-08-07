@@ -13,7 +13,7 @@ import {
   verticalListSortingStrategy,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
-import { MCQItem } from '../types';
+import { MCQItem, getSourceTags } from '../types';
 import { ValidationPanel } from './ValidationPanel';
 import { AddQuestionsBanner } from './AddQuestionsBanner';
 import { Search } from 'lucide-react';
@@ -121,7 +121,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   const filteredItems = items.filter(
     (item) =>
       item.stem.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.source && item.source.toLowerCase().includes(searchQuery.toLowerCase()))
+      getSourceTags(item).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const dragEnabled = searchQuery.trim() === '';

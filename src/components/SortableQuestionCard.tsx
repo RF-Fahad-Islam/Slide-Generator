@@ -2,7 +2,7 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Copy, Trash2, Pencil } from 'lucide-react';
-import { MCQItem } from '../types';
+import { MCQItem, getSourceTags } from '../types';
 import { MathText } from './MathText';
 
 interface SortableQuestionCardProps {
@@ -66,17 +66,18 @@ export const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
 
             {/* Source & Type badge */}
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              {item.source && (
+              {getSourceTags(item).map((tag) => (
                 <span
+                  key={tag}
                   className={`text-[11px] px-2.5 py-1 rounded-full border font-bold ${
                     isAppLight
                       ? 'bg-amber-100 text-amber-800 border-amber-300'
                       : 'bg-amber-500/20 text-amber-500 border-amber-500/30'
                   }`}
                 >
-                  {item.source}
+                  {tag}
                 </span>
-              )}
+              ))}
               <span
                 className={`text-[11px] px-2.5 py-1 rounded-full font-bold ${
                   isAppLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-slate-300'

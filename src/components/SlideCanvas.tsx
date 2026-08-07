@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { DeckConfig, MCQItem } from '../types';
+import { DeckConfig, MCQItem, getSourceTags } from '../types';
 import { getTemplateById } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { formatSlideQNumber } from '../utils/slideTextBoxes';
@@ -330,16 +330,18 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               </div>
 
               {/* Source Tag Badge */}
-              {item.source && (
-                <div className="pt-2 flex items-center">
-                  <div className={`flex items-center gap-2 px-4 py-1.5 rounded-xl font-extrabold text-base shadow-sm border ${
-                    isLight
-                      ? 'bg-amber-100 border-amber-300 text-amber-950'
-                      : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                  }`} style={accentColor ? { backgroundColor: accentBgSoft, borderColor: accentBorderSoft, color: accentColor } : undefined}>
-                    <Award className="w-5 h-5" />
-                    <span>{item.source}</span>
-                  </div>
+              {getSourceTags(item).length > 0 && (
+                <div className="pt-2 flex items-center flex-wrap gap-2">
+                  {getSourceTags(item).map((tag) => (
+                    <div key={tag} className={`flex items-center gap-2 px-4 py-1.5 rounded-xl font-extrabold text-base shadow-sm border ${
+                      isLight
+                        ? 'bg-amber-100 border-amber-300 text-amber-950'
+                        : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                    }`} style={accentColor ? { backgroundColor: accentBgSoft, borderColor: accentBorderSoft, color: accentColor } : undefined}>
+                      <Award className="w-5 h-5" />
+                      <span>{tag}</span>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -451,14 +453,18 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                 </span>
               </div>
 
-              {item.source && (
-                <div className={`flex items-center gap-2 px-5 py-1.5 rounded-full font-bold text-lg shadow-sm border ${
-                  isLight
-                    ? 'bg-amber-100 border-amber-300 text-amber-950'
-                    : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                }`} style={accentColor ? { backgroundColor: accentBgSoft, borderColor: accentBorderSoft, color: accentColor } : undefined}>
-                  <Award className="w-5 h-5" />
-                  <span>{item.source}</span>
+              {getSourceTags(item).length > 0 && (
+                <div className="flex items-center flex-wrap gap-2">
+                  {getSourceTags(item).map((tag) => (
+                    <div key={tag} className={`flex items-center gap-2 px-5 py-1.5 rounded-full font-bold text-lg shadow-sm border ${
+                      isLight
+                        ? 'bg-amber-100 border-amber-300 text-amber-950'
+                        : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                    }`} style={accentColor ? { backgroundColor: accentBgSoft, borderColor: accentBorderSoft, color: accentColor } : undefined}>
+                      <Award className="w-5 h-5" />
+                      <span>{tag}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

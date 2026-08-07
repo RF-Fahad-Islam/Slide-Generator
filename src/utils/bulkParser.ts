@@ -58,7 +58,10 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
     // Check Source Tag Line e.g. [ঢাকা বোর্ড ২০২৪]
     const sourceMatch = line.match(sourceRegex);
     if (sourceMatch && !sourceMatch[1].match(/^(A|B|C|D|ক|খ|গ|ঘ)$/i)) {
-      sourceTag = sourceMatch[1];
+      const tag = sourceMatch[1].trim();
+      if (tag && !sourceTags.includes(tag)) {
+        sourceTags.push(tag);
+      }
       continue;
     }
 
@@ -113,6 +116,23 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
       continue;
     }
 
+    // Tags line: subject: <value>, class: <value>, paper: <value>
+    const subjectMatch = line.match(/^subject:\s*(.+)$/i);
+    if (subjectMatch) {
+      tags = { ...tags, subject: subjectMatch[1].trim() };
+      continue;
+    }
+    const classNameMatch = line.match(/^class:\s*(.+)$/i);
+    if (classNameMatch) {
+      tags = { ...tags, className: classNameMatch[1].trim() };
+      continue;
+    }
+    const paperMatch = line.match(/^paper:\s*(.+)$/i);
+    if (paperMatch) {
+      tags = { ...tags, paper: paperMatch[1].trim() };
+      continue;
+    }
+
     // Otherwise, append to stem
     if (!isReadingOptions) {
       if (stem) stem += ' ' + line;
@@ -150,7 +170,7 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
         { key: keySet[3], text: 'Option 4' },
       ],
       answer: keySet[0],
-      source: sourceTag,
+      source: sourceTags.length > 0 ? sourceTags : undefined,
       confidence: 'low',
       warnings: ['Could not detect options automatically. Please check layout.'],
     };
@@ -188,8 +208,9 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
     prompt: prompt || (romanItems.length > 0 ? 'নিচের কোনটি সঠিক?' : undefined),
     options,
     answer: answerKey,
-    source: sourceTag || undefined,
+    source: sourceTags.length > 0 ? sourceTags : undefined,
     explanation: explanation || undefined,
+    tags,
     confidence: options.length === 4 ? 'high' : 'low',
   };
 }
@@ -229,7 +250,7 @@ export const SAMPLE_DECKS: { name: string; description: string; items: MCQItem[]
           { key: 'ঘ', text: 'i, ii ও iii' }
         ],
         answer: 'খ',
-        source: 'চট্টগ্রাম বোর্ড ২০১৭',
+        source: ['চট্টগ্রাম বোর্ড ২০১৭'],
         explanation: 'আধুনিক অ-অস্ত্রোপচার পদ্ধতিতে আল্ট্রাসনিক লিথোট্রিপসি ও ইউরেটেরোস্কোপির মাধ্যমে শক ওয়েভ ব্যবহার করে বৃক্কের পাথর গুঁড়ো করা হয়।'
       },
       {
@@ -243,7 +264,7 @@ export const SAMPLE_DECKS: { name: string; description: string; items: MCQItem[]
           { key: 'ঘ', text: 'হরমোন পরিহন' }
         ],
         answer: 'ক',
-        source: 'ঢাকা বোর্ড ২০২৪',
+        source: ['ঢাকা বোর্ড ২০২৪'],
         explanation: 'নেফ্রন হলো বৃক্কের গঠনগত ও কার্যগত একক যা রক্ত থেকে নাইট্রোজেনঘটিত বর্জ্য ছেঁকে মূত্র উৎপন্ন করে।'
       },
       {
@@ -257,7 +278,7 @@ export const SAMPLE_DECKS: { name: string; description: string; items: MCQItem[]
           { key: 'ঘ', text: 'NADP' }
         ],
         answer: 'গ',
-        source: 'রাজশাহী বোর্ড ২০২৩',
+        source: ['রাজশাহী বোর্ড ২০২৩'],
         explanation: 'ATP (Adenosine Triphosphate) কোষে শক্তি সঞ্চয় ও সর্বরাহের কাজ করে বলে একে জৈব মুদ্রা বা শক্তি মুদ্রা বলা হয়।'
       }
     ]
@@ -277,7 +298,7 @@ export const SAMPLE_DECKS: { name: string; description: string; items: MCQItem[]
           { key: 'D', text: '$x = 0, -2$' }
         ],
         answer: 'A',
-        source: 'DU Admission 2022',
+        source: ['DU Admission 2022'],
         explanation: '$f\'(x) = 3x^2 - 6x = 3x(x - 2) = 0 \\implies x = 0, 2$'
       },
       {
@@ -291,7 +312,7 @@ export const SAMPLE_DECKS: { name: string; description: string; items: MCQItem[]
           { key: 'D', text: 'Undefined' }
         ],
         answer: 'C',
-        source: 'BUET Admission 2021',
+        source: ['BUET Admission 2021'],
         explanation: '$\\lim_{x \\to 0} \\frac{\\sin(3x)}{x} = 3 \\cdot \\lim_{x \\to 0} \\frac{\\sin(3x)}{3x} = 3 \\cdot 1 = 3$'
       }
     ]
