@@ -24,7 +24,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ListChecks,
-  Database
+  Database,
+  Bot,
+  ClipboardCopy
 } from 'lucide-react';
 
 interface ManualEditorProps {
@@ -39,6 +41,44 @@ interface ManualEditorProps {
   onPrefillConsumed?: () => void;
   onImportToQuestionBank?: (items: MCQItem[]) => Promise<boolean>;
 }
+
+// Copy-ready prompt for any external AI (ChatGPT / Gemini / Claude etc.). The user
+// uploads a question-paper image/PDF to that AI and pastes this prompt so the AI
+// returns the EXACT raw-text format the bulk parser understands.
+const AI_TRANSCRIBE_PROMPT = `You are a question-paper transcription assistant.
+
+Look at the image/PDF I am giving you and transcribe every multiple-choice question into EXACTLY the raw text format below. Output ONLY the raw text, no commentary.
+
+Rules:
+1. One question per block, separated by a blank line.
+2. Start each question with its number, e.g. "১." or "1.".
+3. Write the question stem as plain text.
+4. Write each option on its own line using Bangla keys "ক)" "খ)" "গ)" "ঘ)" (or A) B) C) D) if the paper uses English). Do NOT number the options.
+5. Mark the correct option with an asterisk "*" right after that option's text.
+6. If the paper is a "বহুপদী" (i/ii/iii statements) question, write the statements as "i." "ii." "iii." lines, then a prompt line like "নিচের কোনটি সঠিক?", then the options.
+7. If a question has an explanation, add a line starting with "ব্যাখ্যা:" followed by the explanation text.
+8. If a question shows a source (e.g. a board name / year like "ঢাকা বোর্ড ২০২৪"), put it on its own line inside square brackets like "[ঢাকা বোর্ড ২০২৪]".
+9. Keep LaTeX math ($...$) exactly as written. Keep Bangla text exact.
+
+Example output:
+১. মানবদেহের বৃক্কে নেফ্রনের প্রধান কাজ কোনটি?
+ক) রক্ত ছাঁকন *
+খ) পিত্ত তৈরি
+গ) শ্বেতকণিকা তৈরি
+ঘ) পরিপাক
+ব্যাখ্যা: নেফ্রন হলো বৃক্কের গঠনগত ও কার্যগত একক।
+[ঢাকা বোর্ড ২০২৪]
+
+২. বৃক্কের পাথর অপসারণে আধুনিক পদ্ধতি—
+i. ইউরেটেরোস্কোপিক
+ii. আল্ট্রাসনিক লিথোট্রিপসি
+iii. অস্ত্রোপচার
+নিচের কোনটি সঠিক?
+ক) i ও ii
+খ) ii ও iii *
+গ) i ও iii
+ঘ) i, ii ও iii
+[চট্টগ্রাম বোর্ড ২০১৭]`;
 
 export const ManualEditor: React.FC<ManualEditorProps> = ({
   onAddMCQs,
@@ -307,6 +347,17 @@ iii. অস্ত্রোপচার
     setBulkText((prev) => (prev ? `${prev}\n\n${snippet}` : snippet));
   };
 
+  const [aiPromptCopied, setAiPromptCopied] = useState(false);
+  const handleCopyAiPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(AI_TRANSCRIBE_PROMPT);
+      setAiPromptCopied(true);
+      setTimeout(() => setAiPromptCopied(false), 1600);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
   return (
     <div
       className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border p-6 lg:p-8 space-y-8 ${
@@ -482,6 +533,22 @@ iii. অস্ত্রোপচার
               >
                 + Bohupodi MCQ
               </button>
+              <button
+                type="button"
+                onClick={() =>
+                  insertSnippet(
+                    `৪. সালোকসংশ্লেষণ কোথায় ঘটে?\nক) মাইটোকন্ড্রিয়ায়\nখ) ক্লোরোপ্লাস্টে *\nগ) রাইবোজোমে\nঘ) নিউক্লিয়াসে\nব্যাখ্যা: সালোকসংশ্লেষণ ক্লোরোপ্লাস্টের গ্রানায় ঘটে, যেখানে ক্লোরোফিল অবস্থান করে।\n[ঢাকা বোর্ড ২০২৩]`
+                  )
+                }
+                className={`text-xs px-3 py-1.5 rounded-xl border font-semibold ${
+                  isAppLight
+                    ? 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'
+                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                }`}
+                title="Shows the optional ব্যাখ্যা: explanation + [source] format"
+              >
+                + MCQ with Explanation
+              </button>
             </div>
 
             {/* Action Button */}
@@ -616,6 +683,21 @@ iii. অস্ত্রোপচার
                           </span>
                         )}
                       </div>
+
+                      {/* Optional explanation indicator */}
+                      {mcq.explanation && (
+                        <div className={`mt-2 px-2.5 py-1.5 rounded-lg border text-[11px] leading-snug flex items-start gap-1.5 ${
+                          isAppLight
+                            ? 'bg-sky-50 border-sky-200 text-sky-800'
+                            : 'bg-sky-500/10 border-sky-500/40 text-sky-300'
+                        }`}>
+                          <HelpCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-sky-400" />
+                          <span>
+                            <span className="font-black">ব্যাখ্যা:</span>{' '}
+                            <MathText text={mcq.explanation} />
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -637,6 +719,46 @@ iii. অস্ত্রোপচার
                 : 'bg-slate-950 border-slate-800'
             }`}
           >
+            {/* AI Image/PDF → Raw Text Transcription Prompt */}
+            <div className="p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-indigo-900/10 border border-violet-500/30 space-y-3">
+              <div className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-violet-400" />
+                <h4 className={`font-extrabold text-xs uppercase tracking-wider ${isAppLight ? 'text-violet-700' : 'text-violet-400'}`}>
+                  Scan Image / PDF → Parser-Ready Text
+                </h4>
+              </div>
+              <p className={`text-[11px] leading-snug ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                Have a question-paper photo or PDF? Paste this prompt into any AI (ChatGPT,
+                Gemini, Claude…), upload your file there, and it will return the{" "}
+                <code className="font-mono font-bold">exact raw text</code> this parser
+                understands — including answers (<code className="font-mono font-bold">*</code>),{" "}
+                <code className="font-mono font-bold">ব্যাখ্যা:</code> explanations,{" "}
+                <code className="font-mono font-bold">i. ii. iii.</code> বহুপদী, and{" "}
+                <code className="font-mono font-bold">[source]</code> tags.
+              </p>
+              <button
+                type="button"
+                onClick={handleCopyAiPrompt}
+                className={`w-full py-2 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                  aiPromptCopied
+                    ? 'bg-emerald-500 border-emerald-400 text-white'
+                    : 'bg-violet-500 hover:bg-violet-400 text-white border-violet-400 shadow-md'
+                }`}
+              >
+                {aiPromptCopied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Prompt Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <ClipboardCopy className="w-4 h-4" />
+                    <span>Copy AI Transcription Prompt</span>
+                  </>
+                )}
+              </button>
+            </div>
+
             {/* CSV Import Box */}
             <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-900/10 border border-emerald-500/30 space-y-3">
               <div className="flex items-center gap-2">
@@ -647,7 +769,9 @@ iii. অস্ত্রোপচার
               </div>
               <p className={`text-[11px] leading-snug ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 Upload a structured <code className="font-mono font-bold">.csv</code> spreadsheet
-                with columns: <code className="font-mono font-bold">stem, A, B, C, D, correct</code>
+                with columns: <code className="font-mono font-bold">stem, A, B, C, D, correct</code>{" "}
+                — plus optional <code className="font-mono font-bold">explanation</code> and{" "}
+                <code className="font-mono font-bold">source</code> columns.
               </p>
               <div className="flex flex-col gap-2 pt-1">
                 <input
@@ -724,6 +848,37 @@ iii. অস্ত্রোপচার
                 <p className="font-bold mb-1">3. Bohupodi (Multi-Statement)</p>
                 <p className="text-slate-400">
                   Statements starting with <code className="text-amber-500 font-mono">i. ii. iii.</code>
+                </p>
+              </div>
+
+              <div
+                className={`p-3 rounded-xl border ${
+                  isAppLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-slate-900 border-slate-800'
+                }`}
+              >
+                <p className="font-bold mb-1">4. Optional Explanation</p>
+                <p className="text-slate-400">
+                  Add a line starting with{' '}
+                  <code className="text-amber-500 font-mono">ব্যাখ্যা:</code> (or{' '}
+                  <code className="text-amber-500 font-mono">exp:</code> /{' '}
+                  <code className="text-amber-500 font-mono">Explanation:</code>) after the
+                  options — it becomes the slide's explanation box.
+                </p>
+              </div>
+
+              <div
+                className={`p-3 rounded-xl border ${
+                  isAppLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-slate-900 border-slate-800'
+                }`}
+              >
+                <p className="font-bold mb-1">5. Source Tag</p>
+                <p className="text-slate-400">
+                  Wrap a board/exam name in brackets, e.g.{' '}
+                  <code className="text-amber-500 font-mono">[ঢাকা বোর্ড ২০২৪]</code>
                 </p>
               </div>
             </div>
@@ -885,6 +1040,21 @@ iii. অস্ত্রোপচার
                       );
                     })}
                   </div>
+
+                  {/* Optional explanation indicator */}
+                  {item.explanation && (
+                    <div className={`mt-2 px-3 py-2 rounded-xl border text-xs leading-snug flex items-start gap-2 ${
+                      isAppLight
+                        ? 'bg-sky-50 border-sky-200 text-sky-800'
+                        : 'bg-sky-500/10 border-sky-500/40 text-sky-300'
+                    }`}>
+                      <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
+                      <span className="min-w-0">
+                        <span className="font-black mr-1">ব্যাখ্যা:</span>
+                        <MathText text={item.explanation} />
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -4,7 +4,6 @@ import { SAMPLE_DECKS } from './utils/bulkParser';
 import { useIndexedDBSync } from './hooks/useIndexedDBSync';
 import { db } from './db/dexie';
 import { SidebarNav } from './components/SidebarNav';
-import { HeaderNavbar } from './components/HeaderNavbar';
 import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
 import { AIUploader } from './components/AIUploader';
@@ -95,24 +94,9 @@ export default function App() {
     localStorage.setItem('edtech_app_theme', appTheme);
   }, [appTheme]);
 
-  // Mobile drawer state — lifted here so the global HeaderNavbar hamburger
-  // can open the same drawer that SidebarNav renders.
+  // Mobile drawer state — lifted here so the onboarding tour can auto-open/close
+  // it for sidebar steps and the SidebarNav mobile hamburger opens the same drawer.
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
-
-  // Sticky global navbar height — exposed as a CSS var so the desktop sidebar
-  // sticks exactly below it (measured, so header content changes stay aligned).
-  const headerRef = useRef<HTMLDivElement>(null);
-  const [navHeight, setNavHeight] = useState<number>(80);
-
-  useEffect(() => {
-    const el = headerRef.current;
-    if (!el) return;
-    const measure = () => setNavHeight(el.offsetHeight);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   // Onboarding Tour — auto-launch on first visit, reopenable via Start Tour buttons
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
@@ -703,29 +687,8 @@ export default function App() {
     <div
       className={`min-h-screen transition-colors duration-300 ${
         isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
-      } flex flex-col font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}
-      style={{ '--nav-h': `${navHeight}px` } as React.CSSProperties}
+      } flex flex-col lg:flex-row font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}
     >
-      {/* Global Sticky Top Navbar — every tab, desktop & mobile */}
-      <div ref={headerRef} className="z-40">
-        <HeaderNavbar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          questionCount={items.length}
-          templateId={config.templateId}
-          onSelectTemplate={(id) => setConfig(prev => ({ ...prev, templateId: id }))}
-          onLoadSample={handleLoadSample}
-          onOpenExportModal={() => setIsBatchExportModalOpen(true)}
-          isSyncing={isSyncing}
-          lastSavedTime={lastSavedTime}
-          appTheme={appTheme}
-          onToggleAppTheme={() => setAppTheme(t => t === 'dark' ? 'light' : 'dark')}
-          onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
-        />
-      </div>
-
-      {/* Sidebar (Desktop) + Main Content — stacked below the sticky navbar */}
-      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
       {/* Sidebar Navigation (Desktop) + Mobile Drawer */}
       <SidebarNav
         activeTab={activeTab}
@@ -1428,7 +1391,6 @@ export default function App() {
           />
         )}
       </main>
-      </div>
 
       {/* Export Modal */}
       <ExportModal
@@ -1446,7 +1408,7 @@ export default function App() {
         scope={exportScope}
       />
 
-      {/* Batch Deck Export Modal — navbar "Export Slides": pick multiple decks → PPTX each */}
+      {/* Batch Deck Export Modal — sidebar "Export Slides": pick multiple decks → PPTX each */}
       <BatchExportModal
         isOpen={isBatchExportModalOpen}
         onClose={() => setIsBatchExportModalOpen(false)}

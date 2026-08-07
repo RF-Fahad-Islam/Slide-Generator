@@ -133,6 +133,17 @@ const isInteractiveTarget = (target: EventTarget | null): boolean => {
   );
 };
 
+const getVisibleElement = (selector: string): HTMLElement | null => {
+  const elements = Array.from(document.querySelectorAll(selector)) as HTMLElement[];
+  if (elements.length === 0) return null;
+  const visible = elements.find(el => {
+    const r = el.getBoundingClientRect();
+    const style = window.getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+  });
+  return visible || elements[0];
+};
+
 export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   open,
   onClose,
@@ -152,8 +163,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   // animation itself) would fight the user and cause jitter.
   const measure = useCallback(() => {
     if (!step) return false;
-    const sel = step.target;
-    const el = document.querySelector(sel) as HTMLElement | null;
+    const el = getVisibleElement(step.target);
     if (!el) return false;
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) return false;
@@ -189,8 +199,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   // Scroll the target into view ONCE per step, then measure.
   const revealAndMeasure = useCallback(() => {
     if (!step) return;
-    const sel = step.target;
-    const el = document.querySelector(sel) as HTMLElement | null;
+    const el = getVisibleElement(step.target);
     if (el) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
     window.setTimeout(tryMeasure, 220);
   }, [step, tryMeasure]);
