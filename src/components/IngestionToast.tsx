@@ -10,6 +10,13 @@ export const IngestionToast: React.FC<IngestionToastProps> = ({ appTheme = 'dark
   const { state, cancel, discard, approve } = useIngestion();
   const isAppLight = appTheme === 'light';
   const [copied, setCopied] = React.useState(false);
+  const [isClosing, setIsClosing] = React.useState(false);
+
+  const closeToast = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => discard(), 200);
+  };
 
   const copyRawText = async () => {
     try {
@@ -84,7 +91,7 @@ export const IngestionToast: React.FC<IngestionToastProps> = ({ appTheme = 'dark
       <div
         role="status"
         aria-live="polite"
-        className={`rounded-3xl border overflow-hidden ${
+        className={`rounded-3xl border overflow-hidden ${isClosing ? 'animate-toast-out' : 'animate-toast-in'} ${
           isAppLight ? 'bg-white' : 'bg-slate-900'
         } ${borderClass}`}
       >
@@ -133,9 +140,9 @@ export const IngestionToast: React.FC<IngestionToastProps> = ({ appTheme = 'dark
                 {formatElapsed(state.elapsed)}
               </span>
               <button
-                onClick={discard}
+                onClick={closeToast}
                 title="Dismiss"
-                className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                className={`p-1.5 rounded-lg cursor-pointer btn-icon ${
                   isAppLight
                     ? 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
                     : 'text-slate-500 hover:text-white hover:bg-slate-800'
@@ -254,7 +261,7 @@ export const IngestionToast: React.FC<IngestionToastProps> = ({ appTheme = 'dark
                   Approve & Parse
                 </button>
                 <button
-                  onClick={discard}
+                  onClick={closeToast}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-all ${
                     isAppLight
                       ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
@@ -267,7 +274,7 @@ export const IngestionToast: React.FC<IngestionToastProps> = ({ appTheme = 'dark
             )}
             {(status === 'done' || status === 'error' || status === 'aborted') && (
               <button
-                onClick={discard}
+                onClick={closeToast}
                 className="flex-1 py-2 rounded-xl text-xs font-black border cursor-pointer transition-all"
               >
                 Close

@@ -118,7 +118,7 @@ export const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
           </button>
           <button
             onClick={onEdit}
-            className={`p-2 rounded-xl transition-colors ${
+            className={`p-2 rounded-xl btn-icon ${
               isAppLight
                 ? 'bg-slate-100 text-slate-600 hover:bg-indigo-100 hover:text-indigo-700'
                 : 'bg-slate-800 text-slate-300 hover:text-indigo-400'
@@ -129,7 +129,7 @@ export const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
           </button>
           <button
             onClick={onDuplicate}
-            className={`p-2 rounded-xl transition-colors ${
+            className={`p-2 rounded-xl btn-icon ${
               isAppLight
                 ? 'bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-700'
                 : 'bg-slate-800 text-slate-300 hover:text-amber-400'
@@ -140,7 +140,7 @@ export const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
           </button>
           <button
             onClick={onDelete}
-            className={`p-2 rounded-xl transition-colors ${
+            className={`p-2 rounded-xl btn-icon ${
               isAppLight
                 ? 'bg-rose-50 text-rose-500 hover:bg-rose-100'
                 : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400'

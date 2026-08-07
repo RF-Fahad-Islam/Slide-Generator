@@ -366,10 +366,10 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-modal-backdrop ${
       isAppLight ? 'bg-black/40' : 'bg-black/80'
     }`}>
-      <div className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} relative w-full max-w-4xl border p-6 lg:p-8 space-y-6 max-h-[90vh] overflow-y-auto ${
+      <div className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} relative w-full max-w-4xl border p-6 lg:p-8 space-y-6 max-h-[90vh] overflow-y-auto animate-modal-card ${
         isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-slate-800'
       }`}>
         <button

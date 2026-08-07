@@ -343,8 +343,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose, o
       {/* Tooltip card */}
       {tipRect && (
         <div
+          key={current}
           ref={tipRef}
-          className="fixed w-[360px] max-w-[90vw] rounded-3xl border border-amber-500/30 bg-slate-900 text-white shadow-2xl shadow-black/50 overflow-hidden"
+          className="fixed w-[360px] max-w-[90vw] rounded-3xl border border-amber-500/30 bg-slate-900 text-white shadow-2xl shadow-black/50 overflow-hidden animate-tour-tip"
           style={{ top: tipRect.top, left: tipRect.left }}
         >
           <div className="h-1.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300" />

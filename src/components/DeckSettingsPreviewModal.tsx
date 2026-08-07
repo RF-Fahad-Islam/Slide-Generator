@@ -55,13 +55,13 @@ export const DeckSettingsPreviewModal: React.FC<DeckSettingsPreviewModalProps> =
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 backdrop-blur-md ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 backdrop-blur-md animate-modal-backdrop ${
         isAppLight ? 'bg-black/40' : 'bg-black/80'
       }`}
       onClick={onClose}
     >
       <div
-        className={`relative w-full max-w-5xl border rounded-3xl overflow-hidden shadow-2xl ${
+        className={`relative w-full max-w-5xl border rounded-3xl overflow-hidden shadow-2xl animate-modal-card ${
           isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}
         onClick={(e) => e.stopPropagation()}
