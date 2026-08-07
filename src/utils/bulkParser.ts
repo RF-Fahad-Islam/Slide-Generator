@@ -1,4 +1,4 @@
-import { MCQItem, MCQOption, QuestionType } from '../types';
+import { MCQItem, MCQOption, MCQTags, QuestionType } from '../types';
 
 /**
  * Smart Regex & Heuristic Parser for Bulk Text Paste of MCQs
@@ -33,8 +33,9 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
   const romanItems: string[] = [];
   const options: MCQOption[] = [];
   let answerKey = '';
-  let sourceTag = '';
+  const sourceTags: string[] = [];
   let explanation = '';
+  let tags: MCQTags = {};
 
   // Patterns
   const romanRegex = /^(?:i|ii|iii|iv|v|১|২|৩)\.?\s+(.+)$/i;

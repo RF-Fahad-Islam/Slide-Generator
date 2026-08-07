@@ -8,12 +8,14 @@ interface MathTextProps {
 }
 
 export const MathText: React.FC<MathTextProps> = ({ text, className = '', inline = true }) => {
-  if (!text) return null;
+  if (text === null || text === undefined) return null;
+  const strText = String(text);
+  if (!strText) return null;
 
   // Split text into normal text parts and math parts
   // Regex matches $$...$$ for block math and $...$ for inline math
   const regex = /(\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$)/g;
-  const parts = text.split(regex);
+  const parts = strText.split(regex);
 
   return (
     <span className={`inline-wrap ${className}`}>

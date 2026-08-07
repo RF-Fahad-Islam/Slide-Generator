@@ -704,6 +704,7 @@ export default function App() {
         onStartTour={() => setIsTourOpen(true)}
         isMobileDrawerOpen={isMobileDrawerOpen}
         onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
+        onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
       />
 
       {/* Main Content View Container */}

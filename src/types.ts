@@ -23,6 +23,12 @@ export interface CustomThemeColors {
   accentColor: string;
 }
 
+export interface MCQTags {
+  subject?: string;
+  className?: string;
+  paper?: string;
+}
+
 export interface MCQItem {
   id: string;
   questionType: QuestionType;
@@ -34,11 +40,26 @@ export interface MCQItem {
   prompt?: string; // e.g., "নিচের কোনটি সঠিক?" or "Which of the following is correct?"
   options: MCQOption[];
   answer: string; // Key of correct option (e.g. "B" or "খ")
-  source?: string; // e.g., "চট্টগ্রাম বোর্ড ২০১৭" / "DU Admission 2023"
+  source?: string[]; // One or more board/exam source tags, e.g. ["চট্টগ্রাম বোর্ড ২০১৭", "DU Admission 2023"]
   explanation?: string; // Detailed answer explanation
+  tags?: MCQTags; // Optional filter tags (subject, class, paper, etc.)
   confidence?: 'high' | 'low';
   warnings?: string[];
   customConfig?: Partial<DeckConfig>; // Slide-level scope settings override
+}
+
+/**
+ * Normalizes an MCQ's source into a string[] of source tags.
+ * Handles legacy single-string `source` values from older saved decks.
+ */
+export function getSourceTags(item: Pick<MCQItem, 'source'>): string[] {
+  if (Array.isArray(item.source)) {
+    return item.source.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
+  }
+  if (typeof item.source === 'string' && item.source.trim().length > 0) {
+    return [item.source.trim()];
+  }
+  return [];
 }
 
 export interface SavedDeck {
