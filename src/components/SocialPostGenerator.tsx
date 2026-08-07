@@ -448,11 +448,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     <div className="space-y-6 animate-fadeIn relative">
       {/* CANVA STUDIO TOP HEADER BAR */}
       <div
-        className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-4 lg:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-          isAppLight
-            ? 'border-slate-200'
-            : 'bg-slate-900/90 border-white/10 text-white shadow-2xl backdrop-blur-xl'
-        }`}
+        className={`${isAppLight ? 'glass-card-fatty-light border-slate-200 bg-white/95' : 'glass-card-fatty border-white/10 bg-slate-900/90'} p-4 lg:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xl backdrop-blur-xl`}
       >
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25">
@@ -463,7 +459,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               <h2 className={`text-lg lg:text-xl font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                 Canva Social Post Studio
               </h2>
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-mono font-black border bg-amber-500/20 text-amber-300 border-amber-500/30">
+              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-black border ${
+                isAppLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+              }`}>
                 PRO CANVAS
               </span>
             </div>
@@ -489,6 +487,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
                   aspectRatio === r.id
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : isAppLight
+                    ? 'text-slate-600 hover:text-slate-900'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -517,20 +517,22 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         {/* ========================================================================= */}
         {/* LEFT COLUMN (xl:col-span-5): FULL CANVA TOOL DRAWER / SIDEBAR            */}
         {/* ========================================================================= */}
-        <div className={`xl:col-span-5 ${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border rounded-3xl overflow-hidden flex flex-col min-h-[640px] shadow-2xl ${
-          isAppLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-slate-900/90'
-        }`}>
+        <div className={`xl:col-span-5 ${isAppLight ? 'glass-card-fatty-light border-slate-200 bg-white' : 'glass-card-fatty border-white/10 bg-slate-900/90'} border rounded-3xl overflow-hidden flex flex-col min-h-[640px] shadow-2xl`}>
           {/* Tool Drawer Header */}
-          <div className="p-4 border-b border-white/10 bg-slate-950/60 flex items-center justify-between">
+          <div className={`p-4 border-b flex items-center justify-between ${
+            isAppLight ? 'bg-slate-100/80 border-slate-200' : 'bg-slate-950/60 border-white/10'
+          }`}>
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 rounded-lg bg-amber-500 text-slate-950 font-black">
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                <h3 className={`text-xs font-black uppercase tracking-wider ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                   Canva Design Tools
                 </h3>
-                <p className="text-[11px] text-slate-400">Select a tool tab below to edit post details</p>
+                <p className={`text-[11px] ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Select a tool tab below to edit post details
+                </p>
               </div>
             </div>
 
@@ -541,6 +543,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer ${
                 isCustomMode
                   ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                  : isAppLight
+                  ? 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200'
                   : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
               }`}
             >
@@ -549,7 +553,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           </div>
 
           {/* Tool Drawer Scrollable Tab Rail */}
-          <div className="flex items-center border-b border-white/10 p-2 gap-1 overflow-x-auto bg-slate-950/40 no-scrollbar">
+          <div className={`flex items-center border-b p-2 gap-1 overflow-x-auto no-scrollbar ${
+            isAppLight ? 'bg-slate-100/50 border-slate-200' : 'bg-slate-950/40 border-white/10'
+          }`}>
             {drawerTabs.map((t) => {
               const Icon = t.icon;
               const isActive = activeTab === t.id;
@@ -561,6 +567,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
                     isActive
                       ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/40'
+                      : isAppLight
+                      ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -579,11 +587,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {activeTab === 'templates' && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                  <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                     <LayoutTemplate className="w-4 h-4" />
                     1. Post Template Preset
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Choose a starting social post design layout or switch to custom canvas mode.
                   </p>
                 </div>
@@ -591,20 +599,22 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 {!isCustomMode ? (
                   <PostTemplateSelector selected={postTemplate} onSelect={setPostTemplate} isAppLight={isAppLight} />
                 ) : (
-                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
-                    <p className="text-xs font-bold text-amber-300 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-400" />
+                  <div className={`p-4 rounded-2xl border space-y-2 ${
+                    isAppLight ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  }`}>
+                    <p className="text-xs font-bold flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
                       <span>Custom Canvas Drag & Drop Mode Active</span>
                     </p>
-                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                    <p className={`text-[11px] leading-relaxed ${isAppLight ? 'text-amber-800' : 'text-slate-300'}`}>
                       You are in free-form canvas mode. Add text boxes, custom images, and resize layers freely. Switch off Custom Mode to return to preset cards.
                     </p>
                   </div>
                 )}
 
                 {/* Aspect Ratio Selector */}
-                <div className="space-y-2 pt-2 border-t border-white/10">
-                  <label className="block text-xs font-bold text-slate-300">
+                <div className={`space-y-2 pt-3 border-t ${isAppLight ? 'border-slate-200' : 'border-white/10'}`}>
+                  <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Aspect Ratio (Post Dimension):
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -619,23 +629,29 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         onClick={() => setAspectRatio(ratio.id as any)}
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           aspectRatio === ratio.id
-                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md ring-2 ring-amber-400/50'
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md ring-2 ring-amber-400/50 font-bold'
+                            : isAppLight
+                            ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                             : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                         }`}
                       >
                         <span className="block text-xs font-black">{ratio.name}</span>
-                        <span className={`block text-[10px] mt-0.5 ${aspectRatio === ratio.id ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>{ratio.desc}</span>
+                        <span className={`block text-[10px] mt-0.5 ${
+                          aspectRatio === ratio.id ? 'text-slate-900 font-bold' : isAppLight ? 'text-slate-500' : 'text-slate-500'
+                        }`}>{ratio.desc}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* Custom Mode Toggle Card */}
-                <div className="p-4 rounded-2xl border bg-slate-950 border-slate-800 space-y-3">
+                <div className={`p-4 rounded-2xl border space-y-3 ${
+                  isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                }`}>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-white">Canva Custom Mode</p>
-                      <p className="text-[11px] text-slate-400">Enable draggable box elements & layer editor</p>
+                      <p className={`text-xs font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Canva Custom Mode</p>
+                      <p className={`text-[11px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>Enable draggable box elements & layer editor</p>
                     </div>
                     <button
                       type="button"
@@ -643,6 +659,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                       className={`px-3 py-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${
                         isCustomMode
                           ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                          : isAppLight
+                          ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                           : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
                       }`}
                     >
@@ -659,39 +677,45 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {activeTab === 'content' && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                  <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                     <Type className="w-4 h-4" />
                     Question Stem & Options A, B, C, D
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Live editable inputs — changes render immediately on the right preview.
                   </p>
                 </div>
 
                 {/* Question Stem */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Question Stem Text (LaTeX & Bangla aware):
                   </label>
                   <textarea
                     value={customStem}
                     onChange={(e) => setCustomStem(e.target.value)}
                     rows={3}
-                    className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none leading-relaxed"
+                    className={`w-full border rounded-xl px-4 py-3 text-xs font-bold focus:border-amber-500 focus:outline-none leading-relaxed ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-900'
+                        : 'bg-slate-950 border-slate-800 text-white'
+                    }`}
                   />
                 </div>
 
                 {/* Options A, B, C, D */}
                 <div className="space-y-3">
-                  <label className="block text-xs font-bold text-slate-300">
+                  <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Options A / B / C / D Text & Correct Answer Mark:
                   </label>
                   {customOptions.map((opt, idx) => {
                     const isCorr = opt.isCorrect || customAnswerKey.toLowerCase() === opt.key.toLowerCase();
                     return (
-                      <div key={idx} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                      <div key={idx} className={`p-3 rounded-2xl border space-y-2 ${
+                        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                      }`}>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                          <span className={`text-xs font-black flex items-center gap-1.5 ${isAppLight ? 'text-amber-700' : 'text-amber-400'}`}>
                             <span className="w-5 h-5 rounded-md bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center">
                               {opt.key || String.fromCharCode(65 + idx)}
                             </span>
@@ -706,6 +730,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                             className={`px-3 py-1 rounded-lg text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
                               isCorr
                                 ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md'
+                                : isAppLight
+                                ? 'bg-white text-slate-600 border-slate-300 hover:text-slate-900'
                                 : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
                             }`}
                           >
@@ -720,7 +746,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                             const val = e.target.value;
                             setCustomOptions(prev => prev.map((o, i) => i === idx ? { ...o, text: val } : o));
                           }}
-                          className="w-full border rounded-xl px-3 py-2 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                          className={`w-full border rounded-xl px-3 py-2 text-xs font-bold focus:border-amber-500 focus:outline-none ${
+                            isAppLight
+                              ? 'bg-white border-slate-300 text-slate-900'
+                              : 'bg-slate-900 border-slate-800 text-white'
+                          }`}
                         />
                       </div>
                     );
@@ -728,17 +758,23 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 </div>
 
                 {/* Display Toggles */}
-                <div className="pt-3 border-t border-white/10 space-y-2">
-                  <label className="block text-xs font-bold text-slate-300">
+                <div className={`pt-3 border-t space-y-2 ${isAppLight ? 'border-slate-200' : 'border-white/10'}`}>
+                  <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Card Display Options:
                   </label>
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
-                    <span className="text-xs text-slate-300 font-bold">Highlight Correct Answer on Card</span>
+                  <div className={`flex items-center justify-between p-3 rounded-xl border ${
+                    isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                  }`}>
+                    <span className={`text-xs font-bold ${isAppLight ? 'text-slate-800' : 'text-slate-300'}`}>Highlight Correct Answer on Card</span>
                     <button
                       type="button"
                       onClick={() => setShowAnswerKey(v => !v)}
                       className={`px-3 py-1 rounded-lg text-xs font-black border transition-all cursor-pointer ${
-                        showAnswerKey ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-900 text-slate-400 border-slate-800'
+                        showAnswerKey
+                          ? 'bg-amber-500 text-slate-950 border-amber-400'
+                          : isAppLight
+                          ? 'bg-white text-slate-600 border-slate-300'
+                          : 'bg-slate-900 text-slate-400 border-slate-800'
                       }`}
                     >
                       {showAnswerKey ? 'ON' : 'OFF'}
@@ -754,23 +790,27 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {activeTab === 'deck' && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                  <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                     <BookOpen className="w-4 h-4" />
                     Select Question From Active Deck ({filteredPickerItems.length} / {items.length})
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Click any question to load its stem and options into the social post.
                   </p>
                 </div>
 
                 <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
+                  <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                   <input
                     type="text"
                     value={pickerSearch}
                     onChange={(e) => setPickerSearch(e.target.value)}
                     placeholder="Search stems, options, topics..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-amber-500 ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
+                        : 'bg-slate-950 border-slate-800 text-white placeholder-slate-500'
+                    }`}
                   />
                 </div>
 
@@ -782,16 +822,20 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         key={q.id || fullIndex}
                         type="button"
                         onClick={() => setSelectedQuestionIndex(fullIndex)}
-                        className={`w-full p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 text-xs ${
+                        className={`w-full p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 text-xs cursor-pointer ${
                           isSelected
-                            ? 'bg-amber-500/15 border-amber-400 text-amber-300 font-bold shadow-md'
+                            ? isAppLight
+                              ? 'bg-amber-100 border-amber-400 text-amber-900 font-bold shadow-sm'
+                              : 'bg-amber-500/15 border-amber-400 text-amber-300 font-bold shadow-md'
+                            : isAppLight
+                            ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                             : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                         }`}
                       >
                         <span className="truncate font-semibold flex-1">
                           #{fullIndex + 1}. <MathText text={q.stem} />
                         </span>
-                        {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />}
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />}
                       </button>
                     );
                   })}
@@ -805,17 +849,17 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {activeTab === 'branding' && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                  <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                     <User className="w-4 h-4" />
                     Brand Identity & Header Logo
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Customize your channel brand name, header title, and custom logo image.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Brand Name / Channel Name:
                   </label>
                   <input
@@ -823,12 +867,16 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     value={customBrandName}
                     onChange={(e) => setCustomBrandName(e.target.value)}
                     placeholder="e.g. Nobel's Classroom / SSC Science Studio"
-                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:border-amber-500 focus:outline-none ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-900'
+                        : 'bg-slate-950 border-slate-800 text-white'
+                    }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Brand Logo Image:
                   </label>
                   <div className="space-y-3">
@@ -845,7 +893,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                           </button>
                         </div>
                       ) : (
-                        <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 font-black text-lg flex items-center justify-center shrink-0">
+                        <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-500 font-black text-lg flex items-center justify-center shrink-0">
                           {customBrandName ? customBrandName.charAt(0).toUpperCase() : 'B'}
                         </div>
                       )}
@@ -861,13 +909,17 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                       value={customLogoUrl.startsWith('data:') ? '' : customLogoUrl}
                       onChange={(e) => setCustomLogoUrl(e.target.value)}
                       placeholder="...or paste image URL"
-                      className="w-full border rounded-xl px-3 py-2 text-xs font-mono bg-slate-950 border-slate-800 text-slate-300 focus:outline-none focus:border-amber-500"
+                      className={`w-full border rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-amber-500 ${
+                        isAppLight
+                          ? 'bg-slate-50 border-slate-300 text-slate-800'
+                          : 'bg-slate-950 border-slate-800 text-slate-300'
+                      }`}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Header Subtitle / Tagline:
                   </label>
                   <input
@@ -875,7 +927,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     value={customHeaderTitle}
                     onChange={(e) => setCustomHeaderTitle(e.target.value)}
                     placeholder="e.g. আজকের কুইজ / Daily MCQ Prep"
-                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:border-amber-500 focus:outline-none ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-900'
+                        : 'bg-slate-950 border-slate-800 text-white'
+                    }`}
                   />
                 </div>
               </div>
@@ -887,64 +943,80 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {activeTab === 'reactions' && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                  <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                     <Smile className="w-4 h-4" />
                     Quiz Time Reaction Grid Settings
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Customize titles and 4 reaction emojis for the Quiz Time template card.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Wordmark Header Title:
                   </label>
                   <input
                     type="text"
                     value={quizTitleText}
                     onChange={(e) => setQuizTitleText(e.target.value)}
-                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:border-amber-500 focus:outline-none ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-900'
+                        : 'bg-slate-950 border-slate-800 text-white'
+                    }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Reaction Call-To-Action:
                   </label>
                   <input
                     type="text"
                     value={quizCtaText}
                     onChange={(e) => setQuizCtaText(e.target.value)}
-                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:border-amber-500 focus:outline-none ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-900'
+                        : 'bg-slate-950 border-slate-800 text-white'
+                    }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Comment Prompt Footer:
                   </label>
                   <input
                     type="text"
                     value={quizSubCtaText}
                     onChange={(e) => setQuizSubCtaText(e.target.value)}
-                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold focus:border-amber-500 focus:outline-none ${
+                      isAppLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-900'
+                        : 'bg-slate-950 border-slate-800 text-white'
+                    }`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-2">
+                  <label className={`block text-xs font-bold mb-2 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Reaction Emojis for Options A / B / C / D:
                   </label>
                   <div className="grid grid-cols-4 gap-2">
                     {REACTION_ORDER.map((letter) => (
                       <div key={letter} className="text-center space-y-1">
-                        <span className="text-[10px] font-mono text-slate-400 uppercase font-black">Option {letter}</span>
+                        <span className={`text-[10px] font-mono uppercase font-black ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Option {letter}</span>
                         <input
                           type="text"
                           value={reactionEmojis[letter]}
                           onChange={(e) => setReactionEmojis(prev => ({ ...prev, [letter]: e.target.value }))}
-                          className="w-full text-center border rounded-xl px-2 py-2 text-lg bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                          className={`w-full text-center border rounded-xl px-2 py-2 text-lg focus:border-amber-500 focus:outline-none ${
+                            isAppLight
+                              ? 'bg-slate-50 border-slate-300 text-slate-900'
+                              : 'bg-slate-950 border-slate-800 text-white'
+                          }`}
                         />
                       </div>
                     ))}
@@ -959,17 +1031,17 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {activeTab === 'theme' && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                  <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                     <Palette className="w-4 h-4" />
                     Background Theme & Custom Image
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Pick background colors or upload custom graphics.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-2">
+                  <label className={`block text-xs font-bold mb-2 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                     Background Color Presets:
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -986,20 +1058,24 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         onClick={() => setPostBgColor(b.id)}
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           postBgColor === b.id
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 font-bold'
+                            ? isAppLight
+                              ? 'bg-amber-100 text-amber-900 border-amber-400 ring-2 ring-amber-400/40 font-bold'
+                              : 'bg-amber-500/20 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 font-bold'
+                            : isAppLight
+                            ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                             : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                         }`}
                       >
                         <span className="block text-xs font-black">{b.name}</span>
-                        <span className="block text-[10px] text-slate-500 mt-0.5">{b.desc}</span>
+                        <span className={`block text-[10px] mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>{b.desc}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {isCustomMode && (
-                  <div className="pt-3 border-t border-white/10 space-y-3">
-                    <label className="block text-xs font-bold text-slate-300">
+                  <div className={`pt-3 border-t space-y-3 ${isAppLight ? 'border-slate-200' : 'border-white/10'}`}>
+                    <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
                       Custom Background Image (Custom Mode):
                     </label>
                     <div className="flex items-center gap-3">
@@ -1012,7 +1088,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         <button
                           type="button"
                           onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }))}
-                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20"
+                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer"
                         >
                           Clear Image
                         </button>
@@ -1029,11 +1105,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {activeTab === 'layers' && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                  <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
                     <Layers className="w-4 h-4" />
                     Layer & Text Box Controls
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                     Add custom text boxes, logos, and adjust layer ordering.
                   </p>
                 </div>
@@ -1062,14 +1138,16 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                     onClose={() => setActiveTab('templates')}
                   />
                 ) : (
-                  <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 text-center">
-                    <p className="text-xs text-slate-400">
+                  <div className={`p-5 rounded-2xl border space-y-3 text-center ${
+                    isAppLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
+                  }`}>
+                    <p className="text-xs">
                       Enable Canva Custom Mode to edit individual text boxes and elements freely on the canvas.
                     </p>
                     <button
                       type="button"
                       onClick={() => setIsCustomMode(true)}
-                      className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-md"
+                      className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-md cursor-pointer"
                     >
                       Enable Custom Canvas Mode
                     </button>
@@ -1086,13 +1164,15 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         <div className="xl:col-span-7 flex flex-col items-center justify-start space-y-4 xl:sticky xl:top-20">
           {/* Canvas Top Bar */}
           <div className="flex items-center justify-between w-full max-w-[500px] px-1">
-            <span className="text-xs font-bold flex items-center gap-1.5 text-slate-300">
-              <Sparkles className="w-4 h-4 text-amber-400" />
+            <span className={`text-xs font-bold flex items-center gap-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+              <Sparkles className="w-4 h-4 text-amber-500" />
               <span>Live Social Canvas ({aspectRatio})</span>
             </span>
 
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-slate-400">
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+                isAppLight ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
+              }`}>
                 {postDesignW}×{postDesignH}px
               </span>
 
@@ -1103,6 +1183,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer ${
                     isBoxEditMode
                       ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                      : isAppLight
+                      ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
                       : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
                   }`}
                 >

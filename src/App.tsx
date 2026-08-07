@@ -8,6 +8,7 @@ import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
 import { AIUploader } from './components/AIUploader';
 import { DeckManager } from './components/DeckManager';
+import { AddQuestionsBanner } from './components/AddQuestionsBanner';
 import { DeckSettingsPage } from './components/DeckSettingsPage';
 import { ExportModal } from './components/ExportModal';
 import { BatchExportModal } from './components/BatchExportModal';
@@ -34,7 +35,7 @@ import { classroomTextBoxes } from './utils/slideElements';
 import { loadGlobalDefaults } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, PlusCircle, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
 import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
@@ -1284,30 +1285,11 @@ export default function App() {
 
                       {/* ADD QUESTIONS — green banner under the deck question side panel,
                           opens the 3-source chooser modal (Bank / Manual / Form) */}
-                      <button
+                      <AddQuestionsBanner
                         onClick={() => setIsAddQuestionsOpen(true)}
-                        className={`w-full rounded-3xl border shadow-2xl p-4 sm:p-5 flex items-center justify-between gap-4 transition-all cursor-pointer group hover:-translate-y-0.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 border-emerald-400 text-slate-950 hover:shadow-emerald-500/30`}
-                      >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <span className="p-3 rounded-2xl bg-slate-950/10 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-                            <PlusCircle className="w-6 h-6 stroke-[2.5]" />
-                          </span>
-                          <div className="text-left min-w-0">
-                            <div className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
-                              Add Questions
-                              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-950 text-emerald-300">
-                                {expandedSlides.length} in deck
-                              </span>
-                            </div>
-                            <div className="text-xs sm:text-sm font-semibold text-slate-900/70 truncate">
-                              Question Bank · Manual Editor · Question Creator Form
-                            </div>
-                          </div>
-                        </div>
-                        <span className="shrink-0 px-4 py-2 rounded-xl bg-slate-950 text-emerald-300 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-transform group-hover:translate-x-1">
-                          Choose Source <ArrowRight className="w-4 h-4" />
-                        </span>
-                      </button>
+                        count={expandedSlides.length}
+                        appTheme={appTheme}
+                      />
                     </div>
                   )}
                 </div>
