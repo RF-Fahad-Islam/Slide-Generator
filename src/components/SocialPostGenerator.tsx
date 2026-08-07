@@ -10,22 +10,18 @@ import {
   PenTool,
   Eye,
   Sparkles,
-  Smartphone,
-  Square,
-  Maximize,
   Sliders,
   Type,
   RefreshCw,
   User,
   BookOpen,
   Search,
-  Filter,
-  Landmark,
-  LayoutGrid,
   X,
   Upload,
   Smile,
   Check,
+  Palette,
+  LayoutTemplate,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
@@ -110,6 +106,8 @@ const loadSavedDesign = (w: number, h: number): CustomPostDesign => {
   return { bgImageUrl: '', boxes: defaultCustomBoxes(w, h) };
 };
 
+export type CanvaDrawerTab = 'templates' | 'content' | 'deck' | 'branding' | 'reactions' | 'theme' | 'layers';
+
 export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   items,
   config,
@@ -163,9 +161,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [canvasWidth, setCanvasWidth] = useState<number>(500);
 
-  // Canva-Style Studio Right Drawer State
-  const [isCanvaDrawerOpen, setIsCanvaDrawerOpen] = useState<boolean>(false);
-  const [canvaTab, setCanvaTab] = useState<'branding' | 'content' | 'reactions' | 'layers' | 'background'>('content');
+  // Canva Drawer Active Tab State (Full Left Drawer)
+  const [activeTab, setActiveTab] = useState<CanvaDrawerTab>('templates');
 
   const postCanvasRef = useRef<HTMLDivElement>(null);
   const postFrameRef = useRef<HTMLDivElement>(null);
@@ -437,205 +434,285 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     }
   };
 
+  const drawerTabs: { id: CanvaDrawerTab; label: string; icon: React.FC<{ className?: string }> }[] = [
+    { id: 'templates', label: 'Templates', icon: LayoutTemplate },
+    { id: 'content', label: 'Question', icon: Type },
+    { id: 'deck', label: 'Deck MCQs', icon: BookOpen },
+    { id: 'branding', label: 'Brand', icon: User },
+    { id: 'reactions', label: 'Emojis', icon: Smile },
+    { id: 'theme', label: 'Theme', icon: Palette },
+    { id: 'layers', label: 'Boxes', icon: Layers },
+  ];
+
   return (
-    <div className="space-y-8 animate-fadeIn relative">
-      {/* Top Banner */}
+    <div className="space-y-6 animate-fadeIn relative">
+      {/* CANVA STUDIO TOP HEADER BAR */}
       <div
-        className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 lg:p-8 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 ${
+        className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-4 lg:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
           isAppLight
             ? 'border-slate-200'
-            : 'bg-slate-900/80 border-white/10 text-white shadow-2xl'
+            : 'bg-slate-900/90 border-white/10 text-white shadow-2xl backdrop-blur-xl'
         }`}
       >
-        <div className="flex items-center gap-4">
-          <div className="p-4 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25">
-            <Share2 className="w-8 h-8 stroke-[2.5]" />
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25">
+            <Share2 className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
-            <h2 className={`text-xl lg:text-2xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-              <span>Social Media Post Studio</span>
-              <span className="text-xs px-3 py-1 rounded-full font-mono font-black border bg-amber-500/20 text-amber-300 border-amber-500/30">
-                Canva Mode · Fully Editable
+            <div className="flex items-center gap-2">
+              <h2 className={`text-lg lg:text-xl font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                Canva Social Post Studio
+              </h2>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-mono font-black border bg-amber-500/20 text-amber-300 border-amber-500/30">
+                PRO CANVAS
               </span>
-            </h2>
-            <p className={`text-xs mt-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              Create & edit custom brand logos, stem text, options A–D, emojis, and Canva-style layouts!
+            </div>
+            <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              Full-featured tool drawer on the left · Fixed live preview on the right
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsCanvaDrawerOpen(prev => !prev)}
-            className="px-5 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/40 font-black text-sm flex items-center gap-2.5 shadow-lg shadow-amber-500/10 cursor-pointer transition-all shrink-0"
-          >
-            <Sliders className="w-5 h-5 text-amber-400" />
-            <span>{isCanvaDrawerOpen ? 'Close Canva Drawer' : '🎨 Canva Studio Drawer'}</span>
-          </button>
+        {/* Header Right Actions & Quick Format Selector */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          {/* Quick Format Pills */}
+          <div className={`hidden md:flex items-center p-1 rounded-xl border ${isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
+            {[
+              { id: '1:1', label: '1:1 Square' },
+              { id: '4:5', label: '4:5 Feed' },
+              { id: '9:16', label: '9:16 Story' },
+            ].map(r => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setAspectRatio(r.id as any)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  aspectRatio === r.id
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
 
           <button
             onClick={handleExportSinglePNG}
             disabled={isExporting || items.length === 0}
-            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-sm flex items-center gap-2.5 shadow-lg shadow-amber-500/25 cursor-pointer disabled:opacity-50 transition-all shrink-0"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer disabled:opacity-50 transition-all shrink-0"
           >
             {isExporting ? (
-              <RefreshCw className="w-5 h-5 animate-spin" />
+              <RefreshCw className="w-4 h-4 animate-spin" />
             ) : (
-              <Download className="w-5 h-5 stroke-[2.5]" />
+              <Download className="w-4 h-4 stroke-[2.5]" />
             )}
-            <span>{isExporting ? 'Generating Image...' : 'Download Social Image'}</span>
+            <span>{isExporting ? 'Generating Image...' : 'Export Social Image'}</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-        {/* LEFT 5 COLUMNS: EDITABLE CONTROLS */}
-        <div className="xl:col-span-5 space-y-6">
-          {/* Custom Mode Switch Card */}
-          <div
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-4 ${
-              isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-white/10'
-            }`}
-          >
-            <label className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-amber-400">
-              <Layers className="w-4 h-4" />
-              0. Custom Layout Mode
-            </label>
-            <div className={`flex items-center justify-between gap-4 p-4 rounded-2xl border ${
-              isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-            }`}>
-              <div className="space-y-1">
-                <p className={`text-sm font-extrabold ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>
-                  Canva Drag & Drop Mode
-                </p>
-                <p className={`text-xs leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Enable free-form text boxes, custom images & drag-and-drop layer position control.
-                </p>
+      {/* CANVA 2-COLUMN STUDIO GRID */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        {/* ========================================================================= */}
+        {/* LEFT COLUMN (xl:col-span-5): FULL CANVA TOOL DRAWER / SIDEBAR            */}
+        {/* ========================================================================= */}
+        <div className={`xl:col-span-5 ${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border rounded-3xl overflow-hidden flex flex-col min-h-[640px] shadow-2xl ${
+          isAppLight ? 'border-slate-200 bg-white' : 'border-white/10 bg-slate-900/90'
+        }`}>
+          {/* Tool Drawer Header */}
+          <div className="p-4 border-b border-white/10 bg-slate-950/60 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-amber-500 text-slate-950 font-black">
+                <Sliders className="w-4 h-4" />
               </div>
-              <button
-                type="button"
-                onClick={() => setIsCustomMode(v => !v)}
-                className={`px-4 py-2.5 rounded-2xl text-sm font-black flex items-center gap-2 transition-all shrink-0 cursor-pointer ${
-                  isCustomMode
-                    ? 'bg-amber-500 text-slate-950 shadow-lg ring-2 ring-amber-400/50'
-                    : isAppLight
-                    ? 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
-                    : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
-                }`}
-              >
-                {isCustomMode ? '🎨 Custom Mode ON' : 'Enable Custom Mode'}
-              </button>
+              <div>
+                <h3 className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                  Canva Design Tools
+                </h3>
+                <p className="text-[11px] text-slate-400">Select a tool tab below to edit post details</p>
+              </div>
             </div>
+
+            {/* Quick Custom Mode Badge/Button */}
+            <button
+              type="button"
+              onClick={() => setIsCustomMode(v => !v)}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer ${
+                isCustomMode
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+              }`}
+            >
+              {isCustomMode ? '🎨 Custom Mode ON' : 'Standard Templates'}
+            </button>
           </div>
 
-          {/* Template Picker */}
-          {!isCustomMode && (
-            <PostTemplateSelector selected={postTemplate} onSelect={setPostTemplate} isAppLight={isAppLight} />
-          )}
+          {/* Tool Drawer Scrollable Tab Rail */}
+          <div className="flex items-center border-b border-white/10 p-2 gap-1 overflow-x-auto bg-slate-950/40 no-scrollbar">
+            {drawerTabs.map((t) => {
+              const Icon = t.icon;
+              const isActive = activeTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTab(t.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                    isActive
+                      ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/40'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Editable Brand Logo & Brand Name */}
-          <div
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-4 ${
-              isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-white/10'
-            }`}
-          >
-            <label className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-amber-400">
-              <User className="w-4 h-4" />
-              1. Brand Name & Custom Logo
-            </label>
+          {/* Tool Drawer Body Content */}
+          <div className="p-5 flex-1 overflow-y-auto space-y-5 max-h-[calc(100vh-16rem)]">
+            {/* --------------------------------------------------------------------- */}
+            {/* TAB 1: TEMPLATES & ASPECT RATIO                                       */}
+            {/* --------------------------------------------------------------------- */}
+            {activeTab === 'templates' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4" />
+                    1. Post Template Preset
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Choose a starting social post design layout or switch to custom canvas mode.
+                  </p>
+                </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-extrabold text-slate-300 mb-1">
-                  Brand Name Text:
-                </label>
-                <input
-                  type="text"
-                  value={customBrandName}
-                  onChange={(e) => setCustomBrandName(e.target.value)}
-                  placeholder="e.g. Physics Plus / Nobel's Classroom"
-                  className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
-                />
-              </div>
+                {!isCustomMode ? (
+                  <PostTemplateSelector selected={postTemplate} onSelect={setPostTemplate} isAppLight={isAppLight} />
+                ) : (
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                    <p className="text-xs font-bold text-amber-300 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>Custom Canvas Drag & Drop Mode Active</span>
+                    </p>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      You are in free-form canvas mode. Add text boxes, custom images, and resize layers freely. Switch off Custom Mode to return to preset cards.
+                    </p>
+                  </div>
+                )}
 
-              <div>
-                <label className="block text-[11px] font-extrabold text-slate-300 mb-1">
-                  Brand Logo Image:
-                </label>
-                <div className="flex items-center gap-3">
-                  {customLogoUrl ? (
-                    <div className="relative shrink-0">
-                      <img src={customLogoUrl} alt="Logo" className="w-12 h-12 rounded-xl object-cover border border-amber-400 bg-black/40 p-1" />
+                {/* Aspect Ratio Selector */}
+                <div className="space-y-2 pt-2 border-t border-white/10">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Aspect Ratio (Post Dimension):
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: '1:1', name: '1:1 Square', desc: 'Instagram / FB Feed' },
+                      { id: '4:5', name: '4:5 Portrait', desc: 'Vertical Mobile Feed' },
+                      { id: '9:16', name: '9:16 Story', desc: 'Reels & Stories' },
+                    ].map((ratio) => (
                       <button
+                        key={ratio.id}
                         type="button"
-                        onClick={() => setCustomLogoUrl('')}
-                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-xs font-black flex items-center justify-center shadow"
+                        onClick={() => setAspectRatio(ratio.id as any)}
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                          aspectRatio === ratio.id
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md ring-2 ring-amber-400/50'
+                            : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
                       >
-                        ✕
+                        <span className="block text-xs font-black">{ratio.name}</span>
+                        <span className={`block text-[10px] mt-0.5 ${aspectRatio === ratio.id ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>{ratio.desc}</span>
                       </button>
-                    </div>
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 font-black text-sm flex items-center justify-center shrink-0">
-                      {customBrandName ? customBrandName.charAt(0).toUpperCase() : 'B'}
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                </div>
 
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer flex items-center justify-center gap-2 border bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800 transition-all">
-                      <Upload className="w-4 h-4 text-amber-400" />
-                      <span>Upload Logo File</span>
-                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                    </label>
-                    <input
-                      type="text"
-                      value={customLogoUrl.startsWith('data:') ? '' : customLogoUrl}
-                      onChange={(e) => setCustomLogoUrl(e.target.value)}
-                      placeholder="...or paste image URL"
-                      className="w-full border rounded-xl px-3 py-1.5 text-xs font-mono bg-slate-950 border-slate-800 text-slate-300 focus:outline-none focus:border-amber-500"
-                    />
+                {/* Custom Mode Toggle Card */}
+                <div className="p-4 rounded-2xl border bg-slate-950 border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-white">Canva Custom Mode</p>
+                      <p className="text-[11px] text-slate-400">Enable draggable box elements & layer editor</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomMode(v => !v)}
+                      className={`px-3 py-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                        isCustomMode
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                          : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {isCustomMode ? 'ON' : 'OFF'}
+                    </button>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            )}
 
-          {/* Editable Question Stem & Options A, B, C, D */}
-          <div
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-4 ${
-              isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-white/10'
-            }`}
-          >
-            <label className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-amber-400">
-              <Type className="w-4 h-4" />
-              2. Edit Question & Options A, B, C, D
-            </label>
+            {/* --------------------------------------------------------------------- */}
+            {/* TAB 2: EDIT QUESTION & OPTIONS A–D                                    */}
+            {/* --------------------------------------------------------------------- */}
+            {activeTab === 'content' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                    <Type className="w-4 h-4" />
+                    Question Stem & Options A, B, C, D
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Live editable inputs — changes render immediately on the right preview.
+                  </p>
+                </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-extrabold text-slate-300 mb-1">
-                  Question Stem:
-                </label>
-                <textarea
-                  value={customStem}
-                  onChange={(e) => setCustomStem(e.target.value)}
-                  rows={2}
-                  className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none leading-relaxed"
-                />
-              </div>
+                {/* Question Stem */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Question Stem Text (LaTeX & Bangla aware):
+                  </label>
+                  <textarea
+                    value={customStem}
+                    onChange={(e) => setCustomStem(e.target.value)}
+                    rows={3}
+                    className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none leading-relaxed"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[11px] font-extrabold text-slate-300 mb-2">
-                  Options A / B / C / D (Live Editable):
-                </label>
-                <div className="space-y-2">
+                {/* Options A, B, C, D */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Options A / B / C / D Text & Correct Answer Mark:
+                  </label>
                   {customOptions.map((opt, idx) => {
                     const isCorr = opt.isCorrect || customAnswerKey.toLowerCase() === opt.key.toLowerCase();
                     return (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-xl bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow">
-                          {opt.key || String.fromCharCode(65 + idx)}
-                        </span>
+                      <div key={idx} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-md bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center">
+                              {opt.key || String.fromCharCode(65 + idx)}
+                            </span>
+                            <span>Option {opt.key || String.fromCharCode(65 + idx)}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomAnswerKey(opt.key);
+                              setCustomOptions(prev => prev.map((o, i) => ({ ...o, isCorrect: i === idx })));
+                            }}
+                            className={`px-3 py-1 rounded-lg text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
+                              isCorr
+                                ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                            }`}
+                          >
+                            {isCorr && <Check className="w-3 h-3 stroke-[3]" />}
+                            <span>{isCorr ? '✓ Correct' : 'Mark Correct'}</span>
+                          </button>
+                        </div>
                         <input
                           type="text"
                           value={opt.text}
@@ -643,98 +720,381 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                             const val = e.target.value;
                             setCustomOptions(prev => prev.map((o, i) => i === idx ? { ...o, text: val } : o));
                           }}
-                          className="flex-1 border rounded-xl px-3 py-2 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                          className="w-full border rounded-xl px-3 py-2 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
                         />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCustomAnswerKey(opt.key);
-                            setCustomOptions(prev => prev.map((o, i) => ({ ...o, isCorrect: i === idx })));
-                          }}
-                          className={`px-3 py-2 rounded-xl text-xs font-extrabold border flex items-center gap-1 transition-all cursor-pointer ${
-                            isCorr
-                              ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-black shadow-md'
-                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                          }`}
-                        >
-                          {isCorr && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                          <span>Correct</span>
-                        </button>
                       </div>
                     );
                   })}
                 </div>
+
+                {/* Display Toggles */}
+                <div className="pt-3 border-t border-white/10 space-y-2">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Card Display Options:
+                  </label>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-xs text-slate-300 font-bold">Highlight Correct Answer on Card</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAnswerKey(v => !v)}
+                      className={`px-3 py-1 rounded-lg text-xs font-black border transition-all cursor-pointer ${
+                        showAnswerKey ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-900 text-slate-400 border-slate-800'
+                      }`}
+                    >
+                      {showAnswerKey ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            )}
 
-          {/* Question Selector */}
-          <div
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border space-y-4 ${
-              isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-white/10'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-amber-400">
-                <BookOpen className="w-5 h-5" />
-                3. Choose From Deck ({filteredPickerItems.length} / {items.length})
-              </label>
-            </div>
+            {/* --------------------------------------------------------------------- */}
+            {/* TAB 3: CHOOSE FROM DECK                                               */}
+            {/* --------------------------------------------------------------------- */}
+            {activeTab === 'deck' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    Select Question From Active Deck ({filteredPickerItems.length} / {items.length})
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Click any question to load its stem and options into the social post.
+                  </p>
+                </div>
 
-            <div className="space-y-2.5">
-              <div className="relative">
-                <Search className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-500" />
-                <input
-                  type="text"
-                  value={pickerSearch}
-                  onChange={(e) => setPickerSearch(e.target.value)}
-                  placeholder="Search questions in this deck..."
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border text-sm bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                />
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
+                  <input
+                    type="text"
+                    value={pickerSearch}
+                    onChange={(e) => setPickerSearch(e.target.value)}
+                    placeholder="Search stems, options, topics..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                  {filteredPickerItems.map(({ question: q, fullIndex }) => {
+                    const isSelected = fullIndex === selectedQuestionIndex;
+                    return (
+                      <button
+                        key={q.id || fullIndex}
+                        type="button"
+                        onClick={() => setSelectedQuestionIndex(fullIndex)}
+                        className={`w-full p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 text-xs ${
+                          isSelected
+                            ? 'bg-amber-500/15 border-amber-400 text-amber-300 font-bold shadow-md'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                        }`}
+                      >
+                        <span className="truncate font-semibold flex-1">
+                          #{fullIndex + 1}. <MathText text={q.stem} />
+                        </span>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-              {filteredPickerItems.map(({ question: q, fullIndex }) => {
-                const isSelected = fullIndex === selectedQuestionIndex;
-                return (
-                  <button
-                    key={q.id || fullIndex}
-                    type="button"
-                    onClick={() => setSelectedQuestionIndex(fullIndex)}
-                    className={`w-full p-3.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 text-sm ${
-                      isSelected
-                        ? 'bg-amber-500/15 border-amber-400 text-amber-300 font-bold shadow-md'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                    }`}
-                  >
-                    <span className="truncate font-semibold">
-                      #{fullIndex + 1}. <MathText text={q.stem} />
-                    </span>
-                    {isSelected && <CheckCircle2 className="w-5 h-5 text-amber-400 shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
+            {/* --------------------------------------------------------------------- */}
+            {/* TAB 4: BRANDING & LOGO                                                */}
+            {/* --------------------------------------------------------------------- */}
+            {activeTab === 'branding' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Brand Identity & Header Logo
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Customize your channel brand name, header title, and custom logo image.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Brand Name / Channel Name:
+                  </label>
+                  <input
+                    type="text"
+                    value={customBrandName}
+                    onChange={(e) => setCustomBrandName(e.target.value)}
+                    placeholder="e.g. Nobel's Classroom / SSC Science Studio"
+                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Brand Logo Image:
+                  </label>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      {customLogoUrl ? (
+                        <div className="relative shrink-0">
+                          <img src={customLogoUrl} alt="Logo" className="w-14 h-14 rounded-2xl object-cover border border-amber-400 bg-black/40 p-1" />
+                          <button
+                            type="button"
+                            onClick={() => setCustomLogoUrl('')}
+                            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-xs font-black flex items-center justify-center shadow"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 font-black text-lg flex items-center justify-center shrink-0">
+                          {customBrandName ? customBrandName.charAt(0).toUpperCase() : 'B'}
+                        </div>
+                      )}
+                      <label className="flex-1 px-4 py-3 rounded-xl text-xs font-black cursor-pointer flex items-center justify-center gap-2 border bg-amber-500 text-slate-950 border-amber-400 shadow-md hover:brightness-110 transition-all">
+                        <Upload className="w-4 h-4 stroke-[2.5]" />
+                        <span>Upload Logo File</span>
+                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                      </label>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={customLogoUrl.startsWith('data:') ? '' : customLogoUrl}
+                      onChange={(e) => setCustomLogoUrl(e.target.value)}
+                      placeholder="...or paste image URL"
+                      className="w-full border rounded-xl px-3 py-2 text-xs font-mono bg-slate-950 border-slate-800 text-slate-300 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Header Subtitle / Tagline:
+                  </label>
+                  <input
+                    type="text"
+                    value={customHeaderTitle}
+                    onChange={(e) => setCustomHeaderTitle(e.target.value)}
+                    placeholder="e.g. আজকের কুইজ / Daily MCQ Prep"
+                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* --------------------------------------------------------------------- */}
+            {/* TAB 5: QUIZ TIME REACTION EMOJIS                                      */}
+            {/* --------------------------------------------------------------------- */}
+            {activeTab === 'reactions' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                    <Smile className="w-4 h-4" />
+                    Quiz Time Reaction Grid Settings
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Customize titles and 4 reaction emojis for the Quiz Time template card.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Wordmark Header Title:
+                  </label>
+                  <input
+                    type="text"
+                    value={quizTitleText}
+                    onChange={(e) => setQuizTitleText(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Reaction Call-To-Action:
+                  </label>
+                  <input
+                    type="text"
+                    value={quizCtaText}
+                    onChange={(e) => setQuizCtaText(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Comment Prompt Footer:
+                  </label>
+                  <input
+                    type="text"
+                    value={quizSubCtaText}
+                    onChange={(e) => setQuizSubCtaText(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2.5 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-2">
+                    Reaction Emojis for Options A / B / C / D:
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {REACTION_ORDER.map((letter) => (
+                      <div key={letter} className="text-center space-y-1">
+                        <span className="text-[10px] font-mono text-slate-400 uppercase font-black">Option {letter}</span>
+                        <input
+                          type="text"
+                          value={reactionEmojis[letter]}
+                          onChange={(e) => setReactionEmojis(prev => ({ ...prev, [letter]: e.target.value }))}
+                          className="w-full text-center border rounded-xl px-2 py-2 text-lg bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --------------------------------------------------------------------- */}
+            {/* TAB 6: THEME & BACKGROUND GRADIENTS                                   */}
+            {/* --------------------------------------------------------------------- */}
+            {activeTab === 'theme' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Background Theme & Custom Image
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Pick background colors or upload custom graphics.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-2">
+                    Background Color Presets:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'gradient_amber', name: 'Midnight Gold', desc: 'Dark Amber Sweep' },
+                      { id: 'gradient_blue', name: 'Cyber Blue', desc: 'Deep Royal Blue' },
+                      { id: 'gradient_emerald', name: 'Forest Emerald', desc: 'Emerald Teal' },
+                      { id: 'clean_light', name: 'Warm Light', desc: 'Bright Clean' },
+                      { id: 'pure_dark', name: 'Pure Dark', desc: 'Deep Obsidian' },
+                    ].map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setPostBgColor(b.id)}
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                          postBgColor === b.id
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 font-bold'
+                            : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        <span className="block text-xs font-black">{b.name}</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">{b.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {isCustomMode && (
+                  <div className="pt-3 border-t border-white/10 space-y-3">
+                    <label className="block text-xs font-bold text-slate-300">
+                      Custom Background Image (Custom Mode):
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <label className="px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer flex items-center gap-2 border bg-amber-500 text-slate-950 border-amber-400 shadow-md">
+                        <Upload className="w-4 h-4 stroke-[2.5]" />
+                        <span>Upload BG File</span>
+                        <input type="file" accept="image/*" onChange={handleCustomBgUpload} className="hidden" />
+                      </label>
+                      {customDesign.bgImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }))}
+                          className="px-3 py-2 rounded-xl text-xs font-bold text-rose-400 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20"
+                        >
+                          Clear Image
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* --------------------------------------------------------------------- */}
+            {/* TAB 7: LAYERS & TEXT BOXES (CUSTOM MODE)                              */}
+            {/* --------------------------------------------------------------------- */}
+            {activeTab === 'layers' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    Layer & Text Box Controls
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Add custom text boxes, logos, and adjust layer ordering.
+                  </p>
+                </div>
+
+                {isCustomMode ? (
+                  <SlideTextBoxPanel
+                    boxes={customDesign.boxes}
+                    selectedId={selectedBoxId}
+                    appTheme={appTheme}
+                    config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
+                    textBoxScope="global"
+                    hasTextBoxOverride={false}
+                    onChangeTextBoxScope={() => {}}
+                    onRevertTextBoxOverride={() => {}}
+                    onApplySlideLayoutToAll={() => {}}
+                    onAddBox={addBox}
+                    onAddElement={addElement}
+                    onAddLayout={addLayout}
+                    onUpdateBox={updateBox}
+                    onDeleteBox={deleteBox}
+                    onDuplicateBox={duplicateBox}
+                    onReorderBox={reorderBox}
+                    onSelectBox={setSelectedBoxId}
+                    onReset={resetDesign}
+                    onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
+                    onClose={() => setActiveTab('templates')}
+                  />
+                ) : (
+                  <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 text-center">
+                    <p className="text-xs text-slate-400">
+                      Enable Canva Custom Mode to edit individual text boxes and elements freely on the canvas.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomMode(true)}
+                      className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-md"
+                    >
+                      Enable Custom Canvas Mode
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* RIGHT 7 COLUMNS: LIVE CANVAS PREVIEW & CANVA DRAWER TOGGLE */}
-        <div className="xl:col-span-7 flex flex-col items-center justify-center space-y-4">
-          <div className="flex items-center justify-between w-full max-w-[500px]">
+        {/* ========================================================================= */}
+        {/* RIGHT COLUMN (xl:col-span-7): FIXED / STICKY LIVE CANVAS PREVIEW         */}
+        {/* ========================================================================= */}
+        <div className="xl:col-span-7 flex flex-col items-center justify-start space-y-4 xl:sticky xl:top-20">
+          {/* Canvas Top Bar */}
+          <div className="flex items-center justify-between w-full max-w-[500px] px-1">
             <span className="text-xs font-bold flex items-center gap-1.5 text-slate-300">
               <Sparkles className="w-4 h-4 text-amber-400" />
               <span>Live Social Canvas ({aspectRatio})</span>
             </span>
+
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsCanvaDrawerOpen(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer"
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>Open Canva Drawer</span>
-              </button>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-slate-400">
+                {postDesignW}×{postDesignH}px
+              </span>
 
               {isCustomMode && (
                 <button
@@ -747,13 +1107,13 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   }`}
                 >
                   {isBoxEditMode ? <Eye className="w-3 h-3" /> : <PenTool className="w-3 h-3" />}
-                  {isBoxEditMode ? 'Preview' : 'Edit Boxes'}
+                  {isBoxEditMode ? 'Preview Mode' : 'Edit Box Handles'}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Live Scaled Canvas Card */}
+          {/* Live Scaled Canvas Card Container */}
           <div className="w-full max-w-[500px] relative">
             {!isCustomMode ? (
               postTemplate === 'quiz_time' ? (
@@ -851,361 +1211,6 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           </div>
         </div>
       </div>
-
-      {/* CANVA-STYLE COLLAPSIBLE RIGHT STUDIO PANEL (NON-MODAL) */}
-      {isCanvaDrawerOpen && (
-        <div className="fixed right-4 top-24 bottom-6 w-[430px] max-w-[92vw] z-40 bg-slate-950/95 backdrop-blur-2xl border border-white/15 rounded-3xl shadow-2xl flex flex-col animate-slideInRight pointer-events-auto overflow-hidden">
-          {/* Panel Header */}
-          <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-slate-900/60">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-amber-500 text-slate-950 font-black shadow-md">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-white">Canva Studio Panel</h3>
-                <p className="text-[11px] text-slate-400">Live edit options A–D, brand & layout</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsCanvaDrawerOpen(false)}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-all cursor-pointer"
-              title="Collapse Side Panel"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-            {/* Tab Navigation */}
-            <div className="flex items-center border-b border-white/10 p-2 gap-1 overflow-x-auto bg-slate-900/50">
-              {[
-                { id: 'branding', label: 'Brand', icon: User },
-                { id: 'content', label: 'Question', icon: Type },
-                { id: 'reactions', label: 'Emojis', icon: Smile },
-                { id: 'background', label: 'Theme', icon: Sliders },
-                { id: 'layers', label: 'Boxes', icon: Layers },
-              ].map((t) => {
-                const Icon = t.icon;
-                const isActive = canvaTab === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setCanvaTab(t.id as any)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
-                      isActive
-                        ? 'bg-amber-500 text-slate-950 shadow-md'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{t.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Tab Body */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-6">
-              {/* TAB 1: BRANDING */}
-              {canvaTab === 'branding' && (
-                <div className="space-y-5">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
-                    Brand Logo & Name Settings
-                  </h4>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      Brand Name:
-                    </label>
-                    <input
-                      type="text"
-                      value={customBrandName}
-                      onChange={(e) => setCustomBrandName(e.target.value)}
-                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      Brand Logo Image:
-                    </label>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        {customLogoUrl ? (
-                          <img src={customLogoUrl} alt="Logo" className="w-14 h-14 rounded-2xl object-cover border border-amber-400 bg-black/40 p-1" />
-                        ) : (
-                          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 font-black text-lg flex items-center justify-center">
-                            {customBrandName ? customBrandName.charAt(0).toUpperCase() : 'B'}
-                          </div>
-                        )}
-                        <label className="px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer flex items-center gap-2 border bg-amber-500 text-slate-950 border-amber-400 shadow-md hover:brightness-110 transition-all">
-                          <Upload className="w-4 h-4 stroke-[2.5]" />
-                          <span>Upload Image File</span>
-                          <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                        </label>
-                      </div>
-
-                      <input
-                        type="text"
-                        value={customLogoUrl.startsWith('data:') ? '' : customLogoUrl}
-                        onChange={(e) => setCustomLogoUrl(e.target.value)}
-                        placeholder="...or paste image URL"
-                        className="w-full border rounded-xl px-3 py-2 text-xs font-mono bg-slate-900 border-slate-800 text-slate-300 focus:outline-none focus:border-amber-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      Header Tagline / Subtitle:
-                    </label>
-                    <input
-                      type="text"
-                      value={customHeaderTitle}
-                      onChange={(e) => setCustomHeaderTitle(e.target.value)}
-                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: CONTENT & OPTIONS */}
-              {canvaTab === 'content' && (
-                <div className="space-y-5">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
-                    Question Stem & Options A, B, C, D
-                  </h4>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      Question Stem:
-                    </label>
-                    <textarea
-                      value={customStem}
-                      onChange={(e) => setCustomStem(e.target.value)}
-                      rows={3}
-                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none leading-relaxed"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="block text-xs font-bold text-slate-300">
-                      Options A / B / C / D Text & Correct Answer:
-                    </label>
-                    {customOptions.map((opt, idx) => {
-                      const isCorr = opt.isCorrect || customAnswerKey.toLowerCase() === opt.key.toLowerCase();
-                      return (
-                        <div key={idx} className="space-y-1 p-3 rounded-2xl bg-slate-900 border border-slate-800">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-amber-400">
-                              Option {opt.key || String.fromCharCode(65 + idx)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCustomAnswerKey(opt.key);
-                                setCustomOptions(prev => prev.map((o, i) => ({ ...o, isCorrect: i === idx })));
-                              }}
-                              className={`px-3 py-1 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
-                                isCorr
-                                  ? 'bg-emerald-500 text-slate-950 border-emerald-400'
-                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                              }`}
-                            >
-                              {isCorr ? '✓ Correct Answer' : 'Mark Correct'}
-                            </button>
-                          </div>
-                          <input
-                            type="text"
-                            value={opt.text}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCustomOptions(prev => prev.map((o, i) => i === idx ? { ...o, text: val } : o));
-                            }}
-                            className="w-full border rounded-xl px-3 py-2 text-xs font-bold bg-slate-950 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: REACTIONS */}
-              {canvaTab === 'reactions' && (
-                <div className="space-y-5">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
-                    Quiz Time Reaction Grid Settings
-                  </h4>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      Wordmark Header Title:
-                    </label>
-                    <input
-                      type="text"
-                      value={quizTitleText}
-                      onChange={(e) => setQuizTitleText(e.target.value)}
-                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      Reaction Call-To-Action:
-                    </label>
-                    <input
-                      type="text"
-                      value={quizCtaText}
-                      onChange={(e) => setQuizCtaText(e.target.value)}
-                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                      Comment Prompt Footer:
-                    </label>
-                    <input
-                      type="text"
-                      value={quizSubCtaText}
-                      onChange={(e) => setQuizSubCtaText(e.target.value)}
-                      className="w-full border rounded-xl px-4 py-3 text-xs font-bold bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-2">
-                      Reaction Emojis (A / B / C / D):
-                    </label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {REACTION_ORDER.map((letter) => (
-                        <div key={letter} className="text-center space-y-1">
-                          <span className="text-[10px] font-mono text-slate-400 uppercase">{letter}</span>
-                          <input
-                            type="text"
-                            value={reactionEmojis[letter]}
-                            onChange={(e) => setReactionEmojis(prev => ({ ...prev, [letter]: e.target.value }))}
-                            className="w-full text-center border rounded-xl px-2 py-2 text-lg bg-slate-900 border-slate-800 text-white focus:border-amber-500 focus:outline-none"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 4: LAYERS */}
-              {canvaTab === 'layers' && (
-                <div className="space-y-5">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
-                    Text Box Layers (Custom Mode)
-                  </h4>
-                  {isCustomMode ? (
-                    <SlideTextBoxPanel
-                      boxes={customDesign.boxes}
-                      selectedId={selectedBoxId}
-                      appTheme={appTheme}
-                      config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
-                      textBoxScope="global"
-                      hasTextBoxOverride={false}
-                      onChangeTextBoxScope={() => {}}
-                      onRevertTextBoxOverride={() => {}}
-                      onApplySlideLayoutToAll={() => {}}
-                      onAddBox={addBox}
-                      onAddElement={addElement}
-                      onAddLayout={addLayout}
-                      onUpdateBox={updateBox}
-                      onDeleteBox={deleteBox}
-                      onDuplicateBox={duplicateBox}
-                      onReorderBox={reorderBox}
-                      onSelectBox={setSelectedBoxId}
-                      onReset={resetDesign}
-                      onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
-                      onClose={() => setIsCanvaDrawerOpen(false)}
-                    />
-                  ) : (
-                    <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 text-center">
-                      <p className="text-xs text-slate-400">
-                        Enable Custom Canva Drag & Drop mode to edit individual text boxes and layers.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setIsCustomMode(true)}
-                        className="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-md"
-                      >
-                        Enable Custom Mode
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TAB 5: BACKGROUND & THEME */}
-              {canvaTab === 'background' && (
-                <div className="space-y-5">
-                  <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider">
-                    Aspect Ratio & Background Theme
-                  </h4>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-2">
-                      Aspect Ratio:
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: '1:1', name: '1:1 Square' },
-                        { id: '4:5', name: '4:5 Feed' },
-                        { id: '9:16', name: '9:16 Story' },
-                      ].map((ratio) => (
-                        <button
-                          key={ratio.id}
-                          type="button"
-                          onClick={() => setAspectRatio(ratio.id as any)}
-                          className={`py-2.5 px-3 rounded-xl border text-xs font-black transition-all ${
-                            aspectRatio === ratio.id
-                              ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
-                              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                          }`}
-                        >
-                          {ratio.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-2">
-                      Background Gradient Preset:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: 'gradient_amber', name: 'Midnight Gold' },
-                        { id: 'gradient_blue', name: 'Cyber Blue' },
-                        { id: 'gradient_emerald', name: 'Forest Emerald' },
-                        { id: 'clean_light', name: 'Warm Light' },
-                      ].map((b) => (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={() => setPostBgColor(b.id)}
-                          className={`p-3 rounded-xl border text-xs font-bold transition-all ${
-                            postBgColor === b.id
-                              ? 'bg-amber-500/20 text-amber-300 border-amber-400'
-                              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                          }`}
-                        >
-                          {b.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-      )}
     </div>
   );
 };

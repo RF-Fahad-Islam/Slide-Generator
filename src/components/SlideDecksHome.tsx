@@ -306,9 +306,9 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
             <Zap className="w-6 h-6 text-amber-400" />
             <span>Main Studio Tools & Modules</span>
           </h2>
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-extrabold shadow-sm">
-            6 Tools
-          </span>
+            <span className="text-xs font-mono px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-extrabold shadow-sm">
+              5 Tools
+            </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
@@ -353,71 +353,6 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
               {/* Mini slide mock */}
               <div className="w-full max-w-sm flex-shrink-0">
                 <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 border border-white/15 shadow-2xl ring-1 ring-white/10 group-hover:scale-[1.02] transition-transform duration-300">
-                  <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-amber-500/25 blur-3xl" />
-                  <div className="absolute inset-0 p-3.5 flex flex-col justify-center gap-2">
-                    <div className="flex items-center justify-between">
-                      <div className="h-1.5 w-1/3 rounded-full bg-amber-400/90" />
-                      <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                      </div>
-                    </div>
-                    <div className="h-3 w-2/3 rounded-md bg-white/15" />
-                    <div className="grid grid-cols-2 gap-1.5 mt-1">
-                      <div className="h-3 rounded-lg bg-white/10 border border-white/15" />
-                      <div className="h-3 rounded-lg bg-amber-400/20 border border-amber-400/40" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <div className="h-3 rounded-lg bg-white/10 border border-white/15" />
-                      <div className="h-3 rounded-lg bg-white/10 border border-white/15" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tool 2 (FEATURED): Social Media Posting Card Generator */}
-          <div
-            onClick={() => onNavigateTab('social')}
-            className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} md:col-span-2 lg:col-span-2 p-7 lg:p-8 border transition-all duration-300 cursor-pointer group overflow-hidden relative flex flex-col justify-between gap-6 ${
-              isAppLight
-                ? 'hover:border-indigo-400'
-                : 'bg-slate-900/60 border-white/10 hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1.5'
-            }`}
-          >
-            <div
-              className={`absolute -bottom-24 -right-24 w-72 h-72 rounded-full blur-3xl pointer-events-none ${
-                isAppLight ? 'bg-amber-200/40' : 'bg-amber-500/10'
-              }`}
-            />
-            <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-              <div className="flex-1 space-y-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="p-3.5 rounded-2xl bg-amber-500 text-slate-950 font-black shadow-lg group-hover:scale-110 transition-transform">
-                    <Presentation className="w-7 h-7 stroke-[2.5]" />
-                  </div>
-                  <span className="text-xs font-mono font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                    16:9 HD Slides
-                  </span>
-                </div>
-                <div>
-                  <h3 className={`text-xl font-black flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                    <span>16:9 Slide Studio</span>
-                    <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
-                  </h3>
-                  <p className={`text-sm mt-1.5 leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Full-screen 1920x1080 slide deck generator with answer reveal, live writing classroom mode, LaTeX math, and PNG export.
-                  </p>
-                </div>
-                <div>
-                  <CtaPill label="Open Slide Studio" accent="amber" />
-                </div>
-              </div>
-
-              {/* Mini slide mock */}
-              <div className="w-full max-w-sm flex-shrink-0">
-                <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 border border-white/10 shadow-2xl ring-1 ring-white/10 group-hover:scale-[1.02] transition-transform duration-300">
                   <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-amber-500/25 blur-3xl" />
                   <div className="absolute inset-0 p-3.5 flex flex-col justify-center gap-2">
                     <div className="flex items-center justify-between">
