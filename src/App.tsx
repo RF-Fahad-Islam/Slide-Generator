@@ -342,6 +342,18 @@ export default function App() {
     });
   };
 
+  const moveSlideBox = (dragId: string, overId: string) => {
+    setTextBoxes(boxes => {
+      const from = boxes.findIndex(b => b.id === dragId);
+      const to = boxes.findIndex(b => b.id === overId);
+      if (from < 0 || to < 0 || from === to) return boxes;
+      const next = [...boxes];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
   const resetSlideTextBoxes = () => {
     if (!window.confirm('Reset the slide text boxes to the preset template layout?')) return;
     setTextBoxes(() => templateToTextBoxes(config));
@@ -1262,6 +1274,7 @@ export default function App() {
                         onDeleteBox={deleteSlideBox}
                         onDuplicateBox={duplicateSlideBox}
                         onReorderBox={reorderSlideBox}
+                        onMoveBox={moveSlideBox}
                         onSelectBox={setSelectedTextBoxId}
                         onReset={resetSlideTextBoxes}
                         onClearAll={clearSlideTextBoxes}

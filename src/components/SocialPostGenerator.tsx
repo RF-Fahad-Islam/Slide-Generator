@@ -32,6 +32,7 @@ import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from '../utils/slideElements';
 import { PostTemplateSelector } from './social-post/PostTemplateSelector';
 import { ClassicQuizCard } from './social-post/ClassicQuizCard';
 import { QuizTimeCard } from './social-post/QuizTimeCard';
+import { PostModeSelector, SocialPostMode } from './social-post/PostModeSelector';
 import { PostTemplateId, ReactionEmojiSet, DEFAULT_REACTION_EMOJIS, REACTION_ORDER } from './social-post/types';
 
 interface SocialPostGeneratorProps {
@@ -217,9 +218,10 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     answer: customAnswerKey || currentItem.answer,
   };
 
-  // Measure canvas width
+  // Measure canvas width (the actual card, not its wrapper, so the scale matches
+  // the visible canvas even when the card is capped at a narrower max-width)
   useEffect(() => {
-    const el = postFrameRef.current;
+    const el = isCustomMode ? postCanvasRef.current : postFrameRef.current;
     if (!el) return;
     const update = () => setCanvasWidth(el.getBoundingClientRect().width);
     update();
@@ -326,6 +328,18 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       if (target < 0 || target >= prev.boxes.length) return prev;
       const boxes = [...prev.boxes];
       [boxes[idx], boxes[target]] = [boxes[target], boxes[idx]];
+      return { ...prev, boxes };
+    });
+  };
+
+  const moveBox = (dragId: string, overId: string) => {
+    setCustomDesign(prev => {
+      const from = prev.boxes.findIndex(b => b.id === dragId);
+      const to = prev.boxes.findIndex(b => b.id === overId);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const boxes = [...prev.boxes];
+      const [moved] = boxes.splice(from, 1);
+      boxes.splice(to, 0, moved);
       return { ...prev, boxes };
     });
   };
@@ -532,70 +546,21 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         </div>
       </div>
 
-      {/* DEDICATED SOCIAL POST MODE SELECTOR STRIP */}
-      <div className={`p-2.5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${
-        isAppLight ? 'bg-white/80 border-slate-200 shadow-sm' : 'bg-slate-900/60 border-slate-800 shadow-xl'
-      }`}>
-        <div className="flex items-center gap-2.5 px-3 py-1">
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span className={`text-xs font-black uppercase tracking-wider ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-            Social Post Mode:
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setPostTemplate('classic');
-              setIsCustomMode(false);
-            }}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              postTemplate === 'classic' && !isCustomMode
-                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/50'
-                : isAppLight
-                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            <LayoutTemplate className="w-4 h-4" />
-            <span>Classic Quiz Card</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setPostTemplate('quiz_time');
-              setIsCustomMode(false);
-            }}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              postTemplate === 'quiz_time' && !isCustomMode
-                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/50'
-                : isAppLight
-                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            <Smile className="w-4 h-4" />
-            <span>Quiz Time Reactions</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsCustomMode(true)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              isCustomMode
-                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/50'
-                : isAppLight
-                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Free-Form Drag & Drop</span>
-          </button>
-        </div>
-      </div>
+      {/* DEDICATED SOCIAL POST MODE SELECTOR (COLLAPSIBLE CARD STRIP) */}
+      <PostModeSelector
+        mode={isCustomMode ? 'custom' : postTemplate}
+        isAppLight={isAppLight}
+        onSelect={(m: SocialPostMode) => {
+          if (m === 'custom') {
+            setIsCustomMode(true);
+            setIsBoxEditMode(true);
+          } else {
+            setPostTemplate(m);
+            setIsCustomMode(false);
+            setIsBoxEditMode(false);
+          }
+        }}
+      />
 
       {/* 2-COLUMN STUDIO GRID */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
@@ -1243,6 +1208,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   onDeleteBox={deleteBox}
                   onDuplicateBox={duplicateBox}
                   onReorderBox={reorderBox}
+                  onMoveBox={moveBox}
                   onSelectBox={setSelectedBoxId}
                   onReset={resetDesign}
                   onClearAll={() => setCustomDesign(prev => ({ ...prev, boxes: [] }))}
@@ -1365,26 +1331,24 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         currentIndex={selectedQuestionIndex}
                         showAnswerHighlight={showAnswerKey}
                       />
+
+                      {isBoxEditMode && (
+                        <SlideTextBoxOverlay
+                          boxes={customDesign.boxes}
+                          selectedId={selectedBoxId}
+                          item={effectiveItem}
+                          config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
+                          currentIndex={selectedQuestionIndex}
+                          scale={canvasWidth > 0 ? canvasWidth / postDesignW : 1}
+                          onSelect={setSelectedBoxId}
+                          onMove={(id, x, y) => updateBox(id, { x, y })}
+                          onResize={(id, patch) => updateBox(id, patch)}
+                          designW={postDesignW}
+                          designH={postDesignH}
+                        />
+                      )}
                     </div>
                   </div>
-
-                  {isBoxEditMode && (
-                    <div className="absolute inset-0 z-20">
-                      <SlideTextBoxOverlay
-                        boxes={customDesign.boxes}
-                        selectedId={selectedBoxId}
-                        item={effectiveItem}
-                        config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl, headerTitle: customHeaderTitle }}
-                        currentIndex={selectedQuestionIndex}
-                        scale={canvasWidth > 0 ? postDesignW / canvasWidth : 1}
-                        onSelect={setSelectedBoxId}
-                        onMove={(id, x, y) => updateBox(id, { x, y })}
-                        onResize={(id, patch) => updateBox(id, patch)}
-                        designW={postDesignW}
-                        designH={postDesignH}
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             )}

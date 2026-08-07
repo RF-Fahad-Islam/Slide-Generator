@@ -726,15 +726,15 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                         : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleQuestionSelect(question.id);
                         }}
-                        className="hover:scale-110 transition-transform cursor-pointer"
+                        className="hover:scale-110 transition-transform cursor-pointer shrink-0"
                       >
                         {isChecked ? (
                           <CheckSquare className="w-6 h-6 text-amber-500 fill-amber-500/20" />
@@ -743,18 +743,18 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                         )}
                       </button>
 
-                      <span className={`px-2.5 py-1 rounded font-mono text-sm font-bold border ${
+                      <span className={`px-2.5 py-1 rounded font-mono text-sm font-bold border shrink-0 ${
                         isAppLight ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-slate-900 text-amber-300 border-slate-800'
                       }`}>
                         #{idx + 1}
                       </span>
 
-                      <span className={`text-sm font-medium ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <span className={`text-sm font-medium truncate ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                         Deck: <strong className={isAppLight ? 'text-slate-900' : 'text-slate-200'}>{deckName}</strong>
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
                       <button
                         type="button"
                         title="Open in Social Post Generator"

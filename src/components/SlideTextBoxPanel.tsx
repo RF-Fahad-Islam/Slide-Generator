@@ -1,4 +1,19 @@
 import React, { useRef, useState, useEffect } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 import { DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
 import { SLIDE_BOX_BINDS, SLIDE_BOX_COLOR_PRESETS } from '../utils/slideTextBoxes';
 import { FONT_PRESETS } from '../utils/fontPresets';
@@ -80,11 +95,100 @@ interface SlideTextBoxPanelProps {
   onDeleteBox: (id: string) => void;
   onDuplicateBox: (id: string) => void;
   onReorderBox: (id: string, dir: 'up' | 'down') => void;
+  onMoveBox?: (dragId: string, overId: string) => void;
   onSelectBox: (id: string | null) => void;
   onReset: () => void;
   onClearAll: () => void;
   onClose: () => void;
 }
+
+interface SortableLayerRowProps {
+  box: SlideTextBox;
+  arrIdx: number;
+  isSel: boolean;
+  isTop: boolean;
+  isBottom: boolean;
+  isAppLight: boolean;
+  onSelectBox: (id: string) => void;
+  onReorderBox: (id: string, dir: 'up' | 'down') => void;
+}
+
+const SortableLayerRow: React.FC<SortableLayerRowProps> = ({
+  box,
+  arrIdx,
+  isSel,
+  isTop,
+  isBottom,
+  isAppLight,
+  onSelectBox,
+  onReorderBox,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: box.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      onClick={() => onSelectBox(box.id)}
+      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer ${
+        isDragging ? 'opacity-40' : ''
+      } ${
+        isSel
+          ? isAppLight
+            ? 'bg-amber-50 border-amber-400'
+            : 'bg-amber-500/10 border-amber-500/50'
+          : isAppLight
+          ? 'bg-white border-slate-200 hover:border-slate-300'
+          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+      }`}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        title="Drag to reorder layer"
+        className={`p-1 rounded-md shrink-0 cursor-grab active:cursor-grabbing touch-none ${
+          isAppLight ? 'text-slate-400 hover:bg-slate-200 hover:text-slate-700' : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="w-3.5 h-3.5" />
+      </button>
+      <span className={`w-5 h-5 rounded-md text-[9px] font-black flex items-center justify-center shrink-0 ${
+        isSel ? 'bg-amber-500 text-slate-950' : isAppLight ? 'bg-slate-200 text-slate-600' : 'bg-slate-800 text-slate-400'
+      }`}>
+        {arrIdx + 1}
+      </span>
+      <span className={`text-[11px] font-extrabold uppercase flex-1 min-w-0 truncate ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+        {box.bind}
+      </span>
+      <span className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={() => onReorderBox(box.id, 'down')}
+          disabled={isTop}
+          className={`p-1 rounded-md transition-colors disabled:opacity-20 cursor-pointer ${
+            isAppLight ? 'text-slate-500 hover:bg-slate-200' : 'text-slate-400 hover:bg-slate-800'
+          }`}
+          title="Move up in layer (bring to front)"
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onReorderBox(box.id, 'up')}
+          disabled={isBottom}
+          className={`p-1 rounded-md transition-colors disabled:opacity-20 cursor-pointer ${
+            isAppLight ? 'text-slate-500 hover:bg-slate-200' : 'text-slate-400 hover:bg-slate-800'
+          }`}
+          title="Move down in layer (send to back)"
+        >
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+      </span>
+    </div>
+  );
+};
 
 export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   boxes,
@@ -103,6 +207,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   onDeleteBox,
   onDuplicateBox,
   onReorderBox,
+  onMoveBox,
   onSelectBox,
   onReset,
   onClearAll,
@@ -111,6 +216,9 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   const isAppLight = appTheme === 'light';
   const selectedBox = boxes.find(b => b.id === selectedId) || null;
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
   const availableImportSources = CONFIG_IMAGE_SOURCES.filter(src => src.get(config));
 
   // Studio-like behavior: selecting a box on the canvas jumps to the Style tab.
@@ -158,8 +266,8 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
 
   return (
     <div
-      className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border rounded-3xl flex flex-col ${
-        isAppLight ? 'border-slate-200' : 'bg-slate-900/80 border-slate-800'
+      className={`border rounded-3xl flex flex-col ${
+        isAppLight ? 'bg-white/60 border-slate-200' : 'bg-slate-900/80 border-slate-800'
       } xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:pr-1`}
     >
       <div className="p-5 flex flex-col gap-4">
@@ -279,60 +387,42 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                 Layers ({boxes.length})
               </span>
               <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                {[...boxes].reverse().map((box, ri) => {
-                  const arrIdx = boxes.length - 1 - ri;
-                  const isSel = box.id === selectedBox.id;
-                  const isTop = arrIdx === boxes.length - 1;
-                  const isBottom = arrIdx === 0;
-                  return (
-                    <div
-                      key={box.id}
-                      onClick={() => onSelectBox(box.id)}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                        isSel
-                          ? isAppLight
-                            ? 'bg-amber-50 border-amber-400'
-                            : 'bg-amber-500/10 border-amber-500/50'
-                          : isAppLight
-                          ? 'bg-white border-slate-200 hover:border-slate-300'
-                          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      <span className={`w-5 h-5 rounded-md text-[9px] font-black flex items-center justify-center shrink-0 ${
-                        isSel ? 'bg-amber-500 text-slate-950' : isAppLight ? 'bg-slate-200 text-slate-600' : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        {arrIdx + 1}
-                      </span>
-                      <span className={`text-[11px] font-extrabold uppercase flex-1 min-w-0 truncate ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                        {box.bind}
-                      </span>
-                      <span className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => onReorderBox(box.id, 'down')}
-                          disabled={isTop}
-                          className={`p-1 rounded-md transition-colors disabled:opacity-20 cursor-pointer ${
-                            isAppLight ? 'text-slate-500 hover:bg-slate-200' : 'text-slate-400 hover:bg-slate-800'
-                          }`}
-                          title="Move up in layer (bring to front)"
-                        >
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onReorderBox(box.id, 'up')}
-                          disabled={isBottom}
-                          className={`p-1 rounded-md transition-colors disabled:opacity-20 cursor-pointer ${
-                            isAppLight ? 'text-slate-500 hover:bg-slate-200' : 'text-slate-400 hover:bg-slate-800'
-                          }`}
-                          title="Move down in layer (send to back)"
-                        >
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        </button>
-                      </span>
-                    </div>
-                  );
-                })}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event: DragEndEvent) => {
+                    if (!onMoveBox) return;
+                    const { active, over } = event;
+                    if (over && active.id !== over.id) {
+                      onMoveBox(String(active.id), String(over.id));
+                    }
+                  }}
+                >
+                  <SortableContext
+                    items={[...boxes].reverse().map(b => b.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {[...boxes].reverse().map((box, ri) => {
+                      const arrIdx = boxes.length - 1 - ri;
+                      const isSel = box.id === selectedBox.id;
+                      const isTop = arrIdx === boxes.length - 1;
+                      const isBottom = arrIdx === 0;
+                      return (
+                        <SortableLayerRow
+                          key={box.id}
+                          box={box}
+                          arrIdx={arrIdx}
+                          isSel={isSel}
+                          isTop={isTop}
+                          isBottom={isBottom}
+                          isAppLight={isAppLight}
+                          onSelectBox={onSelectBox}
+                          onReorderBox={onReorderBox}
+                        />
+                      );
+                    })}
+                  </SortableContext>
+                </DndContext>
               </div>
             </div>
 
