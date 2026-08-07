@@ -577,7 +577,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           {/* Stored Deck Cards */}
           {savedDecks.map(deck => {
             const isSelected = selectedDeckId === deck.id;
-            const tmpl = getTemplateById(deck.config?.templateId || 'rakib-dark');
+            const tmpl = getTemplateById(deck.config?.templateId || 'nobel-dark');
             const isLightTmpl = tmpl.themeType === 'light';
 
             return (

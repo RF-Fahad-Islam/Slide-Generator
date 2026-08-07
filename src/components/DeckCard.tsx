@@ -50,7 +50,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   onDelete,
 }) => {
   const isAppLight = appTheme === 'light';
-  const tmpl = getTemplateById(config?.templateId || 'rakib-dark');
+  const tmpl = getTemplateById(config?.templateId || 'nobel-dark');
   const hasTertiary = onDownload || onExportJson || onDelete;
 
   return (

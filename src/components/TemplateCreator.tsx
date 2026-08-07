@@ -58,7 +58,7 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
 
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
-  const [templateId, setTemplateId] = useState(config.templateId === 'custom-theme' ? 'rakib-dark' : config.templateId);
+  const [templateId, setTemplateId] = useState(config.templateId === 'custom-theme' ? 'nobel-dark' : config.templateId);
   const [accentColor, setAccentColor] = useState<string | null>(config.accentColorCustom || null);
   const [fontFamily, setFontFamily] = useState(config.fontFamily || FONT_PRESETS[0].family);
   const [bgPreset, setBgPreset] = useState<DeckConfig['bgPreset']>(config.bgPreset || 'none');
@@ -145,7 +145,7 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Template name (e.g. Rakib Biology Dark)"
+              placeholder="Template name (e.g. Nobel Biology Dark)"
               className={inputCls}
             />
             <input

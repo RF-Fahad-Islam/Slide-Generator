@@ -51,8 +51,8 @@ export function createCustomTemplateDefinition(customTheme: CustomThemeColors): 
 
 export const TEMPLATES: TemplateDefinition[] = [
   {
-    id: 'rakib-dark',
-    name: "Rakib's Midnight Gold",
+    id: 'nobel-dark',
+    name: "Nobel's Midnight Gold",
     description: "Luxurious deep obsidian & midnight dark theme with glowing gold highlights & frosted glass framing.",
     previewGradient: "from-slate-950 via-zinc-900 to-amber-950",
     themeType: 'dark',
@@ -391,11 +391,18 @@ export const TEMPLATES: TemplateDefinition[] = [
   }
 ];
 
+// Legacy template ids renamed over time — map old ids so saved decks and
+// presets keep resolving to the correct template (e.g. rakib-dark → nobel-dark).
+const LEGACY_TEMPLATE_IDS: Record<string, string> = {
+  'rakib-dark': 'nobel-dark',
+};
+
 export function getTemplateById(id: string, customTheme?: CustomThemeColors): TemplateDefinition {
-  if (id === 'custom-theme' && customTheme) {
+  const resolvedId = LEGACY_TEMPLATE_IDS[id] || id;
+  if (resolvedId === 'custom-theme' && customTheme) {
     return createCustomTemplateDefinition(customTheme);
   }
-  const found = TEMPLATES.find(t => t.id === id);
+  const found = TEMPLATES.find(t => t.id === resolvedId);
   if (found) return found;
   if (customTheme) return createCustomTemplateDefinition(customTheme);
   return TEMPLATES[0];

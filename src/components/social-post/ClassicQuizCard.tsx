@@ -41,7 +41,7 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
             )}
             <div>
               <h3 className="text-sm font-black tracking-wide uppercase leading-tight drop-shadow-sm">
-                {config.brandName || "RAKIB'S CLASSROOM"}
+                {config.brandName || "NOBEL'S CLASSROOM"}
               </h3>
               <p className="text-xs font-bold text-amber-400 mt-0.5">
                 {customHeaderTitle || config.headerTitle || 'আজকের কুইজ'}

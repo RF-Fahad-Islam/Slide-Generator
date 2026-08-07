@@ -236,7 +236,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                   </div>
                   <div>
                     <h2 className="text-3xl font-black text-white tracking-wide">
-                      {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
+                      {effectiveConfig.brandName || "NOBEL'S CLASSROOM"}
                     </h2>
                     <p className="text-xl font-bold text-amber-300 mt-0.5">
                       {effectiveConfig.headerTitle || "অধ্যায় ৮ঃ রেচন প্রক্রিয়া"}
@@ -277,7 +277,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               )}
               <div>
                 <h2 className={`${headerSizeClass} font-black tracking-wider uppercase drop-shadow-sm ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                  {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
+                  {effectiveConfig.brandName || "NOBEL'S CLASSROOM"}
                 </h2>
                 {effectiveConfig.headerTitle && (
                   <p className={`text-lg font-bold flex items-center gap-2 mt-1 drop-shadow-sm ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>

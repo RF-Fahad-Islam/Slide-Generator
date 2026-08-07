@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DeckConfig, CustomThemeColors } from '../types';
 import { TEMPLATES, getTemplateById } from '../templates/registry';
 import { BACKGROUND_PRESETS, getBackgroundPresetUrl } from '../utils/backgroundPresets';
@@ -221,7 +221,7 @@ const TemplateThumbnailPreview: React.FC<{ config: DeckConfig }> = ({ config }) 
                 />
               ) : (
                 <div className="w-full h-[32px] rounded bg-gradient-to-r from-teal-900 via-emerald-950 to-slate-900 border border-emerald-400/60 flex items-center justify-between px-2 text-[8px]">
-                  <span className="font-black text-white truncate max-w-[130px]">{config.brandName || "RAKIB'S CLASSROOM"}</span>
+                  <span className="font-black text-white truncate max-w-[130px]">{config.brandName || "NOBEL'S CLASSROOM"}</span>
                   <span className="bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded text-[7px] truncate max-w-[90px]">{config.badgeTag || "জীববিজ্ঞান"}</span>
                 </div>
               )}
@@ -242,7 +242,7 @@ const TemplateThumbnailPreview: React.FC<{ config: DeckConfig }> = ({ config }) 
                 )}
                 <div className="min-w-0">
                   <h4 className={`text-[9px] sm:text-[10px] font-black tracking-wide uppercase leading-none truncate ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                    {config.brandName || "RAKIB'S CLASSROOM"}
+                    {config.brandName || "NOBEL'S CLASSROOM"}
                   </h4>
                   {config.headerTitle && (
                     <p className={`text-[8px] font-bold leading-tight mt-0.5 truncate max-w-[120px] ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
@@ -351,6 +351,19 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
 
   const hasSlideOverride = !!activeSlideConfig && Object.keys(activeSlideConfig).length > 0;
 
+  // A custom background image is the ONLY background source allowed while it is
+  // active — theme templates and background colors are hidden so only one
+  // background source can be selected at a time (mutual exclusion).
+  const hasCustomBgImage = !!themeEffectiveConfig.bgImageUrl;
+
+  // If the user is on the Theme tab when a background image becomes active, jump
+  // to the Background tab (the Theme tab is hidden while the image is set).
+  useEffect(() => {
+    if (hasCustomBgImage && settingsTab === 'theme') {
+      setSettingsTab('background');
+    }
+  }, [hasCustomBgImage, settingsTab]);
+
   const isBannerMode = config.headerType === 'banner' || config.useHeaderBanner;
 
   const handleChange = (field: keyof DeckConfig, value: any) => {
@@ -363,6 +376,23 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       onUpdateConfig({
         ...config,
         [field]: value,
+      });
+    }
+  };
+
+  // Scope-aware multi-field patch — writes several fields in ONE update so none
+  // are dropped (two sequential handleChange calls both spread the same stale
+  // config and the second would overwrite the first).
+  const handlePatch = (patch: Partial<DeckConfig>) => {
+    if (settingsScope === 'slide') {
+      onUpdateActiveSlideConfig?.({
+        ...(activeSlideConfig || {}),
+        ...patch,
+      });
+    } else {
+      onUpdateConfig({
+        ...config,
+        ...patch,
       });
     }
   };
@@ -418,8 +448,8 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       reader.onload = (evt) => {
         if (evt.target?.result) {
           if (field === 'bgImageUrl') {
-            handleChange('bgImageUrl', evt.target.result as string);
-            handleChange('bgPreset', 'custom');
+            // One atomic update so bgImageUrl + bgPreset land together.
+            handlePatch({ bgImageUrl: evt.target.result as string, bgPreset: 'custom' });
           } else {
             handleChange(field, evt.target.result as string);
           }
@@ -523,7 +553,9 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           { id: 'typography', icon: Type, label: 'Typography' },
           { id: 'layout', icon: SlidersHorizontal, label: 'Layout & Banners' },
           { id: 'background', icon: ImageIcon, label: 'Background' },
-          { id: 'theme', icon: Palette, label: 'Theme & Preview' },
+          // Theme tab (templates + background colors) is hidden while a custom
+          // background image is active — one background source at a time.
+          ...(!hasCustomBgImage ? [{ id: 'theme', icon: Palette, label: 'Theme & Preview' } as const] : []),
           { id: 'header', icon: BookOpen, label: 'Header & Branding' },
           { id: 'presets', icon: LayoutTemplate, label: 'Templates' },
         ] as const).map((tab) => (
@@ -1149,7 +1181,8 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           </label>
         </div>
 
-        {/* Custom URL Input & Upload Row */}
+        {/* Custom URL Input & Clear Row — upload lives in the section header above
+            (single upload button for the custom background image). */}
         <div className={`p-4 rounded-2xl border space-y-3 ${
           isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}>
@@ -1158,27 +1191,16 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
               <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Custom Background Image URL:</span>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label className="text-sm px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-pointer flex items-center gap-2 font-bold transition-all shrink-0">
-                <Upload className="w-3.5 h-3.5" />
-                Upload Image File
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload('bgImageUrl', e)}
-                  className="hidden"
-                />
-              </label>
-              {config.bgImageUrl && (
+              {themeEffectiveConfig.bgImageUrl && (
                 <button
                   type="button"
                   onClick={() => {
-                    onUpdateConfig({
-                      ...config,
+                    handlePatch({
                       bgImageUrl: '',
-                      bgPreset: config.bgPreset === 'custom' ? 'none' : config.bgPreset,
+                      bgPreset: themeEffectiveConfig.bgPreset === 'custom' ? 'none' : themeEffectiveConfig.bgPreset,
                     });
                   }}
-                  className="text-sm px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition-all"
+                  className="text-sm px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition-all shrink-0"
                 >
                   Clear Custom Image
                 </button>
@@ -1189,13 +1211,12 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           <div className="flex items-center gap-3">
             <input
               type="text"
-              value={config.bgImageUrl || ''}
+              value={themeEffectiveConfig.bgImageUrl || ''}
               onChange={(e) => {
                 const url = e.target.value;
-                onUpdateConfig({
-                  ...config,
+                handlePatch({
                   bgImageUrl: url,
-                  bgPreset: url ? 'custom' : config.bgPreset,
+                  bgPreset: url ? 'custom' : themeEffectiveConfig.bgPreset,
                 });
               }}
               placeholder="Paste image URL (e.g., https://images.unsplash.com/... or data:image/...)"
@@ -1205,14 +1226,14 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             />
           </div>
 
-          {config.bgImageUrl && (
+          {themeEffectiveConfig.bgImageUrl && (
             <div className="flex items-center gap-3 pt-1">
               <div
                 className="w-16 h-10 rounded-lg bg-cover bg-center border border-amber-400/50 shrink-0"
-                style={{ backgroundImage: `url("${config.bgImageUrl}")` }}
+                style={{ backgroundImage: `url("${themeEffectiveConfig.bgImageUrl}")` }}
               />
               <p className="text-sm text-amber-300 font-medium">
-                Custom background active! (Theme background removed — preset options hidden below)
+                Custom background image active — theme templates &amp; background colors are hidden until you clear the image.
               </p>
             </div>
           )}
@@ -1220,7 +1241,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
 
         {/* Presets Grid — hidden while a custom image is active, because the
             image replaces the theme background entirely. */}
-        {!config.bgImageUrl && (
+        {!themeEffectiveConfig.bgImageUrl && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {BACKGROUND_PRESETS.map((preset) => {
             const isSelected = config.bgPreset === preset.id;
@@ -1913,7 +1934,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
               type="text"
               value={config.brandName}
               onChange={(e) => handleChange('brandName', e.target.value)}
-              placeholder="e.g. RAKIB'S CLASSROOM"
+              placeholder="e.g. NOBEL'S CLASSROOM"
               className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 font-bold ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
@@ -2126,7 +2147,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
               type="text"
               value={presetName}
               onChange={(e) => setPresetName(e.target.value)}
-              placeholder="Preset name (e.g. Rakib Biology Dark)"
+              placeholder="Preset name (e.g. Nobel Biology Dark)"
               className={`flex-1 border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 font-bold ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
               }`}

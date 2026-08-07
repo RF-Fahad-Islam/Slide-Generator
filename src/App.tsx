@@ -8,11 +8,12 @@ import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
 import { AIUploader } from './components/AIUploader';
 import { DeckManager } from './components/DeckManager';
-import { DeckSettingsModal } from './components/DeckSettingsModal';
+import { DeckSettingsPage } from './components/DeckSettingsPage';
 import { ExportModal } from './components/ExportModal';
 import { BatchExportModal } from './components/BatchExportModal';
 import { TemplateLibraryModal } from './components/TemplateLibraryModal';
 import { EditQuestionModal } from './components/EditQuestionModal';
+import { AddQuestionsModal } from './components/AddQuestionsModal';
 import { TemplateCreator } from './components/TemplateCreator';
 import { QuestionBankView } from './components/QuestionBankView';
 import { MyDecksView } from './components/MyDecksView';
@@ -60,12 +61,20 @@ export default function App() {
   const [editingSavedDeckId, setEditingSavedDeckId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
 
-  // Deck-scoped settings modal — opened from Slide Studio (or Home / My Decks).
-  // Edits a draft config with a live preview; applied only on "Apply to All".
-  const [isDeckSettingsModalOpen, setIsDeckSettingsModalOpen] = useState<boolean>(false);
+  // "Add Questions" chooser modal — wide Slide Studio button → 3 source cards
+  // (Question Bank / Manual Editor / Question Creator Form).
+  const [isAddQuestionsOpen, setIsAddQuestionsOpen] = useState<boolean>(false);
+
+  // Deck-scoped settings page — opened from Slide Studio (or Home / My Decks).
+  // Edits a draft config with a preview modal; applied only on "Apply to All".
+  const [isDeckSettingsOpen, setIsDeckSettingsOpen] = useState<boolean>(false);
 
   // Inline question edit modal (opened from the deck list) + handoff to the dedicated editor
   const [editingQuestion, setEditingQuestion] = useState<MCQItem | null>(null);
+  // True when editingQuestion was created from "Add Questions → Question Creator
+  // Form" (a fresh empty question) — saving appends it to the deck instead of
+  // updating an existing one.
+  const [isCreatingQuestion, setIsCreatingQuestion] = useState<boolean>(false);
   const [dedicatedEditItem, setDedicatedEditItem] = useState<MCQItem | null>(null);
 
   // Slide text box edit mode (overlay layer) + edit scope (deck-wide vs active slide only)
@@ -119,7 +128,7 @@ export default function App() {
   const [config, setConfig] = useState<DeckConfig>(() => {
     const base: DeckConfig = {
       templateId: globalDefaults.defaultTemplateId,
-      brandName: "RAKIB'S CLASSROOM",
+      brandName: "NOBEL'S CLASSROOM",
       logoUrl: '',
       logoSize: 'md',
       logoPosition: 'top-left',
@@ -405,6 +414,38 @@ export default function App() {
     }
   };
 
+  // "Add Questions" chooser → three source cards. Question Bank / Manual Editor
+  // just navigate to their tabs; the Question Creator Form opens the inline
+  // edit modal in CREATE mode with a fresh empty question.
+  const handleFromQuestionBank = () => {
+    setIsAddQuestionsOpen(false);
+    setActiveTab('bank');
+  };
+
+  const handleFromManualEditor = () => {
+    setIsAddQuestionsOpen(false);
+    setActiveTab('manual');
+  };
+
+  const createEmptyQuestion = (): MCQItem => ({
+    id: `q_new_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    questionType: 'standard',
+    stem: '',
+    options: [
+      { key: 'ক', text: '', isCorrect: false },
+      { key: 'খ', text: '', isCorrect: false },
+      { key: 'গ', text: '', isCorrect: false },
+      { key: 'ঘ', text: '', isCorrect: false },
+    ],
+    answer: '',
+  });
+
+  const handleFromQuestionForm = () => {
+    setIsAddQuestionsOpen(false);
+    setIsCreatingQuestion(true);
+    setEditingQuestion(createEmptyQuestion());
+  };
+
   const handleReviewMCQs = (newItems: MCQItem[]) => {
     setReviewItems(newItems);
     setActiveTab('manual');
@@ -464,7 +505,7 @@ export default function App() {
     // to it. Opening settings from Home (no id) clears any prior target.
     setEditingSavedDeckId(savedDeckId ?? null);
     setActiveTab('preview');
-    setIsDeckSettingsModalOpen(true);
+    setIsDeckSettingsOpen(true);
   };
 
   // Classroom View quick action (Deck Settings → Layout) — enforce class_mode +
@@ -477,7 +518,7 @@ export default function App() {
       layoutMode: 'class_mode',
       slideTextBoxes: classroomTextBoxes(),
     }));
-    setIsDeckSettingsModalOpen(false);
+    setIsDeckSettingsOpen(false);
     setActiveTab('preview');
     setIsTextBoxEditMode(true);
     setTextBoxScope('global');
@@ -908,7 +949,7 @@ export default function App() {
                   <div
                     data-tour="studio-toolbar"
                     className={`rounded-3xl border shadow-2xl p-4 sm:p-5 ${
-                    isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-slate-800 text-white'
+                    isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-white/10 text-white backdrop-blur-xl'
                   }`}>
                     {/* ROW 1 — slide identity + primary studio actions (Theme, Deck Settings, Download, slide nav) */}
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
@@ -916,20 +957,20 @@ export default function App() {
                       <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
                         <button
                           onClick={() => setIsOverviewMode(true)}
-                          className="px-3.5 py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0"
+                          className="px-3.5 py-2 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/35 text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer shrink-0 shadow-md shadow-amber-500/10"
                           title="View all created slides in grid view"
                         >
-                          <LayoutGrid className="w-4 h-4 text-amber-500" />
+                          <LayoutGrid className="w-4 h-4 text-amber-400" />
                           <span className="hidden 2xl:inline">View All Slides ({expandedSlides.length})</span>
                         </button>
 
                         {expandedSlides.length > 0 && (
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-mono text-xs font-bold border border-amber-400 shrink-0">
+                            <span className="px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-mono text-xs font-black border border-amber-400 shrink-0 shadow-sm">
                               Slide #{selectedIndex + 1}
                             </span>
                             {activeSlideRef?.isAnswerSlide && (
-                              <span className="px-2.5 py-1 rounded-xl bg-emerald-500 text-slate-950 font-mono text-xs font-bold border border-emerald-400 shrink-0">
+                              <span className="px-2.5 py-1 rounded-xl bg-emerald-500 text-slate-950 font-mono text-xs font-black border border-emerald-400 shrink-0 shadow-sm">
                                 Answer
                               </span>
                             )}
@@ -942,11 +983,11 @@ export default function App() {
 
                       {/* ROW 1 actions — Theme, Deck Settings, Download, slide nav */}
                       <div className="flex flex-wrap items-center gap-2">
-                        {/* Quick Theme Toggle (Minimal Light vs Rakib Dark) — applies to the ACTIVE slide only */}
+                        {/* Quick Theme Toggle (Minimal Light vs Nobel Dark) — applies to the ACTIVE slide only */}
                         <button
                           onClick={() => {
                             applyThemeToActiveSlide({
-                              templateId: isActiveSlideLight ? 'rakib-dark' : 'minimal-light',
+                              templateId: isActiveSlideLight ? 'nobel-dark' : 'minimal-light',
                             });
                           }}
                           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
@@ -954,7 +995,7 @@ export default function App() {
                               ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/20'
                               : isAppLight
                               ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
-                              : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                              : 'bg-slate-950/80 text-slate-200 border-white/10 hover:border-amber-500/40 hover:text-white'
                           }`}
                           title="Toggle Light / Dark Theme (active slide only)"
                         >
@@ -975,13 +1016,13 @@ export default function App() {
                         <button
                           onClick={() => {
                             setEditingSavedDeckId(null);
-                            setIsDeckSettingsModalOpen(true);
+                            setIsDeckSettingsOpen(true);
                           }}
                           data-tour="studio-deck-settings"
                           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                             isAppLight
                               ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
-                              : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                              : 'bg-slate-950/80 text-slate-200 border-white/10 hover:border-amber-500/40 hover:text-white'
                           }`}
                           title="Open Deck Settings — branding, fonts, layout mode, background & banners for this deck"
                         >
@@ -1244,6 +1285,7 @@ export default function App() {
               </div>
             )}
           </div>
+          )
         )}
 
         {/* TAB 2: MANUAL EDITOR / QUESTION CREATOR */}
@@ -1326,42 +1368,6 @@ export default function App() {
         appTheme={appTheme}
       />
 
-      {/* Deck Settings Modal — deck-scoped branding/layout with draft + live preview */}
-      <DeckSettingsModal
-        isOpen={isDeckSettingsModalOpen}
-        onClose={() => setIsDeckSettingsModalOpen(false)}
-        config={config}
-        onApplyConfig={setConfig}
-        activeSlideIndex={selectedIndex}
-        activeSlideConfig={items[selectedIndex]?.customConfig}
-        onApplyActiveSlideConfig={(slideConfigOverride) => {
-          setItems((prev) => {
-            const updated = [...prev];
-            if (updated[selectedIndex]) {
-              updated[selectedIndex] = {
-                ...updated[selectedIndex],
-                customConfig: slideConfigOverride,
-              };
-            }
-            return updated;
-          });
-        }}
-        onResetActiveSlideConfig={() => {
-          setItems((prev) => {
-            const updated = [...prev];
-            if (updated[selectedIndex]) {
-              const copy = { ...updated[selectedIndex] };
-              delete copy.customConfig;
-              updated[selectedIndex] = copy;
-            }
-            return updated;
-          });
-        }}
-        items={items}
-        appTheme={appTheme}
-        onEnforceClassroomView={handleEnforceClassroomView}
-      />
-
       {/* Template Store Modal */}
       <TemplateLibraryModal
         isOpen={isTemplateModalOpen}
@@ -1374,14 +1380,36 @@ export default function App() {
       {/* Inline Question Edit Modal */}
       <EditQuestionModal
         isOpen={!!editingQuestion}
-        onClose={() => setEditingQuestion(null)}
+        onClose={() => {
+          setEditingQuestion(null);
+          setIsCreatingQuestion(false);
+        }}
         item={editingQuestion}
         onSave={(updated) => {
-          setItems(prev => prev.map(q => (q.id === updated.id ? updated : q)));
+          setItems(prev => {
+            if (isCreatingQuestion) {
+              // Append the brand-new question to the deck and jump to it.
+              const added = ensureUniqueIds([...prev, updated]);
+              return added;
+            }
+            return prev.map(q => (q.id === updated.id ? updated : q));
+          });
+          if (isCreatingQuestion) {
+            setIsCreatingQuestion(false);
+            setEditingQuestion(null);
+            setActiveTab('preview');
+            setSelectedIndex(items.length);
+          }
         }}
         onOpenInDedicatedEditor={(item) => {
-          setItems(prev => prev.map(q => (q.id === item.id ? item : q)));
+          setItems(prev => {
+            if (isCreatingQuestion) {
+              return ensureUniqueIds([...prev, item]);
+            }
+            return prev.map(q => (q.id === item.id ? item : q));
+          });
           setEditingQuestion(null);
+          setIsCreatingQuestion(false);
           setDedicatedEditItem(item);
           setActiveTab('manual');
         }}

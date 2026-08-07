@@ -196,21 +196,21 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         } ${
           isActive
             ? isAppLight
-              ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 shadow-lg shadow-amber-500/30'
-              : 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 text-slate-950 shadow-lg shadow-amber-500/30'
+              ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30 font-extrabold'
+              : 'bg-amber-500/10 text-amber-300 border border-amber-500/35 backdrop-blur-xl shadow-lg shadow-amber-500/10 font-extrabold'
             : collapsed
             ? isAppLight
               ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900'
               : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white'
             : isAppLight
-            ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:translate-x-1'
+            : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
         }`}
         title={collapsed ? item.label : undefined}
       >
         {/* Active edge indicator */}
         {isActive && !collapsed && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full bg-slate-950/40" />
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
         )}
 
         {/* Icon tile */}
@@ -220,12 +220,10 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           } ${
             collapsed
               ? isActive
-                ? 'text-slate-950'
-                : isAppLight
-                ? 'text-amber-600'
-                : 'text-amber-400'
+                ? isAppLight ? 'text-slate-950 bg-amber-400' : 'text-amber-300 bg-amber-500/20 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                : isAppLight ? 'text-amber-600' : 'text-amber-400'
               : isActive
-              ? 'bg-slate-950/20 text-slate-950'
+              ? isAppLight ? 'bg-slate-950/20 text-slate-950' : 'bg-amber-500/20 text-amber-300 border border-amber-500/35 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
               : isAppLight
               ? 'bg-white text-amber-600 border border-slate-200 shadow-sm'
               : 'bg-white/5 text-amber-400'
@@ -240,7 +238,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             {badge !== null && (
               <span
                 className={`px-2 py-0.5 rounded-full text-xs font-mono font-black ${
-                  isActive ? 'bg-slate-950/25 text-slate-950' : 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                  isActive
+                    ? isAppLight ? 'bg-slate-950/25 text-slate-950' : 'bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                    : 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
                 }`}
               >
                 {badge}

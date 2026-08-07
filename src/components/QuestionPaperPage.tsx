@@ -135,7 +135,7 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
                   textOverflow: 'ellipsis',
                 }}
               >
-                {config.brandName || "RAKIB'S CLASSROOM"}
+                {config.brandName || "NOBEL'S CLASSROOM"}
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#b45309', marginTop: 2 }}>
                 {config.headerTitle || ''}

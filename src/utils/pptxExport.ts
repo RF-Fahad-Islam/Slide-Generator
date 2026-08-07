@@ -28,7 +28,7 @@ export const exportDeckToPPTX = async (
   pptx.defineLayout({ name: 'LAYOUT_16x9', width: 13.333, height: 7.5 });
   pptx.layout = 'LAYOUT_16x9';
   pptx.title = `${config.brandName || 'EdTech'} - MCQ Deck`;
-  pptx.company = config.brandName || "RAKIB'S CLASSROOM";
+  pptx.company = config.brandName || "NOBEL'S CLASSROOM";
   pptx.author = config.watermarkHandle || 'Instructor';
 
   const template = getTemplateById(config.templateId);
@@ -488,7 +488,7 @@ export const exportDeckToPPTX = async (
       slide.addText(
         [
           {
-            text: (config.brandName || "RAKIB'S CLASSROOM").toUpperCase(),
+            text: (config.brandName || "NOBEL'S CLASSROOM").toUpperCase(),
             options: { fontSize: 16, bold: true, color: colors.titleColor },
           },
           ...(config.headerTitle

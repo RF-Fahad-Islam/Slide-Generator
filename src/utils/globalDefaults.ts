@@ -8,7 +8,7 @@ const GLOBAL_DEFAULTS_KEY = 'mcqgen.globalDefaults';
 
 export const DEFAULT_GLOBAL_DEFAULTS: GlobalDefaults = {
   defaultDeckName: 'Untitled Deck',
-  defaultTemplateId: 'rakib-dark',
+  defaultTemplateId: 'nobel-dark',
   defaultQuestionNumberFormat: 'bangla',
 };
 

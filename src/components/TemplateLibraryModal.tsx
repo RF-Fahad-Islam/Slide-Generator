@@ -99,7 +99,7 @@ export const TemplateLibraryModal: React.FC<TemplateLibraryModalProps> = ({
               type="text"
               value={presetName}
               onChange={(e) => setPresetName(e.target.value)}
-              placeholder="Template name (e.g. Rakib Biology Dark)"
+              placeholder="Template name (e.g. Nobel Biology Dark)"
               className={`flex-1 border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 font-bold ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}

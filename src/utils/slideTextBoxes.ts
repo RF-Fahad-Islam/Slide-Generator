@@ -80,7 +80,7 @@ export const getSlideBoxContent = (
     case 'roman': return (item.romanItems || []).join('\n');
     case 'source': return item.source || '';
     case 'questionNumber': return formatSlideQNumber(currentIndex, config.questionNumberFormat);
-    case 'brand': return config.brandName || "RAKIB'S CLASSROOM";
+    case 'brand': return config.brandName || "NOBEL'S CLASSROOM";
     case 'headerTitle': return config.headerTitle || 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া';
     case 'badgeTag': return config.badgeTag || '';
     case 'footerTag': return config.footerTag || 'BIOMISSION';
