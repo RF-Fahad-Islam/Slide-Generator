@@ -65,6 +65,25 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
       continue;
     }
 
+    // Tags line: subject: <value>, class: <value>, paper: <value>.
+    // MUST run before the option check — `class:` starts with "c" which the
+    // option regex would otherwise read as option key "C".
+    const subjectMatch = line.match(/^subject:\s*(.+)$/i);
+    if (subjectMatch) {
+      tags = { ...tags, subject: subjectMatch[1].trim() };
+      continue;
+    }
+    const classNameMatch = line.match(/^class:\s*(.+)$/i);
+    if (classNameMatch) {
+      tags = { ...tags, className: classNameMatch[1].trim() };
+      continue;
+    }
+    const paperMatch = line.match(/^paper:\s*(.+)$/i);
+    if (paperMatch) {
+      tags = { ...tags, paper: paperMatch[1].trim() };
+      continue;
+    }
+
     // Check Option Line
     // Also check for trailing asterisk indicating correct answer e.g. "B) cos(x) *"
     const hasAsterisk = line.endsWith('*') || line.endsWith('(correct)');
@@ -113,23 +132,6 @@ function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null
     // Explanation line
     if (line.toLowerCase().startsWith('exp:') || line.startsWith('ব্যাখ্যা:') || line.startsWith('Explanation:')) {
       explanation = line.replace(/^(exp:|ব্যাখ্যা:|explanation:)/i, '').trim();
-      continue;
-    }
-
-    // Tags line: subject: <value>, class: <value>, paper: <value>
-    const subjectMatch = line.match(/^subject:\s*(.+)$/i);
-    if (subjectMatch) {
-      tags = { ...tags, subject: subjectMatch[1].trim() };
-      continue;
-    }
-    const classNameMatch = line.match(/^class:\s*(.+)$/i);
-    if (classNameMatch) {
-      tags = { ...tags, className: classNameMatch[1].trim() };
-      continue;
-    }
-    const paperMatch = line.match(/^paper:\s*(.+)$/i);
-    if (paperMatch) {
-      tags = { ...tags, paper: paperMatch[1].trim() };
       continue;
     }
 

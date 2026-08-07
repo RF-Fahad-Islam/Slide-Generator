@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DeckConfig, MCQItem } from '../types';
 import { DeckSettings } from './DeckSettings';
 import { DeckSettingsPreviewModal } from './DeckSettingsPreviewModal';
-import { DeckSettingsCompactPreview } from './DeckSettingsCompactPreview';
+import { DeckSettingsFloatingPreview } from './DeckSettingsFloatingPreview';
 import { ChevronLeft, Sliders, CheckCircle2, Eye, RefreshCw, EyeOff } from 'lucide-react';
 
 interface DeckSettingsPageProps {
@@ -43,8 +43,25 @@ export const DeckSettingsPage: React.FC<DeckSettingsPageProps> = ({
   const [draftSlideConfig, setDraftSlideConfig] = useState<Partial<DeckConfig> | undefined>(activeSlideConfig);
   const [hasPendingChanges, setHasPendingChanges] = useState<boolean>(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
-  // Toggleable compact sticky slide preview on the right (default ON).
-  const [showCompactPreview, setShowCompactPreview] = useState<boolean>(true);
+  // Bigger, draggable, closable FLOATING slide preview (replaces the old sticky
+  // column). Open state persists across page mounts.
+  const [showCompactPreview, setShowCompactPreview] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem('mcqgen.dspOpen');
+      if (raw) return raw === '1';
+    } catch {
+      // ignore
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mcqgen.dspOpen', showCompactPreview ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [showCompactPreview]);
 
   const activeItem = items[activeSlideIndex] || items[0];
 
@@ -129,7 +146,7 @@ export const DeckSettingsPage: React.FC<DeckSettingsPageProps> = ({
                   ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
                   : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
             }`}
-            title={showCompactPreview ? 'Hide the compact slide preview' : 'Show the compact slide preview'}
+            title={showCompactPreview ? 'Hide the floating slide preview' : 'Show the floating slide preview'}
           >
             {showCompactPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             <span className="hidden md:inline">{showCompactPreview ? 'Hide Preview' : 'Show Preview'}</span>
@@ -157,9 +174,9 @@ export const DeckSettingsPage: React.FC<DeckSettingsPageProps> = ({
         </div>
       </div>
 
-      {/* Settings content — full width with an optional sticky compact preview column */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        <div className={showCompactPreview ? 'xl:col-span-8' : 'xl:col-span-12'}>
+      {/* Settings content — full width; the slide preview now floats on top */}
+      <div className="grid grid-cols-1 gap-6 items-start">
+        <div className="xl:col-span-12">
           <DeckSettings
             config={draftConfig}
             onUpdateConfig={(updated) => {
@@ -180,24 +197,22 @@ export const DeckSettingsPage: React.FC<DeckSettingsPageProps> = ({
             onEnforceClassroomView={handleClassroomEnforce}
           />
         </div>
-
-        {/* Sticky compact slide preview — toggleable from the header, expands to the modal */}
-        {showCompactPreview && (
-          <div className="xl:col-span-4">
-            <div className="xl:sticky xl:top-20 flex items-start justify-center gap-2">
-              <DeckSettingsCompactPreview
-                config={draftConfig}
-                slideConfig={draftSlideConfig}
-                item={activeItem}
-                activeSlideIndex={activeSlideIndex}
-                totalCount={items.length}
-                appTheme={appTheme}
-                onExpand={() => setIsPreviewOpen(true)}
-              />
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Floating draggable slide preview — bigger than the old column, closable,
+          drag by its header, expand to the full modal */}
+      {showCompactPreview && activeItem && (
+        <DeckSettingsFloatingPreview
+          config={draftConfig}
+          slideConfig={draftSlideConfig}
+          item={activeItem}
+          activeSlideIndex={activeSlideIndex}
+          totalCount={items.length}
+          appTheme={appTheme}
+          onExpand={() => setIsPreviewOpen(true)}
+          onClose={() => setShowCompactPreview(false)}
+        />
+      )}
 
       {/* Preview slide modal — draft config + draft slide config */}
       <DeckSettingsPreviewModal

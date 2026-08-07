@@ -1,39 +1,42 @@
-# Memory — Add Questions Banner Relocation + Question Bank JSON Removal
+# Memory — Multi Source Tags + Structured Subject/Class/Paper Tags
 
 Last updated: 2026-08-07
 
 ## What was built
 
-All committed on `main`. HEAD = `45f31a4` (this session's docs commit). Source changes were swept into the parallel session's `b036e3d` ("fix: remove hover-lift effects…") which touched the same files — my work is IN that commit. Working tree is clean except my two docs commits were already made (`45f31a4`); nothing uncommitted remains.
+All committed on `main`. HEAD = `958121d` ("feat: multi source tags + structured subject/class/paper tags across question pipeline"). Working tree clean; 20 files changed.
 
-1. **New shared `src/components/AddQuestionsBanner.tsx`** — the green emerald "Add Questions" banner extracted from `App.tsx` into a reusable component (props: `onClick` / `count` / `appTheme`; `from-emerald-500 via-emerald-400 to-teal-400` gradient, `PlusCircle` tile, "N in deck" badge, subtitle "Question Bank · Manual Editor · Question Creator Form", "Choose Source →" CTA).
-2. **Slide Studio: banner moved INSIDE `DeckManager`** — now renders right after the Deck Health `ValidationPanel` and before the Bulk Transformation Bar (`src/components/DeckManager.tsx`). New optional `onAddQuestions?: () => void` prop (App passes `() => setIsAddQuestionsOpen(true)`); `count = items.length`. Removed the sibling banner + `flex flex-col gap-4` wrapper from `App.tsx`; also removed now-unused `PlusCircle`/`ArrowRight` from App's lucide import.
-3. **Question Bank page: JSON import REMOVED** — deleted the "Import MCQs (JSON)" header button, hidden file input, JSON confirm form, `handleImportJsonFile`/`handleConfirmJsonImport` handlers, and `importPending`/`importDeckName`/`importDeckSubject`/`jsonFileInputRef` state from `QuestionBankView.tsx`. Cleaned imports (`normalizeMCQs`, `UploadCloud`, `X`, `useRef`). Per-deck "Download as JSON" export (`handleExportDeckJson`/`downloadJSON`) stays. New required `onAddQuestions: () => void` prop; the shared banner renders right after the page header.
-4. **Home bento cleanup (`SlideDecksHome.tsx`)** — removed the duplicate "16:9 Slide Studio" tool card (a stale copy that navigated to social but rendered identical studio content; the real Social Posts card was kept). "6 Tools" badge → "5 Tools". Removed the extra 16:9 card requested earlier this session.
+1. **New `src/components/SourceTagsInput.tsx`** — chip-based multi-tag input for board/exam source tags. Props: `tags: string[]`, `onChange`, `theme?: 'dark' | 'light'`. Enter/comma/pipe/on-blur commit; `|`/`,` splitting; Backspace removes last; X per-chip. (Note: an earlier parallel version of this file with a different API — `value`/`isAppLight`/`inputClassName` — existed on disk; the committed one is the new `tags`/`theme` API.)
+2. **`src/types.ts`** — `MCQItem.source?: string[] | string` (was `string[]` only; the union keeps legacy string decks valid). Existing `getSourceTags(item)` helper normalizes both forms.
+3. **ManualEditor + EditQuestionModal** — `sourceTag: string` state → `sourceTags: string[]`; `buildUpdatedItem`/`buildFormItem` save `source` as array (only when non-empty) + new structured `tags: { subject, className, paper }` from 3 new inputs.
+4. **QuestionBankView** — filter logic rewritten to match against `getSourceTags(question)` (multi-tag aware, not a single `question.source` string). New **Class** + **Paper** filter dropdowns; Subject dropdown appends dynamic bank tag values; Reset clears all 5 filters; filter grid widened to `lg:grid-cols-5`. Question cards render each source tag as its own amber chip + optional mono subject/class/paper chips.
+5. **Parsers** — `bulkParser.ts`: multiple `[tag]` source lines accumulate into an array + new `subject:`/`class:`/`paper:` tag lines; sample decks switched to `source: string[]`. `csvParser.ts`: source column splits on `,;，；` into tags + new `subject`/`class`/`paper` header columns (sample CSV updated).
+6. **Renderers/exports migrated to multi-tag** — `SlideCanvas` (source badge = one chip per tag), `SortableQuestionCard`, `DeckManager` search, `slideTextBoxes.ts` `source` bind (`join(' · ')`), `pptxExport.ts` source badge pill, question-paper PDFs (`QuestionPaperPage`, `DeckQuestionPaperModal`, `QuestionBankPdfModal` — `join(' · ')`), `SocialPostGenerator` picker search/filters.
+7. **Server/JSON normalization** — `sanitize.ts` and `mcqJson.ts` both now normalize `source` to `string[]` (array → strings, string → `[string]`).
+8. **Docs** — `context/progress-tracker.md` + `context/ui-registry.md` updated (new `SourceTagsInput` entry, QuestionBank filters note, EditQuestionModal form note).
 
 ## Decisions made
 
-- The Add Questions banner is **green + lives inside `DeckManager` right after Deck Health** (user-requested location), and is reused on the Question Bank page via a shared component instead of duplicated markup.
-- JSON import was removed from the Question Bank **header flow** (user request) — per-deck JSON **export** retained. The AddQuestionsModal remains the single entry point for choosing a question source.
-- `DeckManager.onAddQuestions` is optional (banner only renders when the prop is passed) so the component stays reusable.
+- `source` is now a `string[]` as the canonical persisted shape; `getSourceTags()` is the single normalization entry point (legacy single-string decks read fine, no migration needed).
+- Structured filters live on `MCQItem.tags` (`MCQTags`: `subject`/`className`/`paper`) — separate from the free-form `source` tags. Class/Paper filter dropdowns are **dynamic** (derived from tags actually present in the bank) with hardcoded SSC/HSC/Class 9/Class 10 + 1st/2nd Paper fallbacks only when no tagged data exists.
+- `SourceTagsInput` component API is `tags`/`onChange`/`theme` (not `value`/`isAppLight`).
 
 ## Problems solved
 
-- Duplicate/confusing home card: Tool 2 was labeled "Social Media Posting Card Generator" but rendered a copy of the 16:9 Slide Studio card and navigated to social — removed; the real Social Posts card (indigo, Share2, 1:1/4:5/9:16) remains.
-- Orphaned imports after removal (`normalizeMCQs`, `UploadCloud`, `X`, `useRef`, `PlusCircle`, `ArrowRight`) all cleaned; verified `tsc --noEmit` + `vite build` green.
-- /review ran before commit: 0 issues found.
+- TS errors mid-build: `source: sourceTags.join(' | ')` failed because `source` was already typed `string[]` — fixed by persisting the array directly; the `never` narrowing in `getSourceTags` was fixed by widening the type to `source?: string[] | string`.
+- Stale `sourceTag` string state → removed cleanly; no dangling references (verified via `rg`).
 
 ## Current state
 
-- On `main`, HEAD = `45f31a4`. `npx tsc --noEmit` clean, `vite build` green (only pre-existing chunk-size warning).
-- Working tree clean (source committed in parallel session's `b036e3d`; docs committed in this session's `45f31a4`).
-- Still true from earlier: known minor = create-mode `setSelectedIndex(items.length)` lands on the wrong slide under `separate_slide` answer mode (`App.tsx` EditQuestionModal `onSave`). Backlog unchanged: bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor; interactive template studio JSON import/export.
+- On `main`, HEAD = `958121d`. `npx tsc --noEmit` clean, `vite build` green (only pre-existing chunk-size warning). Lint script is `tsc --noEmit` (no eslint config exists).
+- Known minor (pre-existing, still open): create-mode `setSelectedIndex(items.length)` lands on the wrong slide under `separate_slide` answer mode (`App.tsx` EditQuestionModal `onSave`).
+- Backlog unchanged: bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor; interactive template studio JSON import/export; paginated standalone answer-key slides (`answerKeyList`).
 
 ## Next session starts with
 
-1. Optionally fix the known minor: create-mode `setSelectedIndex(items.length)` navigates to the wrong slide under `separate_slide` answer mode — use `questionSlideIndex(expandDeckSlides(...), items.length)`.
-2. If adding CSV / JSON-backup source cards to the AddQuestionsModal (mentioned earlier as a possible follow-up), reuse `parseCSVToMCQs` (`src/utils/csvParser.ts`) and `normalizeMCQs` (`src/utils/mcqJson.ts`).
-3. Run `git pull`/fetch if the parallel social-post session pushes more commits before you continue.
+1. Optionally fix the known minor: create-mode `setSelectedIndex(items.length)` → use `questionSlideIndex(expandDeckSlides(...), items.length)` for `separate_slide` mode.
+2. Possible follow-ups for the tag feature: bulk tag-edit UI (set subject/class/paper on many questions at once in the Bank), or CSV import template header row updated in the UI copy (CSV Import box mentions `explanation`/`source` columns — add `subject`/`class`/`paper`).
+3. Run `git fetch`/`pull` if parallel sessions pushed more commits.
 
 ## Open questions
 

@@ -31,6 +31,7 @@ export interface DeckDesignSnapshot {
   layoutMode?: DeckConfig['layoutMode'];
   bgPreset: DeckConfig['bgPreset'];
   bgImageUrl?: string;
+  bgImageFit?: DeckConfig['bgImageFit'];
   bgImageOpacity: number;
   bgOverlayDarkness: number;
   useHeaderBanner?: boolean;
@@ -78,6 +79,7 @@ export const captureDesign = (config: DeckConfig): DeckDesignSnapshot => {
     layoutMode: c.layoutMode,
     bgPreset: c.bgPreset,
     bgImageUrl: c.bgImageUrl,
+    bgImageFit: c.bgImageFit,
     bgImageOpacity: c.bgImageOpacity,
     bgOverlayDarkness: c.bgOverlayDarkness,
     useHeaderBanner: c.useHeaderBanner,

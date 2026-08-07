@@ -1463,6 +1463,7 @@ export default function App() {
           setActiveTab('manual');
         }}
         onSaveToQuestionBank={handleImportToQuestionBank}
+        previousTags={items.length > 0 ? items[items.length - 1] : null}
         appTheme={appTheme}
       />
 

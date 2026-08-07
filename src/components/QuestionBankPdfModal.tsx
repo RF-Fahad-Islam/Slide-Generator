@@ -88,8 +88,9 @@ const PaperPage = ({
             position: 'absolute',
             inset: 0,
             backgroundImage: `url("${bgUrl}")`,
-            backgroundSize: 'cover',
+            backgroundSize: config.bgImageFit === 'contain' ? 'contain' : config.bgImageFit === 'stretch' ? '100% 100%' : 'cover',
             backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
             opacity: bgOpacity,
           }}
         />

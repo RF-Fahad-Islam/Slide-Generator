@@ -92,7 +92,7 @@ export const PostModeSelector: React.FC<PostModeSelectorProps> = ({ mode, isAppL
     <>
       {/* Compact selector bar */}
       <div
-        className={`p-2 rounded-2xl border ${
+        className={`p-2.5 rounded-2xl border ${
           isAppLight ? 'bg-white/80 border-slate-200 shadow-sm' : 'bg-slate-900/60 border-slate-800 shadow-xl'
         }`}
       >
@@ -100,26 +100,26 @@ export const PostModeSelector: React.FC<PostModeSelectorProps> = ({ mode, isAppL
           type="button"
           onClick={() => setOpen(true)}
           aria-haspopup="dialog"
-          className={`w-full flex items-center justify-between gap-3 cursor-pointer rounded-xl px-2 py-1.5 transition-colors ${
+          className={`w-full flex items-center justify-between gap-3 cursor-pointer rounded-xl px-3 py-2 transition-colors ${
             isAppLight ? 'hover:bg-slate-100/70' : 'hover:bg-white/5'
           }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="p-1.5 rounded-lg bg-amber-500/15 text-amber-500 shrink-0">
+            <span className="p-2 rounded-lg bg-amber-500/15 text-amber-500 shrink-0">
               <ActiveIcon className="w-4 h-4" />
             </span>
             <span className={`text-xs font-black uppercase tracking-wider ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
               Social Post Mode
             </span>
             <span
-              className={`hidden sm:inline-block truncate text-[11px] font-black px-2.5 py-1 rounded-lg border ${
+              className={`hidden sm:inline-block truncate text-[11px] font-black px-3 py-1.5 rounded-lg border ${
                 isAppLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
               }`}
             >
               {active.label}
             </span>
           </div>
-          <span className={`p-1 rounded-lg shrink-0 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+          <span className={`p-1.5 rounded-lg shrink-0 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
             <ChevronDown className="w-4 h-4" />
           </span>
         </button>

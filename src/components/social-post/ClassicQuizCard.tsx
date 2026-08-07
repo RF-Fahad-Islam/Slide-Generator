@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle2, User } from 'lucide-react';
 import { MathText } from '../MathText';
-import { DeckConfig, MCQItem } from '../../types';
+import { DeckConfig, MCQItem, BgImageFit } from '../../types';
 
 interface ClassicQuizCardProps {
   item: MCQItem;
@@ -11,6 +11,7 @@ interface ClassicQuizCardProps {
   aspectClass: string;
   bgStyle: string;
   customBgImageUrl?: string;
+  customBgImageFit?: BgImageFit;
   showAnswerKey: boolean;
   showExplanation: boolean;
   brandName?: string;
@@ -32,6 +33,7 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
       aspectClass,
       bgStyle,
       customBgImageUrl,
+      customBgImageFit,
       showAnswerKey,
       showExplanation,
       brandName,
@@ -54,7 +56,7 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
           ...(customBgImageUrl
             ? {
                 backgroundImage: `url("${customBgImageUrl}")`,
-                backgroundSize: 'cover',
+                backgroundSize: customBgImageFit === 'contain' ? 'contain' : customBgImageFit === 'stretch' ? '100% 100%' : 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
               }

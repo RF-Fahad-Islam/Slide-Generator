@@ -4,6 +4,9 @@ import { parseBulkTextToMCQs } from '../utils/bulkParser';
 import { parseCSVToMCQs, generateSampleCSV } from '../utils/csvParser';
 import { MathText } from './MathText';
 import { SourceTagsInput } from './SourceTagsInput';
+import { TagChipSelect } from './TagChipSelect';
+import { useTagMemory } from '../hooks/useTagMemory';
+import { applyBatchTags } from '../utils/tagMemory';
 import {
   Plus,
   Sparkles,
@@ -27,7 +30,9 @@ import {
   ListChecks,
   Database,
   Bot,
-  ClipboardCopy
+  ClipboardCopy,
+  Tags,
+  History
 } from 'lucide-react';
 
 interface ManualEditorProps {
@@ -59,7 +64,11 @@ Rules:
 6. If the paper is a "বহুপদী" (i/ii/iii statements) question, write the statements as "i." "ii." "iii." lines, then a prompt line like "নিচের কোনটি সঠিক?", then the options.
 7. If a question has an explanation, add a line starting with "ব্যাখ্যা:" followed by the explanation text.
 8. If a question shows a source (e.g. a board name / year like "ঢাকা বোর্ড ২০২৪"), put it on its own line inside square brackets like "[ঢাকা বোর্ড ২০২৪]".
-9. Keep LaTeX math ($...$) exactly as written. Keep Bangla text exact.
+9. Optional category fields — add these lines ONLY when you can infer them confidently from the paper (headings, footers, board seals, subject name on the cover). If you are not sure, omit them:
+   subject: <subject name, e.g. Biology / জীববিজ্ঞান>
+   class: <class level, e.g. SSC / HSC / Class 9>
+   paper: <paper number, e.g. 1st Paper / 2nd Paper>
+10. Keep LaTeX math ($...$) exactly as written. Keep Bangla text exact.
 
 Example output:
 ১. মানবদেহের বৃক্কে নেফ্রনের প্রধান কাজ কোনটি?
@@ -69,6 +78,9 @@ Example output:
 ঘ) পরিপাক
 ব্যাখ্যা: নেফ্রন হলো বৃক্কের গঠনগত ও কার্যগত একক।
 [ঢাকা বোর্ড ২০২৪]
+subject: জীববিজ্ঞান
+class: SSC
+paper: 1st Paper
 
 ২. বৃক্কের পাথর অপসারণে আধুনিক পদ্ধতি—
 i. ইউরেটেরোস্কোপিক
@@ -96,8 +108,17 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
   const isAppLight = appTheme === 'light';
   const [activeSubTab, setActiveSubTab] = useState<'review' | 'bulk' | 'single'>('bulk');
 
+  // Shared input style for the in-place review-queue editor
+  const queueInputCls = `w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
+    isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+  }`;
+
   // Internal Unapproved Review Queue
   const [unapprovedQueue, setUnapprovedQueue] = useState<MCQItem[]>(reviewItems);
+
+  // In-place editing of a review-queue card (no tab switch to the full form).
+  const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
+  const [queueEditDraft, setQueueEditDraft] = useState<MCQItem | null>(null);
 
   // Sync when reviewItems prop updates
   useEffect(() => {
@@ -107,6 +128,12 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     }
   }, [reviewItems]);
 
+  // Batch tags applied to EVERY MCQ parsed from the bulk paste text.
+  const [batchSourceTags, setBatchSourceTags] = useState<string[]>([]);
+  const [batchSubject, setBatchSubject] = useState('');
+  const [batchClass, setBatchClass] = useState('');
+  const [batchPaper, setBatchPaper] = useState('');
+
   // Bulk paste state
   const [bulkText, setBulkText] = useState<string>(`১. বৃক্কের কাজ কোনটি?
 ক) রক্ত ছাঁকন *
@@ -115,6 +142,9 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
 ঘ) পরিপাক
 উত্তর: ক
 [ঢাকা বোর্ড ২০২৪]
+subject: জীববিজ্ঞান
+class: SSC
+paper: 1st Paper
 
 ২. বৃক্কের পাথর অপসারণে আধুনিক পদ্ধতি—
 i. ইউরেটেরোস্কোপিক
@@ -127,8 +157,17 @@ iii. অস্ত্রোপচার
 ঘ) i, ii ও iii
 [চট্টগ্রাম বোর্ড ২০১৭]`);
 
-  // Live preview of whatever the parser would extract from the current bulk text
-  const parsedPreview = parseBulkTextToMCQs(bulkText);
+  // Live preview of whatever the parser would extract from the current bulk text,
+  // with the interactive batch tags applied (so the preview is a true WYSIWYG of
+  // what the parse button will push into the review queue).
+  const parsedPreview = parseBulkTextToMCQs(bulkText).map((q) =>
+    applyBatchTags(q, {
+      sources: batchSourceTags,
+      subject: batchSubject,
+      className: batchClass,
+      paper: batchPaper,
+    })
+  );
 
   // Single Question / Editor Form State
   const [editingItemTarget, setEditingItemTarget] = useState<'none' | 'queue' | 'deck'>('none');
@@ -144,6 +183,16 @@ iii. অস্ত্রোপচার
   const [tagSubject, setTagSubject] = useState('');
   const [tagClass, setTagClass] = useState('');
   const [tagPaper, setTagPaper] = useState('');
+
+  // Staged questions created in the Form Question Creator. "Save" appends here
+  // instead of committing straight to the deck; a batch action pushes them all
+  // to the Active Deck or the Question Bank, then clears with a success message.
+  const [stagedItems, setStagedItems] = useState<MCQItem[]>([]);
+  const [formNotice, setFormNotice] = useState<string | null>(null);
+
+  // Tag memory — remembers every used source tag / subject / class / paper so the
+  // next session can suggest them in the chip pickers below.
+  const { memory, remember, rememberItems } = useTagMemory();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -189,6 +238,25 @@ iii. অস্ত্রোপচার
     setPrompt('নিচের কোনটি সঠিক?');
   };
 
+  // "Add more" accelerator: pull the last deck question's tags into the form so the
+  // next question starts tagged the same way.
+  const lastItemTags = items.length > 0 ? items[items.length - 1] : null;
+
+  const useLastItemTags = () => {
+    if (!lastItemTags) return;
+    setSourceTags(getSourceTags(lastItemTags));
+    setTagSubject(lastItemTags.tags?.subject || '');
+    setTagClass(lastItemTags.tags?.className || '');
+    setTagPaper(lastItemTags.tags?.paper || '');
+  };
+
+  const clearBatchTags = () => {
+    setBatchSourceTags([]);
+    setBatchSubject('');
+    setBatchClass('');
+    setBatchPaper('');
+  };
+
   // Batch-edit-all: walk through every question in the active deck inside the form.
   const [batchQueue, setBatchQueue] = useState<{ ids: string[]; index: number } | null>(null);
 
@@ -208,6 +276,8 @@ iii. অস্ত্রোপচার
     setBatchQueue({ ids: items.map((q) => q.id), index: 0 });
     loadItemIntoForm(items[0], 'deck');
     setActiveSubTab('single');
+    setStagedItems([]);
+    setFormNotice(null);
   };
 
   const batchNav = (dir: 'prev' | 'next') => {
@@ -265,9 +335,17 @@ iii. অস্ত্রোপচার
 
   // Bulk parse text -> Passes through Question Reviewer!
   const handleParseBulk = () => {
-    const parsed = parseBulkTextToMCQs(bulkText);
+    const parsed = parseBulkTextToMCQs(bulkText).map((q) =>
+      applyBatchTags(q, {
+        sources: batchSourceTags,
+        subject: batchSubject,
+        className: batchClass,
+        paper: batchPaper,
+      })
+    );
     if (parsed.length > 0) {
       setUnapprovedQueue((prev) => [...prev, ...parsed]);
+      rememberItems(parsed);
       setBulkText('');
       setActiveSubTab('review');
     }
@@ -278,6 +356,7 @@ iii. অস্ত্রোপচার
     const itemToApprove = unapprovedQueue.find((q) => q.id === id);
     if (itemToApprove) {
       onAddMCQs([itemToApprove]);
+      rememberItems([itemToApprove]);
       setUnapprovedQueue((prev) => prev.filter((q) => q.id !== id));
       if (editingId === id) resetForm();
     }
@@ -287,6 +366,7 @@ iii. অস্ত্রোপচার
   const approveAllQueue = () => {
     if (unapprovedQueue.length === 0) return;
     onAddMCQs(unapprovedQueue);
+    rememberItems(unapprovedQueue);
     setUnapprovedQueue([]);
     if (onClearReviewItems) onClearReviewItems();
     resetForm();
@@ -295,6 +375,56 @@ iii. অস্ত্রোপচার
   const removeQueueItem = (id: string) => {
     setUnapprovedQueue((prev) => prev.filter((q) => q.id !== id));
     if (editingId === id) resetForm();
+    if (editingQueueItemId === id) cancelQueueEdit();
+  };
+
+  // --- In-place review-queue editor -------------------------------------------
+  const startQueueEdit = (item: MCQItem) => {
+    setEditingQueueItemId(item.id);
+    setQueueEditDraft({
+      ...item,
+      options: item.options.map((o) => ({ ...o })),
+      romanItems: item.romanItems ? [...item.romanItems] : undefined,
+    });
+  };
+
+  const cancelQueueEdit = () => {
+    setEditingQueueItemId(null);
+    setQueueEditDraft(null);
+  };
+
+  const saveQueueEdit = () => {
+    if (!queueEditDraft || !queueEditDraft.stem.trim()) return;
+    setUnapprovedQueue((prev) =>
+      prev.map((q) => (q.id === editingQueueItemId ? queueEditDraft : q))
+    );
+    rememberItems([queueEditDraft]);
+    setEditingQueueItemId(null);
+    setQueueEditDraft(null);
+  };
+
+  const patchQueueDraft = (patch: Partial<MCQItem>) => {
+    setQueueEditDraft((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const patchQueueOption = (key: string, text: string) => {
+    setQueueEditDraft((prev) =>
+      prev
+        ? { ...prev, options: prev.options.map((o) => (o.key === key ? { ...o, text } : o)) }
+        : prev
+    );
+  };
+
+  const setQueueAnswer = (key: string) => {
+    setQueueEditDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            answer: key,
+            options: prev.options.map((o) => ({ ...o, isCorrect: o.key === key })),
+          }
+        : prev
+    );
   };
 
   // Build the MCQItem from the current form state (shared by submit + bank import)
@@ -334,27 +464,59 @@ iii. অস্ত্রোপচার
     if (!stem.trim()) return;
 
     const updatedItem = buildFormItem();
+    rememberItems([updatedItem]);
 
     if (editingItemTarget === 'deck' && onUpdateItems) {
       // Update in active deck
       const updatedDeck = items.map((q) => (q.id === editingId ? updatedItem : q));
       onUpdateItems(updatedDeck);
+      setFormNotice('Question updated in the Active Deck.');
     } else if (editingItemTarget === 'queue') {
       // Update in unapproved queue
       setUnapprovedQueue((prev) => prev.map((q) => (q.id === editingId ? updatedItem : q)));
+      setFormNotice('Question updated in the Review Queue.');
     } else {
-      // Direct approve & add to active deck
-      onAddMCQs([updatedItem]);
+      // New question → stage it for batch commit to deck / question bank
+      setStagedItems((prev) => [...prev, updatedItem]);
+      setFormNotice(`Question saved to the batch (${stagedItems.length + 1} staged). Keep adding more or commit below.`);
     }
 
     resetForm();
+  };
+
+  // Remove a single staged question from the batch list.
+  const removeStagedItem = (id: string) => {
+    setStagedItems((prev) => prev.filter((q) => q.id !== id));
+  };
+
+  // Commit every staged question to the Active Deck in one shot.
+  const commitStagedToDeck = () => {
+    if (stagedItems.length === 0) return;
+    onAddMCQs(stagedItems);
+    rememberItems(stagedItems);
+    const count = stagedItems.length;
+    setStagedItems([]);
+    setFormNotice(`✓ ${count} MCQ${count > 1 ? 's' : ''} added to the Active Deck.`);
+  };
+
+  // Commit every staged question to the Question Bank in one shot.
+  const commitStagedToBank = async () => {
+    if (stagedItems.length === 0 || !onImportToQuestionBank) return;
+    const count = stagedItems.length;
+    const saved = await onImportToQuestionBank(stagedItems);
+    if (!saved) return;
+    rememberItems(stagedItems);
+    setStagedItems([]);
+    setFormNotice(`✓ ${count} MCQ${count > 1 ? 's' : ''} saved to the Question Bank.`);
   };
 
   // Save the freshly-typed question straight to the Question Bank (not the deck)
   const handleSaveSingleToBank = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!stem.trim() || !onImportToQuestionBank) return;
-    const saved = await onImportToQuestionBank([buildFormItem()]);
+    const item = buildFormItem();
+    rememberItems([item]);
+    const saved = await onImportToQuestionBank([item]);
     if (saved) resetForm();
   };
 
@@ -409,7 +571,7 @@ iii. অস্ত্রোপচার
           isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950/20 border-slate-700/50'
         }`}>
           <button
-            onClick={() => setActiveSubTab('bulk')}
+            onClick={() => { setActiveSubTab('bulk'); setFormNotice(null); }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeSubTab === 'bulk'
                 ? 'bg-amber-500 text-slate-950 shadow-md font-black'
@@ -423,7 +585,7 @@ iii. অস্ত্রোপচার
           </button>
 
           <button
-            onClick={() => setActiveSubTab('review')}
+            onClick={() => { setActiveSubTab('review'); setFormNotice(null); }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all relative cursor-pointer ${
               activeSubTab === 'review'
                 ? 'bg-amber-500 text-slate-950 shadow-md font-black'
@@ -442,7 +604,7 @@ iii. অস্ত্রোপচার
           </button>
 
           <button
-            onClick={() => setActiveSubTab('single')}
+            onClick={() => { setActiveSubTab('single'); setFormNotice(null); }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeSubTab === 'single'
                 ? 'bg-amber-500 text-slate-950 shadow-md font-black'
@@ -564,6 +726,107 @@ iii. অস্ত্রোপচার
               >
                 + MCQ with Explanation
               </button>
+              <button
+                type="button"
+                onClick={() =>
+                  insertSnippet(
+                    `৫. কোষ বিভাজনের ফলে কতটি অপত্য কোষ সৃষ্টি হয়?\nক) ১টি\nখ) ২টি *\nগ) ৩টি\nঘ) ৪টি\n[ঢাকা বোর্ড ২০২২]\nsubject: জীববিজ্ঞান\nclass: SSC\npaper: 1st Paper`
+                  )
+                }
+                className={`text-xs px-3 py-1.5 rounded-xl border font-semibold ${
+                  isAppLight
+                    ? 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'
+                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                }`}
+                title="Shows the optional subject: / class: / paper: category lines"
+              >
+                + MCQ with Subject/Class/Paper
+              </button>
+            </div>
+
+            {/* Batch Tags — interactive editor, applied to every parsed MCQ */}
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+            }`}>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <label className="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+                  <Tags className="w-4 h-4" /> Batch Tags
+                  <span className="text-[10px] font-semibold normal-case text-slate-400 font-sans">
+                    applied to every parsed MCQ
+                  </span>
+                </label>
+                {(batchSourceTags.length > 0 || batchSubject || batchClass || batchPaper) && (
+                  <button
+                    type="button"
+                    onClick={clearBatchTags}
+                    className={`text-[11px] px-2.5 py-1 rounded-lg font-semibold border cursor-pointer transition-colors ${
+                      isAppLight
+                        ? 'bg-white border-slate-300 text-slate-500 hover:text-rose-500 hover:border-rose-300'
+                        : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-rose-400 hover:border-rose-500/40'
+                    }`}
+                  >
+                    <X className="w-3 h-3 inline mr-1" />Clear batch tags
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="md:col-span-3">
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                    Source Tags (Board / Exam) — multiple allowed
+                  </label>
+                  <SourceTagsInput
+                    tags={batchSourceTags}
+                    onChange={setBatchSourceTags}
+                    theme={isAppLight ? 'light' : 'dark'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                    Subject (single)
+                  </label>
+                  <TagChipSelect
+                    value={batchSubject}
+                    onChange={(v) => {
+                      setBatchSubject(v);
+                      if (v) remember({ subject: v });
+                    }}
+                    suggestions={memory.subjects}
+                    placeholder="e.g. Biology"
+                    theme={isAppLight ? 'light' : 'dark'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                    Class (single)
+                  </label>
+                  <TagChipSelect
+                    value={batchClass}
+                    onChange={(v) => {
+                      setBatchClass(v);
+                      if (v) remember({ className: v });
+                    }}
+                    suggestions={memory.classes}
+                    placeholder="e.g. SSC / HSC"
+                    theme={isAppLight ? 'light' : 'dark'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                    Paper (single)
+                  </label>
+                  <TagChipSelect
+                    value={batchPaper}
+                    onChange={(v) => {
+                      setBatchPaper(v);
+                      if (v) remember({ paper: v });
+                    }}
+                    suggestions={memory.papers}
+                    placeholder="e.g. 1st Paper"
+                    theme={isAppLight ? 'light' : 'dark'}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Action Button */}
@@ -685,18 +948,41 @@ iii. অস্ত্রোপচার
                         })}
                       </div>
 
-                      {/* Answer key + source footer */}
+                      {/* Answer key + tags footer */}
                       <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-dashed ${
                         isAppLight ? 'border-slate-200' : 'border-slate-800'
                       }">
                         <span className={`text-[10px] font-mono font-bold ${isAppLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                           ✓ উত্তর: {mcq.answer}
                         </span>
-                        {getSourceTags(mcq).length > 0 && (
-                          <span className={`text-[10px] font-semibold truncate ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-                            <MathText text={`[${getSourceTags(mcq).join(' | ')}]`} />
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          {mcq.tags?.subject && (
+                            <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] border ${
+                              isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            }`}>
+                              📌 {mcq.tags.subject}
+                            </span>
+                          )}
+                          {mcq.tags?.className && (
+                            <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] border ${
+                              isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            }`}>
+                              🏫 {mcq.tags.className}
+                            </span>
+                          )}
+                          {mcq.tags?.paper && (
+                            <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] border ${
+                              isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            }`}>
+                              📄 {mcq.tags.paper}
+                            </span>
+                          )}
+                          {getSourceTags(mcq).length > 0 && (
+                            <span className={`text-[10px] font-semibold truncate max-w-[220px] ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                              <MathText text={`[${getSourceTags(mcq).join(' | ')}]`} />
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Optional explanation indicator */}
@@ -748,8 +1034,12 @@ iii. অস্ত্রোপচার
                 <code className="font-mono font-bold">exact raw text</code> this parser
                 understands — including answers (<code className="font-mono font-bold">*</code>),{" "}
                 <code className="font-mono font-bold">ব্যাখ্যা:</code> explanations,{" "}
-                <code className="font-mono font-bold">i. ii. iii.</code> বহুপদী, and{" "}
-                <code className="font-mono font-bold">[source]</code> tags.
+                <code className="font-mono font-bold">i. ii. iii.</code> বহুপদী,{" "}
+                <code className="font-mono font-bold">[source]</code> tags, and — when it can
+                infer them confidently from the paper — the{" "}
+                <code className="font-mono font-bold">subject:</code> /{" "}
+                <code className="font-mono font-bold">class:</code> /{" "}
+                <code className="font-mono font-bold">paper:</code> category lines.
               </p>
               <button
                 type="button"
@@ -785,8 +1075,11 @@ iii. অস্ত্রোপচার
               <p className={`text-[11px] leading-snug ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 Upload a structured <code className="font-mono font-bold">.csv</code> spreadsheet
                 with columns: <code className="font-mono font-bold">stem, A, B, C, D, correct</code>{" "}
-                — plus optional <code className="font-mono font-bold">explanation</code> and{" "}
-                <code className="font-mono font-bold">source</code> columns.
+                — plus optional <code className="font-mono font-bold">explanation</code>,{" "}
+                <code className="font-mono font-bold">source</code>,{" "}
+                <code className="font-mono font-bold">subject</code>,{" "}
+                <code className="font-mono font-bold">class</code> and{" "}
+                <code className="font-mono font-bold">paper</code> columns.
               </p>
               <div className="flex flex-col gap-2 pt-1">
                 <input
@@ -896,6 +1189,23 @@ iii. অস্ত্রোপচার
                   <code className="text-amber-500 font-mono">[ঢাকা বোর্ড ২০২৪]</code>
                 </p>
               </div>
+
+              <div
+                className={`p-3 rounded-xl border ${
+                  isAppLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-slate-900 border-slate-800'
+                }`}
+              >
+                <p className="font-bold mb-1">6. Subject / Class / Paper (Optional)</p>
+                <p className="text-slate-400">
+                  Add tag lines like{' '}
+                  <code className="text-amber-500 font-mono">subject: জীববিজ্ঞান</code>,{' '}
+                  <code className="text-amber-500 font-mono">class: SSC</code>,{' '}
+                  <code className="text-amber-500 font-mono">paper: 1st Paper</code> — they
+                  become the question's category tags.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -927,7 +1237,7 @@ iii. অস্ত্রোপচার
                 <button
                   type="button"
                   onClick={approveAllQueue}
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 cursor-pointer flex items-center gap-1.5"
+                  className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 cursor-pointer flex items-center gap-1.5 transition-all"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Approve All ({unapprovedQueue.length}) → Active Deck</span>
@@ -936,13 +1246,14 @@ iii. অস্ত্রোপচার
                   <button
                     type="button"
                     onClick={async () => {
+                      rememberItems(unapprovedQueue);
                       const saved = await onImportToQuestionBank(unapprovedQueue);
                       if (!saved) return;
                       setUnapprovedQueue([]);
                       if (onClearReviewItems) onClearReviewItems();
                       resetForm();
                     }}
-                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5"
+                    className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-500/25 cursor-pointer flex items-center gap-1.5 transition-all"
                     title="Save every queued question to the Question Bank (deck library) instead of the active deck"
                   >
                     <Database className="w-4 h-4" />
@@ -963,115 +1274,367 @@ iii. অস্ত্রোপচার
             </div>
           ) : (
             <div className="space-y-4">
-              {unapprovedQueue.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className={`p-5 rounded-3xl border transition-all space-y-3 ${
-                    isAppLight
-                      ? 'glass-card-fatty-light border-slate-200 text-slate-900'
-                      : 'glass-card-fatty bg-slate-950 border-slate-800 text-slate-100'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">
-                        {idx + 1}
-                      </span>
-                      <div>
-                        <h4 className="text-sm font-bold leading-snug">
-                          <MathText text={item.stem} />
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 font-bold font-mono">
-                            Answer: {item.answer}
-                          </span>
-                          {getSourceTags(item).map(tag => (
-                            <span key={tag} className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                              {tag}
+              {unapprovedQueue.map((item, idx) => {
+                const isEditing = editingQueueItemId === item.id && !!queueEditDraft;
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-5 rounded-3xl border transition-all space-y-3 ${
+                      isEditing
+                        ? isAppLight
+                          ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-50/40'
+                          : 'border-amber-500/50 ring-1 ring-amber-500/30 bg-slate-950'
+                        : isAppLight
+                        ? 'glass-card-fatty-light border-slate-200 text-slate-900'
+                        : 'glass-card-fatty bg-slate-950 border-slate-800 text-slate-100'
+                    }`}
+                  >
+                    {isEditing && queueEditDraft ? (
+                      <>
+                        {/* Header: editing state */}
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">
+                              {idx + 1}
                             </span>
-                          ))}
+                            <span className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                              isAppLight ? 'text-indigo-700' : 'text-indigo-300'
+                            }`}>
+                              <Edit2 className="w-3.5 h-3.5" />
+                              Editing Question (in place)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={cancelQueueEdit}
+                              className={`px-4 py-2.5 rounded-2xl text-xs font-bold border cursor-pointer transition-all ${
+                                isAppLight
+                                  ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
+                                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                              }`}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={saveQueueEdit}
+                              className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm flex items-center gap-1.5 shadow-lg shadow-amber-500/25 cursor-pointer transition-all"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              Save Changes
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Actions: Edit in Creator, Approve, Remove */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => loadItemIntoForm(item, 'queue')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1 cursor-pointer transition-colors ${
-                          isAppLight
-                            ? 'bg-slate-100 hover:bg-slate-200 text-amber-700 border-slate-300'
-                            : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
-                        }`}
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span>Edit in Form</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => approveQueueItem(item.id)}
-                        className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black shadow-sm flex items-center gap-1 cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Approve</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeQueueItem(item.id)}
-                        className={`p-1.5 rounded-xl border cursor-pointer transition-colors ${
-                          isAppLight ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
-                        }`}
-                        title="Remove"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Options List Preview */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
-                    {item.options.map((opt) => {
-                      const isCorrect =
-                        opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
-                      return (
-                        <div
-                          key={opt.key}
-                          className={`p-2 rounded-xl border flex items-center gap-2 font-medium truncate ${
-                            isCorrect
-                              ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 font-bold'
-                              : isAppLight
-                              ? 'bg-white border-slate-200 text-slate-700'
-                              : 'bg-slate-900 border-slate-800 text-slate-300'
-                          }`}
-                        >
-                          <span className="font-bold text-amber-500 font-mono text-[10px]">
-                            {opt.key}.
-                          </span>
-                          <span className="truncate">
-                            <MathText text={opt.text} />
-                          </span>
+                        {/* Stem */}
+                        <div>
+                          <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                            isAppLight ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
+                            Question Stem
+                          </label>
+                          <textarea
+                            value={queueEditDraft.stem}
+                            onChange={(e) => patchQueueDraft({ stem: e.target.value })}
+                            rows={2}
+                            className={`${queueInputCls} resize-none leading-relaxed`}
+                          />
                         </div>
-                      );
-                    })}
-                  </div>
 
-                  {/* Optional explanation indicator */}
-                  {item.explanation && (
-                    <div className={`mt-2 px-3 py-2 rounded-xl border text-xs leading-snug flex items-start gap-2 ${
-                      isAppLight
-                        ? 'bg-sky-50 border-sky-200 text-sky-800'
-                        : 'bg-sky-500/10 border-sky-500/40 text-sky-300'
-                    }`}>
-                      <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
-                      <span className="min-w-0">
-                        <span className="font-black mr-1">ব্যাখ্যা:</span>
-                        <MathText text={item.explanation} />
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
+                        {/* Bohupodi roman items */}
+                        {queueEditDraft.questionType === 'roman_statements' && (
+                          <div className={`space-y-2 p-3 rounded-2xl border ${
+                            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                          }`}>
+                            <label className={`block text-[11px] font-bold text-amber-500 uppercase tracking-wider`}>
+                              Roman Statements (i. ii. iii.)
+                            </label>
+                            {queueEditDraft.romanItems && queueEditDraft.romanItems.length > 0
+                              ? queueEditDraft.romanItems.map((ri, riIdx) => (
+                                  <input
+                                    key={riIdx}
+                                    type="text"
+                                    value={ri}
+                                    onChange={(e) => {
+                                      const updated = [...(queueEditDraft.romanItems || [])];
+                                      updated[riIdx] = e.target.value;
+                                      patchQueueDraft({ romanItems: updated });
+                                    }}
+                                    className={queueInputCls}
+                                  />
+                                ))
+                              : (
+                                  <input
+                                    type="text"
+                                    value=""
+                                    onChange={(e) => patchQueueDraft({ romanItems: [e.target.value, '', ''] })}
+                                    placeholder="Add statement…"
+                                    className={queueInputCls}
+                                  />
+                                )}
+                            <input
+                              type="text"
+                              value={queueEditDraft.prompt || ''}
+                              onChange={(e) => patchQueueDraft({ prompt: e.target.value })}
+                              placeholder="Prompt e.g. নিচের কোনটি সঠিক?"
+                              className={`${queueInputCls} ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}
+                            />
+                          </div>
+                        )}
+
+                        {/* Options */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {queueEditDraft.options.map((opt) => {
+                            const isCorrect =
+                              opt.key.toLowerCase() === queueEditDraft.answer?.toLowerCase();
+                            return (
+                              <div
+                                key={opt.key}
+                                className={`flex items-center gap-2 p-2 rounded-xl border ${
+                                  isCorrect
+                                    ? 'bg-emerald-500/10 border-emerald-500/40'
+                                    : isAppLight
+                                    ? 'bg-white border-slate-200'
+                                    : 'bg-slate-900 border-slate-800'
+                                }`}
+                              >
+                                <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black flex items-center justify-center shrink-0">
+                                  {opt.key}
+                                </span>
+                                <input
+                                  type="text"
+                                  value={opt.text}
+                                  onChange={(e) => patchQueueOption(opt.key, e.target.value)}
+                                  className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border text-sm focus:outline-none focus:border-amber-500 bg-transparent"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setQueueAnswer(opt.key)}
+                                  className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
+                                    isCorrect
+                                      ? 'bg-emerald-500 text-slate-950'
+                                      : isAppLight
+                                      ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                                  }`}
+                                >
+                                  {isCorrect ? '✓ Correct' : 'Answer'}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Source + explanation */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                              isAppLight ? 'text-slate-500' : 'text-slate-400'
+                            }`}>
+                              Source Tags (Board / Exam)
+                            </label>
+                            <SourceTagsInput
+                              tags={getSourceTags(queueEditDraft)}
+                              onChange={(tags) => patchQueueDraft({ source: tags.length > 0 ? tags : undefined })}
+                              theme={isAppLight ? 'light' : 'dark'}
+                            />
+                          </div>
+                          <div>
+                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                              isAppLight ? 'text-slate-500' : 'text-slate-400'
+                            }`}>
+                              Explanation
+                            </label>
+                            <input
+                              type="text"
+                              value={queueEditDraft.explanation || ''}
+                              onChange={(e) => patchQueueDraft({ explanation: e.target.value || undefined })}
+                              placeholder="Optional explanation"
+                              className={queueInputCls}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Structured tags */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                              isAppLight ? 'text-slate-500' : 'text-slate-400'
+                            }`}>
+                              Subject
+                            </label>
+                            <TagChipSelect
+                              value={queueEditDraft.tags?.subject || ''}
+                              onChange={(v) =>
+                                patchQueueDraft({
+                                  tags: { ...(queueEditDraft.tags || {}), subject: v || undefined },
+                                })
+                              }
+                              suggestions={memory.subjects}
+                              placeholder="e.g. Biology"
+                              theme={isAppLight ? 'light' : 'dark'}
+                            />
+                          </div>
+                          <div>
+                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                              isAppLight ? 'text-slate-500' : 'text-slate-400'
+                            }`}>
+                              Class
+                            </label>
+                            <TagChipSelect
+                              value={queueEditDraft.tags?.className || ''}
+                              onChange={(v) =>
+                                patchQueueDraft({
+                                  tags: { ...(queueEditDraft.tags || {}), className: v || undefined },
+                                })
+                              }
+                              suggestions={memory.classes}
+                              placeholder="e.g. SSC / HSC"
+                              theme={isAppLight ? 'light' : 'dark'}
+                            />
+                          </div>
+                          <div>
+                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                              isAppLight ? 'text-slate-500' : 'text-slate-400'
+                            }`}>
+                              Paper
+                            </label>
+                            <TagChipSelect
+                              value={queueEditDraft.tags?.paper || ''}
+                              onChange={(v) =>
+                                patchQueueDraft({
+                                  tags: { ...(queueEditDraft.tags || {}), paper: v || undefined },
+                                })
+                              }
+                              suggestions={memory.papers}
+                              placeholder="e.g. 1st Paper"
+                              theme={isAppLight ? 'light' : 'dark'}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <h4 className="text-sm font-bold leading-snug">
+                                <MathText text={item.stem} />
+                              </h4>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 font-bold font-mono">
+                                  Answer: {item.answer}
+                                </span>
+                                {getSourceTags(item).map(tag => (
+                                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                                    {tag}
+                                  </span>
+                                ))}
+                                {item.tags?.subject && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                                    📌 {item.tags.subject}
+                                  </span>
+                                )}
+                                {item.tags?.className && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                                    🏫 {item.tags.className}
+                                  </span>
+                                )}
+                                {item.tags?.paper && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                                    📄 {item.tags.paper}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Actions: Edit in place, Approve (fatty), Remove */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => startQueueEdit(item)}
+                              className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
+                                isAppLight
+                                  ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-300'
+                                  : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                              }`}
+                              title="Edit this question right here in the queue"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => approveQueueItem(item.id)}
+                              className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-500/25 cursor-pointer transition-all"
+                            >
+                              <Check className="w-4 h-4 stroke-[2.5]" />
+                              <span>Approve</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeQueueItem(item.id)}
+                              className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                                isAppLight ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
+                              }`}
+                              title="Remove"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Options List Preview */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
+                          {item.options.map((opt) => {
+                            const isCorrect =
+                              opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
+                            return (
+                              <div
+                                key={opt.key}
+                                className={`p-2 rounded-xl border flex items-center gap-2 font-medium truncate ${
+                                  isCorrect
+                                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 font-bold'
+                                    : isAppLight
+                                    ? 'bg-white border-slate-200 text-slate-700'
+                                    : 'bg-slate-900 border-slate-800 text-slate-300'
+                                }`}
+                              >
+                                <span className="font-bold text-amber-500 font-mono text-[10px]">
+                                  {opt.key}.
+                                </span>
+                                <span className="truncate">
+                                  <MathText text={opt.text} />
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Optional explanation indicator */}
+                        {item.explanation && (
+                          <div className={`mt-2 px-3 py-2 rounded-xl border text-xs leading-snug flex items-start gap-2 ${
+                            isAppLight
+                              ? 'bg-sky-50 border-sky-200 text-sky-800'
+                              : 'bg-sky-500/10 border-sky-500/40 text-sky-300'
+                          }`}>
+                            <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
+                            <span className="min-w-0">
+                              <span className="font-black mr-1">ব্যাখ্যা:</span>
+                              <MathText text={item.explanation} />
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1348,56 +1911,75 @@ iii. অস্ত্রোপচার
           </div>
 
           {/* Structured Tags: Subject / Class / Paper */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1">
-                Subject Tag (Optional):
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Structured Tags (Subject / Class / Paper)
               </label>
-              <input
-                type="text"
-                value={tagSubject}
-                onChange={(e) => setTagSubject(e.target.value)}
-                placeholder="e.g. Biology / জীববিজ্ঞান"
-                className={`w-full px-3 py-2 rounded-xl border text-sm ${
-                  isAppLight
-                    ? 'bg-slate-50 border-slate-300 text-slate-900'
-                    : 'bg-slate-950 border-slate-800 text-white'
-                }`}
-              />
+              {lastItemTags && (
+                <button
+                  type="button"
+                  onClick={useLastItemTags}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
+                    isAppLight
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
+                      : 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20'
+                  }`}
+                  title={`Copy tags from the last deck question: ${lastItemTags.stem.slice(0, 40)}…`}
+                >
+                  <History className="w-3.5 h-3.5" />
+                  Use Last Question's Tags
+                </button>
+              )}
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">
+                  Subject Tag (Optional):
+                </label>
+                <TagChipSelect
+                  value={tagSubject}
+                  onChange={(v) => {
+                    setTagSubject(v);
+                    if (v) remember({ subject: v });
+                  }}
+                  suggestions={memory.subjects}
+                  placeholder="e.g. Biology / জীববিজ্ঞান"
+                  theme={isAppLight ? 'light' : 'dark'}
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1">
-                Class Tag (Optional):
-              </label>
-              <input
-                type="text"
-                value={tagClass}
-                onChange={(e) => setTagClass(e.target.value)}
-                placeholder="e.g. SSC / HSC / Class 9"
-                className={`w-full px-3 py-2 rounded-xl border text-sm ${
-                  isAppLight
-                    ? 'bg-slate-50 border-slate-300 text-slate-900'
-                    : 'bg-slate-950 border-slate-800 text-white'
-                }`}
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">
+                  Class Tag (Optional):
+                </label>
+                <TagChipSelect
+                  value={tagClass}
+                  onChange={(v) => {
+                    setTagClass(v);
+                    if (v) remember({ className: v });
+                  }}
+                  suggestions={memory.classes}
+                  placeholder="e.g. SSC / HSC / Class 9"
+                  theme={isAppLight ? 'light' : 'dark'}
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1">
-                Paper Tag (Optional):
-              </label>
-              <input
-                type="text"
-                value={tagPaper}
-                onChange={(e) => setTagPaper(e.target.value)}
-                placeholder="e.g. 1st Paper / 2nd Paper"
-                className={`w-full px-3 py-2 rounded-xl border text-sm ${
-                  isAppLight
-                    ? 'bg-slate-50 border-slate-300 text-slate-900'
-                    : 'bg-slate-950 border-slate-800 text-white'
-                }`}
-              />
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">
+                  Paper Tag (Optional):
+                </label>
+                <TagChipSelect
+                  value={tagPaper}
+                  onChange={(v) => {
+                    setTagPaper(v);
+                    if (v) remember({ paper: v });
+                  }}
+                  suggestions={memory.papers}
+                  placeholder="e.g. 1st Paper / 2nd Paper"
+                  theme={isAppLight ? 'light' : 'dark'}
+                />
+              </div>
             </div>
           </div>
 
@@ -1407,7 +1989,7 @@ iii. অস্ত্রোপচার
               className="px-8 py-3.5 rounded-2xl bg-amber-500 text-slate-950 font-black text-sm flex items-center gap-2 shadow-lg hover:brightness-110 cursor-pointer"
             >
               {editingId ? <CheckCircle2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-              <span>{editingId ? 'Save & Update Question' : 'Add Question to Active Deck'}</span>
+              <span>{editingId ? 'Save & Update Question' : 'Save Question to Batch'}</span>
             </button>
             {!editingId && onImportToQuestionBank && (
               <button
@@ -1435,6 +2017,119 @@ iii. অস্ত্রোপচার
             )}
           </div>
         </form>
+      )}
+
+      {/* Success / info notice from the Form Question Creator */}
+      {formNotice && (
+        <div className={`flex items-center justify-between gap-3 p-4 rounded-2xl border ${
+          isAppLight ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
+        }`}>
+          <p className="text-sm font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span>{formNotice}</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => setFormNotice(null)}
+            className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+              isAppLight ? 'text-emerald-600 hover:bg-emerald-100' : 'text-emerald-400 hover:bg-emerald-500/20'
+            }`}
+            title="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Staged question batch — created in the Form Question Creator, waiting to
+          be committed to the Active Deck or the Question Bank in one shot. */}
+      {stagedItems.length > 0 && (
+        <div className={`p-5 rounded-3xl border space-y-3 ${
+          isAppLight ? 'bg-indigo-50/60 border-indigo-300' : 'bg-slate-950 border-indigo-500/40'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className={`p-2 rounded-xl font-black ${isAppLight ? 'bg-indigo-500 text-white' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'}`}>
+                <Layers className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className={`text-sm font-black uppercase tracking-wider ${isAppLight ? 'text-indigo-700' : 'text-indigo-300'}`}>
+                  Staged Batch ({stagedItems.length})
+                </h4>
+                <p className={`text-[11px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Questions below are saved locally — commit them all to your deck or the question bank.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setStagedItems([])}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
+                  isAppLight ? 'bg-white border-slate-300 text-slate-500 hover:text-rose-600 hover:border-rose-300' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-rose-400 hover:border-rose-500/40'
+                }`}
+              >
+                Discard All
+              </button>
+              {onImportToQuestionBank && (
+                <button
+                  type="button"
+                  onClick={commitStagedToBank}
+                  className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 border cursor-pointer transition-all ${
+                    isAppLight ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                  }`}
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  Commit All ({stagedItems.length}) → Question Bank
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={commitStagedToDeck}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm flex items-center gap-1.5 shadow-lg shadow-amber-500/25 cursor-pointer transition-all"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Commit All ({stagedItems.length}) → Active Deck
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {stagedItems.map((item, idx) => (
+              <div
+                key={item.id}
+                className={`p-3 rounded-2xl border flex items-center justify-between gap-3 ${
+                  isAppLight ? 'bg-white border-indigo-200 text-slate-900' : 'bg-slate-900 border-indigo-500/30 text-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-6 h-6 rounded-lg bg-indigo-500 text-white font-black text-[11px] flex items-center justify-center shrink-0">
+                    {idx + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold truncate max-w-[420px]">
+                      <MathText text={item.stem} />
+                    </p>
+                    <span className={`text-[10px] font-mono font-semibold ${isAppLight ? 'text-indigo-600' : 'text-indigo-300'}`}>
+                      Ans: {item.answer}
+                      {getSourceTags(item).length > 0 ? ` • ${getSourceTags(item).join(' | ')}` : ''}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeStagedItem(item.id)}
+                  className={`p-2 rounded-lg cursor-pointer transition-colors shrink-0 ${
+                    isAppLight ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-500 hover:text-rose-400 hover:bg-rose-500/10'
+                  }`}
+                  title="Remove from batch"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ACTIVE PRESENTATION DECK RE-EDITOR INSPECTOR */}

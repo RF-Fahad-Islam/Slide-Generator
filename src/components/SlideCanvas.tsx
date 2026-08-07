@@ -136,6 +136,10 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   const bgImageUrl = getBackgroundPresetUrl(effectiveConfig.bgPreset, effectiveConfig.bgImageUrl);
   const bgOpacity = effectiveConfig.bgImageOpacity !== undefined ? effectiveConfig.bgImageOpacity : 0.85;
   const overlayDarkness = effectiveConfig.bgOverlayDarkness !== undefined ? effectiveConfig.bgOverlayDarkness : 0.4;
+  // Fit mode: cover (default) | contain | stretch
+  const bgFit = effectiveConfig.bgImageFit || 'cover';
+  const bgSizeStyle = bgFit === 'contain' ? 'contain' : bgFit === 'stretch' ? '100% 100%' : 'cover';
+  const bgPosStyle = bgFit === 'contain' ? 'center' : 'center';
 
   // Logo Size mapping
   const logoDimensions = {
@@ -187,9 +191,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
           it REPLACES the template theme background entirely. */}
       {bgImageUrl && (
         <div
-          className="absolute inset-0 z-0 bg-cover bg-center pointer-events-none transition-opacity duration-300"
+          className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300"
           style={{
             backgroundImage: `url("${bgImageUrl}")`,
+            backgroundSize: bgSizeStyle,
+            backgroundPosition: bgPosStyle,
+            backgroundRepeat: 'no-repeat',
             opacity: bgOpacity,
           }}
         />

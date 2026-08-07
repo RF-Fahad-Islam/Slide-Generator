@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MCQItem, DeckConfig, SlideTextBox, SlideTextBoxBind, getSourceTags } from '../types';
+import { MCQItem, DeckConfig, SlideTextBox, SlideTextBoxBind, BgImageFit, getSourceTags } from '../types';
 import { MathText } from './MathText';
+import { BackgroundImageEditor, BgImageEditorResult } from './BackgroundImageEditor';
 import {
   Share2,
   Download,
@@ -44,6 +45,7 @@ interface SocialPostGeneratorProps {
 
 interface CustomPostDesign {
   bgImageUrl: string;
+  bgImageFit?: BgImageFit;
   boxes: SlideTextBox[];
 }
 
@@ -69,6 +71,7 @@ const defaultCustomBoxes = (w: number, h: number): SlideTextBox[] => [
 interface StoredPostDesign {
   version?: number;
   bgImageUrl: string;
+  bgImageFit?: BgImageFit;
   boxes: SlideTextBox[];
 }
 
@@ -97,14 +100,14 @@ const loadSavedDesign = (w: number, h: number): CustomPostDesign => {
             };
           });
         if (boxes.length > 0) {
-          return { bgImageUrl: parsed.bgImageUrl || '', boxes };
+          return { bgImageUrl: parsed.bgImageUrl || '', bgImageFit: parsed.bgImageFit || 'cover', boxes };
         }
       }
     }
   } catch {
     // ignore corrupted storage
   }
-  return { bgImageUrl: '', boxes: defaultCustomBoxes(w, h) };
+  return { bgImageUrl: '', bgImageFit: 'cover', boxes: defaultCustomBoxes(w, h) };
 };
 
 export type StudioDrawerTab = 'templates' | 'content' | 'deck' | 'branding' | 'reactions' | 'theme' | 'layers';
@@ -161,6 +164,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   );
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [canvasWidth, setCanvasWidth] = useState<number>(500);
+  // Background image crop/resize/fit editor state (custom canvas mode).
+  const [bgEditorImage, setBgEditorImage] = useState<string | null>(null);
 
   // Studio Drawer Active Tab State (Full Left Drawer)
   const [activeTab, setActiveTab] = useState<StudioDrawerTab>('templates');
@@ -233,7 +238,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   // Persist custom design
   useEffect(() => {
     try {
-      const stored: StoredPostDesign = { version: 2, bgImageUrl: customDesign.bgImageUrl, boxes: customDesign.boxes };
+      const stored: StoredPostDesign = { version: 2, bgImageUrl: customDesign.bgImageUrl, bgImageFit: customDesign.bgImageFit, boxes: customDesign.boxes };
       localStorage.setItem(CUSTOM_DESIGN_STORAGE_KEY, JSON.stringify(stored));
     } catch {
       // ignore
@@ -338,10 +343,19 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     const reader = new FileReader();
     reader.onload = (evt) => {
       if (evt.target?.result) {
-        setCustomDesign(prev => ({ ...prev, bgImageUrl: evt.target.result as string }));
+        setBgEditorImage(evt.target.result as string);
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleBgEditorApply = (result: BgImageEditorResult) => {
+    setCustomDesign(prev => ({
+      ...prev,
+      bgImageUrl: result.dataUrl,
+      bgImageFit: result.fit,
+    }));
+    setBgEditorImage(null);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -358,7 +372,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
   const resetDesign = () => {
     if (!window.confirm('Reset the custom design to its default layout? This clears your background image and all text boxes.')) return;
-    setCustomDesign({ bgImageUrl: '', boxes: defaultCustomBoxes(postDesignW, postDesignH) });
+    setCustomDesign({ bgImageUrl: '', bgImageFit: 'cover', boxes: defaultCustomBoxes(postDesignW, postDesignH) });
     setSelectedBoxId(null);
   };
 
@@ -437,13 +451,13 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const getAspectClass = () => {
     switch (aspectRatio) {
       case '1:1':
-        return 'aspect-square max-w-[500px]';
+        return 'aspect-square max-w-[640px]';
       case '4:5':
-        return 'aspect-[4/5] max-w-[450px]';
+        return 'aspect-[4/5] max-w-[600px]';
       case '9:16':
-        return 'aspect-[9/16] max-w-[360px]';
+        return 'aspect-[9/16] max-w-[480px]';
       default:
-        return 'aspect-square max-w-[500px]';
+        return 'aspect-square max-w-[640px]';
     }
   };
 
@@ -466,19 +480,19 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     <div className="space-y-5 animate-fadeIn relative">
       {/* STUDIO TOP HEADER BAR (PAGE-FLAT PANEL) */}
       <div
-        className={`p-4 lg:p-5 border rounded-3xl backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+        className={`p-5 lg:p-6 border rounded-3xl backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
           isAppLight
             ? 'bg-white/80 border-slate-200 shadow-sm'
             : 'bg-slate-900/60 border-slate-800/80 shadow-xl text-white'
         }`}
       >
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25">
-            <Share2 className="w-6 h-6 stroke-[2.5]" />
+        <div className="flex items-center gap-4">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-500/25">
+            <Share2 className="w-7 h-7 stroke-[2.5]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className={`text-lg lg:text-xl font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+              <h2 className={`text-xl lg:text-2xl font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
                 Social Post Studio
               </h2>
               <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-black border ${
@@ -496,7 +510,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         {/* Header Right Actions & Quick Format Selector */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
           {/* Quick Format Pills */}
-          <div className={`hidden md:flex items-center p-1 rounded-xl border ${isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
+          <div className={`hidden md:flex items-center p-1.5 rounded-2xl border ${isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
             {[
               { id: '1:1', label: '1:1 Square' },
               { id: '4:5', label: '4:5 Feed' },
@@ -506,7 +520,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 key={r.id}
                 type="button"
                 onClick={() => setAspectRatio(r.id as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
                   aspectRatio === r.id
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
                     : isAppLight
@@ -522,7 +536,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           <button
             onClick={handleExportSinglePNG}
             disabled={isExporting || items.length === 0}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer disabled:opacity-50 transition-all shrink-0"
+            className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer disabled:opacity-50 transition-all shrink-0"
           >
             {isExporting ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -551,7 +565,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       />
 
       {/* 2-COLUMN STUDIO GRID */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         {/* ========================================================================= */}
         {/* LEFT COLUMN (xl:col-span-5): FULL TOOL DRAWER / SIDEBAR (PAGE-FLAT)        */}
         {/* ========================================================================= */}
@@ -561,11 +575,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             : 'bg-slate-900/60 border-slate-800/80 shadow-xl text-white'
         }`}>
           {/* Tool Drawer Header */}
-          <div className={`p-4 border-b flex items-center justify-between ${
+          <div className={`p-5 border-b flex items-center justify-between ${
             isAppLight ? 'bg-slate-100/80 border-slate-200' : 'bg-slate-950/60 border-slate-800'
           }`}>
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-amber-500 text-slate-950 font-black">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500 text-slate-950 font-black">
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
@@ -607,7 +621,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           </div>
 
           {/* Tool Drawer Body Content */}
-          <div className="p-5 flex-1 overflow-y-auto space-y-5 max-h-[calc(100vh-16rem)]">
+          <div className="p-6 flex-1 overflow-y-auto space-y-5 max-h-[calc(100vh-14rem)]">
             {/* --------------------------------------------------------------------- */}
             {/* TAB 1: TEMPLATES & ASPECT RATIO                                       */}
             {/* --------------------------------------------------------------------- */}
@@ -1089,7 +1103,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         type="button"
                         onClick={() => {
                           setPostBgColor(b.id);
-                          setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }));
+                          setCustomDesign(prev => ({ ...prev, bgImageUrl: '', bgImageFit: 'cover' }));
                         }}
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           postBgColor === b.id && !customDesign.bgImageUrl
@@ -1128,16 +1142,28 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         <img src={customDesign.bgImageUrl} alt="Custom Background" className="w-12 h-12 rounded-xl object-cover border border-amber-400 shrink-0" />
                         <div className="min-w-0">
                           <p className={`text-xs font-bold truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Custom BG Graphic</p>
-                          <p className={`text-[10px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>Applied live to card</p>
+                          <p className={`text-[10px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            Applied live to card · <span className="font-mono font-bold text-amber-500">{customDesign.bgImageFit || 'cover'}</span>
+                          </p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '' }))}
-                        className="px-3 py-1.5 rounded-xl text-xs font-black text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer shrink-0"
-                      >
-                        Clear Image
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setBgEditorImage(customDesign.bgImageUrl)}
+                          className="px-3 py-1.5 rounded-xl text-xs font-black text-amber-500 border border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 cursor-pointer shrink-0"
+                          title="Re-open the crop / resize / fit editor"
+                        >
+                          Re-edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '', bgImageFit: 'cover' }))}
+                          className="px-3 py-1.5 rounded-xl text-xs font-black text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer shrink-0"
+                        >
+                          Clear Image
+                        </button>
+                      </div>
                     </div>
                   ) : null}
 
@@ -1211,7 +1237,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         {/* ========================================================================= */}
         <div className="xl:col-span-7 flex flex-col items-center justify-start space-y-4 xl:sticky xl:top-20">
           {/* Canvas Top Bar */}
-          <div className="flex items-center justify-between w-full max-w-[500px] px-1">
+          <div className="flex items-center justify-between w-full max-w-[640px] px-1">
             <span className={`text-xs font-bold flex items-center gap-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
               <Sparkles className="w-4 h-4 text-amber-500" />
               <span>Live Social Canvas ({aspectRatio})</span>
@@ -1244,7 +1270,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           </div>
 
           {/* Live Scaled Canvas Card Container */}
-          <div className="w-full max-w-[500px] relative">
+          <div className="w-full max-w-[640px] relative">
             {!isCustomMode ? (
               postTemplate === 'quiz_time' ? (
                 <QuizTimeCard
@@ -1253,6 +1279,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   aspectClass={getAspectClass()}
                   bgStyle={getBgStyle()}
                   customBgImageUrl={customDesign.bgImageUrl}
+                  customBgImageFit={customDesign.bgImageFit}
                   brandName={customBrandName}
                   logoUrl={customLogoUrl}
                   titleText={quizTitleText}
@@ -1274,6 +1301,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   aspectClass={getAspectClass()}
                   bgStyle={getBgStyle()}
                   customBgImageUrl={customDesign.bgImageUrl}
+                  customBgImageFit={customDesign.bgImageFit}
                   showAnswerKey={showAnswerKey}
                   showExplanation={showExplanation}
                   brandName={customBrandName}
@@ -1291,7 +1319,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                       ...(customDesign.bgImageUrl
                         ? {
                             backgroundImage: `url("${customDesign.bgImageUrl}")`,
-                            backgroundSize: 'cover',
+                            backgroundSize: customDesign.bgImageFit === 'contain' ? 'contain' : customDesign.bgImageFit === 'stretch' ? '100% 100%' : 'cover',
                             backgroundPosition: 'center',
                             backgroundRepeat: 'no-repeat',
                           }
@@ -1342,6 +1370,21 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Background image crop / resize / fit editor (custom canvas) */}
+      <BackgroundImageEditor
+        open={!!bgEditorImage}
+        imageUrl={bgEditorImage || ''}
+        isAppLight={isAppLight}
+        ratios={[
+          { id: '1:1', label: '1:1', value: 1, hint: 'Square' },
+          { id: '4:5', label: '4:5', value: 4 / 5, hint: 'Feed' },
+          { id: '9:16', label: '9:16', value: 9 / 16, hint: 'Story' },
+        ]}
+        defaultRatioId={aspectRatio}
+        onClose={() => setBgEditorImage(null)}
+        onApply={handleBgEditorApply}
+      />
     </div>
   );
 };

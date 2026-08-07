@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MCQItem, QuestionType, getSourceTags } from '../types';
-import { X, Save, Edit3, ArrowUpRight, Database } from 'lucide-react';
+import { MCQItem, QuestionType, getSourceTags, MCQTags } from '../types';
+import { X, Save, Edit3, ArrowUpRight, Database, History } from 'lucide-react';
 import { SourceTagsInput } from './SourceTagsInput';
+import { TagChipSelect } from './TagChipSelect';
+import { useTagMemory } from '../hooks/useTagMemory';
 
 interface EditQuestionModalProps {
   isOpen: boolean;
@@ -11,6 +13,9 @@ interface EditQuestionModalProps {
   onOpenInDedicatedEditor: (item: MCQItem) => void;
   onSaveToQuestionBank?: (items: MCQItem[]) => Promise<boolean>;
   appTheme: 'dark' | 'light';
+  // Tags of the previous deck question — lets the "Use Last Question's Tags"
+  // button auto-fill this form so adding a batch of same-category MCQs is fast.
+  previousTags?: { source?: string[] | string; tags?: MCQTags } | null;
 }
 
 export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
@@ -21,8 +26,10 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   onOpenInDedicatedEditor,
   onSaveToQuestionBank,
   appTheme,
+  previousTags,
 }) => {
   const isAppLight = appTheme === 'light';
+  const { memory, remember, rememberItems } = useTagMemory();
 
   const [questionType, setQuestionType] = useState<QuestionType>('standard');
   const [stem, setStem] = useState('');
@@ -85,8 +92,19 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
   const handleSave = () => {
     if (!stem.trim()) return;
-    onSave(buildUpdatedItem());
+    const updated = buildUpdatedItem();
+    rememberItems([updated]);
+    onSave(updated);
     onClose();
+  };
+
+  // "Add more" accelerator: copy the previous deck question's tags into the form.
+  const useLastQuestionTags = () => {
+    if (!previousTags) return;
+    setSourceTags(getSourceTags(previousTags));
+    setTagSubject(previousTags.tags?.subject || '');
+    setTagClass(previousTags.tags?.className || '');
+    setTagPaper(previousTags.tags?.paper || '');
   };
 
   const handleSaveToBank = async () => {
@@ -269,42 +287,73 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
           </div>
 
           {/* Structured tags */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
-                Subject Tag:
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Subject / Class / Paper
               </label>
-              <input
-                type="text"
-                value={tagSubject}
-                onChange={(e) => setTagSubject(e.target.value)}
-                placeholder="e.g. Biology"
-                className={inputCls}
-              />
+              {previousTags && (
+                <button
+                  type="button"
+                  onClick={useLastQuestionTags}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
+                    isAppLight
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
+                      : 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20'
+                  }`}
+                  title="Copy source / subject / class / paper from the previous deck question"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  Use Last Question's Tags
+                </button>
+              )}
             </div>
-            <div>
-              <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
-                Class Tag:
-              </label>
-              <input
-                type="text"
-                value={tagClass}
-                onChange={(e) => setTagClass(e.target.value)}
-                placeholder="e.g. SSC / HSC"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
-                Paper Tag:
-              </label>
-              <input
-                type="text"
-                value={tagPaper}
-                onChange={(e) => setTagPaper(e.target.value)}
-                placeholder="e.g. 1st Paper"
-                className={inputCls}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
+                  Subject Tag:
+                </label>
+                <TagChipSelect
+                  value={tagSubject}
+                  onChange={(v) => {
+                    setTagSubject(v);
+                    if (v) remember({ subject: v });
+                  }}
+                  suggestions={memory.subjects}
+                  placeholder="e.g. Biology"
+                  theme={appTheme}
+                />
+              </div>
+              <div>
+                <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
+                  Class Tag:
+                </label>
+                <TagChipSelect
+                  value={tagClass}
+                  onChange={(v) => {
+                    setTagClass(v);
+                    if (v) remember({ className: v });
+                  }}
+                  suggestions={memory.classes}
+                  placeholder="e.g. SSC / HSC"
+                  theme={appTheme}
+                />
+              </div>
+              <div>
+                <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1`}>
+                  Paper Tag:
+                </label>
+                <TagChipSelect
+                  value={tagPaper}
+                  onChange={(v) => {
+                    setTagPaper(v);
+                    if (v) remember({ paper: v });
+                  }}
+                  suggestions={memory.papers}
+                  placeholder="e.g. 1st Paper"
+                  theme={appTheme}
+                />
+              </div>
             </div>
           </div>
         </div>

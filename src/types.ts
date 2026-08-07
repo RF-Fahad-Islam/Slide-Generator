@@ -1,5 +1,9 @@
 export type QuestionType = 'standard' | 'roman_statements' | 'passage';
 
+/** How a background image maps onto the canvas: crop to fill (cover),
+ *  fit the whole image with letterboxing (contain), or distort to fill (stretch). */
+export type BgImageFit = 'cover' | 'contain' | 'stretch';
+
 export interface MCQOption {
   key: string; // e.g. "A", "B", "C", "D" or "ক", "খ", "গ", "ঘ"
   text: string;
@@ -126,6 +130,7 @@ export interface DeckConfig {
   // Background Image Controls
   bgPreset: 'none' | 'dark_chalkboard' | 'tech_mesh' | 'blue_studio' | 'geometric_dark' | 'paper_texture' | 'custom';
   bgImageUrl?: string; // Custom uploaded background image Data URL
+  bgImageFit?: BgImageFit; // cover (default) | contain | stretch — how the image maps to the canvas
   bgImageOpacity: number; // 0.0 to 1.0
   bgOverlayDarkness: number; // 0.0 to 0.9 overlay tint for text legibility
   // Deck-wide text box overlay layer (editable in the preview tab, rendered on every slide)

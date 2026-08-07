@@ -1,5 +1,5 @@
 import React from 'react';
-import { MCQItem } from '../../types';
+import { MCQItem, BgImageFit } from '../../types';
 import { MathText } from '../MathText';
 import { ReactionOptionCard } from './ReactionOptionCard';
 import { ReactionEmojiSet, REACTION_ORDER, REACTION_BADGE_COLORS } from './types';
@@ -9,6 +9,7 @@ interface QuizTimeCardProps {
   aspectClass: string;
   bgStyle?: string;
   customBgImageUrl?: string;
+  customBgImageFit?: BgImageFit;
   brandName: string;
   logoUrl?: string;
   titleText: string;
@@ -30,6 +31,7 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
       aspectClass,
       bgStyle,
       customBgImageUrl,
+      customBgImageFit,
       brandName,
       logoUrl,
       titleText,
@@ -62,7 +64,7 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
           ...(customBgImageUrl
             ? {
                 backgroundImage: `url("${customBgImageUrl}")`,
-                backgroundSize: 'cover',
+                backgroundSize: customBgImageFit === 'contain' ? 'contain' : customBgImageFit === 'stretch' ? '100% 100%' : 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
               }

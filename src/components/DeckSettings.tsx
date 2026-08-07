@@ -3,6 +3,7 @@ import { DeckConfig, CustomThemeColors } from '../types';
 import { TEMPLATES, getTemplateById } from '../templates/registry';
 import { BACKGROUND_PRESETS, getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { FONT_PRESETS, getFontPresetByFamily } from '../utils/fontPresets';
+import { BackgroundImageEditor, BgImageEditorResult } from './BackgroundImageEditor';
 import {
   getTemplatePresets,
   saveTemplatePreset,
@@ -189,9 +190,12 @@ const TemplateThumbnailPreview: React.FC<{ config: DeckConfig }> = ({ config }) 
         {/* Background Image Layer */}
         {bgImageUrl && (
           <div
-            className="absolute inset-0 z-0 bg-cover bg-center pointer-events-none"
+            className="absolute inset-0 z-0 pointer-events-none"
             style={{
               backgroundImage: `url("${bgImageUrl}")`,
+              backgroundSize: config.bgImageFit === 'contain' ? 'contain' : config.bgImageFit === 'stretch' ? '100% 100%' : 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
               opacity: config.bgImageOpacity ?? 0.85,
             }}
           />
@@ -318,6 +322,9 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   const isAppLight = appTheme === 'light';
   const [themeFilter, setThemeFilter] = useState<'all' | 'light' | 'dark' | 'custom'>('all');
   const [fontCategoryFilter, setFontCategoryFilter] = useState<string>('all');
+
+  // Background image crop/resize/fit editor — opened right after a bg upload.
+  const [bgEditorImage, setBgEditorImage] = useState<string | null>(null);
 
   // Saved custom template presets (Templates tab)
   const [savedPresets, setSavedPresets] = useState<DeckTemplatePreset[]>(getTemplatePresets());
@@ -448,8 +455,9 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       reader.onload = (evt) => {
         if (evt.target?.result) {
           if (field === 'bgImageUrl') {
-            // One atomic update so bgImageUrl + bgPreset land together.
-            handlePatch({ bgImageUrl: evt.target.result as string, bgPreset: 'custom' });
+            // Open the crop/resize/fit editor instead of applying directly — the
+            // result (processed data URL + fit) lands atomically with bgPreset.
+            setBgEditorImage(evt.target.result as string);
           } else {
             handleChange(field, evt.target.result as string);
           }
@@ -457,6 +465,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleBgEditorApply = (result: BgImageEditorResult) => {
+    handlePatch({ bgImageUrl: result.dataUrl, bgPreset: 'custom', bgImageFit: result.fit });
+    setBgEditorImage(null);
   };
 
   const filteredTemplates = TEMPLATES.filter((tmpl) => {
@@ -1192,18 +1205,28 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               {themeEffectiveConfig.bgImageUrl && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    handlePatch({
-                      bgImageUrl: '',
-                      bgPreset: themeEffectiveConfig.bgPreset === 'custom' ? 'none' : themeEffectiveConfig.bgPreset,
-                    });
-                  }}
-                  className="text-sm px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition-all shrink-0"
-                >
-                  Clear Custom Image
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setBgEditorImage(themeEffectiveConfig.bgImageUrl)}
+                    className="text-sm px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold transition-all shrink-0"
+                  >
+                    Re-edit Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handlePatch({
+                        bgImageUrl: '',
+                        bgPreset: themeEffectiveConfig.bgPreset === 'custom' ? 'none' : themeEffectiveConfig.bgPreset,
+                        bgImageFit: undefined,
+                      });
+                    }}
+                    className="text-sm px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition-all shrink-0"
+                  >
+                    Clear Custom Image
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -2275,6 +2298,22 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         )}
       </div>
       )}
+
+      {/* Background image crop / resize / fit editor */}
+      <BackgroundImageEditor
+        open={!!bgEditorImage}
+        imageUrl={bgEditorImage || ''}
+        isAppLight={isAppLight}
+        ratios={[
+          { id: '16:9', label: '16:9', value: 16 / 9, hint: 'Slide' },
+          { id: '4:3', label: '4:3', value: 4 / 3, hint: 'Classic' },
+          { id: '1:1', label: '1:1', value: 1, hint: 'Square' },
+          { id: '9:16', label: '9:16', value: 9 / 16, hint: 'Story' },
+        ]}
+        defaultRatioId="16:9"
+        onClose={() => setBgEditorImage(null)}
+        onApply={handleBgEditorApply}
+      />
     </div>
 );
 };
