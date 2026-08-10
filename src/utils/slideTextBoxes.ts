@@ -82,7 +82,7 @@ export const getSlideBoxContent = (
     case 'questionNumber': return formatSlideQNumber(currentIndex, config.questionNumberFormat);
     case 'brand': return config.brandName || "NOBEL'S CLASSROOM";
     case 'headerTitle': return config.headerTitle || 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া';
-    case 'badgeTag': return getEffectiveBadgeTag(config);
+    case 'badgeTag': return getEffectiveBadgeTag(config, item);
     case 'footerTag': return config.footerTag || 'BIOMISSION';
     case 'watermark': return config.watermarkHandle || 'Hasnat Shuvro';
     case 'free': return box.text || '';

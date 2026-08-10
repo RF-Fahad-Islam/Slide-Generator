@@ -253,7 +253,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
 
                 <div className="flex items-center gap-4">
                   <div className="px-6 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xl shadow-md">
-                    {getEffectiveBadgeTag(effectiveConfig) || "৯ম-১০ম শ্রেণি | জীববিজ্ঞান"}
+                    {getEffectiveBadgeTag(effectiveConfig, item) || "৯ম-১০ম শ্রেণি | জীববিজ্ঞান"}
                   </div>
                   <div className="px-4 py-2 rounded-xl bg-slate-900 text-white border border-slate-700 font-mono font-bold text-lg">
                     {currentIndex + 1} / {totalCount}
@@ -297,9 +297,9 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
 
             {/* Badge Tag & Slide Count */}
             <div className="flex items-center gap-4">
-              {getEffectiveBadgeTag(effectiveConfig) && (
+              {getEffectiveBadgeTag(effectiveConfig, item) && (
                 <div className={`px-6 py-2.5 rounded-2xl text-xl font-extrabold shadow-lg backdrop-blur-md border ${styles.badgeBg} ${styles.badgeText}`}>
-                  {getEffectiveBadgeTag(effectiveConfig)}
+                  {getEffectiveBadgeTag(effectiveConfig, item)}
                 </div>
               )}
               <div className={`px-5 py-2.5 rounded-2xl border text-lg font-extrabold shadow-md ${
@@ -364,15 +364,15 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* Stylus Writing Space */}
-            <div className={`flex-1 min-h-[240px] rounded-3xl border-2 border-dashed p-6 flex flex-col justify-end items-start ${
-              isLight ? 'border-slate-300/80 bg-slate-50/50' : 'border-slate-800 bg-slate-950/20'
-            }`}>
-              <span className="text-xs font-mono font-bold uppercase tracking-widest text-slate-500 opacity-60">
-                ✏️ Live Teacher Writing / Stylus Space
-              </span>
+              {/* Prompt line (e.g. "নিচের কোনটি সঠিক?") */}
+              {item.prompt && (
+                <p className={`pt-2 text-xl font-bold italic ${
+                  isLight ? 'text-amber-800' : 'text-amber-300'
+                }`} style={accentTextStyle}>
+                  {item.prompt}
+                </p>
+              )}
             </div>
           </div>
 

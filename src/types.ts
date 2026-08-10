@@ -59,11 +59,29 @@ export interface MCQItem {
  * "৯ম-১০ম শ্রেণি | জীববিজ্ঞান | অধ্যায় ৮". The chapter is not duplicated if
  * it is already a segment of the base badge.
  */
-export function getEffectiveBadgeTag(config: Pick<DeckConfig, 'badgeTag' | 'chapterName'>): string {
-  const base = (config.badgeTag || '').trim();
+export function getEffectiveBadgeTag(
+  config: Pick<DeckConfig, 'badgeTag' | 'chapterName'>,
+  item?: Pick<MCQItem, 'tags'>
+): string {
+  let base = (config.badgeTag || '').trim();
+
+  // If item carries item-level class / subject tags, auto-compose "Class | Subject"
+  if (item?.tags?.className || item?.tags?.subject) {
+    const itemClass = (item.tags.className || '').trim();
+    const itemSubject = (item.tags.subject || '').trim();
+    if (itemClass && itemSubject) {
+      base = `${itemClass} | ${itemSubject}`;
+    } else if (itemClass) {
+      base = itemClass;
+    } else if (itemSubject) {
+      base = itemSubject;
+    }
+  }
+
   const chapter = (config.chapterName || '').trim();
   if (!chapter) return base;
   if (!base) return chapter;
+
   const segments = base.split('|').map((s) => s.trim());
   if (segments.includes(chapter)) return base;
   return `${base} | ${chapter}`;

@@ -88,9 +88,9 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
             </div>
           </div>
 
-          {getEffectiveBadgeTag(config) && (
+          {getEffectiveBadgeTag(config, item) && (
             <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
-              {getEffectiveBadgeTag(config)}
+              {getEffectiveBadgeTag(config, item)}
             </span>
           )}
         </div>
