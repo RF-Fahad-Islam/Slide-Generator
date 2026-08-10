@@ -1,50 +1,53 @@
-# Memory — Background Image Resize/Crop/Fit Editor + Form Staged-Batch Flow
+# Memory — KaTeX & Chemistry Auto-Formatter + Option Card Layout + Classroom Stylus Removal + Dynamic Badge Tag + Theme Inheritance & Self-Hosted Font Bundling
 
-Last updated: 2026-08-07
+Last updated: 2026-08-10
 
 ## What was built
 
-All committed on `main`. HEAD = `fb5ce5e` ("feat: background image resize/crop/fit editor everywhere + form staged-batch flow + ManualEditor crash fix"). Working tree clean; 24 files changed.
+All committed on `main`. Latest HEAD = `f6830dd`. Working tree clean.
 
-1. **New `src/components/BackgroundImageEditor.tsx`** — reusable canvas-based modal (no new deps) for **Resize · Crop · Fit** of any uploaded background image. Opens right after a bg image file is selected in `DeckSettings` (bg upload) and `SocialPostGenerator` (custom canvas bg upload).
-   - **Aspect Ratio** chips (DeckSettings: 16:9/4:3/1:1/9:16, default 16:9; SocialPost: 1:1/4:5/9:16, default = current aspect).
-   - Interactive **crop frame**: drag anywhere to pan (`applyDrag mode 'move'`), 4 corner handles resize aspect-locked, rule-of-thirds guides, live `W × Hpx` readout, dimmed outside regions. Pointer events use `setPointerCapture`; coords converted via `toImgCoords` (client px → natural image px).
-   - **Fit mode**: Cover (bake cropped region), Contain (whole image letterboxed into ratio), Stretch (distort to fill). **Critical**: `contain` output is baked as **PNG** (alpha) so letterbox bars stay transparent and the slide theme shows through; cover/stretch use JPEG 0.92.
-   - **Output Size** presets: Original/720/1080/1920/4096. `handleApply` → canvas `drawImage` → `BgImageEditorResult { dataUrl, fit, ratioId, width, height }`.
-   - Props: `open`, `imageUrl`, `isAppLight`, `ratios: BgRatioOption[]` (`{ id, label, value (w/h), hint }`), `defaultRatioId`, `onClose`, `onApply(result)`.
-2. **`types.ts`** — new `BgImageFit = 'cover' | 'contain' | 'stretch'` + `DeckConfig.bgImageFit?`. `templatePresets.ts` snapshot captures `bgImageFit`.
-3. **Renderers honor fit** (map `bgImageFit` → `backgroundSize`: cover/contain/`100% 100%`, center, no-repeat) — was hardcoded `bg-cover bg-center` before: `SlideCanvas`, `DeckSettings` preview, `DeckQuestionPaperModal`, `QuestionBankPdfModal`, `ClassicQuizCard` (`customBgImageFit` prop), `QuizTimeCard` (same), and the `SocialPostGenerator` custom canvas.
-4. **DeckSettings** — bg upload handler opens the editor instead of directly patching; `handleBgEditorApply` → `handlePatch({ bgImageUrl, bgPreset: 'custom', bgImageFit })`; "Re-edit Image" button next to Clear; Clear resets fit.
-5. **SocialPostGenerator** — custom-bg upload opens the editor; `CustomPostDesign` + `StoredPostDesign` gained `bgImageFit` (persisted to `social_post_custom_design_v1`, loaded, default `'cover'`); "Re-edit" button on the active-bg card; `backgroundSize` honors fit on the custom canvas.
-6. **Manual Editor page crash fixed** — `parsedPreview` (ManualEditor.tsx) referenced batch-tag state (`batchSourceTags`/`batchSubject`/`batchClass`/`batchPaper`) declared LATER in the same render scope → `ReferenceError: Cannot access before initialization` at render → whole Manual Editor tab white-screened. Fixed by moving the batch-tag state block ABOVE `parsedPreview`.
-7. **Form Question Creator staged-batch flow** (ManualEditor) — submit no longer commits straight to the deck. "Save Question to Batch" appends the built MCQ to `stagedItems` and clears the form with an emerald success notice (`formNotice`). Below the form, a **Staged Batch (N)** indigo panel lists staged questions (numbered, stem, Ans/source chips, per-row ✕ remove) with **Commit All (N) → Active Deck** (`commitStagedToDeck` → `onAddMCQs(stagedItems)` + clear + `✓ N MCQs added`) and **Commit All (N) → Question Bank** (`commitStagedToBank` → async `onImportToQuestionBank` + clear + `✓ N MCQs saved`), plus Discard All. Editing existing deck/queue questions still updates in place ("Question updated…" notice). Batch-tab buttons clear `formNotice`; `startBatchEditAll` clears `stagedItems` + notice.
+1. **LaTeX & Chemistry Auto-Formatter (`src/utils/latexFormatter.ts`)**
+   - Auto-detects chemical formulas (`H2SO4`, `Na2SO4`, `2NaOH(aq)`, `2H2O(l)`), scientific units (`kJ mol-1`), and un-enclosed LaTeX macros (`\lim`, `\int`, `\frac`, `\sqrt`, `\rightleftharpoons`, `⇌`).
+   - Normalizes matrix/determinant shortcuts (`\vert{}\begin{matrix}` → `\begin{vmatrix}`).
+   - Updated `MathText.tsx` regex to `(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g` to support multiline matrices/determinants.
 
-## Decisions made
+2. **KaTeX CSS & Single HTML Output (`src/index.css`, `MathText.tsx`)**
+   - Added `@import "katex/dist/katex.min.css";` to `src/index.css` for proper visual rendering of math fonts, fraction bars, square roots, and matrix brackets.
+   - Set `output: 'html'` in `katex.renderToString()`, eliminating un-styled raw text and duplicate MathML text strings.
 
-- `BgImageFit` is the single fit contract: renderers map it to `backgroundSize` (`cover` → `'cover'`, `contain` → `'contain'`, `stretch` → `'100% 100%'`), `backgroundPosition: center`, `backgroundRepeat: no-repeat`.
-- `contain` MUST be baked as PNG (transparency) — JPEG has no alpha and would bake solid-black letterbox bars (double-letterbox bug caught in `/review`).
-- The editor is fully client-side canvas — no new dependency approved/needed (react-image-crop etc. would have required approval).
-- Staged batch keeps `onAddMCQs(stagedItems)` (App `handleAddMCQs` already `ensureUniqueIds`).
+3. **Option Box Layout Geometry (`src/utils/slideElements.ts`, `SlideTextBoxLayer.tsx`)**
+   - Widened `cl_options` from 560px to 630px (`x: 1210`, `w: 630`) and set font size to 26px in `classroomTextBoxes()`.
+   - Updated option text wrappers in `SlideTextBoxLayer.tsx` to use `flex-1 min-w-0` and `flex items-center` for single-line option fitting.
 
-## Problems solved
+4. **Classroom View Mode Stylus Removal (`SlideCanvas.tsx`, `slideElements.ts`)**
+   - Removed the dashed `✏️ Live Teacher Writing / Stylus Space` container from Classroom Mode layout and preset text boxes (`classroomTextBoxes()`).
+   - Added `item.prompt` rendering (e.g., "নিচের কোনটি সঠিক?") inside the left question stem card in Classroom Mode.
 
-- **ManualEditor TDZ crash** (see #6 above) — a `const` read before its declaration in the same render scope crashes React at render. Symptom: whole Manual Editor tab blank. Always keep derived values AFTER the state they read.
-- **Contain double-letterbox** — baking `contain` as JPEG produced opaque black bars that then got letterboxed again by the renderer. PNG fix.
-- **Stale-closure in the editor's image-load effect** — `ratioId` read inside `el.onload` could be stale; computed `targetRatioId` from props instead.
-- **Ratio-reset effect loop risk** — effect depended on `activeRatio` (recomputed from inline `ratios` array, new identity per parent render); narrowed deps to `[ratioId, img]` (review fix).
+5. **Auto Class | Subject Badge Tag (`src/types.ts`, `slideTextBoxes.ts`, `SlideCanvas.tsx`, `ClassicQuizCard.tsx`)**
+   - Updated `getEffectiveBadgeTag(config, item)` in `src/types.ts` to accept the active MCQ item.
+   - When item-level tags exist (`item.tags.className` and/or `item.tags.subject`), it auto-composes `Class | Subject` (e.g. `SSC | Biology` or `৯ম-১০ম শ্রেণি | জীববিজ্ঞান`).
+   - Appends ` | Chapter Name` when `config.chapterName` is set; falls back to `config.badgeTag` when item tags are absent.
 
-## Current state
+6. **Theme Inheritance Bug Fix (`DeckSettings.tsx`, `App.tsx`)**
+   - Fixed scope-aware theme settings so changing template presets or custom colors in `DeckSettings.tsx` updates `config` globally when `settingsScope === 'global'`.
+   - `App.handleApplyDeckConfig` clears stale per-slide `customConfig` theme overrides (`templateId`, `customTheme`, `accentColorCustom`) while dynamically re-generating `slideTextBoxes` via `templateToTextBoxes(updated)` so text box colors update everywhere.
 
-- On `main`, HEAD = `fb5ce5e`. `npx tsc --noEmit` clean, `vite build` green (only pre-existing chunk-size warning). Lint script is `tsc --noEmit` (no eslint config exists).
-- Known minor (pre-existing, still open): create-mode `setSelectedIndex(items.length)` lands on the wrong slide under `separate_slide` answer mode (`App.tsx` EditQuestionModal `onSave`).
-- Backlog unchanged: bundle self-hosted Bengali woff2 fonts; declarative `Element[]` renderer refactor; interactive template studio JSON import/export; paginated standalone answer-key slides (`answerKeyList`).
+7. **Self-Hosted Bengali & UI Font Bundling (`public/fonts/`, `src/fonts.css`, `src/index.css`)**
+   - Downloaded 13 `.woff2`/`.ttf` font files into `public/fonts/` (Kalpurush, Hind Siliguri, Noto Sans Bengali, Anek Bangla, Tiro Bangla, Atma, Mina, Plus Jakarta Sans, Poppins, Playfair Display).
+   - Added `@font-face` definitions in `src/fonts.css` and imported via `@import "./fonts.css";` in `src/index.css`.
+   - Ensures HTML-to-Image canvas rasterization and PDF/PPTX exports are 100% CORS-free, instant, and offline-capable.
 
-## Next session starts with
+---
 
-1. Verify in-browser (dev server on :3000): upload a bg in Deck Settings + Social Post custom canvas → editor opens, crop/drag/fit/output all work, `contain` shows theme through transparent bars.
-2. Optionally fix the known minor: create-mode `setSelectedIndex(items.length)` → use `questionSlideIndex(expandDeckSlides(...), items.length)` for `separate_slide` mode.
-3. Run `git fetch`/`pull` if parallel sessions pushed more commits.
+## Current State
 
-## Open questions
+- On `main`, HEAD = `f6830dd`.
+- `npx tsc --noEmit` is 100% clean (0 errors).
+- Dev server running on `http://localhost:3000`.
 
-- None blocking. Only the minor `separate_slide` create-mode nav target is knowingly unresolved.
+---
+
+## Next Session Starts With
+
+1. Dev server is running on `http://localhost:3000`.
+2. Continue with any follow-up user feature requests or design tweaks.
