@@ -20,6 +20,11 @@ interface SlideCanvasProps {
   // Export override — when provided (true/false) it forces the explanation box
   // on/off regardless of config/answer-variant. Undefined keeps default behavior.
   forceShowExplanation?: boolean;
+  // 'backgroundOnly' renders just the background stack (gradient/color, bg
+  // image, readability tint, ambient glows) with no header/content/footer/text
+  // boxes — used by PPTX export to rasterize an exact background picture layer
+  // that is then layered under native editable text/shape layers.
+  mode?: 'full' | 'backgroundOnly';
 }
 
 export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
@@ -31,6 +36,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   slideVariant = 'question',
   scale = 1,
   forceShowExplanation,
+  mode = 'full',
 }, ref) => {
   // Merge global deck config with slide-specific scope overrides (item.customConfig)
   const effectiveConfig: DeckConfig = {
@@ -221,6 +227,8 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
         </>
       )}
 
+      {mode === 'backgroundOnly' ? null : (
+      <>
       {/* Boxed-design mode: when text boxes are present they ARE the slide content — template header/middle/footer are hidden */}
       {!isBoxedDesign && (
         <>
@@ -687,6 +695,8 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
         showAnswerHighlight={showAnswerHighlight}
         isAnswerVariant={isAnswerVariant}
       />
+      </>
+      )}
     </div>
   );
 });

@@ -25,10 +25,14 @@ export const exportDeckToPPTX = async (
   items: MCQItem[],
   config: DeckConfig,
   onProgress?: (msg: string) => void,
-  slideDataUrls?: string[],
-  useImages?: boolean,
   slides?: PptxSlideSpec[],
-  includeExplanation = true
+  includeExplanation = true,
+  // Pre-rendered background-only rasters (gradient/color + bg image + tint +
+  // ambient glows), one per slide in `slides` order — embedded as a single
+  // full-bleed picture layer so the exported gradient is pixel-identical to
+  // the live preview. Falls back to an approximated shape/gradient render
+  // when a slide has no corresponding raster.
+  backgroundDataUrls?: string[]
 ) => {
   onProgress?.('Initializing 16:9 PowerPoint Presentation...');
 
@@ -336,7 +340,7 @@ export const exportDeckToPPTX = async (
   // radial glows. All are real PowerPoint objects so the user can select,
   // move, resize or delete them. Uses the per-slide effective config so
   // slide-level (customConfig) background overrides are respected.
-  const renderSlideBackground = (slide: any, cfg: DeckConfig) => {
+  const renderSlideBackground = (slide: any, cfg: DeckConfig, bgDataUrl?: string) => {
     const slideTemplate = getTemplateById(cfg.templateId, cfg.customTheme);
     const slideColors = slideTemplate.styles.hexColors;
     const slideBgUrl = getBackgroundPresetUrl(cfg.bgPreset, cfg.bgImageUrl);
@@ -346,6 +350,15 @@ export const exportDeckToPPTX = async (
     slide.background = {
       color: slideBgUrl ? '0F172A' : gradientStops ? gradientStops[1] : slideColors.bg,
     };
+
+    // A pre-rendered raster of the exact background stack (gradient/color,
+    // bg image, tint, ambient glows — see SlideCanvas's `backgroundOnly`
+    // mode) is available: use it as a single full-bleed picture layer and
+    // skip the shape-based approximation below entirely.
+    if (bgDataUrl) {
+      slide.addImage({ data: bgDataUrl, x: 0, y: 0, w: 13.333, h: 7.5 });
+      return;
+    }
 
     const bgOpacity = cfg.bgImageOpacity !== undefined ? cfg.bgImageOpacity : 0.85;
     const overlayDarkness = cfg.bgOverlayDarkness !== undefined ? cfg.bgOverlayDarkness : 0.4;
@@ -435,21 +448,11 @@ export const exportDeckToPPTX = async (
     // in-place highlight mode is on) — mirrors SlideCanvas's isAnswerVariant.
     const highlightAnswers = isAnswerSlide || effectiveConfig.showAnswerInSlide;
 
-    // Check if we have pre-rendered high-res slide images from SlideCanvas for exact visual match
-    const shouldUseImages = useImages === undefined ? !!(slideDataUrls && slideDataUrls.length > 0) : useImages;
+    const bgDataUrl = backgroundDataUrls?.[pos];
 
-    if (shouldUseImages && slideDataUrls && slideDataUrls[pos]) {
-      slide.addImage({
-        data: slideDataUrls[pos],
-        x: 0,
-        y: 0,
-        w: 13.333,
-        h: 7.5,
-      });
-    } else {
-      if (isBoxedDesign) {
-        // Boxed-design mode — background layer + slide text boxes only (mirrors SlideCanvas)
-        renderSlideBackground(slide, effectiveConfig);
+    if (isBoxedDesign) {
+      // Boxed-design mode — background layer + slide text boxes only (mirrors SlideCanvas)
+      renderSlideBackground(slide, effectiveConfig, bgDataUrl);
         // Answer slide indicator strip (top-center, mirrors SlideCanvas overlay)
         if (isAnswerSlide && item.answer) {
           slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
@@ -508,9 +511,9 @@ export const exportDeckToPPTX = async (
           }
           renderTextBox(slide, renderBox, item, effectiveConfig, questionIndex, highlightAnswers);
         }
-      } else {
+    } else {
       // Native PPTX shape fallback
-      renderSlideBackground(slide, effectiveConfig);
+      renderSlideBackground(slide, effectiveConfig, bgDataUrl);
 
       // TOP HEADER BAR: Brand Logo + Brand Name + Chapter Header + Badge
       if (config.logoUrl) {
@@ -818,7 +821,6 @@ export const exportDeckToPPTX = async (
         align: 'right',
         valign: 'middle',
       });
-      }
     }
 
     // Always attach Speaker Notes with clean structured text & raw LaTeX source

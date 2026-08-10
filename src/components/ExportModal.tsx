@@ -75,11 +75,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
     prevOpenRef.current = isOpen;
   }, [isOpen, config]);
-  // PPTX: native editable layers (text boxes / shapes as layers) by default —
-  // the flattened exact-image fallback is opt-in.
-  const [pptxEditable, setPptxEditable] = useState<boolean>(true);
   // The slide ref currently being rasterized in the offscreen canvas.
   const [renderSlideRef, setRenderSlideRef] = useState<SlideRef | null>(null);
+  // The slide ref currently being rasterized for a background-only PPTX capture.
+  const [bgRenderSlideRef, setBgRenderSlideRef] = useState<SlideRef | null>(null);
+  const bgExportCanvasRef = useRef<HTMLDivElement | null>(null);
   // Whether answer slides include the explanation box (defaults to ON — answer
   // slides always showed it before; the toggle lets exports drop it).
   const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
@@ -99,64 +99,57 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // Question Paper gets the raw items (scoped).
   const paperItems = isCurrentScope ? (currentSlide ? [currentSlide.item] : []) : items;
 
-  // Helper to render high-res slide images for exact PPTX visual reproduction
-  const renderSlideDataUrls = async (): Promise<string[]> => {
-    const slideDataUrls: string[] = [];
+  // Renders the exact background stack (gradient/color, bg image, tint,
+  // ambient glows — no header/content/footer/text boxes) for each slide in
+  // scope, so the PPTX export can embed it as one pixel-accurate picture
+  // layer instead of approximating gradients with shapes.
+  const renderBackgroundDataUrls = async (): Promise<string[]> => {
+    const backgroundDataUrls: string[] = [];
     for (let i = 0; i < scopeSlides.length; i++) {
       const ref = scopeSlides[i];
-      setRenderSlideRef(ref);
-      setProgressMsg(`Rendering high-res slide ${i + 1} of ${scopeSlides.length} for PPTX...`);
-      await new Promise(r => setTimeout(r, 150));
+      setBgRenderSlideRef(ref);
+      setProgressMsg(`Rendering background ${i + 1} of ${scopeSlides.length} for PPTX...`);
+      await new Promise(r => setTimeout(r, 120));
 
-      const targetEl = exportCanvasRef.current || slideRef.current;
+      const targetEl = bgExportCanvasRef.current;
       if (targetEl) {
-        const dataUrl = await toPng(targetEl, {
-          pixelRatio: 2,
-          cacheBust: true,
-        });
-        slideDataUrls.push(dataUrl);
+        const dataUrl = await toPng(targetEl, { cacheBust: true });
+        backgroundDataUrls.push(dataUrl);
       }
     }
-    return slideDataUrls;
+    return backgroundDataUrls;
   };
 
   const toPptxSpecs = (): PptxSlideSpec[] =>
     scopeSlides.map(s => ({ item: s.item, questionIndex: s.questionIndex, isAnswerSlide: s.isAnswerSlide }));
 
-  // Export to PowerPoint PPTX (16:9 Widescreen) - native editable layers (default) or exact visual image
+  // Export to PowerPoint PPTX (16:9 Widescreen) — native editable text/shape
+  // layers on top of a pixel-accurate rasterized background picture layer.
   const downloadPPTX = async () => {
     if (scopeSlides.length === 0) return;
     setIsExporting(true);
     try {
       const specs = toPptxSpecs();
-      if (pptxEditable) {
-        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), undefined, false, specs, includeExplanation);
-      } else {
-        const slideDataUrls = await renderSlideDataUrls();
-        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), slideDataUrls, true, specs, includeExplanation);
-      }
+      const backgroundDataUrls = await renderBackgroundDataUrls();
+      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls);
     } catch (err: any) {
       console.error('PPTX Export Error:', err);
       alert('Failed to generate PowerPoint presentation: ' + err.message);
     } finally {
       setIsExporting(false);
       setProgressMsg('');
-      setRenderSlideRef(null);
+      setBgRenderSlideRef(null);
     }
   };
 
-  // Export for Google Slides: Downloads exact visual PPTX & opens Google Drive upload prompt
+  // Export for Google Slides: Downloads the same editable PPTX & opens Google Drive upload prompt
   const handleExportGoogleSlides = async () => {
     if (scopeSlides.length === 0) return;
     setIsExporting(true);
     try {
       const specs = toPptxSpecs();
-      if (pptxEditable) {
-        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), undefined, false, specs, includeExplanation);
-      } else {
-        const slideDataUrls = await renderSlideDataUrls();
-        await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), slideDataUrls, true, specs, includeExplanation);
-      }
+      const backgroundDataUrls = await renderBackgroundDataUrls();
+      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls);
       setShowGoogleSlidesGuide(true);
     } catch (err: any) {
       console.error('Google Slides PPTX Export Error:', err);
@@ -164,7 +157,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
-      setRenderSlideRef(null);
+      setBgRenderSlideRef(null);
     }
   };
 
@@ -356,26 +349,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
               <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
                 {isCurrentScope
-                  ? pptxEditable
-                    ? `Generates a single 16:9 PowerPoint slide for slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1} with editable text fields & layers.`
-                    : `Generates a single 16:9 PowerPoint slide for slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1} as a flattened image.`
-                  : pptxEditable
-                  ? 'Generates editable 16:9 PowerPoint slides — text fields, shapes & backgrounds stay as editable layers.'
-                  : 'Generates 16:9 PowerPoint slides as flattened images (exact visual match, not editable).'}
+                  ? `Generates a single 16:9 PowerPoint slide for slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1} with editable text fields & layers, over a pixel-accurate background image.`
+                  : 'Generates editable 16:9 PowerPoint slides — text fields, shapes & icons stay as selectable native layers, on top of a pixel-accurate background image layer (preserves gradients exactly).'}
               </p>
-              <label
-                className={`mt-2.5 inline-flex items-center gap-2 text-xs font-bold cursor-pointer select-none ${
-                  isAppLight ? 'text-amber-800' : 'text-amber-200'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={pptxEditable}
-                  onChange={(e) => setPptxEditable(e.target.checked)}
-                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
-                />
-                Export as editable layers (native text boxes)
-              </label>
             </div>
             <button
               onClick={downloadPPTX}
@@ -708,6 +684,33 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             isAnswerRevealMode={false}
             slideVariant={renderSlideRef.isAnswerSlide ? 'answer' : 'question'}
             forceShowExplanation={renderSlideRef.isAnswerSlide ? includeExplanation : undefined}
+          />
+        )}
+      </div>
+
+      {/* Hidden Offscreen 1920x1080 Container for PPTX background-only rasters —
+          exact gradient/image/tint/glow stack, no text/shape layers (those are
+          added as native editable PPTX layers on top of this picture). */}
+      <div
+        style={{
+          position: 'fixed',
+          left: '-9999px',
+          top: '-9999px',
+          width: '1920px',
+          height: '1080px',
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: -100,
+        }}
+      >
+        {bgRenderSlideRef && (
+          <SlideCanvas
+            ref={bgExportCanvasRef}
+            item={bgRenderSlideRef.item}
+            config={config}
+            currentIndex={bgRenderSlideRef.questionIndex}
+            totalCount={items.length}
+            mode="backgroundOnly"
           />
         )}
       </div>

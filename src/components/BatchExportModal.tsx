@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { DeckConfig, SavedDeck } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { DeckConfig, MCQItem, SavedDeck } from '../types';
 import { db } from '../db/dexie';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { exportDeckToPPTX } from '../utils/pptxExport';
+import { SlideCanvas } from './SlideCanvas';
+import { toPng } from 'html-to-image';
 import { X, Download, Check, RefreshCw, CheckCircle2, Layers, CheckSquare } from 'lucide-react';
 
 interface BatchExportModalProps {
@@ -31,6 +33,9 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
   const [exportTotal, setExportTotal] = useState(0);
   const [doneCount, setDoneCount] = useState(0);
   const [progressMsg, setProgressMsg] = useState('');
+  // Item/config currently rasterized offscreen for a background-only PPTX capture.
+  const [bgRenderSlide, setBgRenderSlide] = useState<{ item: MCQItem; config: DeckConfig; questionIndex: number } | null>(null);
+  const bgCanvasRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -97,8 +102,24 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
       for (let i = 0; i < selectedDecks.length; i++) {
         const deck = selectedDecks[i];
         setExportIndex(i + 1);
+
+        // Rasterize the exact background stack (gradient/image/tint/glows) for
+        // every slide so the PPTX gets a pixel-accurate picture layer instead
+        // of an approximated gradient shape — mirrors ExportModal's PPTX flow.
+        const backgroundDataUrls: string[] = [];
+        for (let qi = 0; qi < deck.items.length; qi++) {
+          setBgRenderSlide({ item: deck.items[qi], config: deck.config, questionIndex: qi });
+          setProgressMsg(`Rendering background ${qi + 1} of ${deck.items.length} for "${deck.name}"...`);
+          await new Promise(r => setTimeout(r, 100));
+          const el = bgCanvasRef.current;
+          if (el) {
+            const dataUrl = await toPng(el, { cacheBust: true });
+            backgroundDataUrls.push(dataUrl);
+          }
+        }
+
         setProgressMsg('');
-        await exportDeckToPPTX(deck.items, deck.config, (msg) => setProgressMsg(msg));
+        await exportDeckToPPTX(deck.items, deck.config, (msg) => setProgressMsg(msg), undefined, true, backgroundDataUrls);
         setDoneCount(i + 1);
       }
     } catch (err: any) {
@@ -107,6 +128,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
     } finally {
       setIsExporting(false);
       setProgressMsg('');
+      setBgRenderSlide(null);
     }
   };
 
@@ -296,6 +318,32 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Hidden offscreen 1920x1080 container for PPTX background-only rasters
+          (gradient/image/tint/glow stack, no text/shape layers). */}
+      <div
+        style={{
+          position: 'fixed',
+          left: '-9999px',
+          top: '-9999px',
+          width: '1920px',
+          height: '1080px',
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: -100,
+        }}
+      >
+        {bgRenderSlide && (
+          <SlideCanvas
+            ref={bgCanvasRef}
+            item={bgRenderSlide.item}
+            config={bgRenderSlide.config}
+            currentIndex={bgRenderSlide.questionIndex}
+            totalCount={1}
+            mode="backgroundOnly"
+          />
+        )}
       </div>
     </div>
   );
