@@ -1280,14 +1280,14 @@ iii. অস্ত্রোপচার
                 return (
                   <div
                     key={item.id}
-                    className={`p-5 rounded-3xl border transition-all space-y-3 ${
+                    className={`p-5 rounded-3xl border space-y-3 ${
                       isEditing
                         ? isAppLight
                           ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-50/40'
                           : 'border-amber-500/50 ring-1 ring-amber-500/30 bg-slate-950'
                         : isAppLight
-                        ? 'glass-card-fatty-light border-slate-200 text-slate-900'
-                        : 'glass-card-fatty bg-slate-950 border-slate-800 text-slate-100'
+                        ? 'bg-white border-2 border-slate-250 text-slate-950 shadow-sm'
+                        : 'bg-slate-950 border-2 border-slate-800 text-slate-100 shadow-md'
                     }`}
                   >
                     {isEditing && queueEditDraft ? (
@@ -1633,7 +1633,7 @@ iii. অস্ত্রোপচার
                                       ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-sm'
                                       : 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-300 shadow-sm'
                                     : isAppLight
-                                    ? 'bg-slate-50 border-2 border-slate-250 text-slate-950 hover:border-slate-400'
+                                    ? 'bg-slate-50 border-2 border-slate-250 text-slate-950'
                                     : 'bg-slate-900/90 border-2 border-slate-800 text-slate-100'
                                 }`}
                               >

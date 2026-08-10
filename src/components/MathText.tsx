@@ -41,7 +41,7 @@ export const MathText: React.FC<MathTextProps> = ({ text, className = '' }) => {
             return (
               <span
                 key={index}
-                className={isBlock ? 'my-2 block text-center' : 'inline-flex items-center align-middle whitespace-nowrap mx-1 max-w-full overflow-x-auto'}
+                className={isBlock ? 'my-2 block text-center' : 'inline-flex items-center align-middle whitespace-nowrap mx-1 max-w-full overflow-x-visible'}
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             );
