@@ -867,10 +867,10 @@ iii. অস্ত্রোপচার
                   {parsedPreview.map((mcq, idx) => (
                     <div
                       key={mcq.id}
-                      className={`relative rounded-2xl border p-4 ${
+                      className={`relative rounded-2xl p-4 ${
                         isAppLight
-                          ? 'border-slate-300 bg-white shadow-xs'
-                          : 'border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40 shadow-xs'
+                          ? 'border border-slate-200/80 bg-white shadow-xs'
+                          : 'border border-slate-800/80 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40 shadow-xs'
                       }`}
                     >
                       {/* Question number badge */}
@@ -900,8 +900,8 @@ iii. অস্ত্রোপচার
 
                       {/* Roman statements (i, ii, iii) */}
                       {mcq.romanItems && mcq.romanItems.length > 0 && (
-                        <div className={`my-2 p-3 rounded-2xl border space-y-1 ${
-                          isAppLight ? 'bg-slate-100/90 border-slate-300 text-slate-950' : 'bg-black/40 border-white/15 text-slate-100'
+                        <div className={`my-2 p-3 rounded-2xl space-y-1 ${
+                          isAppLight ? 'bg-slate-100/70 border border-slate-200/60 text-slate-950' : 'bg-black/30 border border-white/10 text-slate-100'
                         }`}>
                           {mcq.romanItems.map((ri, riIdx) => (
                             <div key={riIdx} className="text-sm font-bold">
@@ -925,14 +925,14 @@ iii. অস্ত্রোপচার
                           return (
                             <div
                               key={opt.key}
-                              className={`px-3 py-2 rounded-xl border text-sm font-bold flex items-center gap-2 ${
+                              className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 ${
                                 isCorrect
                                   ? isAppLight
-                                    ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-xs'
-                                    : 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-300 shadow-xs'
+                                    ? 'bg-emerald-100/90 border border-emerald-400 text-emerald-950 shadow-2xs'
+                                    : 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-2xs'
                                   : isAppLight
-                                    ? 'bg-slate-50 border-2 border-slate-250 text-slate-950'
-                                    : 'bg-white/5 border-2 border-white/10 text-slate-100'
+                                    ? 'bg-slate-100/70 border border-slate-200/60 text-slate-950'
+                                    : 'bg-white/5 border border-white/10 text-slate-100'
                               }`}
                             >
                               <span className={`font-black font-mono text-xs px-2 py-0.5 rounded-lg shrink-0 ${
@@ -988,10 +988,10 @@ iii. অস্ত্রোপচার
 
                       {/* Optional explanation indicator */}
                       {mcq.explanation && (
-                        <div className={`mt-2.5 p-3 rounded-2xl border text-xs lg:text-sm font-bold leading-relaxed flex items-start gap-2.5 ${
+                        <div className={`mt-2.5 p-3 rounded-2xl text-xs lg:text-sm font-bold leading-relaxed flex items-start gap-2.5 ${
                           isAppLight
-                            ? 'bg-sky-50 border-2 border-sky-300 text-sky-950'
-                            : 'bg-sky-500/10 border-2 border-sky-500/40 text-sky-200'
+                            ? 'bg-sky-50/90 border border-sky-200/70 text-sky-950'
+                            : 'bg-sky-500/10 border border-sky-500/40 text-sky-200'
                         }`}>
                           <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-sky-500" />
                           <span className="min-w-0 flex-1">
@@ -1286,8 +1286,8 @@ iii. অস্ত্রোপচার
                           ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-50/40'
                           : 'border-amber-500/50 ring-1 ring-amber-500/30 bg-slate-950'
                         : isAppLight
-                        ? 'bg-white border-2 border-slate-250 text-slate-950 shadow-sm'
-                        : 'bg-slate-950 border-2 border-slate-800 text-slate-100 shadow-md'
+                        ? 'bg-white border border-slate-200/80 text-slate-950 shadow-sm hover:shadow-md transition-shadow'
+                        : 'bg-slate-950 border border-slate-800/80 text-slate-100 shadow-md'
                     }`}
                   >
                     {isEditing && queueEditDraft ? (
@@ -1627,14 +1627,14 @@ iii. অস্ত্রোপচার
                             return (
                               <div
                                 key={opt.key}
-                                className={`p-2.5 rounded-2xl border flex items-center gap-2.5 font-bold transition-colors ${
+                                className={`p-2.5 rounded-2xl flex items-center gap-2.5 font-bold transition-colors ${
                                   isCorrect
                                     ? isAppLight
-                                      ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-sm'
-                                      : 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-300 shadow-sm'
+                                      ? 'bg-emerald-100/90 border border-emerald-400 text-emerald-950 shadow-2xs'
+                                      : 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-2xs'
                                     : isAppLight
-                                    ? 'bg-slate-50 border-2 border-slate-250 text-slate-950'
-                                    : 'bg-slate-900/90 border-2 border-slate-800 text-slate-100'
+                                    ? 'bg-slate-100/70 border border-slate-200/60 text-slate-950'
+                                    : 'bg-slate-900/60 border border-slate-800/60 text-slate-100'
                                 }`}
                               >
                                 <span className={`font-black font-mono text-xs px-2.5 py-0.5 rounded-lg shrink-0 ${
@@ -1659,10 +1659,10 @@ iii. অস্ত্রোপচার
 
                         {/* Optional explanation indicator */}
                         {item.explanation && (
-                          <div className={`mt-3 p-3.5 rounded-2xl border text-xs lg:text-sm font-bold leading-relaxed flex items-start gap-2.5 ${
+                          <div className={`mt-3 p-3.5 rounded-2xl text-xs lg:text-sm font-bold leading-relaxed flex items-start gap-2.5 ${
                             isAppLight
-                              ? 'bg-sky-50 border-2 border-sky-300 text-sky-950 shadow-xs'
-                              : 'bg-sky-950/50 border-2 border-sky-700/60 text-sky-200'
+                              ? 'bg-sky-50/90 border border-sky-200/70 text-sky-950 shadow-2xs'
+                              : 'bg-sky-950/40 border border-sky-800/50 text-sky-200'
                           }`}>
                             <HelpCircle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-sky-500" />
                             <div className="min-w-0 flex-1">
