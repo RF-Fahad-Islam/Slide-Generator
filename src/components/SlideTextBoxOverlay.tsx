@@ -1,6 +1,14 @@
 import React, { useRef } from 'react';
 import { MCQItem, DeckConfig, SlideTextBox } from '../types';
 import { getSlideBoxContent, clamp, SLIDE_W, SLIDE_H } from '../utils/slideTextBoxes';
+import {
+  TPL_CARD_ID,
+  TPL_STEM_ID,
+  TPL_ROMAN_ID,
+  TPL_PROMPT_ID,
+  TPL_OPTIONS_ID,
+  computeTemplateCardMetrics,
+} from '../utils/templateBoxLayout';
 
 type ResizePatch = Partial<Pick<SlideTextBox, 'w' | 'h'>>;
 
@@ -95,22 +103,46 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
     return getSlideBoxContent(box, item, config, currentIndex);
   };
 
+  // The preset template's card/roman/prompt/options boxes render at content-
+  // adaptive positions (see templateBoxLayout.ts / SlideTextBoxLayer) instead
+  // of their stored x/y for bohupodi (roman-statement) questions — otherwise
+  // the drag outline here would float away from the actual slide content.
+  // Dragging still reads/writes the real stored box, this only affects where
+  // the (non-adaptive) outline for these specific ids is drawn.
+  const cardBox = boxes.find(b => b.id.startsWith(TPL_CARD_ID));
+  const stemBox = boxes.find(b => b.id.startsWith(TPL_STEM_ID));
+  const romanBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_ROMAN_ID));
+  const optionsBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_OPTIONS_ID));
+  const cardMetrics = cardBox
+    ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBoxForMetrics, optionsBoxForMetrics?.y ?? cardBox.y)
+    : undefined;
+
   return (
     <div className="absolute inset-0 z-30">
       {boxes.map(box => {
         const selected = box.id === selectedId;
         const isElement = box.bind === 'icon' || box.bind === 'image';
+
+        let displayY = box.y;
+        let displayH = box.h;
+        if (cardMetrics) {
+          if (box.id.startsWith(TPL_OPTIONS_ID)) displayY = cardMetrics.optionsY;
+          else if (box.id.startsWith(TPL_ROMAN_ID) && cardMetrics.romanY !== undefined) displayY = cardMetrics.romanY;
+          else if (box.id.startsWith(TPL_PROMPT_ID) && cardMetrics.promptY !== undefined) displayY = cardMetrics.promptY;
+          else if (box.id.startsWith(TPL_CARD_ID)) displayH = cardMetrics.cardH;
+        }
+
         // Keep the label chip fully inside the slide canvas: it sits BELOW the box
         // when the box is near the top (so it never pokes toward the controls bar),
         // and above the box only when below would clip at the slide bottom.
-        const boxH = box.h || 40;
-        const chipBelow = box.y < 56 || box.y + boxH + 28 <= designH;
+        const boxH = displayH || 40;
+        const chipBelow = displayY < 56 || displayY + boxH + 28 <= designH;
         return (
           <div
             key={box.id}
             onPointerDown={(e) => startDrag(e, box.id, 'move')}
             className="absolute cursor-move"
-            style={{ left: box.x, top: box.y, width: box.w, height: box.h || undefined }}
+            style={{ left: box.x, top: displayY, width: box.w, height: displayH || undefined }}
           >
             <div
               className={`relative w-full h-full border rounded-lg pointer-events-none transition-colors ${selected ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-white/40'}`}

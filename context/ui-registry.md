@@ -151,6 +151,7 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **Border:** `border-slate-800`
 - **Radius:** `rounded-2xl`
 - **Note:** Canvas is always dark regardless of app theme (slide content renders on dark surface)
+- **Adaptive template-card layout (2026-08-11):** the default (boxed-design) question card/roman-statements/prompt/options geometry is content-adaptive, not fixed — see `src/utils/templateBoxLayout.ts` (`computeTemplateCardMetrics`, id prefixes `mdl_card`/`mdl_stem`/`mdl_roman`/`mdl_prompt`/`mdl_options`) + `src/utils/textHeightEstimate.ts` (wrapped-line heuristic). Plain MCQs keep the compact 205px card; bohupodi (roman-statement) MCQs get a card tall enough for stem + statements + prompt so the prompt line never overlaps the statements box, with options pushed down to clear it. Consumed identically by `SlideTextBoxLayer.tsx` (DOM), `pptxExport.ts` (boxed-design export branch), and `SlideTextBoxOverlay.tsx` (Edit Text Boxes drag-outline alignment) — one geometry calc, three renderers, per the repo's DOM/PPTX-parity principle. Each roman statement renders with a small numeral pill badge (`splitRomanLabel`, template accent color) instead of plain leading text.
 
 ### `ManualEditor` — `src/components/ManualEditor.tsx`
 - **Background:** `glass-card-fatty-light` (light) | `glass-card-fatty` (dark) for panel + side cards
