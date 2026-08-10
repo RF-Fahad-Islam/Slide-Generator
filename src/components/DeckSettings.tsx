@@ -13,6 +13,7 @@ import {
 } from '../utils/templatePresets';
 import { Sliders, Upload, Palette, User, Award, BookOpen, Image as ImageIcon, SlidersHorizontal, CheckCircle2, Eye, Type, Sun, Moon, Sparkles, Layers, RefreshCw, Layers3, Target, Globe, LayoutTemplate, Save, Trash2 } from 'lucide-react';
 import { AnswerMode, effectiveAnswerMode, effectiveShowAnswerInSlide } from '../utils/answerSlides';
+import { templateToTextBoxes } from '../utils/templateToTextBoxes';
 
 interface DeckSettingsProps {
   config: DeckConfig;
@@ -339,7 +340,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   };
 
   const handleApplyPreset = (preset: DeckTemplatePreset) => {
-    onUpdateConfig(applyDesignToConfig(preset, config));
+    const updated = applyDesignToConfig(preset, config);
+    if (updated.slideTextBoxes && updated.slideTextBoxes.length > 0) {
+      updated.slideTextBoxes = templateToTextBoxes(updated);
+    }
+    onUpdateConfig(updated);
   };
 
   const handleDeletePreset = (id: string) => {
@@ -352,8 +357,7 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   const [settingsScope, setSettingsScope] = useState<'global' | 'slide'>('global');
   const [settingsTab, setSettingsTab] = useState<'typography' | 'layout' | 'background' | 'theme' | 'header' | 'presets'>('typography');
 
-  // Theme & Preview edits ALWAYS target the ACTIVE slide (themes are slide-specific).
-  // All other tabs still respect the Global/Slide scope toggle via handleChange.
+  // Active slide config or global config based on scope
   const themeEffectiveConfig: DeckConfig = { ...config, ...(activeSlideConfig || {}) };
 
   const hasSlideOverride = !!activeSlideConfig && Object.keys(activeSlideConfig).length > 0;
@@ -363,8 +367,6 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   // background source can be selected at a time (mutual exclusion).
   const hasCustomBgImage = !!themeEffectiveConfig.bgImageUrl;
 
-  // If the user is on the Theme tab when a background image becomes active, jump
-  // to the Background tab (the Theme tab is hidden while the image is set).
   useEffect(() => {
     if (hasCustomBgImage && settingsTab === 'theme') {
       setSettingsTab('background');
@@ -427,13 +429,28 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
     });
   };
 
-  // Theme field change — always writes to the ACTIVE slide's customConfig,
-  // ignoring the Global/Slide scope toggle (themes are slide-specific).
+  // Theme field change — respects the Global/Slide scope toggle.
   const handleThemeFieldChange = (field: keyof DeckConfig, value: any) => {
-    onUpdateActiveSlideConfig?.({
-      ...(activeSlideConfig || {}),
-      [field]: value,
-    });
+    if (settingsScope === 'slide') {
+      const updatedSlide = {
+        ...(activeSlideConfig || {}),
+        [field]: value,
+      };
+      const effective = { ...config, ...updatedSlide };
+      if (effective.slideTextBoxes && effective.slideTextBoxes.length > 0) {
+        updatedSlide.slideTextBoxes = templateToTextBoxes(effective);
+      }
+      onUpdateActiveSlideConfig?.(updatedSlide);
+    } else {
+      const updatedConfig = {
+        ...config,
+        [field]: value,
+      };
+      if (updatedConfig.slideTextBoxes && updatedConfig.slideTextBoxes.length > 0) {
+        updatedConfig.slideTextBoxes = templateToTextBoxes(updatedConfig);
+      }
+      onUpdateConfig(updatedConfig);
+    }
   };
 
   const handleCustomThemeChange = (colorField: keyof CustomThemeColors, value: string) => {
@@ -443,19 +460,53 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       [colorField]: value,
     };
 
-    onUpdateActiveSlideConfig?.({
-      ...(activeSlideConfig || {}),
-      templateId: 'custom-theme',
-      customTheme: updatedCustomTheme,
-    });
+    if (settingsScope === 'slide') {
+      const updatedSlide = {
+        ...(activeSlideConfig || {}),
+        templateId: 'custom-theme',
+        customTheme: updatedCustomTheme,
+      };
+      const effective = { ...config, ...updatedSlide };
+      if (effective.slideTextBoxes && effective.slideTextBoxes.length > 0) {
+        updatedSlide.slideTextBoxes = templateToTextBoxes(effective);
+      }
+      onUpdateActiveSlideConfig?.(updatedSlide);
+    } else {
+      const updatedConfig = {
+        ...config,
+        templateId: 'custom-theme',
+        customTheme: updatedCustomTheme,
+      };
+      if (updatedConfig.slideTextBoxes && updatedConfig.slideTextBoxes.length > 0) {
+        updatedConfig.slideTextBoxes = templateToTextBoxes(updatedConfig);
+      }
+      onUpdateConfig(updatedConfig);
+    }
   };
 
   const handleApplyCustomPalette = (colors: CustomThemeColors) => {
-    onUpdateActiveSlideConfig?.({
-      ...(activeSlideConfig || {}),
-      templateId: 'custom-theme',
-      customTheme: colors,
-    });
+    if (settingsScope === 'slide') {
+      const updatedSlide = {
+        ...(activeSlideConfig || {}),
+        templateId: 'custom-theme',
+        customTheme: colors,
+      };
+      const effective = { ...config, ...updatedSlide };
+      if (effective.slideTextBoxes && effective.slideTextBoxes.length > 0) {
+        updatedSlide.slideTextBoxes = templateToTextBoxes(effective);
+      }
+      onUpdateActiveSlideConfig?.(updatedSlide);
+    } else {
+      const updatedConfig = {
+        ...config,
+        templateId: 'custom-theme',
+        customTheme: colors,
+      };
+      if (updatedConfig.slideTextBoxes && updatedConfig.slideTextBoxes.length > 0) {
+        updatedConfig.slideTextBoxes = templateToTextBoxes(updatedConfig);
+      }
+      onUpdateConfig(updatedConfig);
+    }
   };
 
   const handleImageUpload = (field: 'logoUrl' | 'watermarkAvatar' | 'bgImageUrl' | 'headerBannerUrl' | 'footerBannerUrl', e: React.ChangeEvent<HTMLInputElement>) => {

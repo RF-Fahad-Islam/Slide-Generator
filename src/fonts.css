@@ -1,0 +1,108 @@
+/* Self-Hosted Bengali & UI Fonts for Offline & CORS-Free Canvas/PDF Rendering */
+
+/* Kalpurush (Default Bangla Standard) */
+@font-face {
+  font-family: 'Kalpurush';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/kalpurush.woff2') format('woff2'),
+       url('/fonts/Kalpurush.ttf') format('truetype');
+}
+
+/* Hind Siliguri (Clean Sans) */
+@font-face {
+  font-family: 'Hind Siliguri';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/HindSiliguri-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Hind Siliguri';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/HindSiliguri-Bold.ttf') format('truetype');
+}
+
+/* Noto Sans Bengali (Academic) */
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/NotoSansBengali-Regular.woff2') format('woff2');
+}
+
+/* Anek Bangla (Modern Bold) */
+@font-face {
+  font-family: 'Anek Bangla';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/AnekBangla-Variable.ttf') format('truetype');
+}
+
+/* Tiro Bangla (Editorial Serif) */
+@font-face {
+  font-family: 'Tiro Bangla';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/TiroBangla-Regular.ttf') format('truetype');
+}
+
+/* Atma (Casual Playful) */
+@font-face {
+  font-family: 'Atma';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('/fonts/Atma-Regular.ttf') format('truetype');
+}
+
+/* Mina (Curved Artistic) */
+@font-face {
+  font-family: 'Mina';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/Mina-Regular.ttf') format('truetype');
+}
+
+/* Plus Jakarta Sans (Sleek Tech) */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/PlusJakartaSans-Variable.ttf') format('truetype');
+}
+
+/* Poppins (Geometric Bold) */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Poppins-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Poppins-Bold.ttf') format('truetype');
+}
+
+/* Playfair Display (Luxury Editorial) */
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/PlayfairDisplay-Variable.ttf') format('truetype');
+}

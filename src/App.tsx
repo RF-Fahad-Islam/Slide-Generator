@@ -631,6 +631,28 @@ export default function App() {
     setSelectedTextBoxId(null);
   };
 
+  const handleApplyDeckConfig = (updated: DeckConfig) => {
+    let nextConfig = updated;
+    if (nextConfig.slideTextBoxes && nextConfig.slideTextBoxes.length > 0) {
+      nextConfig = {
+        ...nextConfig,
+        slideTextBoxes: templateToTextBoxes(nextConfig),
+      };
+    }
+    setConfig(nextConfig);
+    setItems(prev => prev.map(it => {
+      if (!it.customConfig) return it;
+      const cc = { ...it.customConfig };
+      delete cc.templateId;
+      delete cc.customTheme;
+      delete cc.accentColorCustom;
+      if (nextConfig.slideTextBoxes && nextConfig.slideTextBoxes.length > 0) {
+        delete cc.slideTextBoxes;
+      }
+      return Object.keys(cc).length > 0 ? { ...it, customConfig: cc } : { ...it, customConfig: undefined };
+    }));
+  };
+
   const handleOpenSocialGenerator = (deckItems: MCQItem[]) => {
     setEditingSavedDeckId(null);
     setItems(ensureUniqueIds(deckItems));
@@ -764,7 +786,7 @@ export default function App() {
             <DeckSettingsPage
               onClose={() => setIsDeckSettingsOpen(false)}
               config={config}
-              onApplyConfig={setConfig}
+              onApplyConfig={handleApplyDeckConfig}
               activeSlideIndex={selectedIndex}
               activeSlideConfig={items[selectedIndex]?.customConfig}
               onApplyActiveSlideConfig={(slideConfigOverride) => {
@@ -1389,8 +1411,8 @@ export default function App() {
             config={config}
             items={items}
             appTheme={appTheme}
-            onApplyTemplate={(preset) => setConfig(applyDesignToConfig(preset, config))}
-            onApplyConfig={setConfig}
+            onApplyTemplate={(preset) => handleApplyDeckConfig(applyDesignToConfig(preset, config))}
+            onApplyConfig={handleApplyDeckConfig}
           />
         )}
       </main>
@@ -1425,7 +1447,7 @@ export default function App() {
         onClose={() => setIsTemplateModalOpen(false)}
         config={config}
         appTheme={appTheme}
-        onApply={(preset) => setConfig(applyDesignToConfig(preset, config))}
+        onApply={(preset) => handleApplyDeckConfig(applyDesignToConfig(preset, config))}
       />
 
       {/* Inline Question Edit Modal */}
