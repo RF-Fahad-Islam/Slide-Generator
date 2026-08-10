@@ -6,6 +6,14 @@ import { getSlideBoxContent, getBoxFontFamily } from './slideTextBoxes';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
 import { getSlideIcon } from './slideElements';
+import {
+  TPL_CARD_ID,
+  TPL_STEM_ID,
+  TPL_ROMAN_ID,
+  TPL_PROMPT_ID,
+  TPL_OPTIONS_ID,
+  computeTemplateCardMetrics,
+} from './templateBoxLayout';
 
 export interface PptxSlideSpec {
   item: MCQItem;
@@ -465,8 +473,40 @@ export const exportDeckToPPTX = async (
             valign: 'middle',
           });
         }
+        // Adaptive geometry for the preset template card/roman/prompt/options
+        // boxes — mirrors SlideTextBoxLayer.tsx (browser preview) so the
+        // exported PPTX doesn't overlap the roman-statements/prompt boxes
+        // that a fixed 280px card can't always fit (see templateBoxLayout.ts).
+        const cardBox = boxes.find(b => b.id.startsWith(TPL_CARD_ID));
+        const stemBox = boxes.find(b => b.id.startsWith(TPL_STEM_ID));
+        const romanBox = boxes.find(b => b.id.startsWith(TPL_ROMAN_ID));
+        const optionsBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_OPTIONS_ID));
+        const cardMetrics = cardBox
+          ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y)
+          : undefined;
+
         for (const box of boxes) {
-          renderTextBox(slide, box, item, effectiveConfig, questionIndex, highlightAnswers);
+          // Skip optional structural boxes that have no content on this slide
+          // — otherwise a deck-wide template box (e.g. an empty roman card)
+          // renders as a stray shape on plain MCQs (mirrors SlideTextBoxLayer).
+          if (box.bind === 'roman' && !(item.romanItems || []).length) continue;
+          if (box.bind === 'prompt' && !item.prompt) continue;
+          if (box.bind === 'explanation' && !item.explanation) continue;
+          if (box.bind === 'source' && getSourceTags(item).length === 0) continue;
+
+          let renderBox = box;
+          if (cardMetrics) {
+            if (box.id.startsWith(TPL_CARD_ID)) {
+              renderBox = { ...box, h: cardMetrics.cardH };
+            } else if (box.id.startsWith(TPL_ROMAN_ID) && cardMetrics.romanY !== undefined) {
+              renderBox = { ...box, y: cardMetrics.romanY };
+            } else if (box.id.startsWith(TPL_PROMPT_ID) && cardMetrics.promptY !== undefined) {
+              renderBox = { ...box, y: cardMetrics.promptY };
+            } else if (box.id.startsWith(TPL_OPTIONS_ID)) {
+              renderBox = { ...box, y: cardMetrics.optionsY };
+            }
+          }
+          renderTextBox(slide, renderBox, item, effectiveConfig, questionIndex, highlightAnswers);
         }
       } else {
       // Native PPTX shape fallback

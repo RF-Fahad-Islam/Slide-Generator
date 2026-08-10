@@ -3,17 +3,17 @@ import { DeckConfig, MCQItem, SlideTextBox, getSourceTags } from '../types';
 import { getSlideBoxContent, getBoxFontFamily } from '../utils/slideTextBoxes';
 import { getSlideIcon } from '../utils/slideElements';
 import { getTemplateById } from '../templates/registry';
+import {
+  TPL_CARD_ID,
+  TPL_STEM_ID,
+  TPL_ROMAN_ID,
+  TPL_PROMPT_ID,
+  TPL_OPTIONS_ID,
+  computeTemplateCardMetrics,
+  splitRomanLabel,
+} from '../utils/templateBoxLayout';
 import { MathText } from './MathText';
 import { Check } from 'lucide-react';
-
-// Template-box id prefixes (see templateToTextBoxes.ts) — used to apply the
-// compact standard-MCQ layout at render time without touching user boxes.
-const TPL_CARD_ID = 'mdl_card';
-const TPL_OPTIONS_ID = 'mdl_options';
-// Compact question-card height for plain MCQs (no roman statements / prompt):
-// the 280px template card leaves a large empty region under a short stem.
-const COMPACT_CARD_H = 205;
-const COMPACT_CARD_GAP = 26;
 
 interface SlideTextBoxLayerProps {
   boxes: SlideTextBox[];
@@ -45,14 +45,26 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const template = getTemplateById(config.templateId, config.customTheme);
   const isLight = template.themeType === 'light';
   const hex = template.styles.hexColors;
+  const accent = template.styles.accentColor;
+  const isHexAccent = /^#[0-9A-Fa-f]{6}$/.test(accent);
+  const romanBadgeBg = isHexAccent ? `${accent}26` : 'rgba(255,255,255,0.14)';
+  const romanBadgeBorder = isHexAccent ? `${accent}55` : 'rgba(255,255,255,0.28)';
 
-  // Compact standard-MCQ layout: when the deck uses the preset template card
-  // and the current question has no roman statements, the card collapses to a
-  // shorter height and the options slide up right below it — no dead space
-  // inside the question box. Roman/prompt questions keep the tall layout.
+  // Adaptive template-card layout: when the deck uses the preset template
+  // card, its geometry adapts to the current question's content instead of
+  // the fixed 280px card the boxes were generated with — plain MCQs collapse
+  // to a shorter card (options slide up, no dead space), and bohupodi
+  // (roman-statement) MCQs get a card tall enough for stem + statements +
+  // prompt so the prompt line never overlaps the statements box. See
+  // templateBoxLayout.ts for why this can't be baked into the boxes when
+  // they're generated (that step only knows the deck config, not the item).
   const cardBox = boxes.find(b => b.id.startsWith(TPL_CARD_ID));
-  const isCompact = !!cardBox && !((item.romanItems || []).length > 0);
-  const compactOptionsY = isCompact ? cardBox.y + COMPACT_CARD_H + COMPACT_CARD_GAP : undefined;
+  const stemBox = boxes.find(b => b.id.startsWith(TPL_STEM_ID));
+  const romanBox = boxes.find(b => b.id.startsWith(TPL_ROMAN_ID));
+  const optionsBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_OPTIONS_ID));
+  const cardMetrics = cardBox
+    ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y)
+    : undefined;
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none">
@@ -77,21 +89,27 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         if (box.bind === 'explanation' && !item.explanation) return null;
         if (box.bind === 'source' && getSourceTags(item).length === 0) return null;
 
+        // Adaptive-layout overrides for the preset template card/roman/prompt/
+        // options boxes — see the cardMetrics computation above.
+        const isTplCard = box.id.startsWith(TPL_CARD_ID);
+        const isTplOptions = box.id.startsWith(TPL_OPTIONS_ID);
+        const isTplRoman = box.id.startsWith(TPL_ROMAN_ID);
+        const isTplPrompt = box.id.startsWith(TPL_PROMPT_ID);
+        let boxTop = box.y;
+        if (isTplOptions && cardMetrics) boxTop = cardMetrics.optionsY;
+        else if (isTplRoman && cardMetrics?.romanY !== undefined) boxTop = cardMetrics.romanY;
+        else if (isTplPrompt && cardMetrics?.promptY !== undefined) boxTop = cardMetrics.promptY;
+        const boxHeight = isTplCard && cardMetrics ? cardMetrics.cardH : box.h;
+
         const base: React.CSSProperties = {
           left: box.x,
-          top: box.y,
+          top: boxTop,
           width: box.w,
           fontSize: box.fontSize,
           color: box.color,
           textAlign: box.align,
           fontFamily: getBoxFontFamily(box, config),
         };
-
-        // Compact-layout overrides for the preset template card + options boxes.
-        const isTplCard = box.id.startsWith(TPL_CARD_ID);
-        const isTplOptions = box.id.startsWith(TPL_OPTIONS_ID);
-        const boxTop = isTplOptions && compactOptionsY !== undefined ? compactOptionsY : box.y;
-        const boxHeight = isTplCard && isCompact ? COMPACT_CARD_H : box.h;
 
         // ICON ELEMENT (decorative lucide icon, sized by fontSize)
         if (box.bind === 'icon') {
@@ -209,9 +227,31 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`}
               style={{ ...base, ...cardStyle, height: box.h || undefined }}
             >
-              {(item.romanItems || []).map((stmt, i) => (
-                <div key={i} className="my-1"><MathText text={stmt} /></div>
-              ))}
+              {(item.romanItems || []).map((stmt, i) => {
+                const parsed = splitRomanLabel(stmt);
+                if (!parsed) {
+                  return <div key={i} className="my-1"><MathText text={stmt} /></div>;
+                }
+                return (
+                  <div key={i} className="my-1 flex items-start gap-3">
+                    <span
+                      className="shrink-0 inline-flex items-center justify-center rounded-full font-black uppercase"
+                      style={{
+                        fontSize: '0.72em',
+                        minWidth: '2em',
+                        height: '1.6em',
+                        padding: '0 0.55em',
+                        backgroundColor: romanBadgeBg,
+                        color: accent,
+                        border: `1px solid ${romanBadgeBorder}`,
+                      }}
+                    >
+                      {parsed.label}
+                    </span>
+                    <span className="flex-1 min-w-0"><MathText text={parsed.rest} /></span>
+                  </div>
+                );
+              })}
             </div>
           );
         }
