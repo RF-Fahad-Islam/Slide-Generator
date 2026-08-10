@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MCQItem, QuestionType, getSourceTags } from '../types';
-import { parseBulkTextToMCQs } from '../utils/bulkParser';
+import { parseBulkTextToMCQs, parseBulkTextToBlocks, serializeMCQToBlockText } from '../utils/bulkParser';
 import { parseCSVToMCQs, generateSampleCSV } from '../utils/csvParser';
 import { MathText } from './MathText';
 import { SourceTagsInput } from './SourceTagsInput';
@@ -156,6 +156,58 @@ iii. অস্ত্রোপচার
 গ) i ও iii
 ঘ) i, ii ও iii
 [চট্টগ্রাম বোর্ড ২০১৭]`);
+
+  // Paste-area view toggle: 'raw' = plain textarea, 'cards' = live editable MCQ cards.
+  const [bulkViewMode, setBulkViewMode] = useState<'raw' | 'cards'>('raw');
+  const justPastedBulkRef = useRef(false);
+
+  // Auto-switch to Cards right after a paste that parsed into at least one MCQ.
+  useEffect(() => {
+    if (!justPastedBulkRef.current) return;
+    justPastedBulkRef.current = false;
+    if (parseBulkTextToBlocks(bulkText).length > 0) {
+      setBulkViewMode('cards');
+    }
+  }, [bulkText]);
+
+  // --- Cards-mode editing: bulkText stays the single source of truth. Each edit
+  // re-serializes just the touched block and splices it back in, so Raw Text
+  // always reflects the latest card edits and vice versa.
+  const patchBlockItem = (index: number, patch: Partial<MCQItem>) => {
+    const pairs = parseBulkTextToBlocks(bulkText);
+    if (!pairs[index]) return;
+    const updatedItem = { ...pairs[index].item, ...patch };
+    const blocks = pairs.map((p, i) => (i === index ? serializeMCQToBlockText(updatedItem) : p.blockText));
+    setBulkText(blocks.join('\n\n'));
+  };
+
+  const patchBlockOption = (index: number, key: string, text: string) => {
+    const item = parseBulkTextToBlocks(bulkText)[index]?.item;
+    if (!item) return;
+    patchBlockItem(index, { options: item.options.map((o) => (o.key === key ? { ...o, text } : o)) });
+  };
+
+  const setBlockAnswer = (index: number, key: string) => {
+    const item = parseBulkTextToBlocks(bulkText)[index]?.item;
+    if (!item) return;
+    patchBlockItem(index, {
+      answer: key,
+      options: item.options.map((o) => ({ ...o, isCorrect: o.key === key })),
+    });
+  };
+
+  const removeBlock = (index: number) => {
+    const blocks = parseBulkTextToBlocks(bulkText)
+      .map((p) => p.blockText)
+      .filter((_, i) => i !== index);
+    setBulkText(blocks.join('\n\n'));
+  };
+
+  const addBlankCard = () => {
+    const scaffold = `নতুন প্রশ্ন লিখুন?\nক) অপশন ১ *\nখ) অপশন ২\nগ) অপশন ৩\nঘ) অপশন ৪`;
+    setBulkText((prev) => (prev.trim() ? `${prev}\n\n${scaffold}` : scaffold));
+    setBulkViewMode('cards');
+  };
 
   // Live preview of whatever the parser would extract from the current bulk text,
   // with the interactive batch tags applied (so the preview is a true WYSIWYG of
@@ -641,26 +693,279 @@ iii. অস্ত্রোপচার
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Bulk Text Area */}
           <div className="lg:col-span-2 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 Paste Raw MCQs Text Here
               </label>
-              <span className="text-[11px] text-slate-400 font-mono">
-                Bengali, English, LaTeX math ($x^2$), & Bohupodi
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
+                  Bengali, English, LaTeX math ($x^2$), & Bohupodi
+                </span>
+                <div className={`inline-flex items-center rounded-xl border p-1 gap-1 ${
+                  isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950/40 border-slate-700/50'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setBulkViewMode('raw')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      bulkViewMode === 'raw'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                        : isAppLight
+                        ? 'text-slate-600 hover:bg-slate-200'
+                        : 'text-slate-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Raw Text</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkViewMode('cards')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      bulkViewMode === 'cards'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                        : isAppLight
+                        ? 'text-slate-600 hover:bg-slate-200'
+                        : 'text-slate-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Cards ({parsedPreview.length})</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <textarea
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              placeholder="Paste questions here... e.g. 1. Question stem? A) Opt 1 B) Opt 2 * C) Opt 3 D) Opt 4"
-              className={`w-full h-80 font-['Hind_Siliguri',sans-serif] p-5 rounded-2xl border focus:outline-none focus:border-amber-500 text-base leading-relaxed resize-none shadow-inner ${
-                isAppLight
-                  ? 'bg-slate-50 border-slate-300 text-slate-900'
-                  : 'bg-slate-950 border-slate-800 text-slate-100'
-              }`}
-            />
+            {bulkViewMode === 'raw' ? (
+              <textarea
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                onPaste={() => { justPastedBulkRef.current = true; }}
+                placeholder="Paste questions here... e.g. 1. Question stem? A) Opt 1 B) Opt 2 * C) Opt 3 D) Opt 4"
+                className={`w-full h-80 font-['Hind_Siliguri',sans-serif] p-5 rounded-2xl border focus:outline-none focus:border-amber-500 text-base leading-relaxed resize-none shadow-inner ${
+                  isAppLight
+                    ? 'bg-slate-50 border-slate-300 text-slate-900'
+                    : 'bg-slate-950 border-slate-800 text-slate-100'
+                }`}
+              />
+            ) : (
+              <div className={`w-full max-h-[36rem] overflow-y-auto rounded-2xl border p-3 space-y-3 shadow-inner ${
+                isAppLight ? 'bg-slate-50 border-slate-300' : 'bg-slate-950 border-slate-800'
+              }`}>
+                {parseBulkTextToBlocks(bulkText).length === 0 ? (
+                  <div className={`rounded-xl border border-dashed p-6 text-center text-xs ${
+                    isAppLight ? 'border-slate-300 text-slate-400' : 'border-slate-800 text-slate-500'
+                  }`}>
+                    No questions yet — switch to Raw Text and paste, or add one below.
+                  </div>
+                ) : (
+                  parseBulkTextToBlocks(bulkText).map(({ item }, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-2xl space-y-3 ${
+                        isAppLight
+                          ? 'bg-white border-2 border-slate-300 text-slate-950 shadow-sm'
+                          : 'bg-slate-900 border-2 border-slate-700 text-slate-100 shadow-md'
+                      }`}
+                    >
+                      {/* Header: number badge + delete */}
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeBlock(idx)}
+                          className={`p-2 rounded-xl border cursor-pointer transition-colors ${
+                            isAppLight ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
+                          }`}
+                          title="Remove this card"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Stem */}
+                      <div>
+                        <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                          isAppLight ? 'text-slate-500' : 'text-slate-400'
+                        }`}>
+                          Question Stem
+                        </label>
+                        <textarea
+                          value={item.stem}
+                          onChange={(e) => patchBlockItem(idx, { stem: e.target.value })}
+                          rows={2}
+                          className={`${queueInputCls} resize-none leading-relaxed`}
+                        />
+                      </div>
+
+                      {/* Bohupodi roman items */}
+                      {item.questionType === 'roman_statements' && (
+                        <div className={`space-y-2 p-3 rounded-2xl border ${
+                          isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+                        }`}>
+                          <label className="block text-[11px] font-bold text-amber-500 uppercase tracking-wider">
+                            Roman Statements (i. ii. iii.)
+                          </label>
+                          {(item.romanItems || []).map((ri, riIdx) => (
+                            <input
+                              key={riIdx}
+                              type="text"
+                              value={ri}
+                              onChange={(e) => {
+                                const updated = [...(item.romanItems || [])];
+                                updated[riIdx] = e.target.value;
+                                patchBlockItem(idx, { romanItems: updated });
+                              }}
+                              className={queueInputCls}
+                            />
+                          ))}
+                          <input
+                            type="text"
+                            value={item.prompt || ''}
+                            onChange={(e) => patchBlockItem(idx, { prompt: e.target.value })}
+                            placeholder="Prompt e.g. নিচের কোনটি সঠিক?"
+                            className={`${queueInputCls} ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}
+                          />
+                        </div>
+                      )}
+
+                      {/* Options */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {item.options.map((opt) => {
+                          const isCorrect = opt.key.toLowerCase() === (item.answer || '').toLowerCase();
+                          return (
+                            <div
+                              key={opt.key}
+                              className={`flex items-center gap-2 p-2 rounded-xl border ${
+                                isCorrect
+                                  ? 'bg-emerald-500/10 border-emerald-500/40'
+                                  : isAppLight
+                                  ? 'bg-white border-slate-200'
+                                  : 'bg-slate-900 border-slate-800'
+                              }`}
+                            >
+                              <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black flex items-center justify-center shrink-0">
+                                {opt.key}
+                              </span>
+                              <input
+                                type="text"
+                                value={opt.text}
+                                onChange={(e) => patchBlockOption(idx, opt.key, e.target.value)}
+                                className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border text-sm focus:outline-none focus:border-amber-500 bg-transparent"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setBlockAnswer(idx, opt.key)}
+                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
+                                  isCorrect
+                                    ? 'bg-emerald-500 text-slate-950'
+                                    : isAppLight
+                                    ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {isCorrect ? '✓ Correct' : 'Answer'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Source + explanation */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                            isAppLight ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
+                            Source Tags (Board / Exam)
+                          </label>
+                          <SourceTagsInput
+                            tags={getSourceTags(item)}
+                            onChange={(tags) => patchBlockItem(idx, { source: tags.length > 0 ? tags : undefined })}
+                            theme={isAppLight ? 'light' : 'dark'}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                            isAppLight ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
+                            Explanation
+                          </label>
+                          <input
+                            type="text"
+                            value={item.explanation || ''}
+                            onChange={(e) => patchBlockItem(idx, { explanation: e.target.value || undefined })}
+                            placeholder="Optional explanation"
+                            className={queueInputCls}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Structured tags */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                            isAppLight ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
+                            Subject
+                          </label>
+                          <TagChipSelect
+                            value={item.tags?.subject || ''}
+                            onChange={(v) => patchBlockItem(idx, { tags: { ...(item.tags || {}), subject: v || undefined } })}
+                            suggestions={memory.subjects}
+                            placeholder="e.g. Biology"
+                            theme={isAppLight ? 'light' : 'dark'}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                            isAppLight ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
+                            Class
+                          </label>
+                          <TagChipSelect
+                            value={item.tags?.className || ''}
+                            onChange={(v) => patchBlockItem(idx, { tags: { ...(item.tags || {}), className: v || undefined } })}
+                            suggestions={memory.classes}
+                            placeholder="e.g. SSC / HSC"
+                            theme={isAppLight ? 'light' : 'dark'}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
+                            isAppLight ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
+                            Paper
+                          </label>
+                          <TagChipSelect
+                            value={item.tags?.paper || ''}
+                            onChange={(v) => patchBlockItem(idx, { tags: { ...(item.tags || {}), paper: v || undefined } })}
+                            suggestions={memory.papers}
+                            placeholder="e.g. 1st Paper"
+                            theme={isAppLight ? 'light' : 'dark'}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <button
+                  type="button"
+                  onClick={addBlankCard}
+                  className={`w-full px-4 py-3 rounded-2xl border-2 border-dashed text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                    isAppLight
+                      ? 'border-slate-300 text-slate-500 hover:border-amber-400 hover:text-amber-600'
+                      : 'border-slate-700 text-slate-400 hover:border-amber-500/50 hover:text-amber-400'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Question</span>
+                </button>
+              </div>
+            )}
 
             {/* Quick Snippet Insert Buttons */}
             <div className="flex flex-wrap items-center gap-2">
@@ -845,7 +1150,8 @@ iii. অস্ত্রোপচার
               </button>
             </div>
 
-            {/* Live Parse Preview — mock slide of the first parsed question */}
+            {/* Live Parse Preview — mock slide of the first parsed question (Raw Text mode only; Cards mode IS the live preview) */}
+            {bulkViewMode === 'raw' && (
             <div className={`p-4 rounded-2xl border space-y-3 ${
               isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
             }`}>
@@ -1011,6 +1317,7 @@ iii. অস্ত্রোপচার
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Format Helper Sidebar & CSV Import */}

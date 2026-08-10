@@ -1,15 +1,33 @@
-import { MCQItem, MCQOption, MCQTags, QuestionType } from '../types';
+import { MCQItem, MCQOption, MCQTags, QuestionType, getSourceTags } from '../types';
 
 /**
  * Smart Regex & Heuristic Parser for Bulk Text Paste of MCQs
  * Works 100% offline without API.
  */
 export function parseBulkTextToMCQs(rawText: string): MCQItem[] {
+  return parseBulkTextToBlocks(rawText).map((p) => p.item);
+}
+
+/**
+ * Same parse as `parseBulkTextToMCQs` but keeps each parsed item paired with
+ * the exact raw-text block it came from, so a UI can edit one block/card and
+ * splice its re-serialized text back in without disturbing the others.
+ */
+export function parseBulkTextToBlocks(rawText: string): { blockText: string; item: MCQItem }[] {
   if (!rawText || !rawText.trim()) return [];
 
-  // Split into candidate blocks by double newlines or numbered lines
-  const rawBlocks = rawText.split(/\n\s*\n+/);
-  const items: MCQItem[] = [];
+  // Insert a blank line before a numbered question line (e.g. "২. ...?") that
+  // isn't already separated by one, so pasted lists with no blank lines
+  // between questions still split into separate blocks. Numeric OPTION lines
+  // (e.g. "1) Option text") never end in "?" so they're unaffected.
+  const withNumberedSplits = rawText.replace(
+    /([^\n])\n((?:\d+|[০-৯]+)[.)]\s+.+[?؟])/g,
+    '$1\n\n$2'
+  );
+
+  // Split into candidate blocks by double newlines
+  const rawBlocks = withNumberedSplits.split(/\n\s*\n+/);
+  const pairs: { blockText: string; item: MCQItem }[] = [];
 
   for (let blockIdx = 0; blockIdx < rawBlocks.length; blockIdx++) {
     const block = rawBlocks[blockIdx].trim();
@@ -17,11 +35,49 @@ export function parseBulkTextToMCQs(rawText: string): MCQItem[] {
 
     const parsed = parseSingleBlock(block, blockIdx + 1);
     if (parsed) {
-      items.push(parsed);
+      pairs.push({ blockText: block, item: parsed });
     }
   }
 
-  return items;
+  return pairs;
+}
+
+/**
+ * Inverse of `parseSingleBlock` — turns an MCQItem back into the raw-text
+ * block format the parser understands, so card edits can be written back
+ * into the bulk paste textarea.
+ */
+export function serializeMCQToBlockText(item: MCQItem): string {
+  const lines: string[] = [];
+
+  lines.push(item.stem);
+
+  if (item.questionType === 'roman_statements' && item.romanItems) {
+    for (const ri of item.romanItems) {
+      if (ri.trim()) lines.push(ri);
+    }
+    if (item.prompt) lines.push(item.prompt);
+  }
+
+  for (const opt of item.options) {
+    const isCorrect = opt.isCorrect || opt.key.toLowerCase() === (item.answer || '').toLowerCase();
+    lines.push(`${opt.key}) ${opt.text}${isCorrect ? ' *' : ''}`);
+  }
+
+  if (item.explanation) {
+    lines.push(`ব্যাখ্যা: ${item.explanation}`);
+  }
+
+  const sources = getSourceTags(item);
+  if (sources.length > 0) {
+    lines.push(`[${sources.join(' | ')}]`);
+  }
+
+  if (item.tags?.subject) lines.push(`subject: ${item.tags.subject}`);
+  if (item.tags?.className) lines.push(`class: ${item.tags.className}`);
+  if (item.tags?.paper) lines.push(`paper: ${item.tags.paper}`);
+
+  return lines.join('\n');
 }
 
 function parseSingleBlock(blockText: string, defaultNum: number): MCQItem | null {
