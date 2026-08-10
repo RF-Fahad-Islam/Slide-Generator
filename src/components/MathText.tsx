@@ -1,5 +1,6 @@
 import React from 'react';
 import katex from 'katex';
+import { formatMathAndChemistry } from '../utils/latexFormatter';
 
 interface MathTextProps {
   text: string;
@@ -7,15 +8,18 @@ interface MathTextProps {
   inline?: boolean;
 }
 
-export const MathText: React.FC<MathTextProps> = ({ text, className = '', inline = true }) => {
+export const MathText: React.FC<MathTextProps> = ({ text, className = '' }) => {
   if (text === null || text === undefined) return null;
   const strText = String(text);
-  if (!strText) return null;
+  if (!strText.trim()) return null;
 
-  // Split text into normal text parts and math parts
-  // Regex matches $$...$$ for block math and $...$ for inline math
-  const regex = /(\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$)/g;
-  const parts = strText.split(regex);
+  // Auto-format un-delimited chemical formulas, units, & LaTeX macros
+  const processedText = formatMathAndChemistry(strText);
+
+  // Split text into normal text parts and math parts ($$ ... $$ and $ ... $)
+  // Handles multiline math expressions (e.g. matrices, determinants, cases)
+  const regex = /(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g;
+  const parts = processedText.split(regex);
 
   return (
     <span className={`inline-wrap ${className}`}>
@@ -28,16 +32,16 @@ export const MathText: React.FC<MathTextProps> = ({ text, className = '', inline
         if (isBlock || isInline) {
           const rawMath = isBlock ? part.slice(2, -2) : part.slice(1, -1);
           try {
-            const html = katex.renderToString(rawMath, {
+            const html = katex.renderToString(rawMath.trim(), {
               displayMode: isBlock,
               throwOnError: false,
-              output: 'htmlAndMathml',
+              output: 'html', // Output HTML only (no duplicate MathML text)
             });
 
             return (
               <span
                 key={index}
-                className={isBlock ? 'my-2 block text-center' : 'inline-block mx-0.5'}
+                className={isBlock ? 'my-2 block text-center' : 'inline-flex items-center align-middle whitespace-nowrap mx-1 max-w-full overflow-x-auto'}
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             );

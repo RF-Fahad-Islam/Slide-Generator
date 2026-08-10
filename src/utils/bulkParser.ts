@@ -318,5 +318,145 @@ export const SAMPLE_DECKS: { name: string; description: string; items: MCQItem[]
         explanation: '$\\lim_{x \\to 0} \\frac{\\sin(3x)}{x} = 3 \\cdot \\lim_{x \\to 0} \\frac{\\sin(3x)}{3x} = 3 \\cdot 1 = 3$'
       }
     ]
+  },
+  {
+    name: 'উচ্চতর গণিত (Matrices, Integrals & Calculus)',
+    description: 'Features 10 Higher Secondary Math MCQs with Matrices, Determinants, Calculus & Trigonometry.',
+    items: [
+      {
+        id: 'hsc_math_1',
+        questionType: 'standard',
+        stem: '$A=\\begin{bmatrix}a&2&5\\\\ -2&b&-3\\\\ -5&3&c\\end{bmatrix}$ একটি বক্র প্রতিসম ম্যাট্রিক্স হলে a, b, c এর মানগুলো-',
+        options: [
+          { key: 'A', text: '-2, -5, 3' },
+          { key: 'B', text: '0, 0, 0', isCorrect: true },
+          { key: 'C', text: '1, 1, 1' },
+          { key: 'D', text: '2, 5, 3' }
+        ],
+        answer: 'B',
+        source: ['17-18'],
+        explanation: 'বক্র প্রতিসম Matrix এর শর্ত হয় $A^{T}=-A$ এক্ষেত্রে $a_{ij}=0$ যখন $i=j$ অর্থাৎ কর্ণের উপাদানগুলো শূন্য হতে হবে। $\\therefore a=0, b=0, c=0$'
+      },
+      {
+        id: 'hsc_math_2',
+        questionType: 'standard',
+        stem: '$\\begin{vmatrix}\\alpha&\\alpha&x\\\\ \\beta&\\beta&\\beta\\\\ 0&x&\\theta\\end{vmatrix}=0$ হলে, x=?',
+        options: [
+          { key: 'A', text: '$\\alpha, \\beta, \\theta$' },
+          { key: 'B', text: '$\\alpha, \\theta$', isCorrect: true },
+          { key: 'C', text: '$\\beta, \\theta$' },
+          { key: 'D', text: '$\\alpha, \\beta$' }
+        ],
+        answer: 'B',
+        source: ['14-15'],
+        explanation: '$\\beta\\begin{vmatrix}\\alpha&\\alpha&x\\\\ 1&1&1\\\\ 0&x&\\theta\\end{vmatrix}=0 \\Rightarrow \\beta[\\alpha(\\theta-x)-\\alpha(\\theta-\\theta)]+x(x-\\theta)=0 \\Rightarrow \\beta(\\alpha-x)(\\theta-x)=0 \\therefore x=\\theta, \\alpha$'
+      },
+      {
+        id: 'hsc_math_3',
+        questionType: 'standard',
+        stem: '$\\begin{pmatrix}\\cos\\theta&\\sin\\theta\\\\ -\\sin\\theta&\\cos\\theta\\end{pmatrix}$ এর বিপরীত ম্যাট্রিক্স-',
+        options: [
+          { key: 'A', text: '$\\begin{pmatrix}\\cos\\theta&-\\sin\\theta\\\\ -\\sin\\theta&\\cos\\theta\\end{pmatrix}$' },
+          { key: 'B', text: '$\\begin{pmatrix}\\cos\\theta&-\\sin\\theta\\\\ \\sin\\theta&-\\cos\\theta\\end{pmatrix}$' },
+          { key: 'C', text: '$\\begin{pmatrix}\\cos\\theta&-\\sin\\theta\\\\ \\sin\\theta&\\cos\\theta\\end{pmatrix}$', isCorrect: true },
+          { key: 'D', text: '$\\begin{pmatrix}\\cos\\theta&\\sin\\theta\\\\ \\sin\\theta&\\cos\\theta\\end{pmatrix}$' }
+        ],
+        answer: 'C',
+        source: ['13-14'],
+        explanation: '$|A|=\\cos^{2}\\theta-(-\\sin^{2}\\theta)=\\cos^{2}\\theta+\\sin^{2}\\theta=1 \\therefore Adj(A)=\\begin{pmatrix}\\cos\\theta&-\\sin\\theta\\\\ \\sin\\theta&\\cos\\theta\\end{pmatrix}$ $A^{-1}=\\frac{1}{|A|}Adj(A)=\\frac{1}{1}\\begin{pmatrix}\\cos\\theta&-\\sin\\theta\\\\ \\sin\\theta&\\cos\\theta\\end{pmatrix}$'
+      },
+      {
+        id: 'hsc_math_4',
+        questionType: 'standard',
+        stem: '$\\begin{vmatrix}a&1&b+c\\\\ b&1&c+a\\\\ c&1&a+b\\end{vmatrix}$ এর মান হবে-',
+        options: [
+          { key: 'A', text: '0', isCorrect: true },
+          { key: 'B', text: '$abc(a+b)(b+c)(c+a)$' },
+          { key: 'C', text: '$abc$' },
+          { key: 'D', text: '$(a+b)(b+c)(c+a)$' }
+        ],
+        answer: 'A',
+        source: ['12-13'],
+        explanation: '$\\begin{vmatrix}a&1&b+c\\\\ b&1&c+a\\\\ c&1&a+b\\end{vmatrix}=\\begin{vmatrix}a-b&0&b-c\\\\ b-c&0&c-a\\\\ c&1&a+b\\end{vmatrix}=\\begin{vmatrix}a-b&b-c\\\\ b-c&c-a\\end{vmatrix}=-\\begin{vmatrix}a-b&a-b\\\\ b-c&b-c\\end{vmatrix}=-[(a-b)(b-c)-(a-b)(b-c)]=0$'
+      },
+      {
+        id: 'hsc_math_5',
+        questionType: 'standard',
+        stem: '$\\int\\frac{e^{x}(1+x)}{\\cos^{2}(xe^{x})}dx=?$',
+        options: [
+          { key: 'A', text: '$xe^{x}+c$' },
+          { key: 'B', text: '$\\tan(xe^{x})+c$', isCorrect: true },
+          { key: 'C', text: '$\\cot(xe^{x})+c$' },
+          { key: 'D', text: '$\\cos(xe^{x})+c$' }
+        ],
+        answer: 'B',
+        source: ['14-15']
+      },
+      {
+        id: 'hsc_math_6',
+        questionType: 'standard',
+        stem: '$\\lim_{x\\rightarrow0}\\frac{e^{x}-e^{-x}-2\\ln(1+x)}{x\\sin x}$ এর মান-',
+        options: [
+          { key: 'A', text: '0' },
+          { key: 'B', text: '-1' },
+          { key: 'C', text: '1', isCorrect: true },
+          { key: 'D', text: '2' }
+        ],
+        answer: 'C',
+        source: ['10-11']
+      },
+      {
+        id: 'hsc_math_7',
+        questionType: 'standard',
+        stem: '$(2x^{2}-\\frac{1}{2x^{3}})^{10}$ এর বিস্তৃতিতে x-বর্জিত পদটি কততম এবং এর মান কত?',
+        options: [
+          { key: 'A', text: 'পঞ্চম এবং 840', isCorrect: true },
+          { key: 'B', text: 'চতুর্থ এবং 1920' },
+          { key: 'C', text: 'ষষ্ঠ এবং 252' },
+          { key: 'D', text: 'সপ্তম এবং 30' }
+        ],
+        answer: 'A',
+        source: ['12-13']
+      },
+      {
+        id: 'hsc_math_8',
+        questionType: 'standard',
+        stem: '$(2x^{2}+\\frac{k}{x^{3}})^{10}$ এর বিস্তৃতিতে $x^{5}$ এবং $x^{15}$ এর সহগদ্বয় সমান হলে k এর ধনাত্মক মান-',
+        options: [
+          { key: 'A', text: '$\\frac{1}{\\sqrt{2}}$' },
+          { key: 'B', text: '$\\frac{1}{\\sqrt{3}}$', isCorrect: true },
+          { key: 'C', text: '$\\frac{1}{2}$' },
+          { key: 'D', text: '$\\frac{1}{\\sqrt{5}}$' }
+        ],
+        answer: 'B',
+        source: ['11-12']
+      },
+      {
+        id: 'hsc_math_9',
+        questionType: 'standard',
+        stem: '$\\arctan\\{\\sin(\\arccos\\frac{\\sqrt{2}}{\\sqrt{3}})\\} = ?$',
+        options: [
+          { key: 'A', text: '$\\frac{\\pi}{2}$' },
+          { key: 'B', text: '$\\frac{\\pi}{3}$' },
+          { key: 'C', text: '$\\frac{\\pi}{4}$' },
+          { key: 'D', text: '$\\frac{\\pi}{6}$', isCorrect: true }
+        ],
+        answer: 'D',
+        source: ['13-14']
+      },
+      {
+        id: 'hsc_math_10',
+        questionType: 'standard',
+        stem: '$\\frac{x+17}{(x-3)(x+2)}=\\frac{a}{x-3}+\\frac{b}{x+2}$ হলে (a, b) = ?',
+        options: [
+          { key: 'A', text: '$a=2, b=-5$' },
+          { key: 'B', text: '$a=4, b=-3$', isCorrect: true },
+          { key: 'C', text: '$a=-3, b=4$' },
+          { key: 'D', text: '$a=b, b=-2$' }
+        ],
+        answer: 'B',
+        source: ['08-09']
+      }
+    ]
   }
 ];

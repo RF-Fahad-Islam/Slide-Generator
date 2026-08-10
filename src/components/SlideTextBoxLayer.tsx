@@ -159,9 +159,9 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full"
                         style={containerStyle}
                       >
-                        <span className="font-black">{opt.key}.</span>
-                        <span><MathText text={opt.text} /></span>
-                        {highlight && <Check className="w-6 h-6 stroke-[3.5]" />}
+                        <span className="font-black shrink-0">{opt.key}.</span>
+                        <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
+                        {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0" />}
                       </span>
                     );
                   }
@@ -169,19 +169,19 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     return (
                       <div
                         key={opt.key}
-                        className="flex items-start gap-3 px-5 py-3.5 rounded-2xl"
+                        className="flex items-center gap-3 px-5 py-3.5 rounded-2xl"
                         style={containerStyle}
                       >
                         <span className="font-black shrink-0">{opt.key}.</span>
-                        <span><MathText text={opt.text} /></span>
+                        <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
                         {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
                       </div>
                     );
                   }
                   return (
-                    <div key={opt.key} className="flex items-start gap-3" style={highlight ? { color: hex.optionSelectedText } : undefined}>
+                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: hex.optionSelectedText } : undefined}>
                       <span className="font-black shrink-0">{opt.key}.</span>
-                      <span><MathText text={opt.text} /></span>
+                      <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
                       {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
                     </div>
                   );

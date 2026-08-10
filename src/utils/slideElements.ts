@@ -258,10 +258,10 @@ export const SLIDE_LAYOUTS: SlideLayoutDef[] = [
 export const classroomTextBoxes = (): SlideTextBox[] => [
   { id: 'cl_brand', bind: 'brand', x: 80, y: 70, w: 900, fontSize: 40, color: '#fbbf24', align: 'left', bold: true },
   { id: 'cl_header', bind: 'headerTitle', x: 80, y: 140, w: 1100, fontSize: 32, color: '#ffffff', align: 'left', bold: false },
-  { id: 'cl_stem', bind: 'stem', x: 80, y: 280, w: 1050, fontSize: 48, color: '#ffffff', align: 'left', bold: true, shape: 'card', bg: 'rgba(255,255,255,0.06)' },
-  { id: 'cl_source', bind: 'source', x: 100, y: 300, w: 900, fontSize: 28, color: '#fbbf24', align: 'left', bold: false },
-  { id: 'cl_writing', bind: 'free', text: '✏️ Live Teacher Writing / Stylus Space', x: 80, y: 560, w: 1050, fontSize: 30, color: 'rgba(148,163,184,0.55)', align: 'center', bold: false, shape: 'card', bg: 'rgba(255,255,255,0.03)' },
-  { id: 'cl_options', bind: 'options', x: 1260, y: 280, w: 560, fontSize: 34, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(255,255,255,0.06)' },
+  { id: 'cl_stem', bind: 'stem', x: 80, y: 280, w: 1080, fontSize: 44, color: '#ffffff', align: 'left', bold: true, shape: 'card', bg: 'rgba(255,255,255,0.06)' },
+  { id: 'cl_source', bind: 'source', x: 100, y: 300, w: 900, fontSize: 26, color: '#fbbf24', align: 'left', bold: false },
+  { id: 'cl_writing', bind: 'free', text: '✏️ Live Teacher Writing / Stylus Space', x: 80, y: 560, w: 1080, fontSize: 28, color: 'rgba(148,163,184,0.55)', align: 'center', bold: false, shape: 'card', bg: 'rgba(255,255,255,0.03)' },
+  { id: 'cl_options', bind: 'options', x: 1210, y: 280, w: 630, fontSize: 26, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(255,255,255,0.06)' },
   { id: 'cl_footer', bind: 'footerTag', x: 80, y: 990, w: 700, fontSize: 28, color: '#fbbf24', align: 'left', bold: true },
 ];
 
