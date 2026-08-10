@@ -144,13 +144,12 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px 0 rgba(245, 158, 11, 0.05);
   border-radius: 1.75rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-card-fatty:hover {
   border-color: rgba(245, 158, 11, 0.35);
   box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), 0 0 40px 0 rgba(245, 158, 11, 0.15);
-  transform: translateY(-2px);
 }
 
 /* Light Theme Card Variant */
@@ -158,17 +157,16 @@
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   box-shadow: 0 20px 40px -15px rgba(148, 163, 184, 0.25), 0 0 20px 0 rgba(245, 158, 11, 0.08);
   border-radius: 1.75rem;
   color: #0f172a;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-card-fatty-light:hover {
   border-color: #f59e0b;
   box-shadow: 0 25px 50px -12px rgba(148, 163, 184, 0.4), 0 0 30px 0 rgba(245, 158, 11, 0.2);
-  transform: translateY(-2px);
 }
 
 /* Fatty Action Button */

@@ -867,28 +867,28 @@ iii. অস্ত্রোপচার
                   {parsedPreview.map((mcq, idx) => (
                     <div
                       key={mcq.id}
-                      className={`relative rounded-xl border p-3.5 ${
+                      className={`relative rounded-2xl border p-4 ${
                         isAppLight
-                          ? 'border-slate-200 bg-white'
-                          : 'border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40'
+                          ? 'border-slate-300 bg-white shadow-xs'
+                          : 'border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40 shadow-xs'
                       }`}
                     >
                       {/* Question number badge */}
                       <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 text-[11px] font-black flex items-center justify-center shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-7 h-7 rounded-xl bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
                             {idx + 1}
                           </span>
-                          <div className={`text-sm font-bold leading-snug ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                          <div className={`text-base font-black leading-relaxed ${isAppLight ? 'text-slate-950' : 'text-white'}`}>
                             <MathText text={mcq.stem} />
                           </div>
                         </div>
-                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg shrink-0 ${
+                        <span className={`text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-xl shrink-0 ${
                           mcq.questionType === 'roman_statements'
-                            ? 'bg-violet-500/20 text-violet-400 border border-violet-500/40'
+                            ? 'bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/40'
                             : mcq.questionType === 'passage'
-                              ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
-                              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                              ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/40'
+                              : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
                         }`}>
                           {mcq.questionType === 'roman_statements'
                             ? 'বহুপদী'
@@ -900,85 +900,86 @@ iii. অস্ত্রোপচার
 
                       {/* Roman statements (i, ii, iii) */}
                       {mcq.romanItems && mcq.romanItems.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
+                        <div className={`my-2 p-3 rounded-2xl border space-y-1 ${
+                          isAppLight ? 'bg-slate-100/90 border-slate-300 text-slate-950' : 'bg-black/40 border-white/15 text-slate-100'
+                        }`}>
                           {mcq.romanItems.map((ri, riIdx) => (
-                            <span
-                              key={riIdx}
-                              className={`text-[11px] px-2 py-0.5 rounded-lg border ${
-                                isAppLight
-                                  ? 'bg-slate-100 border-slate-200 text-slate-700'
-                                  : 'bg-white/5 border-white/10 text-slate-300'
-                              }`}
-                            >
+                            <div key={riIdx} className="text-sm font-bold">
                               <MathText text={ri} />
-                            </span>
+                            </div>
                           ))}
                           {mcq.prompt && (
-                            <span className={`text-[11px] px-2 py-0.5 rounded-lg border font-semibold ${
-                              isAppLight
-                                ? 'bg-amber-50 border-amber-200 text-amber-700'
-                                : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                            <div className={`text-sm font-black italic pt-1 ${
+                              isAppLight ? 'text-amber-800' : 'text-amber-300'
                             }`}>
                               <MathText text={mcq.prompt} />
-                            </span>
+                            </div>
                           )}
                         </div>
                       )}
 
                       {/* Options */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 my-2">
                         {mcq.options.map((opt) => {
                           const isCorrect = opt.isCorrect || opt.key.toLowerCase() === mcq.answer?.toLowerCase();
                           return (
                             <div
                               key={opt.key}
-                              className={`px-2 py-1 rounded-lg border text-[11px] font-semibold ${
+                              className={`px-3 py-2 rounded-xl border text-sm font-bold flex items-center gap-2 ${
                                 isCorrect
-                                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                                  ? isAppLight
+                                    ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-xs'
+                                    : 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-300 shadow-xs'
                                   : isAppLight
-                                    ? 'bg-slate-100 border-slate-200 text-slate-700'
-                                    : 'bg-white/5 border-white/10 text-slate-300'
+                                    ? 'bg-slate-50 border-2 border-slate-250 text-slate-950'
+                                    : 'bg-white/5 border-2 border-white/10 text-slate-100'
                               }`}
                             >
-                              <span className="font-mono font-bold mr-1">{opt.key}.</span>
-                              <MathText text={opt.text} />
-                              {isCorrect && <CheckCircle2 className="inline w-3 h-3 text-amber-400 ml-1 -mt-0.5" />}
+                              <span className={`font-black font-mono text-xs px-2 py-0.5 rounded-lg shrink-0 ${
+                                isCorrect ? 'bg-emerald-500 text-slate-950' : isAppLight ? 'bg-amber-500 text-slate-950' : 'bg-amber-500/30 text-amber-300'
+                              }`}>
+                                {opt.key}.
+                              </span>
+                              <span className="flex-1 min-w-0 truncate">
+                                <MathText text={opt.text} />
+                              </span>
+                              {isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />}
                             </div>
                           );
                         })}
                       </div>
 
                       {/* Answer key + tags footer */}
-                      <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-dashed ${
-                        isAppLight ? 'border-slate-200' : 'border-slate-800'
+                      <div className="flex items-center justify-between gap-3 mt-2.5 pt-2 border-t border-dashed ${
+                        isAppLight ? 'border-slate-300' : 'border-slate-800'
                       }">
-                        <span className={`text-[10px] font-mono font-bold ${isAppLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
-                          ✓ উত্তর: {mcq.answer}
+                        <span className="text-xs font-black font-mono px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 shadow-2xs">
+                          ✓ Ans: {mcq.answer}
                         </span>
                         <div className="flex items-center gap-1.5 flex-wrap justify-end">
                           {mcq.tags?.subject && (
-                            <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] border ${
-                              isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            <span className={`px-2.5 py-1 rounded-xl font-mono font-extrabold text-xs border ${
+                              isAppLight ? 'bg-slate-100 text-slate-900 border-slate-300' : 'bg-slate-900 text-slate-300 border-slate-800'
                             }`}>
                               📌 {mcq.tags.subject}
                             </span>
                           )}
                           {mcq.tags?.className && (
-                            <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] border ${
-                              isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            <span className={`px-2.5 py-1 rounded-xl font-mono font-extrabold text-xs border ${
+                              isAppLight ? 'bg-slate-100 text-slate-900 border-slate-300' : 'bg-slate-900 text-slate-300 border-slate-800'
                             }`}>
                               🏫 {mcq.tags.className}
                             </span>
                           )}
                           {mcq.tags?.paper && (
-                            <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] border ${
-                              isAppLight ? 'bg-slate-50 text-slate-600 border-slate-300' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            <span className={`px-2.5 py-1 rounded-xl font-mono font-extrabold text-xs border ${
+                              isAppLight ? 'bg-slate-100 text-slate-900 border-slate-300' : 'bg-slate-900 text-slate-300 border-slate-800'
                             }`}>
                               📄 {mcq.tags.paper}
                             </span>
                           )}
                           {getSourceTags(mcq).length > 0 && (
-                            <span className={`text-[10px] font-semibold truncate max-w-[220px] ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                            <span className={`text-xs font-extrabold px-2.5 py-1 rounded-xl border ${isAppLight ? 'bg-amber-100 border-amber-300 text-amber-950' : 'bg-amber-500/20 border-amber-500/40 text-amber-300'}`}>
                               <MathText text={`[${getSourceTags(mcq).join(' | ')}]`} />
                             </span>
                           )}
@@ -987,14 +988,14 @@ iii. অস্ত্রোপচার
 
                       {/* Optional explanation indicator */}
                       {mcq.explanation && (
-                        <div className={`mt-2 px-2.5 py-1.5 rounded-lg border text-[11px] leading-snug flex items-start gap-1.5 ${
+                        <div className={`mt-2.5 p-3 rounded-2xl border text-xs lg:text-sm font-bold leading-relaxed flex items-start gap-2.5 ${
                           isAppLight
-                            ? 'bg-sky-50 border-sky-200 text-sky-800'
-                            : 'bg-sky-500/10 border-sky-500/40 text-sky-300'
+                            ? 'bg-sky-50 border-2 border-sky-300 text-sky-950'
+                            : 'bg-sky-500/10 border-2 border-sky-500/40 text-sky-200'
                         }`}>
-                          <HelpCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-sky-400" />
-                          <span>
-                            <span className="font-black">ব্যাখ্যা:</span>{' '}
+                          <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-sky-500" />
+                          <span className="min-w-0 flex-1">
+                            <span className="font-black text-sky-700 dark:text-sky-400 mr-1.5">ব্যাখ্যা:</span>
                             <MathText text={mcq.explanation} />
                           </span>
                         </div>
@@ -1518,34 +1519,63 @@ iii. অস্ত্রোপচার
                       <>
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3">
-                            <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">
+                            <span className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shrink-0 shadow-sm">
                               {idx + 1}
                             </span>
-                            <div>
-                              <h4 className="text-sm font-bold leading-snug">
+                            <div className="space-y-1">
+                              <h4 className={`text-base lg:text-lg font-black leading-relaxed ${isAppLight ? 'text-slate-950' : 'text-white'}`}>
                                 <MathText text={item.stem} />
                               </h4>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 font-bold font-mono">
-                                  Answer: {item.answer}
+
+                              {/* Roman statements & prompt */}
+                              {item.romanItems && item.romanItems.length > 0 && (
+                                <div className={`my-2 p-3 rounded-2xl border space-y-1.5 ${
+                                  isAppLight ? 'bg-slate-100/90 border-slate-300 text-slate-950' : 'bg-black/40 border-white/15 text-slate-100'
+                                }`}>
+                                  {item.romanItems.map((stmt, sIdx) => (
+                                    <div key={sIdx} className="text-sm lg:text-base font-bold">
+                                      <MathText text={stmt} />
+                                    </div>
+                                  ))}
+                                  {item.prompt && (
+                                    <div className={`text-sm lg:text-base font-black italic pt-1 ${
+                                      isAppLight ? 'text-amber-800' : 'text-amber-300'
+                                    }`}>
+                                      <MathText text={item.prompt} />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                                <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-mono shadow-xs">
+                                  ✓ Ans: {item.answer}
                                 </span>
                                 {getSourceTags(item).map(tag => (
-                                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                                  <span key={tag} className={`text-xs font-extrabold px-2.5 py-1 rounded-xl border ${
+                                    isAppLight ? 'bg-amber-100 border-amber-300 text-amber-950' : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                                  }`}>
                                     {tag}
                                   </span>
                                 ))}
                                 {item.tags?.subject && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                                  <span className={`text-xs font-extrabold px-2.5 py-1 rounded-xl border font-mono ${
+                                    isAppLight ? 'bg-slate-100 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-slate-300'
+                                  }`}>
                                     📌 {item.tags.subject}
                                   </span>
                                 )}
                                 {item.tags?.className && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                                  <span className={`text-xs font-extrabold px-2.5 py-1 rounded-xl border font-mono ${
+                                    isAppLight ? 'bg-slate-100 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-slate-300'
+                                  }`}>
                                     🏫 {item.tags.className}
                                   </span>
                                 )}
                                 {item.tags?.paper && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                                  <span className={`text-xs font-extrabold px-2.5 py-1 rounded-xl border font-mono ${
+                                    isAppLight ? 'bg-slate-100 border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-slate-300'
+                                  }`}>
                                     📄 {item.tags.paper}
                                   </span>
                                 )}
@@ -1590,27 +1620,38 @@ iii. অস্ত্রোপচার
                         </div>
 
                         {/* Options List Preview */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm pt-2">
                           {item.options.map((opt) => {
                             const isCorrect =
                               opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
                             return (
                               <div
                                 key={opt.key}
-                                className={`p-2 rounded-xl border flex items-center gap-2 font-medium truncate ${
+                                className={`p-2.5 rounded-2xl border flex items-center gap-2.5 font-bold transition-colors ${
                                   isCorrect
-                                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 font-bold'
+                                    ? isAppLight
+                                      ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-sm'
+                                      : 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-300 shadow-sm'
                                     : isAppLight
-                                    ? 'bg-white border-slate-200 text-slate-700'
-                                    : 'bg-slate-900 border-slate-800 text-slate-300'
+                                    ? 'bg-slate-50 border-2 border-slate-250 text-slate-950 hover:border-slate-400'
+                                    : 'bg-slate-900/90 border-2 border-slate-800 text-slate-100'
                                 }`}
                               >
-                                <span className="font-bold text-amber-500 font-mono text-[10px]">
+                                <span className={`font-black font-mono text-xs px-2.5 py-0.5 rounded-lg shrink-0 ${
+                                  isCorrect
+                                    ? 'bg-emerald-500 text-slate-950 font-black'
+                                    : isAppLight
+                                    ? 'bg-amber-500 text-slate-950 font-black'
+                                    : 'bg-amber-500/30 text-amber-300 font-black'
+                                }`}>
                                   {opt.key}.
                                 </span>
-                                <span className="truncate">
+                                <span className="truncate flex-1 min-w-0">
                                   <MathText text={opt.text} />
                                 </span>
+                                {isCorrect && (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                )}
                               </div>
                             );
                           })}
@@ -1618,16 +1659,16 @@ iii. অস্ত্রোপচার
 
                         {/* Optional explanation indicator */}
                         {item.explanation && (
-                          <div className={`mt-2 px-3 py-2 rounded-xl border text-xs leading-snug flex items-start gap-2 ${
+                          <div className={`mt-3 p-3.5 rounded-2xl border text-xs lg:text-sm font-bold leading-relaxed flex items-start gap-2.5 ${
                             isAppLight
-                              ? 'bg-sky-50 border-sky-200 text-sky-800'
-                              : 'bg-sky-500/10 border-sky-500/40 text-sky-300'
+                              ? 'bg-sky-50 border-2 border-sky-300 text-sky-950 shadow-xs'
+                              : 'bg-sky-950/50 border-2 border-sky-700/60 text-sky-200'
                           }`}>
-                            <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
-                            <span className="min-w-0">
-                              <span className="font-black mr-1">ব্যাখ্যা:</span>
+                            <HelpCircle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-sky-500" />
+                            <div className="min-w-0 flex-1">
+                              <span className="font-black text-sky-700 dark:text-sky-400 mr-1.5">ব্যাখ্যা:</span>
                               <MathText text={item.explanation} />
-                            </span>
+                            </div>
                           </div>
                         )}
                       </>
