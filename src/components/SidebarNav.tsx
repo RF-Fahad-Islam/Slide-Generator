@@ -21,11 +21,12 @@ import {
   LayoutTemplate,
   HelpCircle,
   Library,
+  FolderKanban,
 } from 'lucide-react';
 
 interface SidebarNavProps {
-  activeTab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
-  setActiveTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => void;
+  activeTab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys';
+  setActiveTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys') => void;
   questionCount: number;
   onOpenExportModal: () => void;
   isSyncing?: boolean;
@@ -38,11 +39,11 @@ interface SidebarNavProps {
   onCloseMobileDrawer?: () => void;
 }
 
-type NavTab = 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
+type NavTab = 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys';
 
 const NAV_GROUPS: { label: string; items: { id: NavTab; label: string; icon: typeof Layers }[] }[] = [
   {
-    label: 'Workspace',
+    label: 'Studio',
     items: [
       { id: 'home', label: 'Home', icon: LayoutGrid },
       { id: 'decks', label: 'My Decks', icon: Library },
@@ -55,7 +56,7 @@ const NAV_GROUPS: { label: string; items: { id: NavTab; label: string; icon: typ
     label: 'Create',
     items: [
       { id: 'ai', label: 'AI PDF Parser', icon: Sparkles },
-      { id: 'manual', label: 'Manual Editor', icon: Edit3 },
+      { id: 'workspaces', label: 'Workspaces', icon: FolderKanban },
     ],
   },
   {
