@@ -42,7 +42,8 @@ import { SlideTextBox, SlideTextBoxBind } from './types';
 import { SlidePreviewModal } from './components/SlidePreviewModal';
 import { LayoutLibraryModal } from './components/LayoutLibraryModal';
 import { AnswerModeModal } from './components/AnswerModeModal';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, Maximize2, SquareStack } from 'lucide-react';
+import { SavePresetModal } from './components/SavePresetModal';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, Maximize2, SquareStack, BookmarkPlus } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
 import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
@@ -79,6 +80,7 @@ export default function App() {
   const [editingSavedDeckId, setEditingSavedDeckId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isTemplateStudioOpen, setIsTemplateStudioOpen] = useState<boolean>(false);
+  const [isSavePresetOpen, setIsSavePresetOpen] = useState<boolean>(false);
 
   // "Add Questions" chooser modal — wide Slide Studio button → 3 source cards
   // (Question Bank / Manual Editor / Question Creator Form).
@@ -815,6 +817,16 @@ export default function App() {
           <SettingsView appTheme={appTheme} />
         )}
 
+        {/* TAB 0.7: TEMPLATE CREATOR & DESIGN STUDIO */}
+        {activeTab === 'templates' && (
+          <TemplateCreator
+            config={config}
+            items={items}
+            appTheme={appTheme}
+            onApplyConfig={handleApplyDeckConfig}
+          />
+        )}
+
         {/* TAB 1: SLIDE PREVIEW & DECK MANAGER */}
         {activeTab === 'preview' && (
           isDeckSettingsOpen ? (
@@ -1146,6 +1158,20 @@ export default function App() {
                         >
                           <Sliders className="w-3.5 h-3.5 text-amber-500" />
                           <span className="hidden 2xl:inline">Deck Settings</span>
+                        </button>
+
+                        {/* Save Current Design as Preset Button */}
+                        <button
+                          onClick={() => setIsSavePresetOpen(true)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                            isAppLight
+                              ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                          }`}
+                          title="Save active slide's effective design (colors, typography, background) as a preset template"
+                        >
+                          <BookmarkPlus className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="hidden 2xl:inline">Save as Preset</span>
                         </button>
 
                         {/* Interactive Template Studio (JSON Import/Export) */}
@@ -1659,6 +1685,15 @@ export default function App() {
           }
         }}
         totalQuestions={items.length}
+        appTheme={appTheme}
+      />
+
+      {/* Save Current Design as Preset Modal */}
+      <SavePresetModal
+        isOpen={isSavePresetOpen}
+        onClose={() => setIsSavePresetOpen(false)}
+        config={config}
+        activeSlideConfigOverride={items[selectedIndex]?.customConfig}
         appTheme={appTheme}
       />
 
