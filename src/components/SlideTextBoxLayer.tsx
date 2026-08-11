@@ -54,12 +54,15 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const showAnswerPill = isRevealActive && hasAnswerDisplayStyle(config, 'answer_pill');
   const showExplanationCard = hasAnswerDisplayStyle(config, 'explanation_card');
 
-  const cardBox = boxes.find(b => b.id.startsWith(TPL_CARD_ID));
-  const stemBox = boxes.find(b => b.id.startsWith(TPL_STEM_ID));
-  const romanBox = boxes.find(b => b.id.startsWith(TPL_ROMAN_ID));
-  const optionsBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_OPTIONS_ID));
+  const cardBox = boxes.find(b => b.bind === 'free' && (b.shape === 'card' || b.shape === 'banner')) || boxes.find(b => b.bind === 'stem');
+  const stemBox = boxes.find(b => b.bind === 'stem');
+  const romanBox = boxes.find(b => b.bind === 'roman');
+  const promptBox = boxes.find(b => b.bind === 'prompt');
+  const optionsBoxForMetrics = boxes.find(b => b.bind === 'options');
+  const is2Column = !!(cardBox && optionsBoxForMetrics && optionsBoxForMetrics.x > cardBox.x + 300);
+
   const cardMetrics = cardBox
-    ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y)
+    ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y, is2Column)
     : undefined;
 
   return (
@@ -84,17 +87,16 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         if (box.bind === 'answer' && !showAnswerPill && !isAnswerVariant) return null;
         if (box.bind === 'source' && getSourceTags(item).length === 0) return null;
 
-        // Adaptive-layout overrides for the preset template card/roman/prompt/
-        // options boxes — see the cardMetrics computation above.
-        const isTplCard = box.id.startsWith(TPL_CARD_ID);
-        const isTplOptions = box.id.startsWith(TPL_OPTIONS_ID);
-        const isTplRoman = box.id.startsWith(TPL_ROMAN_ID);
-        const isTplPrompt = box.id.startsWith(TPL_PROMPT_ID);
+        // Adaptive-layout overrides for card/roman/prompt/options boxes
+        const isTargetCard = cardBox && box.id === cardBox.id;
+        const isTargetOptions = box.bind === 'options';
+        const isTargetRoman = box.bind === 'roman';
+        const isTargetPrompt = box.bind === 'prompt';
         let boxTop = box.y;
-        if (isTplOptions && cardMetrics) boxTop = cardMetrics.optionsY;
-        else if (isTplRoman && cardMetrics?.romanY !== undefined) boxTop = cardMetrics.romanY;
-        else if (isTplPrompt && cardMetrics?.promptY !== undefined) boxTop = cardMetrics.promptY;
-        const boxHeight = isTplCard && cardMetrics ? cardMetrics.cardH : box.h;
+        if (isTargetOptions && cardMetrics) boxTop = cardMetrics.optionsY;
+        else if (isTargetRoman && cardMetrics?.romanY !== undefined) boxTop = cardMetrics.romanY;
+        else if (isTargetPrompt && cardMetrics?.promptY !== undefined) boxTop = cardMetrics.promptY;
+        const boxHeight = isTargetCard && cardMetrics ? cardMetrics.cardH : box.h;
 
         const base: React.CSSProperties = {
           left: box.x,
