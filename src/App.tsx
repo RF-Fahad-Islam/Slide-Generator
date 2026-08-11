@@ -1402,10 +1402,10 @@ export default function App() {
                           )}
                         </div>
 
-                        {/* Hover Overlay Icon for Large Modal Preview */}
+                        {/* Overlay Icon for Large Modal Preview */}
                         <button
                           onClick={() => setIsLargePreviewOpen(true)}
-                          className="absolute top-4 right-4 z-30 p-3 rounded-2xl bg-slate-950/80 hover:bg-amber-500 text-amber-400 hover:text-slate-950 border border-amber-500/40 shadow-xl transition-all cursor-pointer opacity-70 group-hover:opacity-100 flex items-center gap-2 text-xs font-bold"
+                          className="absolute bottom-4 right-4 z-30 p-3 rounded-2xl bg-slate-950/85 hover:bg-amber-500 text-amber-400 hover:text-slate-950 border border-amber-500/40 shadow-2xl backdrop-blur-md transition-all cursor-pointer opacity-80 group-hover:opacity-100 flex items-center gap-2 text-xs font-bold"
                           title="Open Large Slide Review Modal"
                         >
                           <Maximize2 className="w-4 h-4" />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { DeckConfig, MCQItem, SlideTextBox, getSourceTags } from '../types';
-import { getSlideBoxContent, getBoxFontFamily } from '../utils/slideTextBoxes';
+import { getSlideBoxContent, getBoxFontFamily, formatSlideQNumber } from '../utils/slideTextBoxes';
 import { getSlideIcon } from '../utils/slideElements';
 import { resolveTheme } from '../utils/themeResolver';
 import {
