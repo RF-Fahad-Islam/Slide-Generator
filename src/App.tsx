@@ -799,16 +799,6 @@ export default function App() {
           <SettingsView appTheme={appTheme} />
         )}
 
-        {/* TAB 0.7: TEMPLATE CREATOR & DESIGN STUDIO */}
-        {activeTab === 'templates' && (
-          <TemplateCreator
-            config={config}
-            items={items}
-            appTheme={appTheme}
-            onApplyConfig={handleApplyDeckConfig}
-          />
-        )}
-
         {/* TAB 1: SLIDE PREVIEW & DECK MANAGER */}
         {activeTab === 'preview' && (
           isDeckSettingsOpen ? (
