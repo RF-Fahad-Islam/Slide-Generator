@@ -116,18 +116,33 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       boxes.push({
         id: bid('hdr_badge'),
         bind: 'badgeTag',
-        x: SLIDE_W - PAD - 580,
+        x: SLIDE_W - PAD - 130 - 440,
         y: 44,
-        w: 420,
+        w: 440,
         fontSize: 18,
-        color: theme.colors.badgeText,
-        align: 'center',
+        color: isLight ? '#78350f' : '#fcd34d',
+        align: 'right',
         bold: true,
         fontFamily: headerFont,
         shape: 'pill',
-        bg: hexToRgba(hc.badgeFillHex, isLight ? 0.9 : 0.22),
+        bg: isLight ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.22)',
       });
     }
+    boxes.push({
+      id: bid('hdr_counter'),
+      bind: 'slideCounter',
+      x: SLIDE_W - PAD - 110,
+      y: 44,
+      w: 110,
+      h: 44,
+      fontSize: 18,
+      color: '#fcd34d',
+      align: 'center',
+      bold: true,
+      fontFamily: headerFont,
+      shape: 'card',
+      bg: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(15,23,42,0.9)',
+    });
   }
 
   // -------------------------------------------------------------------------

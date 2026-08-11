@@ -212,7 +212,8 @@ export type SlideTextBoxBind =
   | 'watermark'
   | 'free'
   | 'icon'
-  | 'image';
+  | 'image'
+  | 'slideCounter';
 
 // Container styling for pre-designed slide elements
 export type SlideBoxShape = 'plain' | 'pill' | 'card' | 'banner';

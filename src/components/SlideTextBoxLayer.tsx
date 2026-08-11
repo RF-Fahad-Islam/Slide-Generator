@@ -21,6 +21,7 @@ interface SlideTextBoxLayerProps {
   item: MCQItem;
   config: DeckConfig; // effective config (deck + per-slide overrides)
   currentIndex: number;
+  totalCount?: number;
   showAnswerHighlight: boolean;
   // 'answer' renders a dedicated answer slide — adds the "উত্তর" strip above
   // the boxes, matching SlideCanvas's answer variant.
@@ -36,6 +37,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   item,
   config,
   currentIndex,
+  totalCount = 1,
   showAnswerHighlight,
   isAnswerVariant = false,
 }) => {
@@ -349,12 +351,25 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           );
         }
 
+        if (box.bind === 'slideCounter') {
+          const countStr = `${formatSlideQNumber(currentIndex, config.questionNumberFormat)} / ${formatSlideQNumber(Math.max(1, totalCount), config.questionNumberFormat)}`;
+          return (
+            <div
+              key={box.id}
+              className="absolute px-5 py-2.5 rounded-2xl bg-slate-900/90 border border-white/20 text-amber-300 font-mono font-extrabold text-lg shadow-md flex items-center justify-center"
+              style={{ left: box.x, top: box.y, width: box.w, height: box.h || undefined }}
+            >
+              <span>{countStr}</span>
+            </div>
+          );
+        }
+
         if (box.shape === 'pill') {
           return (
-            <div key={box.id} className="absolute" style={{ left: box.x, top: box.y, width: box.w }}>
+            <div key={box.id} className="absolute flex justify-end" style={{ left: box.x, top: box.y, width: box.w }}>
               <div
-                className="inline-flex items-center px-7 py-2.5 rounded-full whitespace-pre-wrap leading-snug"
-                style={{ ...textBase, textAlign: 'center', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' }}
+                className="inline-flex items-center px-6 py-2.5 rounded-full whitespace-pre-wrap leading-snug border border-amber-500/40 text-amber-300 font-extrabold shadow-lg backdrop-blur-md"
+                style={{ ...textBase, textAlign: box.align || 'center', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' }}
               >
                 <MathText text={content} />
               </div>

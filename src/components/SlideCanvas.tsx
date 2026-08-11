@@ -689,6 +689,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
         item={item}
         config={effectiveConfig}
         currentIndex={currentIndex}
+        totalCount={totalCount}
         showAnswerHighlight={showAnswerHighlight}
         isAnswerVariant={isAnswerVariant}
       />

@@ -15,6 +15,7 @@ export const SLIDE_BOX_BINDS: { bind: SlideTextBoxBind; label: string }[] = [
   { bind: 'badgeTag', label: '+ Badge Tag' },
   { bind: 'footerTag', label: '+ Footer Tag' },
   { bind: 'watermark', label: '+ Watermark' },
+  { bind: 'slideCounter', label: '+ Page Number' },
   { bind: 'free', label: '+ Free Text' },
 ];
 
@@ -85,6 +86,7 @@ export const getSlideBoxContent = (
     case 'badgeTag': return getEffectiveBadgeTag(config, item);
     case 'footerTag': return config.footerTag || 'BIOMISSION';
     case 'watermark': return config.watermarkHandle || 'Hasnat Shuvro';
+    case 'slideCounter': return `${formatSlideQNumber(currentIndex, config.questionNumberFormat)} / ${formatSlideQNumber(1, config.questionNumberFormat)}`;
     case 'free': return box.text || '';
     case 'options': return '';
     case 'icon': return '';
