@@ -197,57 +197,6 @@ export const SLIDE_ELEMENT_DEFS: SlideElementDef[] = [
 // Composed layouts — replace the deck's text boxes with a full pre-designed set
 // ---------------------------------------------------------------------------
 
-export interface SlideLayoutDef {
-  id: string;
-  name: string;
-  desc: string;
-  accent: string; // UI accent hint for the preset button
-  build: () => SlideTextBox[];
-}
-
-export const SLIDE_LAYOUTS: SlideLayoutDef[] = [
-  {
-    id: 'modern_quiz',
-    name: 'Modern Quiz',
-    desc: 'Pill brand bar, card stem, 2-col rounded options, footer chips',
-    accent: 'amber',
-    build: () => [
-      { id: eid('mo_brand'), bind: 'brand', x: 80, y: 60, w: 640, fontSize: 40, color: '#fbbf24', align: 'left', bold: true, shape: 'pill', bg: 'rgba(251,191,36,0.16)' },
-      { id: eid('mo_title'), bind: 'headerTitle', x: 80, y: 150, w: 1300, fontSize: 34, color: '#ffffff', align: 'left', bold: false },
-      { id: eid('mo_stem'), bind: 'stem', x: 120, y: 340, w: 1500, fontSize: 54, color: '#ffffff', align: 'left', bold: true, shape: 'card', bg: 'rgba(255,255,255,0.06)' },
-      { id: eid('mo_icon'), bind: 'icon', x: 1520, y: 320, w: 260, h: 260, fontSize: 160, color: '#fbbf24', align: 'center', bold: false, iconName: 'Lightbulb', shape: 'card', bg: 'rgba(251,191,36,0.10)' },
-      { id: eid('mo_options'), bind: 'options', x: 120, y: 680, w: 1300, fontSize: 36, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(255,255,255,0.07)' },
-      { id: eid('mo_footer'), bind: 'footerTag', x: 80, y: 960, w: 700, fontSize: 30, color: '#fbbf24', align: 'left', bold: true, shape: 'pill', bg: 'rgba(251,191,36,0.14)' },
-    ],
-  },
-  {
-    id: 'clean_card',
-    name: 'Clean Card',
-    desc: 'Minimal pills, airy stem card, one-column rounded options',
-    accent: 'sky',
-    build: () => [
-      { id: eid('cc_brand'), bind: 'brand', x: 80, y: 70, w: 600, fontSize: 38, color: '#fbbf24', align: 'left', bold: true, shape: 'pill', bg: 'rgba(251,191,36,0.14)' },
-      { id: eid('cc_title'), bind: 'headerTitle', x: 80, y: 150, w: 1200, fontSize: 32, color: '#ffffff', align: 'left', bold: false },
-      { id: eid('cc_stem'), bind: 'stem', x: 160, y: 340, w: 1400, fontSize: 52, color: '#ffffff', align: 'left', bold: true, shape: 'card', bg: 'rgba(56,189,248,0.08)' },
-      { id: eid('cc_options'), bind: 'options', x: 160, y: 660, w: 1300, fontSize: 36, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(255,255,255,0.06)' },
-      { id: eid('cc_footer'), bind: 'footerTag', x: 80, y: 970, w: 600, fontSize: 30, color: '#38bdf8', align: 'left', bold: true, shape: 'pill', bg: 'rgba(56,189,248,0.12)' },
-    ],
-  },
-  {
-    id: 'minimal',
-    name: 'Minimal',
-    desc: 'Plain centered text, no containers, classic slide feel',
-    accent: 'emerald',
-    build: () => [
-      { id: eid('mi_brand'), bind: 'brand', x: 80, y: 60, w: 900, fontSize: 44, color: '#fbbf24', align: 'left', bold: true },
-      { id: eid('mi_header'), bind: 'headerTitle', x: 80, y: 120, w: 1200, fontSize: 34, color: '#ffffff', align: 'left', bold: false },
-      { id: eid('mi_stem'), bind: 'stem', x: 120, y: 360, w: 1400, fontSize: 56, color: '#ffffff', align: 'left', bold: true },
-      { id: eid('mi_options'), bind: 'options', x: 120, y: 620, w: 1300, fontSize: 40, color: '#ffffff', align: 'left', bold: false },
-      { id: eid('mi_footer'), bind: 'footerTag', x: 80, y: 980, w: 700, fontSize: 32, color: '#fbbf24', align: 'left', bold: true },
-    ],
-  },
-];
-
 // ---------------------------------------------------------------------------
 // Classroom View — the classroom / live-writing text-box layout enforced onto
 // the deck when "Classroom View" is chosen in Deck Settings. Question stem sits
@@ -264,6 +213,102 @@ export const classroomTextBoxes = (): SlideTextBox[] => [
   { id: 'cl_options', bind: 'options', x: 1210, y: 280, w: 630, fontSize: 26, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(255,255,255,0.06)' },
   { id: 'cl_footer', bind: 'footerTag', x: 80, y: 990, w: 700, fontSize: 28, color: '#fbbf24', align: 'left', bold: true },
 ];
+
+export interface SlideLayoutDef {
+  id: string;
+  name: string;
+  desc: string;
+  accent: string; // UI accent hint for the preset button
+  build: () => SlideTextBox[];
+}
+
+export const SLIDE_LAYOUTS: SlideLayoutDef[] = [
+  {
+    id: 'enterprise_2col_grid',
+    name: 'Enterprise 2x2 EdTech (Default)',
+    desc: 'Structured stem card with badge tags, 2-column option grid, explanation banner & branding footer',
+    accent: 'amber',
+    build: () => [
+      { id: eid('ed_brand'), bind: 'brand', x: 80, y: 50, w: 800, fontSize: 34, color: '#ffffff', align: 'left', bold: true },
+      { id: eid('ed_header'), bind: 'headerTitle', x: 80, y: 100, w: 800, fontSize: 18, color: '#f59e0b', align: 'left', bold: false },
+      { id: eid('ed_badge'), bind: 'badgeTag', x: 1240, y: 44, w: 600, fontSize: 18, color: '#ffffff', align: 'center', bold: true, shape: 'pill', bg: 'rgba(245,158,11,0.2)' },
+      { id: eid('ed_card'), bind: 'free', text: '', x: 40, y: 150, w: 1840, h: 280, fontSize: 30, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(15,23,42,0.9)' },
+      { id: eid('ed_qnum'), bind: 'questionNumber', x: 76, y: 172, w: 72, h: 52, fontSize: 28, color: '#0f172a', align: 'center', bold: true, shape: 'card', bg: '#f59e0b' },
+      { id: eid('ed_source'), bind: 'source', x: 1446, y: 178, w: 354, fontSize: 18, color: '#f59e0b', align: 'right', bold: true },
+      { id: eid('ed_stem'), bind: 'stem', x: 76, y: 236, w: 1768, fontSize: 30, color: '#ffffff', align: 'left', bold: true },
+      { id: eid('ed_roman'), bind: 'roman', x: 76, y: 305, w: 1768, fontSize: 20, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(0,0,0,0.25)' },
+      { id: eid('ed_prompt'), bind: 'prompt', x: 76, y: 375, w: 1768, fontSize: 22, color: '#f59e0b', align: 'left', bold: true },
+      { id: eid('ed_options'), bind: 'options', x: 40, y: 460, w: 1840, fontSize: 24, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(30,41,59,0.75)' },
+      { id: eid('ed_explanation'), bind: 'explanation', x: 40, y: 840, w: 1840, fontSize: 20, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(16,185,129,0.14)' },
+      { id: eid('ed_watermark'), bind: 'watermark', x: 40, y: 1010, w: 800, fontSize: 20, color: '#ffffff', align: 'left', bold: true },
+      { id: eid('ed_footer'), bind: 'footerTag', x: 1080, y: 1010, w: 800, fontSize: 20, color: '#f59e0b', align: 'right', bold: true },
+    ],
+  },
+  {
+    id: 'classroom_live',
+    name: 'Classroom Live Writing',
+    desc: 'Question stem on top-left, wide blank teacher stylus area in center, options on right',
+    accent: 'amber',
+    build: classroomTextBoxes,
+  },
+  {
+    id: 'split_focus',
+    name: 'Split Focus 2-Column',
+    desc: 'Wide question stem card on left column, single-column options stack on right',
+    accent: 'sky',
+    build: () => [
+      { id: eid('sf_brand'), bind: 'brand', x: 80, y: 60, w: 800, fontSize: 38, color: '#38bdf8', align: 'left', bold: true },
+      { id: eid('sf_header'), bind: 'headerTitle', x: 80, y: 130, w: 800, fontSize: 28, color: '#ffffff', align: 'left', bold: false },
+      { id: eid('sf_badge'), bind: 'badgeTag', x: 1200, y: 60, w: 640, fontSize: 20, color: '#38bdf8', align: 'center', bold: true, shape: 'pill', bg: 'rgba(56,189,248,0.15)' },
+      { id: eid('sf_stem'), bind: 'stem', x: 80, y: 260, w: 860, fontSize: 44, color: '#ffffff', align: 'left', bold: true, shape: 'card', bg: 'rgba(15,23,42,0.85)' },
+      { id: eid('sf_options'), bind: 'options', x: 980, y: 260, w: 860, fontSize: 28, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(30,41,59,0.7)' },
+      { id: eid('sf_footer'), bind: 'footerTag', x: 80, y: 980, w: 700, fontSize: 26, color: '#38bdf8', align: 'left', bold: true },
+    ],
+  },
+  {
+    id: 'modern_quiz',
+    name: 'Modern Quiz',
+    desc: 'Pill brand bar, card stem, 2-col rounded options, footer chips',
+    accent: 'amber',
+    build: () => [
+      { id: eid('mo_brand'), bind: 'brand', x: 80, y: 60, w: 640, fontSize: 40, color: '#fbbf24', align: 'left', bold: true, shape: 'pill', bg: 'rgba(251,191,36,0.16)' },
+      { id: eid('mo_title'), bind: 'headerTitle', x: 80, y: 150, w: 1300, fontSize: 34, color: '#ffffff', align: 'left', bold: false },
+      { id: eid('mo_stem'), bind: 'stem', x: 120, y: 340, w: 1500, fontSize: 54, color: '#ffffff', align: 'left', bold: true, shape: 'card', bg: 'rgba(255,255,255,0.06)' },
+      { id: eid('mo_icon'), bind: 'icon', x: 1520, y: 320, w: 260, h: 260, fontSize: 160, color: '#fbbf24', align: 'center', bold: false, iconName: 'Lightbulb', shape: 'card', bg: 'rgba(251,191,36,0.10)' },
+      { id: eid('mo_options'), bind: 'options', x: 120, y: 680, w: 1300, fontSize: 36, color: '#ffffff', align: 'left', bold: false, shape: 'card', bg: 'rgba(255,255,255,0.07)' },
+      { id: eid('mo_footer'), bind: 'footerTag', x: 80, y: 960, w: 700, fontSize: 30, color: '#fbbf24', align: 'left', bold: true, shape: 'pill', bg: 'rgba(251,191,36,0.14)' },
+    ],
+  },
+  {
+    id: 'cyber_hud',
+    name: 'Cyberpunk HUD EdTech',
+    desc: 'Futuristic neon accent borders, icon badge cards, 2-column option pills',
+    accent: 'cyan',
+    build: () => [
+      { id: eid('ch_brand'), bind: 'brand', x: 80, y: 60, w: 700, fontSize: 40, color: '#06b6d4', align: 'left', bold: true, shape: 'pill', bg: 'rgba(6,182,212,0.15)' },
+      { id: eid('ch_header'), bind: 'headerTitle', x: 80, y: 150, w: 1100, fontSize: 32, color: '#ffffff', align: 'left', bold: false },
+      { id: eid('ch_stem'), bind: 'stem', x: 80, y: 280, w: 1400, fontSize: 48, color: '#ffffff', align: 'left', bold: true, shape: 'card', bg: 'rgba(9,5,20,0.9)' },
+      { id: eid('ch_icon'), bind: 'icon', x: 1530, y: 280, w: 310, h: 310, fontSize: 180, color: '#06b6d4', align: 'center', bold: false, iconName: 'Atom', shape: 'card', bg: 'rgba(6,182,212,0.12)' },
+      { id: eid('ch_options'), bind: 'options', x: 80, y: 650, w: 1760, fontSize: 32, color: '#ffffff', align: 'left', bold: false, shape: 'pill', bg: 'rgba(6,182,212,0.12)' },
+      { id: eid('ch_footer'), bind: 'footerTag', x: 80, y: 980, w: 800, fontSize: 28, color: '#06b6d4', align: 'left', bold: true },
+    ],
+  },
+  {
+    id: 'minimal',
+    name: 'Minimal Academic',
+    desc: 'Plain centered text, no containers, classic slide feel for printing',
+    accent: 'emerald',
+    build: () => [
+      { id: eid('mi_brand'), bind: 'brand', x: 80, y: 60, w: 900, fontSize: 44, color: '#fbbf24', align: 'left', bold: true },
+      { id: eid('mi_header'), bind: 'headerTitle', x: 80, y: 120, w: 1200, fontSize: 34, color: '#ffffff', align: 'left', bold: false },
+      { id: eid('mi_stem'), bind: 'stem', x: 120, y: 360, w: 1400, fontSize: 56, color: '#ffffff', align: 'left', bold: true },
+      { id: eid('mi_options'), bind: 'options', x: 120, y: 620, w: 1300, fontSize: 40, color: '#ffffff', align: 'left', bold: false },
+      { id: eid('mi_footer'), bind: 'footerTag', x: 80, y: 980, w: 700, fontSize: 32, color: '#fbbf24', align: 'left', bold: true },
+    ],
+  },
+];
+
+
 
 export const SLIDE_SHAPE_OPTIONS: { value: 'plain' | 'pill' | 'card' | 'banner'; label: string }[] = [
   { value: 'plain', label: 'Plain' },

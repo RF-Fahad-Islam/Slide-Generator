@@ -34,7 +34,9 @@ import { classroomTextBoxes } from './utils/slideElements';
 import { loadGlobalDefaults } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders } from 'lucide-react';
+import { SlidePreviewModal } from './components/SlidePreviewModal';
+import { LayoutLibraryModal } from './components/LayoutLibraryModal';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, Maximize2, SquareStack } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
 import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
@@ -48,6 +50,8 @@ export default function App() {
   const [isAnswerRevealMode, setIsAnswerRevealMode] = useState<boolean>(false);
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+  const [isLargePreviewOpen, setIsLargePreviewOpen] = useState<boolean>(false);
+  const [isLayoutModalOpen, setIsLayoutModalOpen] = useState<boolean>(false);
   // Export scope per entry point — My Decks card download = all, Slide Studio Download = whole active deck
   const [exportScope, setExportScope] = useState<'all' | 'current'>('all');
   // Batch deck export modal — opened from the navbar "Export Slides" buttons; lets the
@@ -1012,15 +1016,15 @@ export default function App() {
             ) : (
               /* SINGLE SLIDE PREVIEW & DECK MANAGER SIDE-BY-SIDE */
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 xl:gap-10 items-start">
-                {/* LEFT: LIVE CANVAS DISPLAY (wider when the Canva-style side panel is open) */}
-                <div className={`flex flex-col gap-8 ${isTextBoxEditMode ? 'xl:col-span-8' : 'xl:col-span-7'}`}>
+                {/* LEFT: LIVE CANVAS DISPLAY (wider column span for big preview) */}
+                <div className={`flex flex-col gap-6 ${isTextBoxEditMode ? 'xl:col-span-8' : 'xl:col-span-8'}`}>
                   {/* Slide Name & Controls Bar — compact two-row strip */}
                   <div
                     data-tour="studio-toolbar"
                     className={`rounded-3xl border shadow-2xl p-4 sm:p-5 ${
                     isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-white/10 text-white backdrop-blur-xl'
                   }`}>
-                    {/* ROW 1 — slide identity + primary studio actions (Theme, Deck Settings, Download, slide nav) */}
+                    {/* ROW 1 — slide identity + primary studio actions (Large Review, Theme, Deck Settings, Download, slide nav) */}
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
                       {/* Current Slide Name & Back Button to All Slides */}
                       <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
@@ -1050,8 +1054,22 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* ROW 1 actions — Theme, Deck Settings, Download, slide nav */}
+                      {/* ROW 1 actions — Large Review, Theme, Deck Settings, Download, slide nav */}
                       <div className="flex flex-wrap items-center gap-2">
+                        {/* Large Review Modal Button */}
+                        <button
+                          onClick={() => setIsLargePreviewOpen(true)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                            isAppLight
+                              ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                          }`}
+                          title="Review slide in a large HD modal"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="hidden 2xl:inline">Large Review</span>
+                        </button>
+
                         {/* Quick Theme Toggle (Minimal Light vs Nobel Dark) — applies to the ACTIVE slide only */}
                         <button
                           onClick={() => {
@@ -1145,7 +1163,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* ROW 2 — secondary controls (font, apply design to all, templates, reveal, text boxes) */}
+                    {/* ROW 2 — secondary controls (font, layouts, apply design to all, templates, reveal, text boxes) */}
                     <div className={`flex flex-wrap items-center gap-2 mt-3 pt-3 border-t ${
                       isAppLight ? 'border-slate-200' : 'border-slate-800'
                     }`}>
@@ -1167,6 +1185,20 @@ export default function App() {
                           ))}
                         </select>
                       </div>
+
+                      {/* Layout Library Modal Opener */}
+                      <button
+                        onClick={() => setIsLayoutModalOpen(true)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                          isAppLight
+                            ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
+                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                        }`}
+                        title="Choose slide layout design from the Layout Library"
+                      >
+                        <SquareStack className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="hidden 2xl:inline">Layouts</span>
+                      </button>
 
                       {/* Apply the active slide's design (theme + box layout) to every slide */}
                       <button
@@ -1233,12 +1265,12 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Responsive Slide Canvas Container — generous top padding keeps slide-top boxes clear of the controls bar */}
-                  <div className={`relative w-full border rounded-3xl pt-8 sm:pt-10 lg:pt-12 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 shadow-2xl overflow-hidden flex items-center justify-center ${
-                    isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-                  }`}>
+                  {/* Responsive Slide Canvas Preview — clean direct container for max width and size */}
+                  <div className="relative w-full overflow-hidden flex items-center justify-center">
                     {expandedSlides.length === 0 ? (
-                      <div className="text-center p-12 text-slate-400 space-y-4">
+                      <div className={`w-full text-center p-12 text-slate-400 space-y-4 rounded-3xl border ${
+                        isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+                      }`}>
                         <Presentation className="w-16 h-16 mx-auto stroke-[1.2] text-amber-500" />
                         <div>
                           <h3 className="text-lg font-bold">No Questions in Deck</h3>
@@ -1266,7 +1298,7 @@ export default function App() {
                     ) : (
                       <div
                         ref={slideContainerRef}
-                        className="w-full relative overflow-hidden rounded-2xl bg-slate-950 border border-slate-800/80 shadow-2xl flex justify-center items-start"
+                        className="w-full relative overflow-hidden rounded-3xl bg-slate-950 border border-slate-800/80 shadow-2xl flex justify-center items-start group"
                         style={{ height: `${Math.round(1080 * slideScale)}px` }}
                       >
                         <div
@@ -1303,6 +1335,16 @@ export default function App() {
                             />
                           )}
                         </div>
+
+                        {/* Hover Overlay Icon for Large Modal Preview */}
+                        <button
+                          onClick={() => setIsLargePreviewOpen(true)}
+                          className="absolute top-4 right-4 z-30 p-3 rounded-2xl bg-slate-950/80 hover:bg-amber-500 text-amber-400 hover:text-slate-950 border border-amber-500/40 shadow-xl transition-all cursor-pointer opacity-70 group-hover:opacity-100 flex items-center gap-2 text-xs font-bold"
+                          title="Open Large Slide Review Modal"
+                        >
+                          <Maximize2 className="w-4 h-4" />
+                          <span>Review Large</span>
+                        </button>
                       </div>
                     )}
 
@@ -1311,7 +1353,7 @@ export default function App() {
                 </div>
 
                 {/* RIGHT COLUMN: Canva-style side panel while editing boxes, else the deck question list */}
-                <div className={isTextBoxEditMode ? 'xl:col-span-4' : 'xl:col-span-5'}>
+                <div className={isTextBoxEditMode ? 'xl:col-span-4' : 'xl:col-span-4'}>
                   {isTextBoxEditMode ? (
                     <div className="xl:sticky xl:top-20">
                       <SlideTextBoxPanel
@@ -1508,6 +1550,27 @@ export default function App() {
         onNavigate={(tab) => setActiveTab(tab)}
         onSetMobileDrawerOpen={(open) => setIsMobileDrawerOpen(open)}
         steps={defaultTourSteps}
+      />
+
+      {/* Large Slide Review Modal */}
+      <SlidePreviewModal
+        isOpen={isLargePreviewOpen}
+        onClose={() => setIsLargePreviewOpen(false)}
+        items={items}
+        config={config}
+        selectedIndex={selectedIndex}
+        onSelectIndex={setSelectedIndex}
+        isAnswerRevealMode={isAnswerRevealMode}
+        onToggleAnswerReveal={() => setIsAnswerRevealMode(prev => !prev)}
+        appTheme={appTheme}
+      />
+
+      {/* Layout Library Modal */}
+      <LayoutLibraryModal
+        isOpen={isLayoutModalOpen}
+        onClose={() => setIsLayoutModalOpen(false)}
+        onSelectLayout={addLayoutToDeck}
+        appTheme={appTheme}
       />
 
       {/* AI Ingestion progress toast — bottom-right, survives tab changes */}
