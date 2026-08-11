@@ -37,6 +37,47 @@ export interface OcrBatchResult {
   text: string;
 }
 
+const MAX_OCR_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 1000;
+
+// Transient provider-side overload/rate-limit — worth retrying with backoff.
+// Anything else (bad key, malformed request) is not, so it fails immediately.
+function isTransientOcrError(err: any): boolean {
+  const msg = String(err?.message || '');
+  return /503|UNAVAILABLE|overloaded|high demand|429|RESOURCE_EXHAUSTED|rate.?limit/i.test(msg);
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    }, { once: true });
+  });
+}
+
+async function ocrBatchWithRetry(
+  provider: AiProvider,
+  keys: ProviderKeys,
+  batch: RasterizedPage[],
+  signal?: AbortSignal,
+): Promise<string> {
+  let lastErr: any;
+  for (let attempt = 1; attempt <= MAX_OCR_ATTEMPTS; attempt++) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    try {
+      return await ocrBatch(provider, keys, batch, signal);
+    } catch (err: any) {
+      lastErr = err;
+      if (!isTransientOcrError(err) || attempt === MAX_OCR_ATTEMPTS) throw err;
+      const delay = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1) + Math.random() * 300;
+      await sleep(delay, signal);
+    }
+  }
+  throw lastErr;
+}
+
 export async function ocrPages(
   provider: AiProvider,
   keys: ProviderKeys,
@@ -51,7 +92,7 @@ export async function ocrPages(
 
   for (const batch of batches) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    const text = await ocrBatch(provider, keys, batch, signal);
+    const text = await ocrBatchWithRetry(provider, keys, batch, signal);
     // One result per batch — a 2-4 page batch produces a single combined OCR
     // pass; returning it once prevents the same MCQs being emitted N times.
     results.push({ pageNumbers: batch.map((p) => p.pageNumber), text });
