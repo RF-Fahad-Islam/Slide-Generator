@@ -93,7 +93,10 @@ export interface SlideElementDef {
   id: string;
   label: string;
   desc: string;
+  category?: 'headers' | 'content' | 'highlights' | 'media';
   icon: LucideIcon;
+  accentColor?: string;
+  previewBg?: string;
   build: (extra?: { imageUrl?: string; iconName?: string }) => SlideTextBox;
 }
 
@@ -142,7 +145,7 @@ export const makeOptionPillsBox = (): SlideTextBox => ({
 export const makeCalloutBox = (): SlideTextBox => ({
   id: eid('el_callout'),
   bind: 'free',
-  text: 'Tip: highlight an important note here…',
+  text: '💡 PRO TIP: Read the question stem carefully before checking options!',
   x: 120,
   y: 780,
   w: 1150,
@@ -152,6 +155,111 @@ export const makeCalloutBox = (): SlideTextBox => ({
   bold: true,
   shape: 'card',
   bg: 'rgba(245,158,11,0.16)',
+});
+
+export const makeFormulaBox = (): SlideTextBox => ({
+  id: eid('el_formula'),
+  bind: 'free',
+  text: 'E = mc²  |  f(x) = ∫₀^∞ x² e^(-x) dx',
+  x: 120,
+  y: 760,
+  w: 1200,
+  fontSize: 36,
+  color: '#38bdf8',
+  fontFamily: "'Fira Code', 'Courier New', monospace",
+  align: 'center',
+  bold: true,
+  shape: 'card',
+  bg: 'rgba(15,23,42,0.95)',
+});
+
+export const makeQuoteBox = (): SlideTextBox => ({
+  id: eid('el_quote'),
+  bind: 'free',
+  text: '"Education is not the learning of facts, but the training of the mind to think." — Albert Einstein',
+  x: 120,
+  y: 780,
+  w: 1300,
+  fontSize: 32,
+  color: '#e2e8f0',
+  align: 'center',
+  bold: false,
+  shape: 'card',
+  bg: 'rgba(255,255,255,0.06)',
+});
+
+export const makeTakeawayBox = (): SlideTextBox => ({
+  id: eid('el_takeaway'),
+  bind: 'explanation',
+  text: '❇️ KEY TAKEAWAY: Master the core metabolic pathways for board exams.',
+  x: 120,
+  y: 820,
+  w: 1680,
+  fontSize: 30,
+  color: '#a7f3d0',
+  align: 'left',
+  bold: true,
+  shape: 'card',
+  bg: 'rgba(16,185,129,0.16)',
+});
+
+export const makeInstructorBox = (): SlideTextBox => ({
+  id: eid('el_instructor'),
+  bind: 'watermark',
+  text: 'Hasnat Shuvro — Senior Instructor & Mentor',
+  x: 120,
+  y: 980,
+  w: 800,
+  fontSize: 24,
+  color: '#fbbf24',
+  align: 'left',
+  bold: true,
+  shape: 'pill',
+  bg: 'rgba(15,23,42,0.9)',
+});
+
+export const makeStatHighlightBox = (): SlideTextBox => ({
+  id: eid('el_stathighlight'),
+  bind: 'free',
+  text: '⚡ 98% SUCCESS RATE  ·  500+ SOLVED MCQS',
+  x: 120,
+  y: 840,
+  w: 1000,
+  fontSize: 28,
+  color: '#38bdf8',
+  align: 'center',
+  bold: true,
+  shape: 'pill',
+  bg: 'rgba(56,189,248,0.18)',
+});
+
+export const makeDividerBox = (): SlideTextBox => ({
+  id: eid('el_divider'),
+  bind: 'free',
+  text: '━━━━━━━━━━━━━━━ ★ ━━━━━━━━━━━━━━━',
+  x: 120,
+  y: 500,
+  w: 1680,
+  fontSize: 28,
+  color: '#f59e0b',
+  align: 'center',
+  bold: true,
+  shape: 'plain',
+});
+
+export const makeAlertBox = (): SlideTextBox => ({
+  id: eid('el_alert'),
+  bind: 'free',
+  text: '⚠️ EXAM WARNING: Watch out for negative markings on multi-option questions!',
+  x: 120,
+  y: 780,
+  w: 1400,
+  fontSize: 32,
+  color: '#fca5a5',
+  align: 'left',
+  bold: true,
+  shape: 'card',
+  bg: 'rgba(244,63,94,0.18)',
 });
 
 export const makeBannerImageBox = (imageUrl: string): SlideTextBox => ({
@@ -185,12 +293,19 @@ export const makeIconBox = (iconName: string): SlideTextBox => ({
 });
 
 export const SLIDE_ELEMENT_DEFS: SlideElementDef[] = [
-  { id: 'pill_header', label: 'Pill Header', desc: 'Rounded capsule title bar', icon: PanelTop, build: () => makePillHeaderBox() },
-  { id: 'rounded_options', label: 'Rounded Options', desc: 'Each option as a soft card', icon: SquareStack, build: () => makeRoundedOptionsBox() },
-  { id: 'option_pills', label: 'Option Pills', desc: 'Chip-style answer choices', icon: Shapes, build: () => makeOptionPillsBox() },
-  { id: 'callout', label: 'Callout Box', desc: 'Highlight a key note', icon: Info, build: () => makeCalloutBox() },
-  { id: 'banner_image', label: 'Banner Image', desc: 'Full-width picture bar', icon: LayoutTemplate, build: extra => (extra?.imageUrl ? makeBannerImageBox(extra.imageUrl) : makeBannerImageBox('')) },
-  { id: 'icon', label: 'Icon Badge', desc: 'Decorative lucide icon', icon: Star, build: extra => makeIconBox(extra?.iconName || 'GraduationCap') },
+  { id: 'callout', label: 'Callout Tip Box', desc: 'Amber glow card for key tips & notes', category: 'highlights', icon: Lightbulb, accentColor: '#f59e0b', previewBg: 'rgba(245,158,11,0.16)', build: () => makeCalloutBox() },
+  { id: 'formula', label: 'Formula / Code Container', desc: 'Monospace code & equation box', category: 'content', icon: Atom, accentColor: '#38bdf8', previewBg: 'rgba(15,23,42,0.95)', build: () => makeFormulaBox() },
+  { id: 'quote', label: 'Teacher Quote Panel', desc: 'Translucent glass quote card', category: 'content', icon: Quote, accentColor: '#cbd5e1', previewBg: 'rgba(255,255,255,0.06)', build: () => makeQuoteBox() },
+  { id: 'takeaway', label: 'Key Takeaway Card', desc: 'Emerald green summary banner', category: 'highlights', icon: Sparkles, accentColor: '#10b981', previewBg: 'rgba(16,185,129,0.16)', build: () => makeTakeawayBox() },
+  { id: 'instructor', label: 'Instructor Card', desc: 'Mentor name & avatar badge', category: 'headers', icon: GraduationCap, accentColor: '#fbbf24', previewBg: 'rgba(15,23,42,0.9)', build: () => makeInstructorBox() },
+  { id: 'stathighlight', label: 'Stat Highlight Pill', desc: 'Large capsule stat badge', category: 'highlights', icon: Zap, accentColor: '#38bdf8', previewBg: 'rgba(56,189,248,0.18)', build: () => makeStatHighlightBox() },
+  { id: 'alert', label: 'Alert Warning Banner', desc: 'High-priority rose warning card', category: 'highlights', icon: HelpCircle, accentColor: '#f43f5e', previewBg: 'rgba(244,63,94,0.18)', build: () => makeAlertBox() },
+  { id: 'divider', label: 'Accent Divider', desc: 'Gold gradient section rule', category: 'headers', icon: PenLine, accentColor: '#f59e0b', build: () => makeDividerBox() },
+  { id: 'pill_header', label: 'Pill Header', desc: 'Rounded capsule title bar', category: 'headers', icon: PanelTop, accentColor: '#f59e0b', build: () => makePillHeaderBox() },
+  { id: 'rounded_options', label: 'Rounded Options', desc: 'Soft cards for choices', category: 'content', icon: SquareStack, accentColor: '#94a3b8', build: () => makeRoundedOptionsBox() },
+  { id: 'option_pills', label: 'Option Pills', desc: 'Chip-style answer choices', category: 'content', icon: Shapes, accentColor: '#94a3b8', build: () => makeOptionPillsBox() },
+  { id: 'banner_image', label: 'Banner Image', desc: 'Full-width picture bar', category: 'media', icon: LayoutTemplate, accentColor: '#a78bfa', build: extra => (extra?.imageUrl ? makeBannerImageBox(extra.imageUrl) : makeBannerImageBox('')) },
+  { id: 'icon', label: 'Icon Badge', desc: 'Decorative lucide icon', category: 'media', icon: Star, accentColor: '#fbbf24', build: extra => makeIconBox(extra?.iconName || 'GraduationCap') },
 ];
 
 // ---------------------------------------------------------------------------

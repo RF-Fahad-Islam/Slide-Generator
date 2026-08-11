@@ -191,6 +191,110 @@ const SortableLayerRow: React.FC<SortableLayerRowProps> = ({
   );
 };
 
+const ElementMockupPreview: React.FC<{ elId: string; isAppLight: boolean }> = ({ elId, isAppLight }) => {
+  switch (elId) {
+    case 'callout':
+      return (
+        <div className="w-full h-12 rounded-xl bg-amber-950/40 border border-amber-500/40 p-2 flex items-center gap-2 overflow-hidden shadow-inner">
+          <div className="w-6 h-6 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 shadow-md">💡</div>
+          <div className="flex-1 space-y-1">
+            <div className="h-1.5 w-3/4 rounded bg-amber-300/90" />
+            <div className="h-1 w-1/2 rounded bg-amber-200/50" />
+          </div>
+        </div>
+      );
+    case 'formula':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-950 border border-sky-500/40 p-2 flex items-center justify-center overflow-hidden font-mono text-[10px] text-sky-400 font-extrabold shadow-inner">
+          E = mc²  |  f(x) = ∫₀^∞
+        </div>
+      );
+    case 'quote':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-900/90 border border-white/20 p-2 flex items-center gap-2 overflow-hidden shadow-inner">
+          <Quote className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="flex-1 italic text-[9px] text-slate-200 truncate">
+            "Education is the training of mind..."
+          </div>
+        </div>
+      );
+    case 'takeaway':
+      return (
+        <div className="w-full h-12 rounded-xl bg-emerald-950/90 border border-emerald-500/50 p-2 flex items-center gap-1.5 overflow-hidden shadow-inner">
+          <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="flex-1 text-[9px] font-black text-emerald-200 truncate">
+            KEY TAKEAWAY: Core Concept...
+          </div>
+        </div>
+      );
+    case 'instructor':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-950 border border-amber-500/40 p-2 flex items-center gap-2 overflow-hidden shadow-inner">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 shadow-md">HS</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[9px] font-black text-white truncate">Hasnat Shuvro</div>
+            <div className="text-[8px] font-bold text-amber-300 truncate">Senior Instructor</div>
+          </div>
+        </div>
+      );
+    case 'stathighlight':
+      return (
+        <div className="w-full h-12 rounded-xl bg-sky-950/80 border border-sky-400/40 p-2 flex items-center justify-center gap-1.5 overflow-hidden shadow-inner">
+          <Zap className="w-4 h-4 text-sky-400 shrink-0" />
+          <span className="text-[10px] font-black text-sky-300 tracking-wide">98% SUCCESS</span>
+        </div>
+      );
+    case 'alert':
+      return (
+        <div className="w-full h-12 rounded-xl bg-rose-950/90 border border-rose-500/50 p-2 flex items-center gap-2 overflow-hidden shadow-inner">
+          <HelpCircle className="w-4 h-4 text-rose-400 shrink-0" />
+          <div className="flex-1 text-[9px] font-black text-rose-200 truncate">⚠️ EXAM WARNING...</div>
+        </div>
+      );
+    case 'divider':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-950 border border-slate-800 p-2 flex items-center justify-center overflow-hidden shadow-inner">
+          <div className="w-full h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
+        </div>
+      );
+    case 'pill_header':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-950 border border-slate-800 p-2 flex items-center justify-center overflow-hidden shadow-inner">
+          <div className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/50 text-[9px] font-black text-amber-300">HEADER PILL</div>
+        </div>
+      );
+    case 'rounded_options':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-950 border border-slate-800 p-1.5 grid grid-cols-2 gap-1 overflow-hidden shadow-inner">
+          <div className="rounded-lg bg-amber-500/20 border border-amber-400/40 p-1 flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-400 text-[7px] font-black text-slate-950 flex items-center justify-center">ক</div><div className="h-1 flex-1 bg-amber-200/50 rounded" /></div>
+          <div className="rounded-lg bg-white/10 p-1 flex items-center gap-1"><div className="w-3 h-3 rounded bg-white/20 text-[7px] font-black text-white flex items-center justify-center">খ</div><div className="h-1 flex-1 bg-white/30 rounded" /></div>
+        </div>
+      );
+    case 'option_pills':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-950 border border-slate-800 p-1.5 flex items-center gap-1.5 overflow-hidden shadow-inner">
+          <div className="px-2 py-1 rounded-full bg-amber-500/30 border border-amber-400 text-[8px] font-black text-amber-200 truncate">Option A</div>
+          <div className="px-2 py-1 rounded-full bg-white/10 text-[8px] font-bold text-slate-300 truncate">Option B</div>
+        </div>
+      );
+    case 'banner_image':
+      return (
+        <div className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-sky-500/20 border border-white/20 p-2 flex items-center justify-center gap-1.5 shadow-inner">
+          <LayoutTemplate className="w-4 h-4 text-purple-300" />
+          <span className="text-[9px] font-bold text-purple-200">Banner Image</span>
+        </div>
+      );
+    case 'icon':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-950 border border-amber-500/40 p-2 flex items-center justify-center shadow-inner">
+          <Star className="w-6 h-6 text-amber-400 fill-amber-400/20" />
+        </div>
+      );
+    default:
+      return null;
+  }
+};
+
 export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   boxes,
   selectedId,
@@ -460,17 +564,38 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
               </div>
 
               <div>
-                <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Bind To:</label>
+                <label className={`block text-xs font-black mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  Data Source / Binding:
+                </label>
                 <select
                   value={selectedBox.bind}
                   onChange={(e) => onUpdateBox(selectedBox.id, { bind: e.target.value as SlideTextBoxBind })}
-                  className={`w-full border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-amber-500 ${
+                  className={`w-full border rounded-xl px-3 py-2 text-xs font-extrabold focus:outline-none focus:border-amber-500 ${
                     isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
                   }`}
                 >
-                  {SLIDE_BOX_BINDS.map(opt => (
-                    <option key={opt.bind} value={opt.bind}>{opt.label.replace('+ ', '')}</option>
-                  ))}
+                  <optgroup label="Slide Data Fields (Auto-filled)">
+                    <option value="stem">Question Stem (stem)</option>
+                    <option value="options">Option Cards (options)</option>
+                    <option value="answer">Answer Key (answer)</option>
+                    <option value="explanation">Explanation (explanation)</option>
+                    <option value="passage">Passage Text (passage)</option>
+                    <option value="prompt">Prompt Line (prompt)</option>
+                    <option value="roman">Roman Statements (roman)</option>
+                    <option value="source">Source Tag (source)</option>
+                    <option value="questionNumber">Question Number Badge</option>
+                    <option value="brand">Brand Name</option>
+                    <option value="headerTitle">Header / Chapter Title</option>
+                    <option value="badgeTag">Subject / Class Badge Tag</option>
+                    <option value="footerTag">Footer Brand Tag</option>
+                    <option value="watermark">Watermark / Instructor Handle</option>
+                    <option value="slideCounter">Page Counter (1 / 1)</option>
+                  </optgroup>
+                  <optgroup label="Custom Written Content">
+                    <option value="free">Free Text (Custom Written Text)</option>
+                    <option value="icon">Decorative Icon</option>
+                    <option value="image">Banner / Picture Box</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -781,7 +906,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
               <Wand2 className="w-4 h-4 text-amber-500" />
               Design Elements
             </span>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               {SLIDE_ELEMENT_DEFS.map(el => (
                 <button
                   key={el.id}
@@ -795,17 +920,22 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                       onAddElement(el.id);
                     }
                   }}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer hover:scale-[1.03] group ${
+                  className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer hover:scale-[1.02] flex flex-col gap-2 group ${
                     isAppLight
-                      ? 'bg-white border-slate-300 hover:border-amber-300 hover:bg-amber-50/60'
-                      : 'bg-slate-900 border-slate-700 hover:border-amber-500/40'
+                      ? 'bg-white border-slate-300 hover:border-amber-400 hover:bg-amber-50/50'
+                      : 'bg-slate-900 border-slate-700 hover:border-amber-500/50'
                   }`}
                 >
-                  <div className={`p-1.5 rounded-lg w-fit mb-1.5 ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>
-                    <el.icon className="w-4 h-4" />
+                  <ElementMockupPreview elId={el.id} isAppLight={isAppLight} />
+                  <div className="flex items-start gap-1.5 min-w-0">
+                    <div className={`p-1 rounded-md shrink-0 mt-0.5 ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>
+                      <el.icon className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className={`block text-xs font-black truncate ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>{el.label}</span>
+                      <span className={`block text-[10px] font-semibold leading-tight truncate mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>{el.desc}</span>
+                    </div>
                   </div>
-                  <span className={`block text-xs font-extrabold ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>{el.label}</span>
-                  <span className={`block text-[10px] font-semibold leading-tight mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>{el.desc}</span>
                 </button>
               ))}
             </div>
