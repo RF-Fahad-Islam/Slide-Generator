@@ -228,6 +228,13 @@ export default function App() {
   const activeTextBoxes: SlideTextBox[] = slideTextBoxOverride ?? config.slideTextBoxes ?? [];
   const effectiveTextBoxConfig: DeckConfig = { ...config, ...(items[activeQuestionIndex]?.customConfig || {}) };
 
+  // When text box edit mode is enabled, ensure active text boxes are populated
+  useEffect(() => {
+    if (isTextBoxEditMode && activeTextBoxes.length === 0) {
+      setTextBoxes(() => templateToTextBoxes(effectiveTextBoxConfig));
+    }
+  }, [isTextBoxEditMode, activeTextBoxes.length]);
+
   const setTextBoxes = (updater: (boxes: SlideTextBox[]) => SlideTextBox[]) => {
     if (textBoxScope === 'slide' && items[activeQuestionIndex]) {
       const slideIdx = activeQuestionIndex;
@@ -1313,8 +1320,14 @@ export default function App() {
                       {/* Slide Text Box Edit Mode Toggle */}
                       <button
                         onClick={() => {
-                          setIsTextBoxEditMode(prev => !prev);
-                          if (isTextBoxEditMode) setSelectedTextBoxId(null);
+                          setIsTextBoxEditMode(prev => {
+                            const next = !prev;
+                            if (next && activeTextBoxes.length === 0) {
+                              setTextBoxes(() => templateToTextBoxes(effectiveTextBoxConfig));
+                            }
+                            if (!next) setSelectedTextBoxId(null);
+                            return next;
+                          });
                         }}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                           isTextBoxEditMode
