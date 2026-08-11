@@ -93,53 +93,7 @@ iii. অস্ত্রোপচার
 ঘ) i, ii ও iii
 [চট্টগ্রাম বোর্ড ২০১৭]`;
 
-export const ManualEditor: React.FC<ManualEditorProps> = ({
-  onAddMCQs,
-  onClearAll,
-  appTheme = 'dark',
-  items = [],
-  onUpdateItems,
-  reviewItems = [],
-  onClearReviewItems,
-  prefillEditItem = null,
-  onPrefillConsumed,
-  onImportToQuestionBank,
-}) => {
-  const isAppLight = appTheme === 'light';
-  const [activeSubTab, setActiveSubTab] = useState<'review' | 'bulk' | 'single'>('bulk');
-
-  // Shared input style for the in-place review-queue editor
-  const queueInputCls = `w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
-    isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-  }`;
-
-  // Internal Unapproved Review Queue
-  const [unapprovedQueue, setUnapprovedQueue] = useState<MCQItem[]>(reviewItems);
-
-  // In-place editing of a review-queue card (no tab switch to the full form).
-  const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
-  const [queueEditDraft, setQueueEditDraft] = useState<MCQItem | null>(null);
-
-  // Brief inline confirmation shown after approving one item mid-queue (we stay
-  // put instead of navigating away, so this closes the feedback loop).
-  const [queueToast, setQueueToast] = useState<string | null>(null);
-
-  // Sync when reviewItems prop updates
-  useEffect(() => {
-    if (reviewItems && reviewItems.length > 0) {
-      setUnapprovedQueue(reviewItems);
-      setActiveSubTab('review');
-    }
-  }, [reviewItems]);
-
-  // Batch tags applied to EVERY MCQ parsed from the bulk paste text.
-  const [batchSourceTags, setBatchSourceTags] = useState<string[]>([]);
-  const [batchSubject, setBatchSubject] = useState('');
-  const [batchClass, setBatchClass] = useState('');
-  const [batchPaper, setBatchPaper] = useState('');
-
-  // Bulk paste state
-  const [bulkText, setBulkText] = useState<string>(`১. বৃক্কের কাজ কোনটি?
+const DEFAULT_BULK_TEXT = `১. বৃক্কের কাজ কোনটি?
 ক) রক্ত ছাঁকন *
 খ) পিত্ত তৈরি
 গ) শ্বেতকণিকা তৈরি
@@ -159,10 +113,116 @@ iii. অস্ত্রোপচার
 খ) ii ও iii *
 গ) i ও iii
 ঘ) i, ii ও iii
-[চট্টগ্রাম বোর্ড ২০১৭]`);
+[চট্টগ্রাম বোর্ড ২০১৭]`;
+
+// Auto-saved draft of everything the user has pasted/parsed/reviewed but not
+// yet committed to the deck or bank. ManualEditor is only mounted while its
+// tab is active (`{activeTab === 'manual' && <ManualEditor />}` in App.tsx),
+// so any tab switch unmounts it and would otherwise wipe unsaved review-queue
+// cards and pasted text with no warning. Persisting to localStorage on every
+// change and rehydrating on mount closes that hole.
+const DRAFT_STORAGE_KEY = 'mcqgen.manualEditor.draft';
+
+interface ManualEditorDraft {
+  bulkText: string;
+  bulkViewMode: 'raw' | 'cards';
+  unapprovedQueue: MCQItem[];
+  resolvedIds: string[];
+  batchSourceTags: string[];
+  batchSubject: string;
+  batchClass: string;
+  batchPaper: string;
+  stagedItems: MCQItem[];
+}
+
+function loadDraft(): Partial<ManualEditorDraft> {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDraft(draft: ManualEditorDraft): void {
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // localStorage unavailable (private mode / quota) — draft just won't survive a remount
+  }
+}
+
+export const ManualEditor: React.FC<ManualEditorProps> = ({
+  onAddMCQs,
+  onClearAll,
+  appTheme = 'dark',
+  items = [],
+  onUpdateItems,
+  reviewItems = [],
+  onClearReviewItems,
+  prefillEditItem = null,
+  onPrefillConsumed,
+  onImportToQuestionBank,
+}) => {
+  const isAppLight = appTheme === 'light';
+  const [activeSubTab, setActiveSubTab] = useState<'review' | 'bulk' | 'single'>('bulk');
+
+  // Read the auto-saved draft exactly once per mount — every field below falls
+  // back to it before its own hardcoded default, so a tab switch (which
+  // unmounts this component) never silently drops in-progress work.
+  const [draft] = useState<Partial<ManualEditorDraft>>(() => loadDraft());
+
+  // Shared input style for the in-place review-queue editor
+  const queueInputCls = `w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
+    isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+  }`;
+
+  // Internal Unapproved Review Queue
+  const [unapprovedQueue, setUnapprovedQueue] = useState<MCQItem[]>(
+    reviewItems.length > 0 ? reviewItems : draft.unapprovedQueue || []
+  );
+
+  // Ids of queue items already sent to the Active Deck / Question Bank. Kept
+  // separate from unapprovedQueue itself so approving a card never removes it
+  // from view — it just gets a "Added" badge instead of Edit/Approve/Remove.
+  const [resolvedIds, setResolvedIds] = useState<string[]>(draft.resolvedIds || []);
+
+  // In-place editing of a review-queue card (no tab switch to the full form).
+  const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
+  const [queueEditDraft, setQueueEditDraft] = useState<MCQItem | null>(null);
+
+  // Brief inline confirmation shown after approving one item mid-queue (we stay
+  // put instead of navigating away, so this closes the feedback loop).
+  const [queueToast, setQueueToast] = useState<string | null>(null);
+
+  // Sync when reviewItems prop updates (e.g. AI Parser hands off a fresh batch).
+  // Merge instead of overwrite so it never clobbers cards already sitting in the
+  // queue, then clear the prop immediately so a later remount doesn't re-merge
+  // the same batch again.
+  useEffect(() => {
+    if (reviewItems && reviewItems.length > 0) {
+      setUnapprovedQueue((prev) => {
+        const existingIds = new Set(prev.map((q) => q.id));
+        const incoming = reviewItems.filter((q) => !existingIds.has(q.id));
+        return incoming.length > 0 ? [...prev, ...incoming] : prev;
+      });
+      setActiveSubTab('review');
+      if (onClearReviewItems) onClearReviewItems();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewItems]);
+
+  // Batch tags applied to EVERY MCQ parsed from the bulk paste text.
+  const [batchSourceTags, setBatchSourceTags] = useState<string[]>(draft.batchSourceTags || []);
+  const [batchSubject, setBatchSubject] = useState(draft.batchSubject || '');
+  const [batchClass, setBatchClass] = useState(draft.batchClass || '');
+  const [batchPaper, setBatchPaper] = useState(draft.batchPaper || '');
+
+  // Bulk paste state
+  const [bulkText, setBulkText] = useState<string>(draft.bulkText ?? DEFAULT_BULK_TEXT);
 
   // Paste-area view toggle: 'raw' = plain textarea, 'cards' = live editable MCQ cards.
-  const [bulkViewMode, setBulkViewMode] = useState<'raw' | 'cards'>('raw');
+  const [bulkViewMode, setBulkViewMode] = useState<'raw' | 'cards'>(draft.bulkViewMode || 'raw');
   const justPastedBulkRef = useRef(false);
 
   // Auto-switch to Cards right after a paste that parsed into at least one MCQ.
@@ -243,8 +303,25 @@ iii. অস্ত্রোপচার
   // Staged questions created in the Form Question Creator. "Save" appends here
   // instead of committing straight to the deck; a batch action pushes them all
   // to the Active Deck or the Question Bank, then clears with a success message.
-  const [stagedItems, setStagedItems] = useState<MCQItem[]>([]);
+  const [stagedItems, setStagedItems] = useState<MCQItem[]>(draft.stagedItems || []);
   const [formNotice, setFormNotice] = useState<string | null>(null);
+
+  // Instant auto-save: any change to pasted text, the review queue, or staged
+  // questions is written straight to localStorage, so switching tabs (which
+  // unmounts this component) or an accidental reload never loses it.
+  useEffect(() => {
+    saveDraft({
+      bulkText,
+      bulkViewMode,
+      unapprovedQueue,
+      resolvedIds,
+      batchSourceTags,
+      batchSubject,
+      batchClass,
+      batchPaper,
+      stagedItems,
+    });
+  }, [bulkText, bulkViewMode, unapprovedQueue, resolvedIds, batchSourceTags, batchSubject, batchClass, batchPaper, stagedItems]);
 
   // Tag memory — remembers every used source tag / subject / class / paper so the
   // next session can suggest them in the chip pickers below.
@@ -413,39 +490,60 @@ iii. অস্ত্রোপচার
   // moment). Approving any other item keeps you on the review queue — it used
   // to unconditionally call onAddMCQs, which navigated the whole app away to
   // the Preview tab after every single approval, kicking you out mid-review.
+  // Approve a single item from the review queue into the active deck. We never
+  // navigate away and never remove the card — onUpdateItems appends straight
+  // into the active deck's items while staying on this exact review page, the
+  // card just flips to a "Added to Deck" state so you can keep working through
+  // the rest of the queue without losing your place.
   const approveQueueItem = (id: string) => {
+    if (resolvedIds.includes(id)) return;
     const itemToApprove = unapprovedQueue.find((q) => q.id === id);
     if (!itemToApprove) return;
-    const remaining = unapprovedQueue.filter((q) => q.id !== id);
     rememberItems([itemToApprove]);
 
-    if (remaining.length === 0) {
-      onAddMCQs([itemToApprove]);
-      if (onClearReviewItems) onClearReviewItems();
-    } else if (onUpdateItems) {
+    if (onUpdateItems) {
       onUpdateItems([...items, itemToApprove]);
-      setQueueToast(`✓ Added to Active Deck — ${remaining.length} more to review.`);
-      setTimeout(() => setQueueToast(null), 2200);
     } else {
+      // No onUpdateItems wired up (legacy/standalone usage) — fall back to the
+      // navigating add, since there's no other way to get it into the deck.
       onAddMCQs([itemToApprove]);
     }
 
-    setUnapprovedQueue(remaining);
+    const stillPending = unapprovedQueue.filter((q) => q.id !== id && !resolvedIds.includes(q.id)).length;
+    setResolvedIds((prev) => [...prev, id]);
+    setQueueToast(
+      stillPending > 0
+        ? `✓ Added to Active Deck — ${stillPending} more to review.`
+        : '✓ Added to Active Deck — all caught up.'
+    );
+    setTimeout(() => setQueueToast(null), 2200);
+
     if (editingId === id) resetForm();
+    if (editingQueueItemId === id) cancelQueueEdit();
   };
 
-  // Approve all items from the review queue into active deck
+  // Approve every still-pending item in the queue into the active deck. Same
+  // stay-on-page, keep-the-cards behavior as approveQueueItem.
   const approveAllQueue = () => {
-    if (unapprovedQueue.length === 0) return;
-    onAddMCQs(unapprovedQueue);
-    rememberItems(unapprovedQueue);
-    setUnapprovedQueue([]);
-    if (onClearReviewItems) onClearReviewItems();
-    resetForm();
+    const pending = unapprovedQueue.filter((q) => !resolvedIds.includes(q.id));
+    if (pending.length === 0) return;
+
+    if (onUpdateItems) {
+      onUpdateItems([...items, ...pending]);
+    } else {
+      onAddMCQs(pending);
+    }
+    rememberItems(pending);
+    setResolvedIds((prev) => [...prev, ...pending.map((q) => q.id)]);
+    setQueueToast(`✓ Added ${pending.length} question${pending.length > 1 ? 's' : ''} to the Active Deck.`);
+    setTimeout(() => setQueueToast(null), 2200);
   };
 
+  // Explicit, user-initiated removal — discards a single card from the queue
+  // entirely (distinct from approving, which keeps the card as a record).
   const removeQueueItem = (id: string) => {
     setUnapprovedQueue((prev) => prev.filter((q) => q.id !== id));
+    setResolvedIds((prev) => prev.filter((rid) => rid !== id));
     if (editingId === id) resetForm();
     if (editingQueueItemId === id) cancelQueueEdit();
   };
@@ -607,6 +705,10 @@ iii. অস্ত্রোপচার
     }
   };
 
+  // Cards still needing action vs. ones already sent to the deck/bank — drives
+  // the header count, stepper badge, and which bulk-action buttons are usable.
+  const pendingQueueItems = unapprovedQueue.filter((q) => !resolvedIds.includes(q.id));
+
   return (
     <div
       className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} border p-6 lg:p-8 space-y-8 ${
@@ -687,11 +789,11 @@ iii. অস্ত্রোপচার
             </span>
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span>Review & Add to Deck</span>
-            {unapprovedQueue.length > 0 && (
+            {pendingQueueItems.length > 0 && (
               <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-black ${
                 activeSubTab === 'review' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950 animate-pulse'
               }`}>
-                {unapprovedQueue.length}
+                {pendingQueueItems.length}
               </span>
             )}
           </button>
@@ -1578,10 +1680,11 @@ iii. অস্ত্রোপচার
             <div>
               <h3 className="text-base font-black text-amber-500 flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                Step 2: Review Queue ({unapprovedQueue.length} Pending Approval)
+                Step 2: Review Queue ({pendingQueueItems.length} Pending Approval)
               </h3>
               <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Check each question, fix anything the parser missed, then Approve it into your Active Deck — one at a time or all at once.
+                Approved cards stay right here with a badge, so you never lose track of what you've reviewed.
               </p>
             </div>
 
@@ -1589,35 +1692,38 @@ iii. অস্ত্রোপচার
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setUnapprovedQueue([])}
+                  onClick={() => { setUnapprovedQueue([]); setResolvedIds([]); }}
                   className="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700 border border-slate-700 cursor-pointer"
+                  title="Removes every card from this queue, including ones already added to the deck"
                 >
-                  Discard All Queue
+                  Clear Queue
                 </button>
-                <button
-                  type="button"
-                  onClick={approveAllQueue}
-                  className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 cursor-pointer flex items-center gap-1.5 transition-all"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Approve All ({unapprovedQueue.length}) → Active Deck</span>
-                </button>
-                {onImportToQuestionBank && (
+                {pendingQueueItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={approveAllQueue}
+                    className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 cursor-pointer flex items-center gap-1.5 transition-all"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Approve All ({pendingQueueItems.length}) → Active Deck</span>
+                  </button>
+                )}
+                {onImportToQuestionBank && pendingQueueItems.length > 0 && (
                   <button
                     type="button"
                     onClick={async () => {
-                      rememberItems(unapprovedQueue);
-                      const saved = await onImportToQuestionBank(unapprovedQueue);
+                      rememberItems(pendingQueueItems);
+                      const saved = await onImportToQuestionBank(pendingQueueItems);
                       if (!saved) return;
-                      setUnapprovedQueue([]);
-                      if (onClearReviewItems) onClearReviewItems();
-                      resetForm();
+                      setResolvedIds((prev) => [...prev, ...pendingQueueItems.map((q) => q.id)]);
+                      setQueueToast(`✓ Saved ${pendingQueueItems.length} question${pendingQueueItems.length > 1 ? 's' : ''} to the Question Bank.`);
+                      setTimeout(() => setQueueToast(null), 2200);
                     }}
                     className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-500/25 cursor-pointer flex items-center gap-1.5 transition-all"
-                    title="Save every queued question to the Question Bank (deck library) instead of the active deck"
+                    title="Save every pending question to the Question Bank (deck library) instead of the active deck"
                   >
                     <Database className="w-4 h-4" />
-                    <span>Import All ({unapprovedQueue.length}) → Question Bank</span>
+                    <span>Import All ({pendingQueueItems.length}) → Question Bank</span>
                   </button>
                 )}
               </div>
@@ -1644,14 +1750,19 @@ iii. অস্ত্রোপচার
             <div className="space-y-4">
               {unapprovedQueue.map((item, idx) => {
                 const isEditing = editingQueueItemId === item.id && !!queueEditDraft;
+                const isResolved = resolvedIds.includes(item.id);
                 return (
                   <div
                     key={item.id}
-                    className={`p-5 rounded-3xl space-y-3.5 ${
+                    className={`p-5 rounded-3xl space-y-3.5 transition-opacity ${
                       isEditing
                         ? isAppLight
                           ? 'border-2 border-amber-400 ring-2 ring-amber-400/40 bg-amber-50/40'
                           : 'border-2 border-amber-500/50 ring-1 ring-amber-500/30 bg-slate-950'
+                        : isResolved
+                        ? isAppLight
+                          ? 'bg-emerald-50/60 border-2 border-emerald-300 text-slate-950 opacity-80'
+                          : 'bg-slate-950 border-2 border-emerald-500/30 text-slate-100 opacity-70'
                         : isAppLight
                         ? 'bg-white border-2 border-slate-300 text-slate-950 shadow-sm'
                         : 'bg-slate-950 border-2 border-slate-700 text-slate-100 shadow-md'
@@ -1950,39 +2061,64 @@ iii. অস্ত্রোপচার
                             </div>
                           </div>
 
-                          {/* Actions: Edit in place, Approve (fatty), Remove */}
+                          {/* Actions: Edit in place, Approve (fatty), Remove — or, once
+                              resolved, a badge + a way to hide it from the list. The
+                              card itself is never auto-removed, only these controls swap. */}
                           <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => startQueueEdit(item)}
-                              className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
-                                isAppLight
-                                  ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-300'
-                                  : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                              }`}
-                              title="Edit this question right here in the queue"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => approveQueueItem(item.id)}
-                              className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all"
-                            >
-                              <Check className="w-4 h-4 stroke-[2.5]" />
-                              <span>Approve</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeQueueItem(item.id)}
-                              className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
-                                isAppLight ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
-                              }`}
-                              title="Remove"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {isResolved ? (
+                              <>
+                                <span className={`px-3.5 py-2.5 rounded-2xl text-xs font-black flex items-center gap-1.5 ${
+                                  isAppLight ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                }`}>
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  <span>Added to Deck</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeQueueItem(item.id)}
+                                  className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                                    isAppLight ? 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200' : 'bg-slate-800/60 hover:bg-slate-800 text-slate-400 border-slate-700'
+                                  }`}
+                                  title="Hide this card from the queue (it's already in your deck)"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startQueueEdit(item)}
+                                  className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
+                                    isAppLight
+                                      ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-300'
+                                      : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                                  }`}
+                                  title="Edit this question right here in the queue"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => approveQueueItem(item.id)}
+                                  className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all"
+                                >
+                                  <Check className="w-4 h-4 stroke-[2.5]" />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeQueueItem(item.id)}
+                                  className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                                    isAppLight ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
+                                  }`}
+                                  title="Remove"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
