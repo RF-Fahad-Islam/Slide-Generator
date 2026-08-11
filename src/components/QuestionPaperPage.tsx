@@ -75,7 +75,8 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
           }
 
           onProgress('Saving question paper PDF...');
-          pdf.save(`${(config.brandName || 'QuestionPaper').replace(/\s+/g, '_')}_Question_Paper.pdf`);
+          const paperPrefix = (config.deckName || config.brandName || 'QuestionPaper').replace(/\s+/g, '_');
+          pdf.save(`${paperPrefix}_Question_Paper.pdf`);
         },
       }),
       [items, config, perPage, includeAnswerKey]

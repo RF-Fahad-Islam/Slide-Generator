@@ -455,16 +455,16 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [progressMsg, setProgressMsg] = useState('');
   const [fileName, setFileName] = useState<string>(() =>
-    `${(config.brandName || 'QuestionBank').replace(/[^a-z0-9]+/gi, '_')}_MCQs`
+    `${(config.deckName || config.brandName || 'QuestionBank').replace(/[^a-z0-9]+/gi, '_')}_MCQs`
   );
   // Track whether the user has typed a custom name — a fresh open keeps the
-  // brand-derived default unless they edited it for the current deck.
+  // deck/brand-derived default unless they edited it for the current deck.
   const fileNameEditedRef = useRef<boolean>(false);
   useEffect(() => {
     if (isOpen && !fileNameEditedRef.current) {
-      setFileName(`${(config.brandName || 'QuestionBank').replace(/[^a-z0-9]+/gi, '_')}_MCQs`);
+      setFileName(`${(config.deckName || config.brandName || 'QuestionBank').replace(/[^a-z0-9]+/gi, '_')}_MCQs`);
     }
-  }, [isOpen, config.brandName]);
+  }, [isOpen, config.deckName, config.brandName]);
   const [templateId, setTemplateId] = useState<string>(config.templateId);
   const [itemsPerPage, setItemsPerPage] = useState<number>(3);
   const [answerFormat, setAnswerFormat] = useState<PdfAnswerFormat>('end_page');

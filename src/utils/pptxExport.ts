@@ -929,7 +929,8 @@ export const exportDeckToPPTX = async (
   }
 
   onProgress?.('Generating .pptx file...');
-  const fileName = `${(config.brandName || 'MCQ_Deck').replace(/[^a-zA-Z0-9_-]/g, '_')}_16x9_Presentation.pptx`;
+  const baseTitle = config.deckName || config.brandName || 'MCQ_Deck';
+  const fileName = `${baseTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}_16x9_Presentation.pptx`;
   await pptx.writeFile({ fileName });
   onProgress?.('Presentation generated successfully!');
 };

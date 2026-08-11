@@ -183,7 +183,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         cacheBust: true,
       });
 
-      const fileName = `${(config.brandName || 'Slide').replace(/\s+/g, '_')}_q${currentSlide.questionIndex + 1}${currentSlide.isAnswerSlide ? '_ans' : ''}.png`;
+      const deckPrefix = (config.deckName || config.brandName || 'Slide').replace(/\s+/g, '_');
+      const fileName = `${deckPrefix}_q${currentSlide.questionIndex + 1}${currentSlide.isAnswerSlide ? '_ans' : ''}.png`;
       saveAs(dataUrl, fileName);
     } catch (err: any) {
       console.error('Single Slide Export Error:', err);
@@ -202,7 +203,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     const zip = new JSZip();
 
     try {
-      const folder = zip.folder(`${config.brandName || 'Slides'}_MCQs`);
+      const deckPrefix = (config.deckName || config.brandName || 'Slides').replace(/\s+/g, '_');
+      const folder = zip.folder(`${deckPrefix}_MCQs`);
 
       for (let i = 0; i < scopeSlides.length; i++) {
         const ref = scopeSlides[i];
@@ -227,8 +229,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       saveAs(
         blob,
         isCurrentScope
-          ? `${config.brandName || 'EdTech'}_Slide_${(currentSlide?.questionIndex ?? 0) + 1}.zip`
-          : `${config.brandName || 'EdTech'}_MCQ_Slides.zip`
+          ? `${deckPrefix}_Slide_${(currentSlide?.questionIndex ?? 0) + 1}.zip`
+          : `${deckPrefix}_MCQ_Slides.zip`
       );
     } catch (err: any) {
       console.error('Bulk ZIP Export Error:', err);
@@ -270,7 +272,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       }
 
       setProgressMsg('Saving PDF presentation document...');
-      pdf.save(`${(config.brandName || 'MCQ_Deck').replace(/\s+/g, '_')}_Slides.pdf`);
+      const deckPrefix = (config.deckName || config.brandName || 'MCQ_Deck').replace(/\s+/g, '_');
+      pdf.save(`${deckPrefix}_Slides.pdf`);
     } catch (err: any) {
       console.error('PDF Export Error:', err);
       alert('Failed to generate PDF: ' + err.message);
@@ -284,14 +287,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // Export Deck JSON Backup
   const downloadDeckJSON = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({ config, items }, null, 2));
-    saveAs(dataStr, `${config.brandName || 'Deck'}_mcq_backup.json`);
+    const deckPrefix = (config.deckName || config.brandName || 'Deck').replace(/\s+/g, '_');
+    saveAs(dataStr, `${deckPrefix}_mcq_backup.json`);
   };
 
   // Extract MCQs only (clean question array — no config/slide overrides) as re-importable JSON
   const downloadMCQsJSON = () => {
     if (items.length === 0) return;
     const cleanItems = items.map(({ customConfig, ...q }) => q);
-    downloadJSON(cleanItems, `${config.brandName || 'MCQ'}_mcqs.json`);
+    const deckPrefix = (config.deckName || config.brandName || 'MCQ').replace(/\s+/g, '_');
+    downloadJSON(cleanItems, `${deckPrefix}_mcqs.json`);
   };
 
   const scopeSlideCount = isCurrentScope ? 1 : scopeSlides.length;
