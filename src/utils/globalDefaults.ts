@@ -1,4 +1,4 @@
-import { DeckConfig, CustomThemeColors } from '../types';
+import { DeckConfig, CustomThemeColors, AspectRatio } from '../types';
 
 export interface GlobalDefaults {
   defaultDeckName: string;
@@ -11,6 +11,11 @@ export interface GlobalDefaults {
   logoUrl: string;
   logoSize: DeckConfig['logoSize'];
   logoPosition: DeckConfig['logoPosition'];
+
+  // Channel Footer Tag & Instructor Watermark
+  footerTag: string;
+  watermarkHandle: string;
+  watermarkAvatar: string;
 
   // Background Graphics & Overlays
   bgPreset: DeckConfig['bgPreset'];
@@ -29,6 +34,33 @@ export interface GlobalDefaults {
   fontFamily: string;
   accentColorCustom?: string;
   customTheme?: CustomThemeColors;
+
+  // Layout & Header Mode
+  layoutMode: DeckConfig['layoutMode'];
+  headerType: DeckConfig['headerType'];
+  aspectRatio: AspectRatio;
+
+  // Granular Typography Controls (mirrors DeckSettings "Typography" tab)
+  headerFont?: string;
+  headerFontSize?: DeckConfig['headerFontSize'];
+  bodyFont?: string;
+  bodyFontSize?: DeckConfig['bodyFontSize'];
+  bodyFontWeight?: DeckConfig['bodyFontWeight'];
+  questionAlignment?: DeckConfig['questionAlignment'];
+  questionPosition?: DeckConfig['questionPosition'];
+  optionsFont?: string;
+  optionsFontSize?: DeckConfig['optionsFontSize'];
+  optionsFontWeight?: DeckConfig['optionsFontWeight'];
+  optionsLayout?: DeckConfig['optionsLayout'];
+  optionsAlignment?: DeckConfig['optionsAlignment'];
+  footerFont?: string;
+  footerFontSize?: DeckConfig['footerFontSize'];
+
+  // Default Answer Reveal Behavior
+  answerMode: DeckConfig['answerMode'];
+  showAnswerInSlide: boolean;
+  answerDisplayStyles?: DeckConfig['answerDisplayStyles'];
+  showExplanationInSlide: boolean;
 }
 
 const GLOBAL_DEFAULTS_KEY = 'mcqgen.globalDefaults_v2';
@@ -42,6 +74,9 @@ export const DEFAULT_GLOBAL_DEFAULTS: GlobalDefaults = {
   logoUrl: '',
   logoSize: 'md',
   logoPosition: 'top-left',
+  footerTag: 'BIOMISSION',
+  watermarkHandle: 'Hasnat Shuvro',
+  watermarkAvatar: '',
   bgPreset: 'none',
   bgImageUrl: undefined,
   bgImageFit: 'cover',
@@ -54,6 +89,27 @@ export const DEFAULT_GLOBAL_DEFAULTS: GlobalDefaults = {
   fontFamily: "'Hind Siliguri', sans-serif",
   accentColorCustom: undefined,
   customTheme: undefined,
+  layoutMode: 'standard',
+  headerType: 'manual',
+  aspectRatio: '16:9',
+  headerFont: undefined,
+  headerFontSize: undefined,
+  bodyFont: undefined,
+  bodyFontSize: undefined,
+  bodyFontWeight: undefined,
+  questionAlignment: undefined,
+  questionPosition: undefined,
+  optionsFont: undefined,
+  optionsFontSize: undefined,
+  optionsFontWeight: undefined,
+  optionsLayout: undefined,
+  optionsAlignment: undefined,
+  footerFont: undefined,
+  footerFontSize: undefined,
+  answerMode: 'hidden',
+  showAnswerInSlide: false,
+  answerDisplayStyles: undefined,
+  showExplanationInSlide: false,
 };
 
 export const loadGlobalDefaults = (): GlobalDefaults => {
@@ -101,14 +157,31 @@ export const createDefaultDeckConfig = (overrides?: Partial<DeckConfig>): DeckCo
     fontFamily: overrides?.fontFamily ?? defaults.fontFamily,
     accentColorCustom: overrides?.accentColorCustom ?? defaults.accentColorCustom,
     customTheme: overrides?.customTheme ?? defaults.customTheme,
+    layoutMode: overrides?.layoutMode ?? defaults.layoutMode,
+    headerType: overrides?.headerType ?? defaults.headerType,
+    headerFont: overrides?.headerFont ?? defaults.headerFont,
+    headerFontSize: overrides?.headerFontSize ?? defaults.headerFontSize,
+    bodyFont: overrides?.bodyFont ?? defaults.bodyFont,
+    bodyFontSize: overrides?.bodyFontSize ?? defaults.bodyFontSize,
+    bodyFontWeight: overrides?.bodyFontWeight ?? defaults.bodyFontWeight,
+    questionAlignment: overrides?.questionAlignment ?? defaults.questionAlignment,
+    questionPosition: overrides?.questionPosition ?? defaults.questionPosition,
+    optionsFont: overrides?.optionsFont ?? defaults.optionsFont,
+    optionsFontSize: overrides?.optionsFontSize ?? defaults.optionsFontSize,
+    optionsFontWeight: overrides?.optionsFontWeight ?? defaults.optionsFontWeight,
+    optionsLayout: overrides?.optionsLayout ?? defaults.optionsLayout,
+    optionsAlignment: overrides?.optionsAlignment ?? defaults.optionsAlignment,
+    footerFont: overrides?.footerFont ?? defaults.footerFont,
+    footerFontSize: overrides?.footerFontSize ?? defaults.footerFontSize,
     headerTitle: overrides?.headerTitle || 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
-    footerTag: overrides?.footerTag || 'BIOMISSION',
-    watermarkAvatar: overrides?.watermarkAvatar || '',
-    watermarkHandle: overrides?.watermarkHandle || 'Hasnat Shuvro',
-    aspectRatio: overrides?.aspectRatio || '16:9',
-    showAnswerInSlide: overrides?.showAnswerInSlide ?? false,
-    answerMode: overrides?.answerMode || 'hidden',
-    showExplanationInSlide: overrides?.showExplanationInSlide ?? false,
+    footerTag: overrides?.footerTag ?? defaults.footerTag,
+    watermarkAvatar: overrides?.watermarkAvatar ?? defaults.watermarkAvatar,
+    watermarkHandle: overrides?.watermarkHandle ?? defaults.watermarkHandle,
+    aspectRatio: overrides?.aspectRatio ?? defaults.aspectRatio,
+    showAnswerInSlide: overrides?.showAnswerInSlide ?? defaults.showAnswerInSlide,
+    answerMode: overrides?.answerMode ?? defaults.answerMode,
+    answerDisplayStyles: overrides?.answerDisplayStyles ?? defaults.answerDisplayStyles,
+    showExplanationInSlide: overrides?.showExplanationInSlide ?? defaults.showExplanationInSlide,
     ...overrides,
   };
 };

@@ -150,12 +150,6 @@ export default function App() {
     const base: DeckConfig = createDefaultDeckConfig({
       deckName: SAMPLE_DECKS[0]?.name || 'Untitled Deck',
       headerTitle: 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
-      footerTag: 'BIOMISSION',
-      watermarkHandle: 'Hasnat Shuvro',
-      aspectRatio: '16:9',
-      showAnswerInSlide: false,
-      answerMode: 'hidden',
-      showExplanationInSlide: false,
     });
     return { ...base, slideTextBoxes: templateToTextBoxes(base) };
   });

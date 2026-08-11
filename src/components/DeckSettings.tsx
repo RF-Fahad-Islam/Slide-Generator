@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { DeckConfig, CustomThemeColors, getEffectiveBadgeTag } from '../types';
 import { TEMPLATES, getTemplateById } from '../templates/registry';
-import { BACKGROUND_PRESETS, getBackgroundPresetUrl } from '../utils/backgroundPresets';
+import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { FONT_PRESETS, getFontPresetByFamily } from '../utils/fontPresets';
 import { saveGlobalDefaults } from '../utils/globalDefaults';
-import { BackgroundImageEditor, BgImageEditorResult } from './BackgroundImageEditor';
+import { BackgroundPicker } from './BackgroundPicker';
 import {
   getTemplatePresets,
   saveTemplatePreset,
@@ -325,9 +325,6 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   const [themeFilter, setThemeFilter] = useState<'all' | 'light' | 'dark' | 'custom'>('all');
   const [fontCategoryFilter, setFontCategoryFilter] = useState<string>('all');
 
-  // Background image crop/resize/fit editor — opened right after a bg upload.
-  const [bgEditorImage, setBgEditorImage] = useState<string | null>(null);
-
   // Saved custom template presets (Templates tab)
   const [savedPresets, setSavedPresets] = useState<DeckTemplatePreset[]>(getTemplatePresets());
   const [presetName, setPresetName] = useState('');
@@ -366,6 +363,9 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       logoUrl: config.logoUrl || '',
       logoSize: config.logoSize || 'md',
       logoPosition: config.logoPosition || 'top-left',
+      footerTag: config.footerTag || 'BIOMISSION',
+      watermarkHandle: config.watermarkHandle || 'Hasnat Shuvro',
+      watermarkAvatar: config.watermarkAvatar || '',
       bgPreset: config.bgPreset || 'none',
       bgImageUrl: config.bgImageUrl,
       bgImageFit: config.bgImageFit || 'cover',
@@ -378,6 +378,27 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       fontFamily: config.fontFamily || "'Hind Siliguri', sans-serif",
       accentColorCustom: config.accentColorCustom,
       customTheme: config.customTheme,
+      layoutMode: config.layoutMode || 'standard',
+      headerType: config.headerType || 'manual',
+      aspectRatio: config.aspectRatio || '16:9',
+      headerFont: config.headerFont,
+      headerFontSize: config.headerFontSize,
+      bodyFont: config.bodyFont,
+      bodyFontSize: config.bodyFontSize,
+      bodyFontWeight: config.bodyFontWeight,
+      questionAlignment: config.questionAlignment,
+      questionPosition: config.questionPosition,
+      optionsFont: config.optionsFont,
+      optionsFontSize: config.optionsFontSize,
+      optionsFontWeight: config.optionsFontWeight,
+      optionsLayout: config.optionsLayout,
+      optionsAlignment: config.optionsAlignment,
+      footerFont: config.footerFont,
+      footerFontSize: config.footerFontSize,
+      answerMode: config.answerMode || 'hidden',
+      showAnswerInSlide: config.showAnswerInSlide ?? false,
+      answerDisplayStyles: config.answerDisplayStyles,
+      showExplanationInSlide: config.showExplanationInSlide ?? false,
     });
     setGlobalSavedNotice(true);
     setTimeout(() => setGlobalSavedNotice(false), 2500);
@@ -539,28 +560,17 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
     }
   };
 
-  const handleImageUpload = (field: 'logoUrl' | 'watermarkAvatar' | 'bgImageUrl' | 'headerBannerUrl' | 'footerBannerUrl', e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (field: 'logoUrl' | 'watermarkAvatar' | 'headerBannerUrl' | 'footerBannerUrl', e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = (evt) => {
         if (evt.target?.result) {
-          if (field === 'bgImageUrl') {
-            // Open the crop/resize/fit editor instead of applying directly — the
-            // result (processed data URL + fit) lands atomically with bgPreset.
-            setBgEditorImage(evt.target.result as string);
-          } else {
-            handleChange(field, evt.target.result as string);
-          }
+          handleChange(field, evt.target.result as string);
         }
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleBgEditorApply = (result: BgImageEditorResult) => {
-    handlePatch({ bgImageUrl: result.dataUrl, bgPreset: 'custom', bgImageFit: result.fit });
-    setBgEditorImage(null);
   };
 
   const filteredTemplates = TEMPLATES.filter((tmpl) => {
@@ -1266,188 +1276,17 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
 
       {/* SECTION 2: SLIDE BACKGROUND IMAGE & PRESETS */}
       {settingsTab === 'background' && (
-      <div className={`p-6 rounded-3xl border space-y-6 ${
-        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-      }`}>
-        <div className={`flex items-center justify-between border-b pb-4 ${
-          isAppLight ? 'border-slate-200' : 'border-slate-800/80'
-        }`}>
-          <div>
-            <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${
-              isAppLight ? 'text-amber-700' : 'text-amber-300'
-            }`}>
-              <ImageIcon className="w-4 h-4 text-amber-400" />
-              Slide Background Image & Textures
-            </h3>
-            <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              Select or upload a background image for every slide with custom overlay contrast
-            </p>
-          </div>
-
-          <label className="text-sm px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-pointer flex items-center gap-2 font-bold transition-all">
-            <Upload className="w-4 h-4" />
-            Upload Custom Background
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleImageUpload('bgImageUrl', e)}
-              className="hidden"
-            />
-          </label>
-        </div>
-
-        {/* Custom URL Input & Clear Row — upload lives in the section header above
-            (single upload button for the custom background image). */}
-        <div className={`p-4 rounded-2xl border space-y-3 ${
-          isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
-        }`}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Custom Background Image URL:</span>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {themeEffectiveConfig.bgImageUrl && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setBgEditorImage(themeEffectiveConfig.bgImageUrl)}
-                    className="text-sm px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold transition-all shrink-0"
-                  >
-                    Re-edit Image
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handlePatch({
-                        bgImageUrl: '',
-                        bgPreset: themeEffectiveConfig.bgPreset === 'custom' ? 'none' : themeEffectiveConfig.bgPreset,
-                        bgImageFit: undefined,
-                      });
-                    }}
-                    className="text-sm px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold transition-all shrink-0"
-                  >
-                    Clear Custom Image
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={themeEffectiveConfig.bgImageUrl || ''}
-              onChange={(e) => {
-                const url = e.target.value;
-                handlePatch({
-                  bgImageUrl: url,
-                  bgPreset: url ? 'custom' : themeEffectiveConfig.bgPreset,
-                });
-              }}
-              placeholder="Paste image URL (e.g., https://images.unsplash.com/... or data:image/...)"
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-amber-500 ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
-              }`}
-            />
-          </div>
-
-          {themeEffectiveConfig.bgImageUrl && (
-            <div className="flex items-center gap-3 pt-1">
-              <div
-                className="w-16 h-10 rounded-lg bg-cover bg-center border border-amber-400/50 shrink-0"
-                style={{ backgroundImage: `url("${themeEffectiveConfig.bgImageUrl}")` }}
-              />
-              <p className="text-sm text-amber-300 font-medium">
-                Custom background image active — theme templates &amp; background colors are hidden until you clear the image.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Presets Grid — hidden while a custom image is active, because the
-            image replaces the theme background entirely. */}
-        {!themeEffectiveConfig.bgImageUrl && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {BACKGROUND_PRESETS.map((preset) => {
-            const isSelected = config.bgPreset === preset.id;
-
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => handleChange('bgPreset', preset.id)}
-                className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden group ${
-                  isSelected
-                    ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg shadow-amber-500/10'
-                    : isAppLight
-                    ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                    : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-                }`}
-              >
-                {/* Visual Thumbnail Bar */}
-                <div className={`w-full h-12 rounded-xl bg-gradient-to-r ${preset.previewGradient} border border-white/10 mb-2 relative overflow-hidden`}>
-                  {preset.url && (
-                    <div
-                      className="absolute inset-0 bg-cover bg-center opacity-70"
-                      style={{ backgroundImage: `url("${preset.url}")` }}
-                    />
-                  )}
-                  {isSelected && (
-                    <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <h4 className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>{preset.name}</h4>
-                  <p className={`text-sm mt-0.5 line-clamp-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>{preset.description}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        )}
-
-        {/* Image Opacity & Tint Overlays */}
-        {config.bgPreset !== 'none' && (
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t ${
-            isAppLight ? 'border-slate-200' : 'border-slate-900'
-          }`}>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm font-semibold">
-                <span className={isAppLight ? 'text-slate-600' : 'text-slate-300'}>Background Image Opacity</span>
-                <span className="text-amber-400 font-mono">{Math.round((config.bgImageOpacity ?? 0.85) * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0.1"
-                max="1.0"
-                step="0.05"
-                value={config.bgImageOpacity ?? 0.85}
-                onChange={(e) => handleChange('bgImageOpacity', parseFloat(e.target.value))}
-                className="w-full accent-amber-500 cursor-pointer"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm font-semibold">
-                <span className={isAppLight ? 'text-slate-600' : 'text-slate-300'}>Text Readability Dark Overlay</span>
-                <span className="text-amber-400 font-mono">{Math.round((config.bgOverlayDarkness ?? 0.4) * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0.0"
-                max="0.85"
-                step="0.05"
-                value={config.bgOverlayDarkness ?? 0.4}
-                onChange={(e) => handleChange('bgOverlayDarkness', parseFloat(e.target.value))}
-                className="w-full accent-amber-500 cursor-pointer"
-              />
-            </div>
-          </div>
-        )}
-      </div>
+        <BackgroundPicker
+          value={{
+            bgPreset: themeEffectiveConfig.bgPreset,
+            bgImageUrl: themeEffectiveConfig.bgImageUrl,
+            bgImageFit: themeEffectiveConfig.bgImageFit,
+            bgImageOpacity: themeEffectiveConfig.bgImageOpacity,
+            bgOverlayDarkness: themeEffectiveConfig.bgOverlayDarkness,
+          }}
+          onPatch={handlePatch}
+          isAppLight={isAppLight}
+        />
       )}
 
       {/* SECTION 3: SLIDE TEMPLATE PALETTE & LIVE 16:9 THUMBNAIL PREVIEW */}
@@ -2424,22 +2263,6 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         )}
       </div>
       )}
-
-      {/* Background image crop / resize / fit editor */}
-      <BackgroundImageEditor
-        open={!!bgEditorImage}
-        imageUrl={bgEditorImage || ''}
-        isAppLight={isAppLight}
-        ratios={[
-          { id: '16:9', label: '16:9', value: 16 / 9, hint: 'Slide' },
-          { id: '4:3', label: '4:3', value: 4 / 3, hint: 'Classic' },
-          { id: '1:1', label: '1:1', value: 1, hint: 'Square' },
-          { id: '9:16', label: '9:16', value: 9 / 16, hint: 'Story' },
-        ]}
-        defaultRatioId="16:9"
-        onClose={() => setBgEditorImage(null)}
-        onApply={handleBgEditorApply}
-      />
     </div>
 );
 };

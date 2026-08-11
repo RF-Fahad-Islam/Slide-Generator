@@ -8,15 +8,20 @@ import {
   Moon,
   CheckCircle2,
   Award,
-  Image as ImageIcon,
   Type,
   Check,
   Save,
   Sparkles,
+  SlidersHorizontal,
+  User,
+  Eye,
+  LayoutTemplate,
+  Image as ImageIcon,
+  Upload,
 } from 'lucide-react';
 import { TEMPLATES } from '../templates/registry';
 import { FONT_PRESETS } from '../utils/fontPresets';
-import { BACKGROUND_PRESETS } from '../utils/backgroundPresets';
+import { BackgroundPicker } from './BackgroundPicker';
 import {
   GlobalDefaults,
   DEFAULT_GLOBAL_DEFAULTS,
@@ -162,115 +167,449 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
         </div>
       </div>
 
-      {/* SECTION 2: DEFAULT BACKGROUND GRAPHICS & OVERLAYS */}
+      {/* SECTION 2: DEFAULT BACKGROUND GRAPHICS & OVERLAYS — shared with per-deck
+          Background tab so preset vs. custom-image selection always behaves
+          identically (mutually exclusive) everywhere in the app. */}
+      <BackgroundPicker
+        title="2. Default Background Graphics & Overlays"
+        description="Select or upload the default background image applied to every newly created deck"
+        value={{
+          bgPreset: defaults.bgPreset,
+          bgImageUrl: defaults.bgImageUrl,
+          bgImageFit: defaults.bgImageFit,
+          bgImageOpacity: defaults.bgImageOpacity,
+          bgOverlayDarkness: defaults.bgOverlayDarkness,
+        }}
+        onPatch={(patch) => update(patch)}
+        isAppLight={isAppLight}
+      />
+
+      {/* SECTION 3: DEFAULT SLIDE LAYOUT & HEADER MODE */}
       <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
         isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
       }`}>
         <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-          <ImageIcon className="w-4 h-4" /> 2. Default Background Graphics & Overlays
+          <SlidersHorizontal className="w-4 h-4" /> 3. Default Slide Layout & Header Mode
         </h3>
 
-        <div className="space-y-4 text-xs">
-          {/* Background Presets Grid */}
-          <div className="space-y-1">
-            <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-              Default Background Graphic Preset
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {BACKGROUND_PRESETS.map((preset) => {
-                const isSel = defaults.bgPreset === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => update({ bgPreset: preset.id })}
-                    className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                      isSel
-                        ? 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400/40'
-                        : isAppLight
-                        ? 'bg-white border-slate-200 hover:border-slate-300'
-                        : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <span className="text-xs font-bold block truncate">{preset.name}</span>
-                    <span className="text-[10px] text-slate-500 block truncate">{preset.description}</span>
-                  </button>
-                );
-              })}
-            </div>
+        <div className="space-y-2">
+          <label className={`text-xs font-bold block uppercase tracking-wider ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+            Default Layout Format
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => update({ layoutMode: 'standard' })}
+              className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-2 ${
+                (defaults.layoutMode || 'standard') === 'standard'
+                  ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg'
+                  : isAppLight
+                  ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>🖥️ Standard Center Presentation</span>
+              {(defaults.layoutMode || 'standard') === 'standard' && <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => update({ layoutMode: 'class_mode' })}
+              className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-2 ${
+                defaults.layoutMode === 'class_mode'
+                  ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg'
+                  : isAppLight
+                  ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>📐 Classroom View</span>
+              {defaults.layoutMode === 'class_mode' && <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />}
+            </button>
           </div>
+        </div>
 
-          {/* Custom Image URL */}
-          <div className="space-y-1">
-            <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-              Custom Background Image URL / Data URL
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className={`text-xs font-bold block uppercase tracking-wider ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+              Default Header Mode
             </label>
-            <input
-              type="text"
-              value={defaults.bgImageUrl || ''}
-              onChange={(e) => update({ bgImageUrl: e.target.value, bgPreset: e.target.value ? 'custom' : defaults.bgPreset })}
-              placeholder="https://example.com/custom-bg.jpg"
-              className={`w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:border-amber-500 ${
+            <select
+              value={defaults.headerType || 'manual'}
+              onChange={(e) => update({ headerType: e.target.value as GlobalDefaults['headerType'] })}
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm font-bold cursor-pointer ${
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
-            />
+            >
+              <option value="manual">Manual Text Header</option>
+              <option value="banner">Custom Banner Image</option>
+            </select>
           </div>
 
-          {/* Fit & Sliders */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                Image Fit Mode
+          <div className="space-y-2">
+            <label className={`text-xs font-bold block uppercase tracking-wider ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+              Default Aspect Ratio
+            </label>
+            <select
+              value={defaults.aspectRatio || '16:9'}
+              onChange={(e) => update({ aspectRatio: e.target.value as GlobalDefaults['aspectRatio'] })}
+              className={`w-full border rounded-xl px-4 py-2.5 text-sm font-bold cursor-pointer ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              }`}
+            >
+              <option value="16:9">16:9 (Widescreen)</option>
+              <option value="4:5">4:5 (Portrait Post)</option>
+              <option value="9:16">9:16 (Story / Reel)</option>
+            </select>
+          </div>
+        </div>
+
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t ${isAppLight ? 'border-slate-200' : 'border-slate-900'}`}>
+          <div className={`p-4 rounded-2xl border space-y-3 ${isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Header Banner</span>
+              <label className={`flex items-center gap-2 cursor-pointer text-xs font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
+                <input
+                  type="checkbox"
+                  checked={!!defaults.useHeaderBanner}
+                  onChange={(e) => update({ useHeaderBanner: e.target.checked })}
+                  className="w-4 h-4 accent-amber-500 rounded"
+                />
+                Enable by default
               </label>
-              <select
-                value={defaults.bgImageFit || 'cover'}
-                onChange={(e) => update({ bgImageFit: e.target.value as any })}
-                className={`w-full border rounded-xl px-3 py-2 font-bold cursor-pointer ${
-                  isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+            </div>
+            {defaults.useHeaderBanner && (
+              <input
+                type="text"
+                value={defaults.headerBannerUrl || ''}
+                onChange={(e) => update({ headerBannerUrl: e.target.value })}
+                placeholder="Default header banner image URL"
+                className={`w-full border rounded-xl px-3 py-2 text-xs font-mono ${
+                  isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
                 }`}
+              />
+            )}
+          </div>
+
+          <div className={`p-4 rounded-2xl border space-y-3 ${isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Footer Banner</span>
+              <label className={`flex items-center gap-2 cursor-pointer text-xs font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
+                <input
+                  type="checkbox"
+                  checked={!!defaults.useFooterBanner}
+                  onChange={(e) => update({ useFooterBanner: e.target.checked })}
+                  className="w-4 h-4 accent-amber-500 rounded"
+                />
+                Enable by default
+              </label>
+            </div>
+            {defaults.useFooterBanner && (
+              <input
+                type="text"
+                value={defaults.footerBannerUrl || ''}
+                onChange={(e) => update({ footerBannerUrl: e.target.value })}
+                placeholder="Default footer banner image URL"
+                className={`w-full border rounded-xl px-3 py-2 text-xs font-mono ${
+                  isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
+                }`}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 4: DEFAULT GRANULAR TYPOGRAPHY CONTROLS */}
+      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
+        isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
+      }`}>
+        <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+          <Type className="w-4 h-4" /> 4. Default Typography Per Slide Section
+        </h3>
+        <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+          Independent font, size, weight & alignment defaults for every newly created deck — matches the per-deck Typography tab.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {/* Header Font & Size */}
+          <div className={`p-4 rounded-xl border space-y-2 ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
+            <span className={`text-sm font-bold block ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Header Title & Brand Font</span>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={defaults.headerFont || defaults.fontFamily}
+                onChange={(e) => update({ headerFont: e.target.value })}
+                className={`w-full border rounded-lg px-3 py-2 ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
               >
-                <option value="cover">Cover (Fill canvas)</option>
-                <option value="contain">Contain (Fit inside)</option>
-                <option value="stretch">Stretch (100% 100%)</option>
+                {FONT_PRESETS.map((f) => <option key={f.id} value={f.family}>{f.name}</option>)}
+              </select>
+              <select
+                value={defaults.headerFontSize || 'md'}
+                onChange={(e) => update({ headerFontSize: e.target.value as GlobalDefaults['headerFontSize'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="xs">Small (XS)</option>
+                <option value="sm">Medium (SM)</option>
+                <option value="md">Standard (MD)</option>
+                <option value="lg">Large (LG)</option>
+                <option value="xl">Extra Large (XL)</option>
               </select>
             </div>
+          </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-between font-bold">
-                <span className={isAppLight ? 'text-slate-700' : 'text-slate-300'}>Background Opacity</span>
-                <span className="font-mono text-amber-400">{Math.round((defaults.bgImageOpacity ?? 0.85) * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={defaults.bgImageOpacity ?? 0.85}
-                onChange={(e) => update({ bgImageOpacity: parseFloat(e.target.value) })}
-                className="w-full accent-amber-400 cursor-pointer"
-              />
+          {/* Question Body Font, Size, Weight, Alignment, Position */}
+          <div className={`p-4 rounded-xl border space-y-2 ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
+            <span className={`text-sm font-bold block uppercase tracking-wider ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>Question Body / Stem</span>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={defaults.bodyFont || defaults.fontFamily}
+                onChange={(e) => update({ bodyFont: e.target.value })}
+                className={`w-full border rounded-lg px-3 py-2 ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                {FONT_PRESETS.map((f) => <option key={f.id} value={f.family}>{f.name}</option>)}
+              </select>
+              <select
+                value={defaults.bodyFontSize || 'lg'}
+                onChange={(e) => update({ bodyFontSize: e.target.value as GlobalDefaults['bodyFontSize'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Standard</option>
+                <option value="xl">Large</option>
+                <option value="2xl">2XL</option>
+                <option value="3xl">3XL</option>
+              </select>
+              <select
+                value={defaults.bodyFontWeight || 'bold'}
+                onChange={(e) => update({ bodyFontWeight: e.target.value as GlobalDefaults['bodyFontWeight'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="normal">Normal</option>
+                <option value="medium">Medium</option>
+                <option value="semibold">SemiBold</option>
+                <option value="bold">Bold</option>
+                <option value="extrabold">ExtraBold</option>
+              </select>
+              <select
+                value={defaults.questionAlignment || 'left'}
+                onChange={(e) => update({ questionAlignment: e.target.value as GlobalDefaults['questionAlignment'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="left">Left Align</option>
+                <option value="center">Center Align</option>
+                <option value="right">Right Align</option>
+              </select>
             </div>
+          </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-between font-bold">
-                <span className={isAppLight ? 'text-slate-700' : 'text-slate-300'}>Overlay Darkness</span>
-                <span className="font-mono text-amber-400">{Math.round((defaults.bgOverlayDarkness ?? 0.4) * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="0.9"
-                step="0.05"
-                value={defaults.bgOverlayDarkness ?? 0.4}
-                onChange={(e) => update({ bgOverlayDarkness: parseFloat(e.target.value) })}
-                className="w-full accent-amber-400 cursor-pointer"
-              />
+          {/* Options Font, Size, Weight, Layout, Alignment */}
+          <div className={`p-4 rounded-xl border space-y-2 ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
+            <span className={`text-sm font-bold block uppercase tracking-wider ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>MCQ Options (A, B, C, D)</span>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={defaults.optionsFont || defaults.fontFamily}
+                onChange={(e) => update({ optionsFont: e.target.value })}
+                className={`w-full border rounded-lg px-3 py-2 ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                {FONT_PRESETS.map((f) => <option key={f.id} value={f.family}>{f.name}</option>)}
+              </select>
+              <select
+                value={defaults.optionsFontSize || 'md'}
+                onChange={(e) => update({ optionsFontSize: e.target.value as GlobalDefaults['optionsFontSize'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="xs">Small</option>
+                <option value="sm">Medium</option>
+                <option value="md">Standard</option>
+                <option value="lg">Large</option>
+                <option value="xl">XL</option>
+                <option value="2xl">2XL</option>
+              </select>
+              <select
+                value={defaults.optionsFontWeight || 'bold'}
+                onChange={(e) => update({ optionsFontWeight: e.target.value as GlobalDefaults['optionsFontWeight'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="normal">Normal</option>
+                <option value="medium">Medium</option>
+                <option value="semibold">SemiBold</option>
+                <option value="bold">Bold</option>
+                <option value="extrabold">ExtraBold</option>
+              </select>
+              <select
+                value={defaults.optionsLayout || '2col'}
+                onChange={(e) => update({ optionsLayout: e.target.value as GlobalDefaults['optionsLayout'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="1col">1-Column Stack</option>
+                <option value="2col">2-Column Grid</option>
+                <option value="4col">4-Column Row</option>
+              </select>
+              <select
+                value={defaults.optionsAlignment || 'left'}
+                onChange={(e) => update({ optionsAlignment: e.target.value as GlobalDefaults['optionsAlignment'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold col-span-2 ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="left">Left Align</option>
+                <option value="center">Center Align</option>
+                <option value="right">Right Align</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Footer Font & Size */}
+          <div className={`p-4 rounded-xl border space-y-2 ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
+            <span className={`text-sm font-bold block ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Footer Tag Font</span>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={defaults.footerFont || defaults.fontFamily}
+                onChange={(e) => update({ footerFont: e.target.value })}
+                className={`w-full border rounded-lg px-3 py-2 ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                {FONT_PRESETS.map((f) => <option key={f.id} value={f.family}>{f.name}</option>)}
+              </select>
+              <select
+                value={defaults.footerFontSize || 'sm'}
+                onChange={(e) => update({ footerFontSize: e.target.value as GlobalDefaults['footerFontSize'] })}
+                className={`w-full border rounded-lg px-3 py-2 font-mono font-bold ${isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'}`}
+              >
+                <option value="xs">Small (XS)</option>
+                <option value="sm">Medium (SM)</option>
+                <option value="md">Standard (MD)</option>
+              </select>
             </div>
           </div>
         </div>
       </div>
 
-      {/* SECTION 3: DEFAULT TYPOGRAPHY & THEME */}
+      {/* SECTION 5: CHANNEL FOOTER TAG & INSTRUCTOR WATERMARK */}
+      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
+        isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
+      }`}>
+        <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+          <User className="w-4 h-4" /> 5. Channel Footer Tag & Instructor Watermark
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs sm:text-sm">
+          <div className="space-y-1.5">
+            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              Default Footer Tag
+            </label>
+            <input
+              type="text"
+              value={defaults.footerTag}
+              onChange={(e) => update({ footerTag: e.target.value })}
+              placeholder="e.g. BIOMISSION"
+              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+              }`}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              Default Instructor Handle / Channel
+            </label>
+            <input
+              type="text"
+              value={defaults.watermarkHandle}
+              onChange={(e) => update({ watermarkHandle: e.target.value })}
+              placeholder="e.g. Hasnat Shuvro"
+              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+              }`}
+            />
+          </div>
+
+          <div className="sm:col-span-2 space-y-1.5">
+            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              Default Instructor Avatar URL / Data URL
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={defaults.watermarkAvatar}
+                onChange={(e) => update({ watermarkAvatar: e.target.value })}
+                placeholder="https://example.com/avatar.png"
+                className={`w-full border-2 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
+                  isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+                }`}
+              />
+              <label className="px-4 py-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-sm font-bold cursor-pointer shrink-0 flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Upload
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const r = new FileReader();
+                      r.onload = (evt) => evt.target?.result && update({ watermarkAvatar: evt.target.result as string });
+                      r.readAsDataURL(e.target.files[0]);
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 6: DEFAULT ANSWER REVEAL BEHAVIOR */}
+      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
+        isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
+      }`}>
+        <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+          <Eye className="w-4 h-4" /> 6. Default Answer Reveal Behavior
+        </h3>
+
+        <div className="space-y-2">
+          <label className={`text-xs font-bold block uppercase tracking-wider ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+            Default Answer Display Mode
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {([
+              { id: 'hidden', label: 'Hidden', desc: 'Question only, no answer shown' },
+              { id: 'highlight', label: 'Highlight In-Place', desc: 'Correct option highlighted on the same slide' },
+              { id: 'separate_slide', label: 'Separate Answer Slide', desc: 'Extra slide right after each question' },
+            ] as const).map((opt) => {
+              const isSelected = (defaults.answerMode || 'hidden') === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => update({ answerMode: opt.id, showAnswerInSlide: opt.id === 'highlight' })}
+                  className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-1 ${
+                    isSelected
+                      ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg shadow-amber-500/10 ring-1 ring-amber-400/50'
+                      : isAppLight
+                      ? 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+                      : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-bold ${isSelected ? 'text-amber-300' : isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>{opt.label}</span>
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />}
+                  </div>
+                  <p className={`text-xs ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>{opt.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <label className={`flex items-center gap-2 cursor-pointer text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
+          <input
+            type="checkbox"
+            checked={!!defaults.showExplanationInSlide}
+            onChange={(e) => update({ showExplanationInSlide: e.target.checked })}
+            className="w-4 h-4 accent-amber-500 rounded"
+          />
+          Show explanation box by default
+        </label>
+      </div>
+
+      {/* SECTION 7: DEFAULT FONT FAMILY & DECK NAMING */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Default Font Family */}
         <div className={`p-6 rounded-3xl border space-y-3 ${
