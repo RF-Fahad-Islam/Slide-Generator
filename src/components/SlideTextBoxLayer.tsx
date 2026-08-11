@@ -12,6 +12,7 @@ import {
   computeTemplateCardMetrics,
   splitRomanLabel,
 } from '../utils/templateBoxLayout';
+import { hasAnswerDisplayStyle } from '../utils/answerSlides';
 import { MathText } from './MathText';
 import { Check } from 'lucide-react';
 
@@ -40,8 +41,6 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
 }) => {
   if (boxes.length === 0) return null;
 
-  // Mirror SlideCanvas: highlight/accent colors come from the effective template
-  // (deck template + customTheme override), not hardcoded classes.
   const template = getTemplateById(config.templateId, config.customTheme);
   const isLight = template.themeType === 'light';
   const hex = template.styles.hexColors;
@@ -50,14 +49,12 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const romanBadgeBg = isHexAccent ? `${accent}26` : 'rgba(255,255,255,0.14)';
   const romanBadgeBorder = isHexAccent ? `${accent}55` : 'rgba(255,255,255,0.28)';
 
-  // Adaptive template-card layout: when the deck uses the preset template
-  // card, its geometry adapts to the current question's content instead of
-  // the fixed 280px card the boxes were generated with — plain MCQs collapse
-  // to a shorter card (options slide up, no dead space), and bohupodi
-  // (roman-statement) MCQs get a card tall enough for stem + statements +
-  // prompt so the prompt line never overlaps the statements box. See
-  // templateBoxLayout.ts for why this can't be baked into the boxes when
-  // they're generated (that step only knows the deck config, not the item).
+  // Granular display feature evaluation
+  const isRevealActive = isAnswerVariant || showAnswerHighlight;
+  const showOptionHighlight = isRevealActive && hasAnswerDisplayStyle(config, 'highlight_option');
+  const showAnswerPill = isRevealActive && hasAnswerDisplayStyle(config, 'answer_pill');
+  const showExplanationCard = hasAnswerDisplayStyle(config, 'explanation_card');
+
   const cardBox = boxes.find(b => b.id.startsWith(TPL_CARD_ID));
   const stemBox = boxes.find(b => b.id.startsWith(TPL_STEM_ID));
   const romanBox = boxes.find(b => b.id.startsWith(TPL_ROMAN_ID));
@@ -68,7 +65,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none">
-      {isAnswerVariant && item.answer && (
+      {showAnswerPill && item.answer && (
         <div
           className={`absolute left-1/2 -translate-x-1/2 top-5 flex items-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl ${
             isLight
@@ -81,12 +78,10 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         </div>
       )}
       {boxes.map(box => {
-        // Skip optional structural boxes that have no content on this slide —
-        // otherwise a deck-wide template box (e.g. roman card) renders as an
-        // empty stray card on plain MCQs.
+        // Skip optional structural boxes that have no content on this slide
         if (box.bind === 'roman' && !(item.romanItems || []).length) return null;
         if (box.bind === 'prompt' && !item.prompt) return null;
-        if (box.bind === 'explanation' && !item.explanation) return null;
+        if (box.bind === 'explanation' && (!item.explanation || !showExplanationCard)) return null;
         if (box.bind === 'source' && getSourceTags(item).length === 0) return null;
 
         // Adaptive-layout overrides for the preset template card/roman/prompt/
@@ -161,8 +156,8 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
             <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={{ ...base, top: boxTop }}>
               <div className={box.shape === 'pill' ? 'flex flex-wrap gap-3' : 'space-y-2.5'}>
                 {item.options.map(opt => {
-                  const isCorrect = showAnswerHighlight && (opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase());
-                  const highlight = showAnswerHighlight && isCorrect;
+                  const isCorrectOption = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
+                  const highlight = showOptionHighlight && isCorrectOption;
                   const containerStyle: React.CSSProperties = highlight
                     ? {
                         backgroundColor: `${hex.optionSelectedBg}38`,

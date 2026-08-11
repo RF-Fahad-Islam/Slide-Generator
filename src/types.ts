@@ -138,6 +138,8 @@ export interface DeckConfig {
   // answer slide after each question slide). Optional: saved decks without it
   // fall back to the legacy showAnswerInSlide boolean.
   answerMode?: 'hidden' | 'highlight' | 'separate_slide';
+  // Granular multi-select display styles for answer reveal/highlight
+  answerDisplayStyles?: ('highlight_option' | 'answer_pill' | 'explanation_card')[];
   showExplanationInSlide: boolean; // Toggle for showing explanation box
   questionNumberFormat: 'bangla' | 'english' | 'q_prefix'; // e.g. ১, 1, Q1
   accentColorCustom?: string;

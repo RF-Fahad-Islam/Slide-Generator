@@ -5,6 +5,33 @@ import { DeckConfig, MCQItem } from '../types';
 // optional explanation). Kept optional on DeckConfig so saved decks without it
 // fall back to the legacy `showAnswerInSlide` boolean (no data migration needed).
 export type AnswerMode = 'hidden' | 'highlight' | 'separate_slide';
+export type AnswerDisplayStyle = 'highlight_option' | 'answer_pill' | 'explanation_card';
+
+export const DEFAULT_ANSWER_DISPLAY_STYLES: AnswerDisplayStyle[] = [
+  'highlight_option',
+  'answer_pill',
+  'explanation_card',
+];
+
+export const getEffectiveAnswerDisplayStyles = (
+  config: Pick<DeckConfig, 'answerDisplayStyles' | 'showExplanationInSlide'>
+): AnswerDisplayStyle[] => {
+  if (config.answerDisplayStyles && Array.isArray(config.answerDisplayStyles)) {
+    return config.answerDisplayStyles;
+  }
+  const styles: AnswerDisplayStyle[] = ['highlight_option', 'answer_pill'];
+  if (config.showExplanationInSlide) {
+    styles.push('explanation_card');
+  }
+  return styles;
+};
+
+export const hasAnswerDisplayStyle = (
+  config: Pick<DeckConfig, 'answerDisplayStyles' | 'showExplanationInSlide'>,
+  style: AnswerDisplayStyle
+): boolean => {
+  return getEffectiveAnswerDisplayStyles(config).includes(style);
+};
 
 export const effectiveAnswerMode = (config: Pick<DeckConfig, 'answerMode' | 'showAnswerInSlide'>): AnswerMode => {
   if (config.answerMode) return config.answerMode;
