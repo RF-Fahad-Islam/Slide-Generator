@@ -14,15 +14,18 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { MCQItem, getSourceTags } from '../types';
+import { SlideRef } from '../utils/answerSlides';
 import { ValidationPanel } from './ValidationPanel';
 import { AddQuestionsBanner } from './AddQuestionsBanner';
-import { Search } from 'lucide-react';
+import { Search, CheckCircle2, Layers } from 'lucide-react';
 import { SortableQuestionCard } from './SortableQuestionCard';
 
 interface DeckManagerProps {
   items: MCQItem[];
+  slides?: SlideRef[];
   onUpdateItems: (items: MCQItem[]) => void;
   onSelectIndex: (index: number) => void;
+  onSelectPhysicalSlide?: (physicalIndex: number) => void;
   selectedIndex: number;
   appTheme?: 'dark' | 'light';
   onEditQuestion?: (item: MCQItem) => void;
@@ -31,8 +34,10 @@ interface DeckManagerProps {
 
 export const DeckManager: React.FC<DeckManagerProps> = ({
   items,
+  slides,
   onUpdateItems,
   onSelectIndex,
+  onSelectPhysicalSlide,
   selectedIndex,
   appTheme = 'dark',
   onEditQuestion,
@@ -138,10 +143,12 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
       <div className={`flex flex-wrap items-center justify-between gap-4 pb-5 border-b ${isAppLight ? 'border-slate-200' : 'border-slate-700/50'}`}>
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            Deck Questions ({items.length})
+            Deck Questions {slides && slides.length > items.length ? `(${slides.length} Slides / ${items.length} Qs)` : `(${items.length})`}
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Reorder, edit stems, toggle answer keys, or transform keying style
+            {slides && slides.length > items.length
+              ? 'Dedicated answer copy slides active — click any question or answer slide to view'
+              : 'Reorder, edit stems, toggle answer keys, or transform keying style'}
           </p>
         </div>
 
@@ -220,21 +227,52 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
               strategy={verticalListSortingStrategy}
             >
               {filteredItems.map((item, idx) => {
-                const isSelected = selectedIndex === idx;
+                const questionSlideRef = slides?.find(s => s.questionIndex === idx && !s.isAnswerSlide);
+                const answerSlideRef = slides?.find(s => s.questionIndex === idx && s.isAnswerSlide);
+
+                const questionPhysicalIdx = questionSlideRef ? questionSlideRef.physicalIndex : idx;
+                const isQuestionSelected = selectedIndex === questionPhysicalIdx;
+                const isAnswerSelected = answerSlideRef ? selectedIndex === answerSlideRef.physicalIndex : false;
 
                 return (
-                  <SortableQuestionCard
-                    key={`${item.id}_${idx}`}
-                    item={item}
-                    index={idx}
-                    isSelected={isSelected}
-                    isAppLight={isAppLight}
-                    disabled={!dragEnabled}
-                    onSelect={() => onSelectIndex(idx)}
-                    onEdit={onEditQuestion ? () => onEditQuestion(item) : undefined}
-                    onDuplicate={() => duplicateItem(item, idx)}
-                    onDelete={() => deleteItem(item.id)}
-                  />
+                  <div key={`${item.id}_${idx}`} className="space-y-2">
+                    <SortableQuestionCard
+                      item={item}
+                      index={idx}
+                      isSelected={isQuestionSelected}
+                      isAppLight={isAppLight}
+                      disabled={!dragEnabled}
+                      onSelect={() => onSelectPhysicalSlide ? onSelectPhysicalSlide(questionPhysicalIdx) : onSelectIndex(idx)}
+                      onEdit={onEditQuestion ? () => onEditQuestion(item) : undefined}
+                      onDuplicate={() => duplicateItem(item, idx)}
+                      onDelete={() => deleteItem(item.id)}
+                    />
+                    {answerSlideRef && (
+                      <div
+                        onClick={() => onSelectPhysicalSlide ? onSelectPhysicalSlide(answerSlideRef.physicalIndex) : null}
+                        className={`ml-5 p-3 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${
+                          isAnswerSelected
+                            ? 'bg-purple-500/25 border-purple-400 ring-2 ring-purple-400/40 text-purple-100 shadow-lg'
+                            : isAppLight
+                            ? 'bg-purple-50/80 border-purple-200 hover:border-purple-300 text-purple-950'
+                            : 'bg-purple-950/40 border-purple-900/60 hover:border-purple-700 text-purple-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 text-xs font-black min-w-0">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="truncate">Slide #{answerSlideRef.physicalIndex + 1}: Answer Copy Slide</span>
+                          {item.answer && (
+                            <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+                              [✓ {item.answer}]
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-purple-500 text-slate-950 shrink-0">
+                          ANSWER SLIDE
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </SortableContext>

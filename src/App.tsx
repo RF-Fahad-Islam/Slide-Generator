@@ -1448,12 +1448,17 @@ export default function App() {
                   ) : (
                     <DeckManager
                       items={items}
+                      slides={expandedSlides}
                       onUpdateItems={setItems}
                       onSelectIndex={(idx) => {
                         setSelectedIndex(questionSlideIndex(expandedSlides, idx));
                         setIsOverviewMode(false);
                       }}
-                      selectedIndex={activeQuestionIndex}
+                      onSelectPhysicalSlide={(physIdx) => {
+                        setSelectedIndex(Math.max(0, Math.min(physIdx, expandedSlides.length - 1)));
+                        setIsOverviewMode(false);
+                      }}
+                      selectedIndex={selectedIndex}
                       appTheme={appTheme}
                       onEditQuestion={(item) => setEditingQuestion(item)}
                       onAddQuestions={() => setIsAddQuestionsOpen(true)}

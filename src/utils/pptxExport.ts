@@ -8,6 +8,7 @@ import { getTemplateById } from '../templates/registry';
 import { getSlideIcon } from './slideElements';
 import { chunkAnswerKeyPages, AnswerKeyPage } from './answerKeySlides';
 import { resolveTheme } from './themeResolver';
+import { expandDeckSlides } from './answerSlides';
 import {
   TPL_CARD_ID,
   TPL_STEM_ID,
@@ -50,8 +51,12 @@ export const exportDeckToPPTX = async (
   const globalTheme = resolveTheme(config);
   const colors = globalTheme.colors;
 
-  // Physical slide list — explicit (question + answer pairs) or one per item.
-  const slideSpecs: PptxSlideSpec[] = slides ?? items.map((item, i) => ({ item, questionIndex: i, isAnswerSlide: false }));
+  // Physical slide list — explicit (question + answer pairs) or expanded from answerMode config.
+  const slideSpecs: PptxSlideSpec[] = slides ?? expandDeckSlides(items, config).map(s => ({
+    item: s.item,
+    questionIndex: s.questionIndex,
+    isAnswerSlide: s.isAnswerSlide,
+  }));
   const totalQuestions = items.length;
   const totalSlides = slideSpecs.length;
 
