@@ -57,7 +57,7 @@ export const defaultTourSteps: TourStep[] = [
   },
   {
     target: '[data-tour="nav-workspaces"]',
-    title: 'Workspaces',
+    title: 'MCQ Import',
     body: 'Paste raw question text, review it, and approve it into a workspace — each workspace keeps its own queue, default tags, and approved history (e.g. one per exam board).',
     navigateTab: 'workspaces',
   },

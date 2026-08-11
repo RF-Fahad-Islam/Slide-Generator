@@ -81,7 +81,7 @@ export const WorkspacesHome: React.FC<WorkspacesHomeProps> = ({ appTheme, onOpen
         <div>
           <h2 className={`text-lg font-extrabold flex items-center gap-2 ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
             <FolderKanban className="w-5 h-5 text-amber-500" />
-            <span>Workspaces</span>
+            <span>MCQ Import Workspaces</span>
             <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 font-bold">
               {workspaces.length}
             </span>
