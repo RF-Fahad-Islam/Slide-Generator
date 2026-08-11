@@ -10,6 +10,8 @@ export type StreamEvent =
   | { type: 'stage1_start'; kind: 'text' | 'vision'; sourceName: string; pageCount: number }
   | { type: 'stage1_raster'; pageNumber: number }
   | { type: 'stage1_page'; pageNumber: number[]; text: string }
+  | { type: 'stage1_client_ocr_page'; pageNumber: number; dataUrl: string }
+  | { type: 'stage1_await_client_ocr'; warnings: string[] }
   | { type: 'stage1_done'; kind: 'text' | 'vision'; text: string; warnings: string[]; totalChars: number }
   | { type: 'chunk_start'; chunkIndex: number; totalChunks: number; approxTokens: number }
   | { type: 'mcqs'; chunkIndex: number; items: MCQItem[]; skipped: number; skipReasons: string[] }
@@ -18,6 +20,7 @@ export type StreamEvent =
   | { type: 'error'; message: string };
 
 export type EmitFn = (event: StreamEvent) => void;
+export type OcrMethod = 'model' | 'browser';
 
 export interface ParseRequest {
   promptText?: string;
@@ -28,10 +31,11 @@ export interface ParseRequest {
   provider: AiProvider;
   keys: ProviderKeys;
   signal?: AbortSignal;
+  ocrMethod?: OcrMethod;
 }
 
 export async function streamStage1(req: ParseRequest, emit: EmitFn): Promise<void> {
-  const { promptText, mimeType, fileBase64, fileName, provider, keys, signal } = req;
+  const { promptText, mimeType, fileBase64, fileName, provider, keys, signal, ocrMethod = 'model' } = req;
   const sourceName = fileName || mimeType?.split('/')[1] || 'pasted text';
 
   if (!promptText?.trim() && !fileBase64) {
@@ -66,7 +70,27 @@ export async function streamStage1(req: ParseRequest, emit: EmitFn): Promise<voi
         }
 
         warnings.push(...doc.warnings);
-        const ocrResults = await ocrPages(provider, keys, pages, signal);
+
+        if (ocrMethod === 'browser') {
+          // No AI call here — hand the rasterized pages back to the client,
+          // which runs Tesseract.js locally and feeds the resulting text
+          // into /api/ai/structure itself. Free rasterization already
+          // happened above via pdf-parse, no key needed for any of this.
+          for (const p of pages) {
+            emit({ type: 'stage1_client_ocr_page', pageNumber: p.pageNumber, dataUrl: p.dataUrl });
+          }
+          emit({ type: 'stage1_await_client_ocr', warnings });
+          return;
+        }
+
+        let ocrResults;
+        try {
+          ocrResults = await ocrPages(provider, keys, pages, signal);
+        } catch (err: any) {
+          if (signal?.aborted) return;
+          emit({ type: 'error', message: `${safeError(err)} Or switch to Browser OCR in Settings (OCR Engine card) — it needs no API key and runs locally.` });
+          return;
+        }
         for (const r of ocrResults) {
           emit({ type: 'stage1_page', pageNumber: r.pageNumbers, text: r.text });
         }
