@@ -170,11 +170,13 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         border: `2px solid ${theme.colors.optionSelectedBorder}`,
                         color: theme.colors.optionSelectedText,
                         boxShadow: '0 10px 25px rgba(245,158,11,0.2)',
+                        fontSize: box.fontSize ? `${box.fontSize}px` : undefined,
                       }
                     : {
                         backgroundColor: box.bg,
                         border: isLight ? '2px solid rgba(226,232,240,0.9)' : '1px solid rgba(255,255,255,0.15)',
                         color: isLight ? '#0f172a' : '#f8fafc',
+                        fontSize: box.fontSize ? `${box.fontSize}px` : undefined,
                       };
                   if (box.shape === 'pill') {
                     return (
@@ -188,7 +190,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         }`}>
                           {opt.key}
                         </span>
-                        <span className="flex-1 min-w-0 text-xl font-bold"><MathText text={opt.text} /></span>
+                        <span className="flex-1 min-w-0 font-bold" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
                         {highlight && (
                           <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
                             <Check className="w-5 h-5 stroke-[3.5]" />
@@ -213,7 +215,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         }`}>
                           {opt.key}
                         </div>
-                        <span className="flex-1 min-w-0 text-xl lg:text-2xl font-extrabold leading-snug"><MathText text={opt.text} /></span>
+                        <span className="flex-1 min-w-0 font-extrabold leading-snug" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
                         {highlight && (
                           <div className="w-10 h-10 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-lg animate-pulse">
                             <Check className="w-6 h-6 stroke-[3.5]" />
@@ -223,9 +225,9 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     );
                   }
                   return (
-                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: theme.colors.optionSelectedText } : undefined}>
+                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: theme.colors.optionSelectedText, fontSize: box.fontSize ? `${box.fontSize}px` : undefined } : { fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}>
                       <span className="font-black shrink-0">{opt.key}.</span>
-                      <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
+                      <span className="flex-1 min-w-0" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
                       {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
                     </div>
                   );
