@@ -44,6 +44,8 @@ import {
   ChevronDown,
   Type,
   Image as ImageIcon,
+  Quote,
+  HelpCircle,
 } from 'lucide-react';
 
 const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
