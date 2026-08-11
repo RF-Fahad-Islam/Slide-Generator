@@ -13,7 +13,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Check } from 'lucide-react';
 import { DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
 import { SLIDE_BOX_BINDS, SLIDE_BOX_COLOR_PRESETS } from '../utils/slideTextBoxes';
 import { FONT_PRESETS } from '../utils/fontPresets';
@@ -23,6 +23,7 @@ import {
   SLIDE_LAYOUTS,
   SLIDE_SHAPE_OPTIONS,
 } from '../utils/slideElements';
+import { LayoutPreviewMockup } from './LayoutPreviewMockup';
 import {
   Layers,
   Palette,
@@ -297,6 +298,115 @@ const ElementMockupPreview: React.FC<{ elId: string; isAppLight: boolean }> = ({
       );
     default:
       return null;
+  }
+};
+
+const BindMockupPreview: React.FC<{ bind: SlideTextBoxBind; isAppLight: boolean }> = ({ bind, isAppLight }) => {
+  switch (bind) {
+    case 'stem':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-900 border border-amber-500/30 p-1.5 flex flex-col justify-center space-y-1 overflow-hidden shadow-inner">
+          <div className="w-3/4 h-1.5 rounded bg-white font-black" />
+          <div className="w-1/2 h-1 rounded bg-slate-400" />
+        </div>
+      );
+    case 'options':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-900 border border-slate-700 p-1 grid grid-cols-2 gap-1 overflow-hidden shadow-inner">
+          <div className="rounded bg-amber-500/20 border border-amber-400/40 p-0.5 flex items-center gap-1"><div className="w-2.5 h-2.5 rounded bg-amber-400 text-[6px] font-black text-slate-950 flex items-center justify-center">ক</div><div className="h-0.5 flex-1 bg-amber-200/60 rounded" /></div>
+          <div className="rounded bg-white/10 p-0.5 flex items-center gap-1"><div className="w-2.5 h-2.5 rounded bg-white/20 text-[6px] font-black text-white flex items-center justify-center">খ</div><div className="h-0.5 flex-1 bg-white/40 rounded" /></div>
+        </div>
+      );
+    case 'answer':
+      return (
+        <div className="w-full h-10 rounded-lg bg-emerald-950/80 border border-emerald-500/50 p-1.5 flex items-center justify-center gap-1 text-[9px] font-black text-emerald-300 shadow-inner">
+          <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />
+          <span>উত্তর: ক</span>
+        </div>
+      );
+    case 'explanation':
+      return (
+        <div className="w-full h-10 rounded-lg bg-emerald-950/90 border border-emerald-500/40 p-1.5 flex items-center gap-1 overflow-hidden shadow-inner">
+          <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
+          <span className="text-[8px] font-extrabold text-emerald-200 truncate">EXPLANATION: ব্যাখ্যা...</span>
+        </div>
+      );
+    case 'passage':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-900 border border-sky-500/40 p-1.5 flex flex-col justify-center space-y-1 overflow-hidden shadow-inner">
+          <div className="w-full h-1 bg-sky-300/80 rounded" />
+          <div className="w-4/5 h-1 bg-slate-400/60 rounded" />
+        </div>
+      );
+    case 'prompt':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-950 border border-amber-400/40 p-1.5 flex items-center justify-center text-[9px] font-black text-amber-300 shadow-inner">
+          নিচের কোনটি সঠিক?
+        </div>
+      );
+    case 'roman':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-950 border border-slate-800 p-1 flex items-center gap-1 overflow-hidden shadow-inner">
+          <span className="px-1 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[7px] font-black">i</span>
+          <div className="h-1 flex-1 bg-slate-300 rounded" />
+        </div>
+      );
+    case 'source':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-900 border border-amber-500/30 p-1.5 flex items-center justify-end text-[8px] font-black text-amber-400 shadow-inner">
+          চট্টগ্রাম বোর্ড ২০১৭
+        </div>
+      );
+    case 'questionNumber':
+      return (
+        <div className="w-full h-10 rounded-lg bg-amber-400 text-slate-950 p-1 flex items-center justify-center gap-1 font-black text-[10px] shadow-inner">
+          <span>১</span><span>প্রশ্ন</span>
+        </div>
+      );
+    case 'brand':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-950 border border-amber-500/30 p-1.5 flex items-center text-[9px] font-black text-amber-400 shadow-inner">
+          NOBEL'S CLASSROOM
+        </div>
+      );
+    case 'headerTitle':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-950 border border-slate-800 p-1.5 flex items-center text-[9px] font-bold text-white shadow-inner">
+          অধ্যায় ৮ঃ রেচন প্রক্রিয়া
+        </div>
+      );
+    case 'badgeTag':
+      return (
+        <div className="w-full h-10 rounded-lg bg-amber-500/15 border border-amber-400/40 p-1 flex items-center justify-center text-[8px] font-black text-amber-300 rounded-full shadow-inner">
+          biology badge
+        </div>
+      );
+    case 'footerTag':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-950 border border-amber-500/20 p-1.5 flex items-center justify-end text-[8px] font-black text-amber-400 shadow-inner">
+          BIOMISSION
+        </div>
+      );
+    case 'watermark':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-950 border border-amber-400/30 p-1 flex items-center gap-1.5 shadow-inner">
+          <div className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-[7px]">HS</div>
+          <span className="text-[8px] font-bold text-white truncate">Hasnat Shuvro</span>
+        </div>
+      );
+    case 'slideCounter':
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-950 border border-slate-800 p-1 flex items-center justify-center font-mono text-[9px] font-black text-amber-300 shadow-inner">
+          ১ / ১
+        </div>
+      );
+    case 'free':
+    default:
+      return (
+        <div className="w-full h-10 rounded-lg bg-slate-900 border border-slate-700 p-1.5 flex items-center text-[9px] font-semibold text-slate-300 shadow-inner">
+          Custom Written Text...
+        </div>
+      );
   }
 };
 
@@ -879,7 +989,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
             <span className={`text-sm font-extrabold block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
               Add Text Box (auto-fills from the current slide)
             </span>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               {SLIDE_BOX_BINDS.map(btn => {
                 const Icon = BIND_ICONS[btn.bind];
                 return (
@@ -887,14 +997,19 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                     key={btn.bind}
                     type="button"
                     onClick={() => onAddBox(btn.bind)}
-                    className={`px-3 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer hover:scale-[1.02] flex items-center gap-1.5 ${
+                    className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer hover:scale-[1.02] flex flex-col gap-2 group ${
                       isAppLight
-                        ? 'bg-white border-slate-300 text-amber-700 hover:bg-amber-50 hover:border-amber-300'
-                        : 'bg-slate-900 border-slate-700 text-amber-300 hover:border-amber-500/40'
+                        ? 'bg-white border-slate-300 hover:border-amber-400 hover:bg-amber-50/50'
+                        : 'bg-slate-900 border-slate-700 hover:border-amber-500/50'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
-                    {btn.label}
+                    <BindMockupPreview bind={btn.bind} isAppLight={isAppLight} />
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className={`p-1 rounded-md shrink-0 ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                      <span className={`text-xs font-black truncate ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>{btn.label}</span>
+                    </div>
                   </button>
                 );
               })}
@@ -1034,32 +1149,35 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
               <LayoutTemplate className="w-4 h-4 text-amber-500" />
               Quick Layouts
             </span>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-3">
               {SLIDE_LAYOUTS.map(layout => (
                 <button
                   key={layout.id}
                   type="button"
                   onClick={() => onAddLayout(layout.id)}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer hover:scale-[1.02] group flex items-center gap-3 ${
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer hover:scale-[1.02] group flex flex-col gap-2.5 ${
                     isAppLight
-                      ? 'bg-white border-slate-300 hover:border-amber-300 hover:bg-amber-50/60'
+                      ? 'bg-white border-slate-300 hover:border-amber-400 hover:bg-amber-50/60'
                       : 'bg-slate-900 border-slate-700 hover:border-amber-500/40'
                   }`}
                 >
-                  <div className={`p-2 rounded-lg shrink-0 ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>
-                    <SquareStack className="w-4 h-4" />
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`p-1.5 rounded-lg shrink-0 ${isAppLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400'}`}>
+                        <SquareStack className="w-3.5 h-3.5" />
+                      </div>
+                      <span className={`text-xs font-black ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>{layout.name}</span>
+                    </div>
+                    <Plus className={`w-4 h-4 shrink-0 ${isAppLight ? 'text-amber-600' : 'text-amber-500'} group-hover:rotate-90 transition-transform`} />
                   </div>
-                  <div className="flex-1">
-                    <span className={`block text-xs font-extrabold ${isAppLight ? 'text-slate-800' : 'text-slate-100'}`}>{layout.name}</span>
-                    <span className={`block text-[10px] font-semibold leading-tight mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>{layout.desc}</span>
-                  </div>
-                  <Plus className={`w-4 h-4 shrink-0 ${isAppLight ? 'text-amber-600' : 'text-amber-500'} group-hover:rotate-90 transition-transform`} />
+
+                  {/* Visual Layout Mockup Preview */}
+                  <LayoutPreviewMockup layoutId={layout.id} isLight={isAppLight} />
+
+                  <span className={`text-[10px] font-semibold leading-tight ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>{layout.desc}</span>
                 </button>
               ))}
             </div>
-            <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-              Applying a layout replaces the {textBoxScope === 'slide' ? 'active slide\'s' : 'deck-wide'} text boxes with a complete pre-designed set.
-            </p>
           </div>
         )}
       </div>
