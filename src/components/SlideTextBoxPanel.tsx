@@ -46,6 +46,9 @@ import {
   Image as ImageIcon,
   Quote,
   HelpCircle,
+  Sparkles,
+  Star,
+  Zap,
 } from 'lucide-react';
 
 const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
