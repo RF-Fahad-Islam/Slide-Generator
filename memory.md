@@ -1,60 +1,47 @@
-# Memory — KaTeX & Chemistry Auto-Formatter + Option Card Layout + Classroom Stylus Removal + Dynamic Badge Tag + Theme Inheritance & Self-Hosted Font Bundling
+# Memory — Manual Editor: Guided 2-Step Paste → Review Flow + Mid-Review Navigation Fix
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 ## What was built
 
-All committed on `main`. Latest HEAD = `f6830dd`. Working tree clean.
+All committed on `main`. Latest HEAD = `8ed9791`. Working tree clean.
 
-1. **LaTeX & Chemistry Auto-Formatter (`src/utils/latexFormatter.ts`)**
-   - Auto-detects chemical formulas (`H2SO4`, `Na2SO4`, `2NaOH(aq)`, `2H2O(l)`), scientific units (`kJ mol-1`), and un-enclosed LaTeX macros (`\lim`, `\int`, `\frac`, `\sqrt`, `\rightleftharpoons`, `⇌`).
-   - Normalizes matrix/determinant shortcuts (`\vert{}\begin{matrix}` → `\begin{vmatrix}`).
-   - Updated `MathText.tsx` regex to `(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g` to support multiline matrices/determinants.
+1. **Guided stepper header (`src/components/ManualEditor.tsx`)**
+   - Replaced the flat 3-pill tab switcher (`1. Raw Text` / `2. Question Reviewer` / `3. Form Question Creator`) with a numbered 2-step flow: **① Paste & Parse → ② Review & Add to Deck**, connected by a line. Step 1's number badge turns into a green checkmark once something has been parsed/queued.
+   - `activeSubTab` state itself is unchanged (`'bulk' | 'review' | 'single'`) — only the header UI changed.
+   - The single-question form (`'single'`) is no longer a numbered peer step. It's now a dashed secondary pill **"+ Add one manually"** off to the side (still opens the identical form; "Editing" badge preserved when editing).
+   - Parse button relabeled `Step 2: Send N MCQs to Review →`.
+   - Review Queue empty state got a dashed-border card + amber **"← Back to Step 1: Paste & Parse"** CTA (was previously a dead-end message with no way back).
 
-2. **KaTeX CSS & Single HTML Output (`src/index.css`, `MathText.tsx`)**
-   - Added `@import "katex/dist/katex.min.css";` to `src/index.css` for proper visual rendering of math fonts, fraction bars, square roots, and matrix brackets.
-   - Set `output: 'html'` in `katex.renderToString()`, eliminating un-styled raw text and duplicate MathML text strings.
+2. **Fixed a real navigation bug in `approveQueueItem`**
+   - Previously: clicking "Approve" on a single card in the review queue always called `onAddMCQs`, which in `App.tsx`'s `handleAddMCQs` unconditionally does `setActiveTab('preview')` — so approving ONE item while others were still pending instantly navigated the whole app away to Slide Studio, ejecting the user mid-review.
+   - Fix: only the LAST remaining queue item now behaves like "Approve All" (calls `onAddMCQs`, navigates — the deliberate "I'm done, show me the deck" moment). Every earlier approval now calls `onUpdateItems([...items, itemToApprove])` (append to the active deck without navigating) and shows a new 2.2s inline emerald toast (`queueToast` state) confirming the add + remaining count.
+   - `approveAllQueue` and `commitStagedToDeck` (staged single-form batch commit) were deliberately left unchanged — their navigate-to-preview behavior is correct/intentional there.
 
-3. **Option Box Layout Geometry (`src/utils/slideElements.ts`, `SlideTextBoxLayer.tsx`)**
-   - Widened `cl_options` from 560px to 630px (`x: 1210`, `w: 630`) and set font size to 26px in `classroomTextBoxes()`.
-   - Updated option text wrappers in `SlideTextBoxLayer.tsx` to use `flex-1 min-w-0` and `flex items-center` for single-line option fitting.
+3. **Docs updated per CLAUDE.md mandate**
+   - `context/progress-tracker.md` — new entry under "## UI Polish" dated 2026-08-11.
+   - `context/ui-registry.md` — `ManualEditor` registered-component entry extended with the stepper pattern + the approve-flow fix.
 
-4. **Classroom View Mode Stylus Removal (`SlideCanvas.tsx`, `slideElements.ts`)**
-   - Removed the dashed `✏️ Live Teacher Writing / Stylus Space` container from Classroom Mode layout and preset text boxes (`classroomTextBoxes()`).
-   - Added `item.prompt` rendering (e.g., "নিচের কোনটি সঠিক?") inside the left question stem card in Classroom Mode.
+## Decisions made
 
-5. **Auto Class | Subject Badge Tag (`src/types.ts`, `slideTextBoxes.ts`, `SlideCanvas.tsx`, `ClassicQuizCard.tsx`)**
-   - Updated `getEffectiveBadgeTag(config, item)` in `src/types.ts` to accept the active MCQ item.
-   - When item-level tags exist (`item.tags.className` and/or `item.tags.subject`), it auto-composes `Class | Subject` (e.g. `SSC | Biology` or `৯ম-১০ম শ্রেণি | জীববিজ্ঞান`).
-   - Appends ` | Chapter Name` when `config.chapterName` is set; falls back to `config.badgeTag` when item tags are absent.
+- Chose a **guided stepper** (not a "keep 3 tabs, polish only" option) after asking the user directly — this was a scope-defining decision confirmed via AskUserQuestion before implementation, since it's the higher-effort/higher-impact of two real options.
+- Kept the terminal "approve all → navigate to deck" behavior intact rather than removing all auto-navigation — it's a pre-existing, deliberate pattern also used by `AIUploader` and the staged-batch commit flow elsewhere in the app; only the *mid-batch* single-approve case was actually broken.
+- Did not touch the Single Question Form's internals, the Bulk Cards mode editor, or the Batch Tags editor — out of scope for this pass; only the top-level flow structure and the approve-navigation bug.
 
-6. **Theme Inheritance Bug Fix (`DeckSettings.tsx`, `App.tsx`)**
-   - Fixed scope-aware theme settings so changing template presets or custom colors in `DeckSettings.tsx` updates `config` globally when `settingsScope === 'global'`.
-   - `App.handleApplyDeckConfig` clears stale per-slide `customConfig` theme overrides (`templateId`, `customTheme`, `accentColorCustom`) while dynamically re-generating `slideTextBoxes` via `templateToTextBoxes(updated)` so text box colors update everywhere.
+## Problems solved
 
-7. **Self-Hosted Bengali & UI Font Bundling (`public/fonts/`, `src/fonts.css`, `src/index.css`)**
-   - Downloaded 13 `.woff2`/`.ttf` font files into `public/fonts/` (Kalpurush, Hind Siliguri, Noto Sans Bengali, Anek Bangla, Tiro Bangla, Atma, Mina, Plus Jakarta Sans, Poppins, Playfair Display).
-   - Added `@font-face` definitions in `src/fonts.css` and imported via `@import "./fonts.css";` in `src/index.css`.
-   - Ensures HTML-to-Image canvas rasterization and PDF/PPTX exports are 100% CORS-free, instant, and offline-capable.
+- The mid-review navigation-jump bug (see #2 above) — was not previously logged as a known issue in `progress-tracker.md`; discovered during this session's flow audit of `App.tsx`'s `handleAddMCQs`.
 
-8. **Enlarged Slide Preview, Large Review Modal, Layout Library & 2x2 Enterprise EdTech Layout (`App.tsx`, `SlidePreviewModal.tsx`, `LayoutLibraryModal.tsx`, `slideElements.ts`)**
-   - Removed outer padded card wrapper around the Slide Studio slide canvas preview, maximizing visible preview width (`xl:col-span-8`).
-   - Created `SlidePreviewModal.tsx` ("Large Review" button & canvas overlay button) to review high-definition slides in a full-screen modal with keyboard arrow/esc navigation.
-   - Created `LayoutLibraryModal.tsx` ("Layouts" toolbar button) for browsing and selecting slide layout presets.
-   - Added Enterprise EdTech 2x2 Split Grid layout (`enterprise_2col_grid`) as default layout matching the reference design (2x2 option cards, question badge, stem card, prompt line, explanation callout, branding footer).
+## Current state
 
-9. **Expandable Answer Mode Modal & Multi-Select Display Features (`AnswerModeModal.tsx`, `answerSlides.ts`, `SlideCanvas.tsx`, `SlideTextBoxLayer.tsx`, `App.tsx`)**
-   - Created `AnswerModeModal.tsx` opened from the toolbar Answer Mode button group or quick reveal eye toggle.
-   - Added `answerDisplayStyles` array (`('highlight_option' | 'answer_pill' | 'explanation_card')[]`) to `DeckConfig` allowing users to multi-select any combination of Option Card Coloring, Answer Badge Pill (`[✓] উত্তর: গ`), and Explanation Box.
-   - Added "Include Dedicated Answer Slides in Active Deck" toggle (`separate_slide` mode), dynamically doubling physical slide count (`3 Qs → 6 Slides`).
-   - Added Deck-Wide vs Active Slide Only scope switch in the modal.
+- On `main`, latest local HEAD = `8ed9791`, local `main` is ahead of `origin/main` (6 commits before this session's push, see below).
+- `npx tsc --noEmit` clean. Manually verified in-browser (Chrome via the Browser pane): light + dark theme, multi-item approve stays in queue + shows toast, last-item approve navigates to Slide Studio like Approve All did, empty-state back button, "Add one manually" secondary path — all working.
+- No known regressions; `AIUploader`, CSV import, staged single-form batch flow, and Bulk Cards mode were not modified and were not re-tested this session (unchanged code paths).
 
----
+## Next session starts with
 
-## Current State
+- Nothing queued. If further Manual Editor polish is wanted: the "Live Parse Preview" wide strip (Raw Text mode only) is now somewhat redundant with Cards mode and could be simplified or removed in a future pass — noted but deliberately left alone this session to keep the change surgical.
 
-- On `main`, latest HEAD = `8da7595`.
-- `npx tsc --noEmit` and `npm run build` are 100% clean (0 errors).
-- Working tree clean.
+## Open questions
 
-
+- None blocking. `/grill-me` was requested by the user at the start of this session but does not exist as an available skill or a project-defined skill under `.agents/skills/` — flagged to the user, not resolved (may need to be created if they actually want it).
