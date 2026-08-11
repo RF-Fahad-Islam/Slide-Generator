@@ -44,7 +44,7 @@ interface SlideDecksHomeProps {
   onOpenDeck: (items: MCQItem[], deckTitle?: string) => void;
   onOpenDeckSettings: (items: MCQItem[], config?: DeckConfig) => void;
   onOpenSocialGenerator: (items: MCQItem[]) => void;
-  onNavigateTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => void;
+  onNavigateTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys') => void;
   onSelectTheme?: (selection: ThemeSelection) => void;
   onResetSlideTheme?: () => void;
   onLoadSample?: (sampleIndex: number) => void;
@@ -224,7 +224,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
           {/* Primary + secondary CTAs */}
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button
-              onClick={() => onNavigateTab('manual')}
+              onClick={() => onNavigateTab('workspaces')}
               className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer transition-all hover:-translate-y-0.5"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -468,7 +468,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
 
           {/* Tool 4: Bulk MCQ Input & Editor */}
           <div
-            onClick={() => onNavigateTab('manual')}
+            onClick={() => onNavigateTab('workspaces')}
             className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} p-6 border transition-all cursor-pointer flex flex-col justify-between space-y-6 group lg:col-span-2 ${
               isAppLight
                 ? 'hover:border-amber-400'
@@ -742,7 +742,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onNavigateTab('manual')}
+              onClick={() => onNavigateTab('workspaces')}
               className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 shadow cursor-pointer transition-all"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />

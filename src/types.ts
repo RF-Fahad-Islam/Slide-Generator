@@ -113,6 +113,24 @@ export interface SavedDeck {
   updatedAt: number;
 }
 
+/**
+ * A named container for the paste -> review -> approve flow (e.g. "SSC Questions").
+ * Each workspace owns its own review queue and permanent approved history, and
+ * mirrors approved items into `linkedDeckId` so they're also usable as a normal
+ * SavedDeck in the Question Bank.
+ */
+export interface Workspace {
+  id: string;
+  name: string;
+  description?: string;
+  defaultTags?: MCQTags; // Opt-in per paste batch — never applied automatically
+  linkedDeckId: string; // SavedDeck.id in questionDecks, auto-created with the workspace
+  reviewQueue: MCQItem[]; // Pasted/parsed, not yet approved
+  approvedItems: MCQItem[]; // Permanent history, editable in place
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type AspectRatio = '16:9' | '4:5' | '9:16';
 
 export interface DeckConfig {

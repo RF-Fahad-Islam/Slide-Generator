@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MCQItem, QuestionType, getSourceTags } from '../types';
+import { MCQItem, MCQTags, QuestionType, getSourceTags } from '../types';
 import { parseBulkTextToMCQs, parseBulkTextToBlocks, serializeMCQToBlockText } from '../utils/bulkParser';
 import { parseCSVToMCQs, generateSampleCSV } from '../utils/csvParser';
 import { MathText } from './MathText';
@@ -7,6 +7,7 @@ import { SourceTagsInput } from './SourceTagsInput';
 import { TagChipSelect } from './TagChipSelect';
 import { useTagMemory } from '../hooks/useTagMemory';
 import { applyBatchTags } from '../utils/tagMemory';
+import { EditableMCQCard } from './workspaces/EditableMCQCard';
 import {
   Plus,
   Sparkles,
@@ -36,16 +37,18 @@ import {
 } from 'lucide-react';
 
 interface ManualEditorProps {
-  onAddMCQs: (items: MCQItem[]) => void;
-  onClearAll: () => void;
   appTheme?: 'dark' | 'light';
-  items?: MCQItem[]; // Active presentation deck
-  onUpdateItems?: (items: MCQItem[]) => void;
-  reviewItems?: MCQItem[]; // Incoming MCQs waiting for review
-  onClearReviewItems?: () => void;
+  // Workspace-scoped review queue — this workspace's own paste/review state,
+  // not a global "Active Deck". Persisted by the caller (WorkspaceEditor) into
+  // the workspace's Dexie row.
+  reviewQueue: MCQItem[];
+  onReviewQueueChange: (next: MCQItem[]) => void;
+  onApproveSelected: (items: MCQItem[]) => Promise<void>;
+  defaultTags?: MCQTags;
+  applyWorkspaceDefaultTags: boolean;
+  onToggleApplyWorkspaceDefaultTags: () => void;
   prefillEditItem?: MCQItem | null; // Question to open in the form (from the deck-list edit modal)
   onPrefillConsumed?: () => void;
-  onImportToQuestionBank?: (items: MCQItem[]) => Promise<boolean>;
 }
 
 // Copy-ready prompt for any external AI (ChatGPT / Gemini / Claude etc.). The user
@@ -126,8 +129,6 @@ const DRAFT_STORAGE_KEY = 'mcqgen.manualEditor.draft';
 interface ManualEditorDraft {
   bulkText: string;
   bulkViewMode: 'raw' | 'cards';
-  unapprovedQueue: MCQItem[];
-  resolvedIds: string[];
   batchSourceTags: string[];
   batchSubject: string;
   batchClass: string;
@@ -153,23 +154,24 @@ function saveDraft(draft: ManualEditorDraft): void {
 }
 
 export const ManualEditor: React.FC<ManualEditorProps> = ({
-  onAddMCQs,
-  onClearAll,
   appTheme = 'dark',
-  items = [],
-  onUpdateItems,
-  reviewItems = [],
-  onClearReviewItems,
+  reviewQueue,
+  onReviewQueueChange,
+  onApproveSelected,
+  defaultTags,
+  applyWorkspaceDefaultTags,
+  onToggleApplyWorkspaceDefaultTags,
   prefillEditItem = null,
   onPrefillConsumed,
-  onImportToQuestionBank,
 }) => {
   const isAppLight = appTheme === 'light';
   const [activeSubTab, setActiveSubTab] = useState<'review' | 'bulk' | 'single'>('bulk');
 
   // Read the auto-saved draft exactly once per mount — every field below falls
   // back to it before its own hardcoded default, so a tab switch (which
-  // unmounts this component) never silently drops in-progress work.
+  // unmounts this component) never silently drops in-progress work. The
+  // review queue itself is NOT part of this draft anymore — it's owned by the
+  // workspace (Dexie), passed in via the reviewQueue prop.
   const [draft] = useState<Partial<ManualEditorDraft>>(() => loadDraft());
 
   // Shared input style for the in-place review-queue editor
@@ -177,40 +179,32 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
   }`;
 
-  // Internal Unapproved Review Queue
-  const [unapprovedQueue, setUnapprovedQueue] = useState<MCQItem[]>(
-    reviewItems.length > 0 ? reviewItems : draft.unapprovedQueue || []
-  );
+  // Internal Unapproved Review Queue — seeded once from the workspace's own
+  // persisted queue; every change is written straight back via onReviewQueueChange
+  // so it survives a workspace switch (this component remounts per workspace).
+  const [unapprovedQueue, setUnapprovedQueue] = useState<MCQItem[]>(reviewQueue);
 
-  // Ids of queue items already sent to the Active Deck / Question Bank. Kept
-  // separate from unapprovedQueue itself so approving a card never removes it
-  // from view — it just gets a "Added" badge instead of Edit/Approve/Remove.
-  const [resolvedIds, setResolvedIds] = useState<string[]>(draft.resolvedIds || []);
-
-  // In-place editing of a review-queue card (no tab switch to the full form).
-  const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
-  const [queueEditDraft, setQueueEditDraft] = useState<MCQItem | null>(null);
-
-  // Brief inline confirmation shown after approving one item mid-queue (we stay
-  // put instead of navigating away, so this closes the feedback loop).
-  const [queueToast, setQueueToast] = useState<string | null>(null);
-
-  // Sync when reviewItems prop updates (e.g. AI Parser hands off a fresh batch).
-  // Merge instead of overwrite so it never clobbers cards already sitting in the
-  // queue, then clear the prop immediately so a later remount doesn't re-merge
-  // the same batch again.
   useEffect(() => {
-    if (reviewItems && reviewItems.length > 0) {
-      setUnapprovedQueue((prev) => {
-        const existingIds = new Set(prev.map((q) => q.id));
-        const incoming = reviewItems.filter((q) => !existingIds.has(q.id));
-        return incoming.length > 0 ? [...prev, ...incoming] : prev;
-      });
-      setActiveSubTab('review');
-      if (onClearReviewItems) onClearReviewItems();
-    }
+    onReviewQueueChange(unapprovedQueue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reviewItems]);
+  }, [unapprovedQueue]);
+
+  // Click-to-select cards for bulk approve (replaces the old per-card Approve button).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const selectAll = () => setSelectedIds(new Set(unapprovedQueue.map((q) => q.id)));
+  const deselectAll = () => setSelectedIds(new Set());
+
+  // Brief inline confirmation shown after approving (we stay put instead of
+  // navigating away, so this closes the feedback loop).
+  const [queueToast, setQueueToast] = useState<string | null>(null);
 
   // Batch tags applied to EVERY MCQ parsed from the bulk paste text.
   const [batchSourceTags, setBatchSourceTags] = useState<string[]>(draft.batchSourceTags || []);
@@ -273,20 +267,33 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     setBulkViewMode('cards');
   };
 
-  // Live preview of whatever the parser would extract from the current bulk text,
-  // with the interactive batch tags applied (so the preview is a true WYSIWYG of
-  // what the parse button will push into the review queue).
-  const parsedPreview = parseBulkTextToMCQs(bulkText).map((q) =>
-    applyBatchTags(q, {
+// Applies the manual per-batch tag chips, then — only when the user has opted in —
+  // the workspace's default tags. Both passes only fill blank fields (applyBatchTags
+  // never overwrites), so precedence is: question's own tags > batch chips > workspace defaults.
+  const applyAllBatchTags = (q: MCQItem): MCQItem => {
+    let next = applyBatchTags(q, {
       sources: batchSourceTags,
       subject: batchSubject,
       className: batchClass,
       paper: batchPaper,
-    })
-  );
+    });
+    if (applyWorkspaceDefaultTags && defaultTags) {
+      next = applyBatchTags(next, {
+        subject: defaultTags.subject,
+        className: defaultTags.className,
+        paper: defaultTags.paper,
+      });
+    }
+    return next;
+  };
+
+  // Live preview of whatever the parser would extract from the current bulk text,
+  // with the interactive batch tags applied (so the preview is a true WYSIWYG of
+  // what the parse button will push into the review queue).
+  const parsedPreview = parseBulkTextToMCQs(bulkText).map(applyAllBatchTags);
 
   // Single Question / Editor Form State
-  const [editingItemTarget, setEditingItemTarget] = useState<'none' | 'queue' | 'deck'>('none');
+  const [editingItemTarget, setEditingItemTarget] = useState<'none' | 'queue'>('none');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [questionType, setQuestionType] = useState<QuestionType>('standard');
   const [stem, setStem] = useState('');
@@ -306,22 +313,20 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
   const [stagedItems, setStagedItems] = useState<MCQItem[]>(draft.stagedItems || []);
   const [formNotice, setFormNotice] = useState<string | null>(null);
 
-  // Instant auto-save: any change to pasted text, the review queue, or staged
-  // questions is written straight to localStorage, so switching tabs (which
-  // unmounts this component) or an accidental reload never loses it.
+  // Instant auto-save: any change to pasted text or staged questions is written
+  // straight to localStorage, so switching away or an accidental reload never
+  // loses it (the review queue itself persists separately via onReviewQueueChange).
   useEffect(() => {
     saveDraft({
       bulkText,
       bulkViewMode,
-      unapprovedQueue,
-      resolvedIds,
       batchSourceTags,
       batchSubject,
       batchClass,
       batchPaper,
       stagedItems,
     });
-  }, [bulkText, bulkViewMode, unapprovedQueue, resolvedIds, batchSourceTags, batchSubject, batchClass, batchPaper, stagedItems]);
+  }, [bulkText, bulkViewMode, batchSourceTags, batchSubject, batchClass, batchPaper, stagedItems]);
 
   // Tag memory — remembers every used source tag / subject / class / paper so the
   // next session can suggest them in the chip pickers below.
@@ -331,7 +336,7 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
   const formRef = useRef<HTMLFormElement | null>(null);
 
   // Helper to load a given MCQ into the form for editing
-  const loadItemIntoForm = (item: MCQItem, target: 'queue' | 'deck') => {
+  const loadItemIntoForm = (item: MCQItem, target: 'queue') => {
     setEditingItemTarget(target);
     setEditingId(item.id);
     setQuestionType(item.questionType);
@@ -371,9 +376,9 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     setPrompt('নিচের কোনটি সঠিক?');
   };
 
-  // "Add more" accelerator: pull the last deck question's tags into the form so the
-  // next question starts tagged the same way.
-  const lastItemTags = items.length > 0 ? items[items.length - 1] : null;
+  // "Add more" accelerator: pull the most recently queued question's tags into
+  // the form so the next question starts tagged the same way.
+  const lastItemTags = unapprovedQueue.length > 0 ? unapprovedQueue[unapprovedQueue.length - 1] : null;
 
   const useLastItemTags = () => {
     if (!lastItemTags) return;
@@ -390,44 +395,17 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     setBatchPaper('');
   };
 
-  // Batch-edit-all: walk through every question in the active deck inside the form.
-  const [batchQueue, setBatchQueue] = useState<{ ids: string[]; index: number } | null>(null);
-
-  // Open a question from the deck-list edit modal directly in this dedicated editor.
+  // Open a question directly in this editor (e.g. a future deep-link) — always
+  // targets the review queue, since there's no separate "Active Deck" in a
+  // workspace-scoped editor.
   useEffect(() => {
-    if (prefillEditItem && onUpdateItems) {
-      const target = items.find((q) => q.id === prefillEditItem.id) || prefillEditItem;
-      loadItemIntoForm(target, 'deck');
-      setBatchQueue(null);
+    if (prefillEditItem) {
+      const target = unapprovedQueue.find((q) => q.id === prefillEditItem.id) || prefillEditItem;
+      loadItemIntoForm(target, 'queue');
       if (onPrefillConsumed) onPrefillConsumed();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefillEditItem]);
-
-  const startBatchEditAll = () => {
-    if (items.length === 0) return;
-    setBatchQueue({ ids: items.map((q) => q.id), index: 0 });
-    loadItemIntoForm(items[0], 'deck');
-    setActiveSubTab('single');
-    setStagedItems([]);
-    setFormNotice(null);
-  };
-
-  const batchNav = (dir: 'prev' | 'next') => {
-    if (!batchQueue) return;
-    let idx = dir === 'prev' ? batchQueue.index - 1 : batchQueue.index + 1;
-    if (idx < 0) idx = batchQueue.ids.length - 1;
-    if (idx >= batchQueue.ids.length) idx = 0;
-    const targetItem = items.find((q) => q.id === batchQueue.ids[idx]);
-    if (!targetItem) return;
-    setBatchQueue({ ...batchQueue, index: idx });
-    loadItemIntoForm(targetItem, 'deck');
-  };
-
-  const endBatchEdit = () => {
-    setBatchQueue(null);
-    resetForm();
-  };
 
   // CSV Upload -> Passes through Question Reviewer first!
   const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -468,14 +446,7 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
 
   // Bulk parse text -> Passes through Question Reviewer!
   const handleParseBulk = () => {
-    const parsed = parseBulkTextToMCQs(bulkText).map((q) =>
-      applyBatchTags(q, {
-        sources: batchSourceTags,
-        subject: batchSubject,
-        className: batchClass,
-        paper: batchPaper,
-      })
-    );
+    const parsed = parseBulkTextToMCQs(bulkText).map(applyAllBatchTags);
     if (parsed.length > 0) {
       setUnapprovedQueue((prev) => [...prev, ...parsed]);
       rememberItems(parsed);
@@ -484,117 +455,34 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     }
   };
 
-  // Approve a single item from the review queue into active deck.
-  // Important: only the LAST item in the queue behaves like "Approve All" and
-  // jumps to Slide Studio (that's the natural "I'm done, show me the deck"
-  // moment). Approving any other item keeps you on the review queue — it used
-  // to unconditionally call onAddMCQs, which navigated the whole app away to
-  // the Preview tab after every single approval, kicking you out mid-review.
-  // Approve a single item from the review queue into the active deck. We never
-  // navigate away and never remove the card — onUpdateItems appends straight
-  // into the active deck's items while staying on this exact review page, the
-  // card just flips to a "Added to Deck" state so you can keep working through
-  // the rest of the queue without losing your place.
-  const approveQueueItem = (id: string) => {
-    if (resolvedIds.includes(id)) return;
-    const itemToApprove = unapprovedQueue.find((q) => q.id === id);
-    if (!itemToApprove) return;
-    rememberItems([itemToApprove]);
-
-    if (onUpdateItems) {
-      onUpdateItems([...items, itemToApprove]);
-    } else {
-      // No onUpdateItems wired up (legacy/standalone usage) — fall back to the
-      // navigating add, since there's no other way to get it into the deck.
-      onAddMCQs([itemToApprove]);
-    }
-
-    const stillPending = unapprovedQueue.filter((q) => q.id !== id && !resolvedIds.includes(q.id)).length;
-    setResolvedIds((prev) => [...prev, id]);
-    setQueueToast(
-      stillPending > 0
-        ? `✓ Added to Active Deck — ${stillPending} more to review.`
-        : '✓ Added to Active Deck — all caught up.'
-    );
-    setTimeout(() => setQueueToast(null), 2200);
-
-    if (editingId === id) resetForm();
-    if (editingQueueItemId === id) cancelQueueEdit();
-  };
-
-  // Approve every still-pending item in the queue into the active deck. Same
-  // stay-on-page, keep-the-cards behavior as approveQueueItem.
-  const approveAllQueue = () => {
-    const pending = unapprovedQueue.filter((q) => !resolvedIds.includes(q.id));
-    if (pending.length === 0) return;
-
-    if (onUpdateItems) {
-      onUpdateItems([...items, ...pending]);
-    } else {
-      onAddMCQs(pending);
-    }
-    rememberItems(pending);
-    setResolvedIds((prev) => [...prev, ...pending.map((q) => q.id)]);
-    setQueueToast(`✓ Added ${pending.length} question${pending.length > 1 ? 's' : ''} to the Active Deck.`);
+  // Bulk approve — the selected cards move out of the queue and into the
+  // workspace's permanent Approved history (+ its linked deck), via
+  // onApproveSelected. We stay on the review page; the toast confirms the move.
+  const approveSelected = async () => {
+    const toApprove = unapprovedQueue.filter((q) => selectedIds.has(q.id));
+    if (toApprove.length === 0) return;
+    await onApproveSelected(toApprove);
+    rememberItems(toApprove);
+    setUnapprovedQueue((prev) => prev.filter((q) => !selectedIds.has(q.id)));
+    setSelectedIds(new Set());
+    setQueueToast(`✓ Approved ${toApprove.length} question${toApprove.length > 1 ? 's' : ''}.`);
     setTimeout(() => setQueueToast(null), 2200);
   };
 
-  // Explicit, user-initiated removal — discards a single card from the queue
-  // entirely (distinct from approving, which keeps the card as a record).
+  // Explicit, user-initiated removal — discards a single card from the queue entirely.
   const removeQueueItem = (id: string) => {
     setUnapprovedQueue((prev) => prev.filter((q) => q.id !== id));
-    setResolvedIds((prev) => prev.filter((rid) => rid !== id));
-    if (editingId === id) resetForm();
-    if (editingQueueItemId === id) cancelQueueEdit();
-  };
-
-  // --- In-place review-queue editor -------------------------------------------
-  const startQueueEdit = (item: MCQItem) => {
-    setEditingQueueItemId(item.id);
-    setQueueEditDraft({
-      ...item,
-      options: item.options.map((o) => ({ ...o })),
-      romanItems: item.romanItems ? [...item.romanItems] : undefined,
+    setSelectedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
     });
+    if (editingId === id) resetForm();
   };
 
-  const cancelQueueEdit = () => {
-    setEditingQueueItemId(null);
-    setQueueEditDraft(null);
-  };
-
-  const saveQueueEdit = () => {
-    if (!queueEditDraft || !queueEditDraft.stem.trim()) return;
-    setUnapprovedQueue((prev) =>
-      prev.map((q) => (q.id === editingQueueItemId ? queueEditDraft : q))
-    );
-    rememberItems([queueEditDraft]);
-    setEditingQueueItemId(null);
-    setQueueEditDraft(null);
-  };
-
-  const patchQueueDraft = (patch: Partial<MCQItem>) => {
-    setQueueEditDraft((prev) => (prev ? { ...prev, ...patch } : prev));
-  };
-
-  const patchQueueOption = (key: string, text: string) => {
-    setQueueEditDraft((prev) =>
-      prev
-        ? { ...prev, options: prev.options.map((o) => (o.key === key ? { ...o, text } : o)) }
-        : prev
-    );
-  };
-
-  const setQueueAnswer = (key: string) => {
-    setQueueEditDraft((prev) =>
-      prev
-        ? {
-            ...prev,
-            answer: key,
-            options: prev.options.map((o) => ({ ...o, isCorrect: o.key === key })),
-          }
-        : prev
-    );
+  const saveQueueItemEdit = (updated: MCQItem) => {
+    setUnapprovedQueue((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
   };
 
   // Build the MCQItem from the current form state (shared by submit + bank import)
@@ -636,17 +524,12 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     const updatedItem = buildFormItem();
     rememberItems([updatedItem]);
 
-    if (editingItemTarget === 'deck' && onUpdateItems) {
-      // Update in active deck
-      const updatedDeck = items.map((q) => (q.id === editingId ? updatedItem : q));
-      onUpdateItems(updatedDeck);
-      setFormNotice('Question updated in the Active Deck.');
-    } else if (editingItemTarget === 'queue') {
+    if (editingItemTarget === 'queue') {
       // Update in unapproved queue
       setUnapprovedQueue((prev) => prev.map((q) => (q.id === editingId ? updatedItem : q)));
       setFormNotice('Question updated in the Review Queue.');
     } else {
-      // New question → stage it for batch commit to deck / question bank
+      // New question → stage it for a batch commit into the review queue
       setStagedItems((prev) => [...prev, updatedItem]);
       setFormNotice(`Question saved to the batch (${stagedItems.length + 1} staged). Keep adding more or commit below.`);
     }
@@ -659,35 +542,14 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     setStagedItems((prev) => prev.filter((q) => q.id !== id));
   };
 
-  // Commit every staged question to the Active Deck in one shot.
-  const commitStagedToDeck = () => {
+  // Commit every staged question into the Review Queue in one shot.
+  const commitStagedToQueue = () => {
     if (stagedItems.length === 0) return;
-    onAddMCQs(stagedItems);
+    setUnapprovedQueue((prev) => [...prev, ...stagedItems]);
     rememberItems(stagedItems);
     const count = stagedItems.length;
     setStagedItems([]);
-    setFormNotice(`✓ ${count} MCQ${count > 1 ? 's' : ''} added to the Active Deck.`);
-  };
-
-  // Commit every staged question to the Question Bank in one shot.
-  const commitStagedToBank = async () => {
-    if (stagedItems.length === 0 || !onImportToQuestionBank) return;
-    const count = stagedItems.length;
-    const saved = await onImportToQuestionBank(stagedItems);
-    if (!saved) return;
-    rememberItems(stagedItems);
-    setStagedItems([]);
-    setFormNotice(`✓ ${count} MCQ${count > 1 ? 's' : ''} saved to the Question Bank.`);
-  };
-
-  // Save the freshly-typed question straight to the Question Bank (not the deck)
-  const handleSaveSingleToBank = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!stem.trim() || !onImportToQuestionBank) return;
-    const item = buildFormItem();
-    rememberItems([item]);
-    const saved = await onImportToQuestionBank([item]);
-    if (saved) resetForm();
+    setFormNotice(`✓ ${count} MCQ${count > 1 ? 's' : ''} added to the Review Queue.`);
   };
 
   const insertSnippet = (snippet: string) => {
@@ -705,9 +567,9 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
     }
   };
 
-  // Cards still needing action vs. ones already sent to the deck/bank — drives
-  // the header count, stepper badge, and which bulk-action buttons are usable.
-  const pendingQueueItems = unapprovedQueue.filter((q) => !resolvedIds.includes(q.id));
+  // Alias kept for readability at call sites below — every item still in the
+  // queue is "pending" now that approved items leave the list entirely.
+  const pendingQueueItems = unapprovedQueue;
 
   return (
     <div
@@ -821,16 +683,6 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
               </span>
             )}
           </button>
-
-          {items.length > 0 && (
-            <button
-              onClick={onClearAll}
-              className="text-xs text-rose-500 hover:text-rose-400 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer font-bold"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Clear Deck ({items.length})</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -889,7 +741,7 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
                 onChange={(e) => setBulkText(e.target.value)}
                 onPaste={() => { justPastedBulkRef.current = true; }}
                 placeholder="Paste questions here... e.g. 1. Question stem? A) Opt 1 B) Opt 2 * C) Opt 3 D) Opt 4"
-                className={`w-full h-80 font-['Hind_Siliguri',sans-serif] p-5 rounded-2xl border focus:outline-none focus:border-amber-500 text-base leading-relaxed resize-none shadow-inner ${
+                className={`w-full h-[28rem] font-['Hind_Siliguri',sans-serif] p-5 rounded-2xl border focus:outline-none focus:border-amber-500 text-base leading-relaxed resize-none shadow-inner ${
                   isAppLight
                     ? 'bg-slate-50 border-slate-300 text-slate-900'
                     : 'bg-slate-950 border-slate-800 text-slate-100'
@@ -1279,6 +1131,26 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Workspace default tags — opt-in, off by default. Only fills blank
+                tag fields on parse; never overwrites a question's own tags. */}
+            {defaultTags && (defaultTags.subject || defaultTags.className || defaultTags.paper) && (
+              <label
+                className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer ${
+                  isAppLight ? 'bg-emerald-50 border-emerald-300' : 'bg-emerald-500/10 border-emerald-500/30'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={applyWorkspaceDefaultTags}
+                  onChange={onToggleApplyWorkspaceDefaultTags}
+                  className="accent-emerald-500 w-4 h-4"
+                />
+                <span className={`text-xs font-bold ${isAppLight ? 'text-emerald-800' : 'text-emerald-300'}`}>
+                  Apply workspace default tags ({[defaultTags.subject, defaultTags.className, defaultTags.paper].filter(Boolean).join(' · ')}) — fills only blank tag fields
+                </span>
+              </label>
+            )}
 
             {/* Action Button */}
             <div className="flex items-center justify-end gap-3 pt-2">
@@ -1680,11 +1552,10 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
             <div>
               <h3 className="text-base font-black text-amber-500 flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                Step 2: Review Queue ({pendingQueueItems.length} Pending Approval)
+                Step 2: Review Queue ({pendingQueueItems.length} Pending)
               </h3>
               <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                Check each question, fix anything the parser missed, then Approve it into your Active Deck — one at a time or all at once.
-                Approved cards stay right here with a badge, so you never lose track of what you've reviewed.
+                Click a card to select it (it turns green), fix anything the parser missed with Edit, then approve your selection.
               </p>
             </div>
 
@@ -1692,40 +1563,30 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => { setUnapprovedQueue([]); setResolvedIds([]); }}
+                  onClick={() => { setUnapprovedQueue([]); setSelectedIds(new Set()); }}
                   className="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700 border border-slate-700 cursor-pointer"
-                  title="Removes every card from this queue, including ones already added to the deck"
+                  title="Removes every card from this queue"
                 >
                   Clear Queue
                 </button>
-                {pendingQueueItems.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={approveAllQueue}
-                    className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 cursor-pointer flex items-center gap-1.5 transition-all"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Approve All ({pendingQueueItems.length}) → Active Deck</span>
-                  </button>
-                )}
-                {onImportToQuestionBank && pendingQueueItems.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      rememberItems(pendingQueueItems);
-                      const saved = await onImportToQuestionBank(pendingQueueItems);
-                      if (!saved) return;
-                      setResolvedIds((prev) => [...prev, ...pendingQueueItems.map((q) => q.id)]);
-                      setQueueToast(`✓ Saved ${pendingQueueItems.length} question${pendingQueueItems.length > 1 ? 's' : ''} to the Question Bank.`);
-                      setTimeout(() => setQueueToast(null), 2200);
-                    }}
-                    className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-500/25 cursor-pointer flex items-center gap-1.5 transition-all"
-                    title="Save every pending question to the Question Bank (deck library) instead of the active deck"
-                  >
-                    <Database className="w-4 h-4" />
-                    <span>Import All ({pendingQueueItems.length}) → Question Bank</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={selectedIds.size === unapprovedQueue.length ? deselectAll : selectAll}
+                  className={`px-3.5 py-2 rounded-xl font-bold text-xs border cursor-pointer transition-all ${
+                    isAppLight ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  {selectedIds.size === unapprovedQueue.length ? 'Deselect All' : 'Select All'}
+                </button>
+                <button
+                  type="button"
+                  onClick={approveSelected}
+                  disabled={selectedIds.size === 0}
+                  className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 cursor-pointer flex items-center gap-1.5 transition-all"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Approve Selected ({selectedIds.size})</span>
+                </button>
               </div>
             )}
           </div>
@@ -1748,437 +1609,19 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {unapprovedQueue.map((item, idx) => {
-                const isEditing = editingQueueItemId === item.id && !!queueEditDraft;
-                const isResolved = resolvedIds.includes(item.id);
-                return (
-                  <div
-                    key={item.id}
-                    className={`p-5 rounded-3xl space-y-3.5 transition-opacity ${
-                      isEditing
-                        ? isAppLight
-                          ? 'border-2 border-amber-400 ring-2 ring-amber-400/40 bg-amber-50/40'
-                          : 'border-2 border-amber-500/50 ring-1 ring-amber-500/30 bg-slate-950'
-                        : isResolved
-                        ? isAppLight
-                          ? 'bg-emerald-50/60 border-2 border-emerald-300 text-slate-950 opacity-80'
-                          : 'bg-slate-950 border-2 border-emerald-500/30 text-slate-100 opacity-70'
-                        : isAppLight
-                        ? 'bg-white border-2 border-slate-300 text-slate-950 shadow-sm'
-                        : 'bg-slate-950 border-2 border-slate-700 text-slate-100 shadow-md'
-                    }`}
-                  >
-                    {isEditing && queueEditDraft ? (
-                      <>
-                        {/* Header: editing state */}
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                            <span className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                              isAppLight ? 'text-indigo-700' : 'text-indigo-300'
-                            }`}>
-                              <Edit2 className="w-3.5 h-3.5" />
-                              Editing Question (in place)
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={cancelQueueEdit}
-                              className={`px-4 py-2.5 rounded-2xl text-xs font-bold border cursor-pointer transition-all ${
-                                isAppLight
-                                  ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
-                                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
-                              }`}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={saveQueueEdit}
-                              className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm flex items-center gap-1.5 shadow-lg shadow-amber-500/25 cursor-pointer transition-all"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              Save Changes
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Stem */}
-                        <div>
-                          <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
-                            isAppLight ? 'text-slate-500' : 'text-slate-400'
-                          }`}>
-                            Question Stem
-                          </label>
-                          <textarea
-                            value={queueEditDraft.stem}
-                            onChange={(e) => patchQueueDraft({ stem: e.target.value })}
-                            rows={2}
-                            className={`${queueInputCls} resize-none leading-relaxed`}
-                          />
-                        </div>
-
-                        {/* Bohupodi roman items */}
-                        {queueEditDraft.questionType === 'roman_statements' && (
-                          <div className={`space-y-2 p-3 rounded-2xl border ${
-                            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                          }`}>
-                            <label className={`block text-[11px] font-bold text-amber-500 uppercase tracking-wider`}>
-                              Roman Statements (i. ii. iii.)
-                            </label>
-                            {queueEditDraft.romanItems && queueEditDraft.romanItems.length > 0
-                              ? queueEditDraft.romanItems.map((ri, riIdx) => (
-                                  <input
-                                    key={riIdx}
-                                    type="text"
-                                    value={ri}
-                                    onChange={(e) => {
-                                      const updated = [...(queueEditDraft.romanItems || [])];
-                                      updated[riIdx] = e.target.value;
-                                      patchQueueDraft({ romanItems: updated });
-                                    }}
-                                    className={queueInputCls}
-                                  />
-                                ))
-                              : (
-                                  <input
-                                    type="text"
-                                    value=""
-                                    onChange={(e) => patchQueueDraft({ romanItems: [e.target.value, '', ''] })}
-                                    placeholder="Add statement…"
-                                    className={queueInputCls}
-                                  />
-                                )}
-                            <input
-                              type="text"
-                              value={queueEditDraft.prompt || ''}
-                              onChange={(e) => patchQueueDraft({ prompt: e.target.value })}
-                              placeholder="Prompt e.g. নিচের কোনটি সঠিক?"
-                              className={`${queueInputCls} ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}
-                            />
-                          </div>
-                        )}
-
-                        {/* Options */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {queueEditDraft.options.map((opt) => {
-                            const isCorrect =
-                              opt.key.toLowerCase() === queueEditDraft.answer?.toLowerCase();
-                            return (
-                              <div
-                                key={opt.key}
-                                className={`flex items-center gap-2 p-2 rounded-xl border ${
-                                  isCorrect
-                                    ? 'bg-emerald-500/10 border-emerald-500/40'
-                                    : isAppLight
-                                    ? 'bg-white border-slate-200'
-                                    : 'bg-slate-900 border-slate-800'
-                                }`}
-                              >
-                                <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black flex items-center justify-center shrink-0">
-                                  {opt.key}
-                                </span>
-                                <input
-                                  type="text"
-                                  value={opt.text}
-                                  onChange={(e) => patchQueueOption(opt.key, e.target.value)}
-                                  className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border text-sm focus:outline-none focus:border-amber-500 bg-transparent"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setQueueAnswer(opt.key)}
-                                  className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
-                                    isCorrect
-                                      ? 'bg-emerald-500 text-slate-950'
-                                      : isAppLight
-                                      ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                                  }`}
-                                >
-                                  {isCorrect ? '✓ Correct' : 'Answer'}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Source + explanation */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
-                              isAppLight ? 'text-slate-500' : 'text-slate-400'
-                            }`}>
-                              Source Tags (Board / Exam)
-                            </label>
-                            <SourceTagsInput
-                              tags={getSourceTags(queueEditDraft)}
-                              onChange={(tags) => patchQueueDraft({ source: tags.length > 0 ? tags : undefined })}
-                              theme={isAppLight ? 'light' : 'dark'}
-                            />
-                          </div>
-                          <div>
-                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
-                              isAppLight ? 'text-slate-500' : 'text-slate-400'
-                            }`}>
-                              Explanation
-                            </label>
-                            <input
-                              type="text"
-                              value={queueEditDraft.explanation || ''}
-                              onChange={(e) => patchQueueDraft({ explanation: e.target.value || undefined })}
-                              placeholder="Optional explanation"
-                              className={queueInputCls}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Structured tags */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div>
-                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
-                              isAppLight ? 'text-slate-500' : 'text-slate-400'
-                            }`}>
-                              Subject
-                            </label>
-                            <TagChipSelect
-                              value={queueEditDraft.tags?.subject || ''}
-                              onChange={(v) =>
-                                patchQueueDraft({
-                                  tags: { ...(queueEditDraft.tags || {}), subject: v || undefined },
-                                })
-                              }
-                              suggestions={memory.subjects}
-                              placeholder="e.g. Biology"
-                              theme={isAppLight ? 'light' : 'dark'}
-                            />
-                          </div>
-                          <div>
-                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
-                              isAppLight ? 'text-slate-500' : 'text-slate-400'
-                            }`}>
-                              Class
-                            </label>
-                            <TagChipSelect
-                              value={queueEditDraft.tags?.className || ''}
-                              onChange={(v) =>
-                                patchQueueDraft({
-                                  tags: { ...(queueEditDraft.tags || {}), className: v || undefined },
-                                })
-                              }
-                              suggestions={memory.classes}
-                              placeholder="e.g. SSC / HSC"
-                              theme={isAppLight ? 'light' : 'dark'}
-                            />
-                          </div>
-                          <div>
-                            <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${
-                              isAppLight ? 'text-slate-500' : 'text-slate-400'
-                            }`}>
-                              Paper
-                            </label>
-                            <TagChipSelect
-                              value={queueEditDraft.tags?.paper || ''}
-                              onChange={(v) =>
-                                patchQueueDraft({
-                                  tags: { ...(queueEditDraft.tags || {}), paper: v || undefined },
-                                })
-                              }
-                              suggestions={memory.papers}
-                              placeholder="e.g. 1st Paper"
-                              theme={isAppLight ? 'light' : 'dark'}
-                            />
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            <span className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shrink-0 shadow-sm">
-                              {idx + 1}
-                            </span>
-                            <div className="space-y-1">
-                              <h4 className={`text-base lg:text-lg font-black leading-relaxed ${isAppLight ? 'text-slate-950' : 'text-white'}`}>
-                                <MathText text={item.stem} />
-                              </h4>
-
-                              {/* Roman statements & prompt */}
-                              {item.romanItems && item.romanItems.length > 0 && (
-                                <div className={`my-2 p-3.5 rounded-2xl space-y-1.5 ${
-                                  isAppLight ? 'bg-slate-100/70 text-slate-950' : 'bg-slate-900/70 text-slate-100'
-                                }`}>
-                                  {item.romanItems.map((stmt, sIdx) => (
-                                    <div key={sIdx} className="text-sm lg:text-base font-bold">
-                                      <MathText text={stmt} />
-                                    </div>
-                                  ))}
-                                  {item.prompt && (
-                                    <div className={`text-sm lg:text-base font-black italic pt-1 ${
-                                      isAppLight ? 'text-amber-800' : 'text-amber-300'
-                                    }`}>
-                                      <MathText text={item.prompt} />
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              <div className="flex items-center gap-2 pt-1 flex-wrap">
-                                <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-mono shadow-2xs">
-                                  ✓ Ans: {item.answer}
-                                </span>
-                                {getSourceTags(item).map(tag => (
-                                  <span key={tag} className={`text-xs font-extrabold px-2.5 py-1 rounded-xl ${
-                                    isAppLight ? 'bg-amber-100 text-amber-950' : 'bg-amber-500/20 text-amber-300'
-                                  }`}>
-                                    {tag}
-                                  </span>
-                                ))}
-                                {item.tags?.subject && (
-                                  <span className={`text-xs font-extrabold px-2.5 py-1 rounded-xl font-mono ${
-                                    isAppLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-900 text-slate-300'
-                                  }`}>
-                                    📌 {item.tags.subject}
-                                  </span>
-                                )}
-                                {item.tags?.className && (
-                                  <span className={`text-xs font-extrabold px-2.5 py-1 rounded-xl font-mono ${
-                                    isAppLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-900 text-slate-300'
-                                  }`}>
-                                    🏫 {item.tags.className}
-                                  </span>
-                                )}
-                                {item.tags?.paper && (
-                                  <span className={`text-xs font-extrabold px-2.5 py-1 rounded-xl font-mono ${
-                                    isAppLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-900 text-slate-300'
-                                  }`}>
-                                    📄 {item.tags.paper}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Actions: Edit in place, Approve (fatty), Remove — or, once
-                              resolved, a badge + a way to hide it from the list. The
-                              card itself is never auto-removed, only these controls swap. */}
-                          <div className="flex items-center gap-2 shrink-0">
-                            {isResolved ? (
-                              <>
-                                <span className={`px-3.5 py-2.5 rounded-2xl text-xs font-black flex items-center gap-1.5 ${
-                                  isAppLight ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                                }`}>
-                                  <CheckCircle2 className="w-4 h-4" />
-                                  <span>Added to Deck</span>
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => removeQueueItem(item.id)}
-                                  className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
-                                    isAppLight ? 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200' : 'bg-slate-800/60 hover:bg-slate-800 text-slate-400 border-slate-700'
-                                  }`}
-                                  title="Hide this card from the queue (it's already in your deck)"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => startQueueEdit(item)}
-                                  className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
-                                    isAppLight
-                                      ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-300'
-                                      : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                                  }`}
-                                  title="Edit this question right here in the queue"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                  <span>Edit</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => approveQueueItem(item.id)}
-                                  className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all"
-                                >
-                                  <Check className="w-4 h-4 stroke-[2.5]" />
-                                  <span>Approve</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeQueueItem(item.id)}
-                                  className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
-                                    isAppLight ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100' : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
-                                  }`}
-                                  title="Remove"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Options List Preview */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-sm pt-2">
-                          {item.options.map((opt) => {
-                            const isCorrect =
-                              opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
-                            return (
-                              <div
-                                key={opt.key}
-                                className={`p-3 rounded-2xl flex items-center gap-2.5 font-bold transition-colors ${
-                                  isCorrect
-                                    ? isAppLight
-                                      ? 'bg-emerald-500/15 text-emerald-950 ring-1 ring-emerald-500/30 shadow-2xs'
-                                      : 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30 shadow-2xs'
-                                    : isAppLight
-                                    ? 'bg-slate-100/80 text-slate-950'
-                                    : 'bg-slate-900/80 text-slate-100'
-                                }`}
-                              >
-                                <span className={`font-black font-mono text-xs px-2.5 py-0.5 rounded-lg shrink-0 ${
-                                  isCorrect
-                                    ? 'bg-emerald-500 text-slate-950 font-black'
-                                    : isAppLight
-                                    ? 'bg-amber-500 text-slate-950 font-black'
-                                    : 'bg-amber-500/30 text-amber-300 font-black'
-                                }`}>
-                                  {opt.key}.
-                                </span>
-                                <span className="truncate flex-1 min-w-0">
-                                  <MathText text={opt.text} />
-                                </span>
-                                {isCorrect && (
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Optional explanation indicator */}
-                        {item.explanation && (
-                          <div className={`mt-3 p-3.5 rounded-2xl text-xs lg:text-sm font-bold leading-relaxed flex items-start gap-2.5 ${
-                            isAppLight
-                              ? 'bg-sky-50/90 text-sky-950 shadow-2xs'
-                              : 'bg-sky-950/40 text-sky-200'
-                          }`}>
-                            <HelpCircle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-sky-500" />
-                            <div className="min-w-0 flex-1">
-                              <span className="font-black text-sky-700 dark:text-sky-400 mr-1.5">ব্যাখ্যা:</span>
-                              <MathText text={item.explanation} />
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+              {unapprovedQueue.map((item, idx) => (
+                <EditableMCQCard
+                  key={item.id}
+                  item={item}
+                  index={idx}
+                  isAppLight={isAppLight}
+                  mode="select"
+                  selected={selectedIds.has(item.id)}
+                  onToggleSelect={() => toggleSelect(item.id)}
+                  onSave={saveQueueItemEdit}
+                  onRemove={() => removeQueueItem(item.id)}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -2187,59 +1630,12 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
       {/* SUB-TAB 3: FORM QUESTION CREATOR & EDITOR */}
       {activeSubTab === 'single' && (
         <form ref={formRef} onSubmit={handleAddOrUpdateSingle} className="space-y-6 max-w-4xl">
-          {/* Batch edit-all toolbar */}
-          {batchQueue && (
-            <div className={`p-4 rounded-2xl border flex flex-wrap items-center gap-3 text-xs ${
-              isAppLight ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-950 border-indigo-500/40'
-            }`}>
-              <span className={`font-black flex items-center gap-2 ${isAppLight ? 'text-indigo-700' : 'text-indigo-300'}`}>
-                <ListChecks className="w-4 h-4" />
-                Batch Editing All Deck Questions
-              </span>
-              <span className={`px-2.5 py-1 rounded-lg font-mono font-black ${isAppLight ? 'bg-white text-indigo-700 border border-indigo-200' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'}`}>
-                {batchQueue.index + 1} / {batchQueue.ids.length}
-              </span>
-              <div className="flex-1" />
-              <button
-                type="button"
-                onClick={() => batchNav('prev')}
-                className={`px-3 py-1.5 rounded-xl font-bold border flex items-center gap-1 cursor-pointer ${
-                  isAppLight ? 'bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-100' : 'bg-slate-900 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20'
-                }`}
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                Prev
-              </button>
-              <button
-                type="button"
-                onClick={() => batchNav('next')}
-                className={`px-3 py-1.5 rounded-xl font-bold border flex items-center gap-1 cursor-pointer ${
-                  isAppLight ? 'bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-100' : 'bg-slate-900 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20'
-                }`}
-              >
-                Next
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={endBatchEdit}
-                className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer ${
-                  isAppLight ? 'bg-slate-800 text-white' : 'bg-slate-800 text-white'
-                }`}
-              >
-                Done
-              </button>
-            </div>
-          )}
-
           {/* Banner showing if we are editing an existing question */}
           {editingId ? (
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs font-bold text-emerald-400">
               <div className="flex items-center gap-2">
                 <Edit2 className="w-4 h-4" />
-                <span>
-                  Editing Question (Source: {editingItemTarget === 'deck' ? 'Active Slide Deck' : 'Review Queue'})
-                </span>
+                <span>Editing Question (Source: Review Queue)</span>
               </div>
               <button
                 type="button"
@@ -2535,21 +1931,6 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
               {editingId ? <CheckCircle2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
               <span>{editingId ? 'Save & Update Question' : 'Save Question to Batch'}</span>
             </button>
-            {!editingId && onImportToQuestionBank && (
-              <button
-                type="button"
-                onClick={handleSaveSingleToBank}
-                className={`px-5 py-3.5 rounded-2xl text-xs font-black flex items-center gap-2 border cursor-pointer transition-all ${
-                  isAppLight
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
-                    : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20'
-                }`}
-                title="Save this question to the Question Bank (deck library) instead of the active deck"
-              >
-                <Database className="w-4 h-4" />
-                <span>Save to Question Bank</span>
-              </button>
-            )}
             {editingId && (
               <button
                 type="button"
@@ -2615,25 +1996,13 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
               >
                 Discard All
               </button>
-              {onImportToQuestionBank && (
-                <button
-                  type="button"
-                  onClick={commitStagedToBank}
-                  className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 border cursor-pointer transition-all ${
-                    isAppLight ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
-                  }`}
-                >
-                  <Database className="w-3.5 h-3.5" />
-                  Commit All ({stagedItems.length}) → Question Bank
-                </button>
-              )}
               <button
                 type="button"
-                onClick={commitStagedToDeck}
+                onClick={commitStagedToQueue}
                 className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm flex items-center gap-1.5 shadow-lg shadow-amber-500/25 cursor-pointer transition-all"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                Commit All ({stagedItems.length}) → Active Deck
+                Commit All ({stagedItems.length}) → Review Queue
               </button>
             </div>
           </div>
@@ -2676,76 +2045,6 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
         </div>
       )}
 
-      {/* ACTIVE PRESENTATION DECK RE-EDITOR INSPECTOR */}
-      {items.length > 0 && (
-        <div className={`pt-8 border-t space-y-4 ${isAppLight ? 'border-slate-200' : 'border-slate-700/50'}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-700' : 'text-amber-500'}`}>
-                <ListOrdered className="w-4 h-4" /> Active Presentation Deck Questions ({items.length})
-              </h3>
-              <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                Click "Edit in Creator" on any existing MCQ to update its stem, options, or answer key.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={startBatchEditAll}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all shrink-0 ${
-                isAppLight
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
-                  : 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20'
-              }`}
-              title="Open every deck question in the editor view to batch edit them one by one"
-            >
-              <ListChecks className="w-4 h-4" />
-              Batch Edit All in Editor
-            </button>
-          </div>
-
-          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-            {items.map((item, idx) => (
-              <div
-                key={`${item.id}_${idx}`}
-                className={`p-4 rounded-2xl border flex items-center justify-between gap-4 transition-all ${
-                  isAppLight
-                    ? 'bg-slate-50 border-slate-200 text-slate-900'
-                    : 'bg-slate-950 border-slate-800 text-slate-100'
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">
-                    {idx + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-bold truncate max-w-[300px] sm:max-w-[500px]">
-                      <MathText text={item.stem} />
-                    </h4>
-                    <span className={`text-[10px] font-mono font-semibold ${isAppLight ? 'text-amber-700' : 'text-amber-500'}`}>
-                      Ans: {item.answer}{getSourceTags(item).length > 0 ? ` • ${getSourceTags(item).join(' | ')}` : ''}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => loadItemIntoForm(item, 'deck')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1 cursor-pointer transition-colors ${
-                      isAppLight
-                        ? 'bg-slate-100 hover:bg-amber-100 text-amber-700 border-slate-300 hover:border-amber-300'
-                        : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
-                    }`}
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>Edit in Creator</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

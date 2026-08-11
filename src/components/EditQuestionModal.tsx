@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MCQItem, QuestionType, getSourceTags, MCQTags } from '../types';
-import { X, Save, Edit3, ArrowUpRight, Database, History } from 'lucide-react';
+import { X, Save, Edit3, Database, History } from 'lucide-react';
 import { SourceTagsInput } from './SourceTagsInput';
 import { TagChipSelect } from './TagChipSelect';
 import { useTagMemory } from '../hooks/useTagMemory';
@@ -10,7 +10,6 @@ interface EditQuestionModalProps {
   onClose: () => void;
   item: MCQItem | null;
   onSave: (updated: MCQItem) => void;
-  onOpenInDedicatedEditor: (item: MCQItem) => void;
   onSaveToQuestionBank?: (items: MCQItem[]) => Promise<boolean>;
   appTheme: 'dark' | 'light';
   // Tags of the previous deck question — lets the "Use Last Question's Tags"
@@ -23,7 +22,6 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   onClose,
   item,
   onSave,
-  onOpenInDedicatedEditor,
   onSaveToQuestionBank,
   appTheme,
   previousTags,
@@ -111,11 +109,6 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     if (!stem.trim() || !onSaveToQuestionBank) return;
     const saved = await onSaveToQuestionBank([buildUpdatedItem()]);
     if (saved) onClose();
-  };
-
-  const handleOpenInDedicated = () => {
-    if (!stem.trim()) return;
-    onOpenInDedicatedEditor(buildUpdatedItem());
   };
 
   const inputCls = `w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
@@ -360,15 +353,6 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
         {/* Footer actions */}
         <div className={`flex flex-wrap items-center gap-2 pt-4 border-t ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
-          <button
-            type="button"
-            onClick={handleOpenInDedicated}
-            className="px-4 py-2.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer bg-indigo-600 text-white border-indigo-400 shadow-lg shadow-indigo-500/20 hover:brightness-110"
-            title="Open this question in the dedicated Question Editor (Bulk MCQ & Editor tab)"
-          >
-            <ArrowUpRight className="w-4 h-4" />
-            Open in Question Editor
-          </button>
           <div className="flex-1" />
           {onSaveToQuestionBank && (
             <button

@@ -83,6 +83,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // Whether answer slides include the explanation box (defaults to ON — answer
   // slides always showed it before; the toggle lets exports drop it).
   const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
+  const [includeAnswerKeySlides, setIncludeAnswerKeySlides] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -108,13 +109,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     for (let i = 0; i < scopeSlides.length; i++) {
       const ref = scopeSlides[i];
       setBgRenderSlideRef(ref);
-      setProgressMsg(`Rendering background ${i + 1} of ${scopeSlides.length} for PPTX...`);
-      await new Promise(r => setTimeout(r, 120));
-
-      const targetEl = bgExportCanvasRef.current;
-      if (targetEl) {
-        const dataUrl = await toPng(targetEl, { cacheBust: true });
-        backgroundDataUrls.push(dataUrl);
+      await new Promise((r) => setTimeout(r, 60));
+      const el = bgExportCanvasRef.current;
+      if (el) {
+        try {
+          const url = await toPng(el, { pixelRatio: 1.5, cacheBust: true });
+          backgroundDataUrls.push(url);
+        } catch {
+          backgroundDataUrls.push('');
+        }
+      } else {
+        backgroundDataUrls.push('');
       }
     }
     return backgroundDataUrls;
@@ -131,7 +136,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     try {
       const specs = toPptxSpecs();
       const backgroundDataUrls = await renderBackgroundDataUrls();
-      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls);
+      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, includeAnswerKeySlides);
     } catch (err: any) {
       console.error('PPTX Export Error:', err);
       alert('Failed to generate PowerPoint presentation: ' + err.message);
@@ -523,19 +528,33 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </button>
             </div>
 
-            {/* Include Explanation toggle — controls the explanation box on the
-                answer slide preview AND every export (PPTX/PDF/ZIP/PNG). */}
-            <label className={`flex items-center gap-2.5 text-xs font-bold cursor-pointer select-none ${
-              isAppLight ? 'text-slate-700' : 'text-slate-300'
-            }`}>
-              <input
-                type="checkbox"
-                checked={includeExplanation}
-                onChange={(e) => setIncludeExplanation(e.target.checked)}
-                className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
-              />
-              Include Explanation on answer slides
-            </label>
+            {/* Include Explanation toggle */}
+            <div className="flex flex-wrap items-center gap-6 pt-1">
+              <label className={`flex items-center gap-2.5 text-xs font-bold cursor-pointer select-none ${
+                isAppLight ? 'text-slate-700' : 'text-slate-300'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={includeExplanation}
+                  onChange={(e) => setIncludeExplanation(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+                Include Explanation on answer slides
+              </label>
+
+              {/* Include Paginated Answer Key Slides toggle */}
+              <label className={`flex items-center gap-2.5 text-xs font-bold cursor-pointer select-none ${
+                isAppLight ? 'text-slate-700' : 'text-slate-300'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={includeAnswerKeySlides}
+                  onChange={(e) => setIncludeAnswerKeySlides(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+                Append Paginated Standalone Answer Key Slide(s) to PPTX
+              </label>
+            </div>
 
             {/* Live 2-slide preview — question slide + answer slide (answer mark
                 graphics / tick / key shown on the answer variant). */}

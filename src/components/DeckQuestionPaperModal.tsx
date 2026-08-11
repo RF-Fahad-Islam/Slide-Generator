@@ -21,6 +21,8 @@ const PAGE_H = 1123;
 
 const banglaDigits = (n: number) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d]);
 
+export type PdfAnswerFormat = 'none' | 'end_page' | 'in_question_highlight' | 'inline_pill';
+
 interface DeckQuestionPaperModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -40,6 +42,7 @@ const PaperPage = ({
   pageNumber,
   pageTotal,
   answerKey,
+  answerFormat = 'end_page',
 }: {
   items: MCQItem[];
   config: DeckConfig;
@@ -47,6 +50,7 @@ const PaperPage = ({
   pageNumber: number; // 1-based page number
   pageTotal: number;
   answerKey?: boolean;
+  answerFormat?: PdfAnswerFormat;
 }) => {
   const tmpl = getTemplateById(config.templateId, config.customTheme);
   const colors = tmpl.styles.hexColors;
@@ -239,88 +243,148 @@ const PaperPage = ({
         ) : (
           /* QUESTION PAGES */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {items.map((item, oIdx) => (
-              <div
-                key={item.id}
-                style={{
-                  border: `1px solid ${cardBorder}`,
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  pageBreakInside: 'avoid',
-                  breakInside: 'avoid',
-                }}
-              >
-                {/* Stem */}
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <span
-                    style={{
-                      background: accent,
-                      color: '#ffffff',
-                      borderRadius: 6,
-                      minWidth: 22,
-                      height: 22,
-                      fontSize: 13,
-                      fontWeight: 800,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginTop: 1,
-                    }}
-                  >
-                    {qNumber(startNumber + oIdx)}
-                  </span>
-                  <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.45, flex: 1 }}>
-                    <MathText text={item.stem} />
-                  </div>
-                </div>
-
-                {/* Passage / Roman / Prompt */}
-                {item.passage && (
-                  <div style={{ margin: '6px 0 0 30px', fontSize: 12, lineHeight: 1.5, fontStyle: 'italic', color: inkMuted }}>
-                    <MathText text={item.passage} />
-                  </div>
-                )}
-                {item.romanItems && item.romanItems.length > 0 && (
-                  <div style={{ margin: '5px 0 0 30px', fontSize: 12, lineHeight: 1.6 }}>
-                    {item.romanItems.map((r, ri) => (
-                      <div key={ri}>
-                        <MathText text={r} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {item.prompt && (
-                  <div style={{ margin: '4px 0 0 30px', fontSize: 12, fontWeight: 700, fontStyle: 'italic', color: accent }}>
-                    {item.prompt}
-                  </div>
-                )}
-
-                {/* Options */}
+            {items.map((item, oIdx) => {
+              const correctOpt = item.options.find(
+                (o) => o.isCorrect || o.key.toLowerCase() === item.answer?.toLowerCase()
+              );
+              return (
                 <div
+                  key={item.id}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '4px 12px',
-                    margin: '6px 0 0 30px',
+                    border: `1px solid ${cardBorder}`,
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    pageBreakInside: 'avoid',
+                    breakInside: 'avoid',
                   }}
                 >
-                  {item.options.map((opt, oi) => (
-                    <div key={oi} style={{ fontSize: 12, lineHeight: 1.45, display: 'flex', gap: 5, alignItems: 'flex-start' }}>
-                      <span style={{ fontWeight: 800, color: accent }}>{opt.key})</span>
-                      <span style={{ flex: 1 }}>
-                        <MathText text={opt.text} />
-                      </span>
+                  {/* Stem */}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span
+                      style={{
+                        background: accent,
+                        color: '#ffffff',
+                        borderRadius: 6,
+                        minWidth: 22,
+                        height: 22,
+                        fontSize: 13,
+                        fontWeight: 800,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 1,
+                      }}
+                    >
+                      {qNumber(startNumber + oIdx)}
+                    </span>
+                    <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.45, flex: 1 }}>
+                      <MathText text={item.stem} />
                     </div>
-                  ))}
-                </div>
-
-                {getSourceTags(item).length > 0 && (
-                  <div style={{ margin: '4px 0 0 30px', fontSize: 10, fontWeight: 700, color: inkMuted }}>
-                    {getSourceTags(item).join(' · ')}
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Passage / Roman / Prompt */}
+                  {item.passage && (
+                    <div style={{ margin: '6px 0 0 30px', fontSize: 12, lineHeight: 1.5, fontStyle: 'italic', color: inkMuted }}>
+                      <MathText text={item.passage} />
+                    </div>
+                  )}
+                  {item.romanItems && item.romanItems.length > 0 && (
+                    <div style={{ margin: '5px 0 0 30px', fontSize: 12, lineHeight: 1.6 }}>
+                      {item.romanItems.map((r, ri) => (
+                        <div key={ri}>
+                          <MathText text={r} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {item.prompt && (
+                    <div style={{ margin: '4px 0 0 30px', fontSize: 12, fontWeight: 700, fontStyle: 'italic', color: accent }}>
+                      {item.prompt}
+                    </div>
+                  )}
+
+                  {/* Inline Answer Pill Format */}
+                  {answerFormat === 'inline_pill' && (correctOpt || item.answer) && (
+                    <div
+                      style={{
+                        margin: '6px 0 2px 30px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: isLightTmpl ? '#d1fae5' : '#064e3b',
+                        color: isLightTmpl ? '#065f46' : '#a7f3d0',
+                        border: `1px solid ${isLightTmpl ? '#6ee7b7' : '#059669'}`,
+                        borderRadius: 6,
+                        padding: '3px 9px',
+                        fontSize: 11,
+                        fontWeight: 800,
+                      }}
+                    >
+                      <span>✓ উত্তর:</span>
+                      <span style={{ fontWeight: 800 }}>({correctOpt?.key || item.answer})</span>
+                      {correctOpt?.text && (
+                        <span><MathText text={correctOpt.text} /></span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Options */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gap: '4px 12px',
+                      margin: '6px 0 0 30px',
+                    }}
+                  >
+                    {item.options.map((opt, oi) => {
+                      const isCorrect = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
+                      const isHighlighted = answerFormat === 'in_question_highlight' && isCorrect;
+
+                      return (
+                        <div
+                          key={oi}
+                          style={{
+                            fontSize: 12,
+                            lineHeight: 1.45,
+                            display: 'flex',
+                            gap: 5,
+                            alignItems: 'center',
+                            borderRadius: 6,
+                            padding: isHighlighted ? '3px 8px' : '2px 0',
+                            background: isHighlighted
+                              ? (isLightTmpl ? '#d1fae5' : '#064e3b')
+                              : 'transparent',
+                            border: isHighlighted
+                              ? `1.5px solid ${isLightTmpl ? '#10b981' : '#34d399'}`
+                              : '1.5px solid transparent',
+                            color: isHighlighted
+                              ? (isLightTmpl ? '#064e3b' : '#ecfdf5')
+                              : ink,
+                          }}
+                        >
+                          <span style={{ fontWeight: 800, color: isHighlighted ? '#10b981' : accent }}>
+                            {opt.key})
+                          </span>
+                          <span style={{ flex: 1, fontWeight: isHighlighted ? 800 : 600 }}>
+                            <MathText text={opt.text} />
+                          </span>
+                          {isHighlighted && (
+                            <span style={{ fontWeight: 800, color: '#10b981', fontSize: 12 }}>✓</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {getSourceTags(item).length > 0 && (
+                    <div style={{ margin: '4px 0 0 30px', fontSize: 10, fontWeight: 700, color: inkMuted }}>
+                      {getSourceTags(item).join(' · ')}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -359,10 +423,26 @@ const PaperPage = ({
 // Lightweight wrapper so the offscreen page node can be targeted by ref for toPng
 const OffscreenPage = React.forwardRef<
   HTMLDivElement,
-  { items: MCQItem[]; config: DeckConfig; startNumber: number; pageNumber: number; pageTotal: number; answerKey: boolean }
->(({ items, config, startNumber, pageNumber, pageTotal, answerKey }, ref) => (
-  <div ref={ref}>
-    <PaperPage items={items} config={config} startNumber={startNumber} pageNumber={pageNumber} pageTotal={pageTotal} answerKey={answerKey} />
+  {
+    items: MCQItem[];
+    config: DeckConfig;
+    startNumber: number;
+    pageNumber: number;
+    pageTotal: number;
+    answerKey: boolean;
+    answerFormat: PdfAnswerFormat;
+  }
+>(({ items, config, startNumber, pageNumber, pageTotal, answerKey, answerFormat }, ref) => (
+  <div ref={ref} style={{ width: PAGE_W, height: PAGE_H, boxSizing: 'border-box' }}>
+    <PaperPage
+      items={items}
+      config={config}
+      startNumber={startNumber}
+      pageNumber={pageNumber}
+      pageTotal={pageTotal}
+      answerKey={answerKey}
+      answerFormat={answerFormat}
+    />
   </div>
 ));
 OffscreenPage.displayName = 'OffscreenPage';
@@ -390,6 +470,7 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
   }, [isOpen, config.brandName]);
   const [templateId, setTemplateId] = useState<string>(config.templateId);
   const [itemsPerPage, setItemsPerPage] = useState<number>(3);
+  const [answerFormat, setAnswerFormat] = useState<PdfAnswerFormat>('end_page');
   const [includeAnswerKey, setIncludeAnswerKey] = useState<boolean>(true);
   // Page slice currently mounted in the offscreen render node (drives PDF pages)
   const [renderSlice, setRenderSlice] = useState<{ start: number; items: MCQItem[]; pageNumber: number; answerKey: boolean }>({
@@ -424,30 +505,34 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
     setIsExporting(true);
     try {
       await document.fonts.ready;
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [PAGE_W, PAGE_H] });
       let addedPage = 0;
 
       for (let p = 0; p < pages.length; p++) {
         setRenderSlice({ start: pages[p].start, items: pages[p].items, pageNumber: p + 1, answerKey: false });
-        setProgressMsg(`Rendering page ${p + 1} of ${pages.length + (includeAnswerKey ? 1 : 0)}...`);
+        setProgressMsg(`Rendering page ${p + 1} of ${pages.length + (answerFormat === 'end_page' && includeAnswerKey ? 1 : 0)}...`);
         await new Promise((r) => setTimeout(r, 150));
         const el = pageRef.current;
         if (!el) continue;
         const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
-        if (addedPage > 0) pdf.addPage('a4', 'portrait');
-        pdf.addImage(dataUrl, 'PNG', 0, 0, PAGE_W, PAGE_H);
+        if (addedPage > 0) pdf.addPage([PAGE_W, PAGE_H], 'portrait');
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
+        pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
         addedPage++;
       }
 
-      if (includeAnswerKey) {
+      if (answerFormat === 'end_page' && includeAnswerKey) {
         setRenderSlice({ start: 0, items, pageNumber: pages.length + 1, answerKey: true });
         setProgressMsg('Rendering answer key page...');
         await new Promise((r) => setTimeout(r, 150));
         const el = pageRef.current;
         if (el) {
           const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
-          pdf.addPage('a4', 'portrait');
-          pdf.addImage(dataUrl, 'PNG', 0, 0, PAGE_W, PAGE_H);
+          pdf.addPage([PAGE_W, PAGE_H], 'portrait');
+          const pdfW = pdf.internal.pageSize.getWidth();
+          const pdfH = pdf.internal.pageSize.getHeight();
+          pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
         }
       }
 
@@ -569,26 +654,96 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
           </div>
         </div>
 
-        {/* Answer key toggle */}
-        <div className={`flex items-center justify-between gap-4 p-4 rounded-2xl border ${
-          isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-        }`}>
-          <div>
-            <h4 className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>Include Answer Key</h4>
-            <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-              Append an answer key page (উত্তরমালা) listing every question's correct answer
-            </p>
-          </div>
-          <label className={`flex items-center gap-2 text-xs font-bold cursor-pointer ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
-            <input
-              type="checkbox"
-              checked={includeAnswerKey}
-              onChange={(e) => setIncludeAnswerKey(e.target.checked)}
-              className="w-4 h-4 accent-amber-500 rounded"
-            />
-            Answer Key
+        {/* Answer Format Selection */}
+        <div className={`p-4 rounded-2xl border ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
+          <label className={`block text-sm font-bold mb-2.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+            Select Answer Presentation Format
           </label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setAnswerFormat('none')}
+              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                answerFormat === 'none'
+                  ? 'bg-amber-500/15 border-amber-500 text-amber-300'
+                  : isAppLight ? 'bg-white border-slate-200 hover:border-slate-400 text-slate-800' : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200'
+              }`}
+            >
+              <div className="text-xs font-black uppercase flex items-center gap-1 mb-1">
+                🚫 Clean Exam
+              </div>
+              <div className="text-[11px] opacity-80 leading-tight">No answers shown (student exam mode)</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAnswerFormat('end_page')}
+              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                answerFormat === 'end_page'
+                  ? 'bg-amber-500/15 border-amber-500 text-amber-300'
+                  : isAppLight ? 'bg-white border-slate-200 hover:border-slate-400 text-slate-800' : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200'
+              }`}
+            >
+              <div className="text-xs font-black uppercase flex items-center gap-1 mb-1">
+                📄 Answer Sheet
+              </div>
+              <div className="text-[11px] opacity-80 leading-tight">Answer key page (উত্তরমালা) at end</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAnswerFormat('in_question_highlight')}
+              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                answerFormat === 'in_question_highlight'
+                  ? 'bg-amber-500/15 border-amber-500 text-amber-300'
+                  : isAppLight ? 'bg-white border-slate-200 hover:border-slate-400 text-slate-800' : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200'
+              }`}
+            >
+              <div className="text-xs font-black uppercase flex items-center gap-1 mb-1">
+                🎨 Color Box
+              </div>
+              <div className="text-[11px] opacity-80 leading-tight">Mark correct option with colored box</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAnswerFormat('inline_pill')}
+              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                answerFormat === 'inline_pill'
+                  ? 'bg-amber-500/15 border-amber-500 text-amber-300'
+                  : isAppLight ? 'bg-white border-slate-200 hover:border-slate-400 text-slate-800' : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200'
+              }`}
+            >
+              <div className="text-xs font-black uppercase flex items-center gap-1 mb-1">
+                🏷️ Answer Pill
+              </div>
+              <div className="text-[11px] opacity-80 leading-tight">Show answer badge `[✓ উত্তর]` under stem</div>
+            </button>
+          </div>
         </div>
+
+        {/* Answer key toggle (visible only when answerFormat is 'end_page') */}
+        {answerFormat === 'end_page' && (
+          <div className={`flex items-center justify-between gap-4 p-4 rounded-2xl border ${
+            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+          }`}>
+            <div>
+              <h4 className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>Include Trailing Answer Key Page</h4>
+              <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Append an answer key page (উত্তরমালা) listing every question's correct answer at the end of the PDF
+              </p>
+            </div>
+            <label className={`flex items-center gap-2 text-xs font-bold cursor-pointer ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
+              <input
+                type="checkbox"
+                checked={includeAnswerKey}
+                onChange={(e) => setIncludeAnswerKey(e.target.checked)}
+                className="w-4 h-4 accent-amber-500 rounded"
+              />
+              Answer Key
+            </label>
+          </div>
+        )}
 
         {/* Preview */}
         <div>
@@ -631,6 +786,7 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
                     pageNumber={1}
                     pageTotal={pages.length || 1}
                     answerKey={false}
+                    answerFormat={answerFormat}
                   />
                 )}
               </div>
@@ -641,7 +797,7 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
         {/* Actions */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <div className={`text-xs font-semibold ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-            {pages.length} page{pages.length === 1 ? '' : 's'}{includeAnswerKey ? ' + answer key' : ''} • A4 portrait • template-themed header/footer
+            {pages.length} page{pages.length === 1 ? '' : 's'}{answerFormat === 'end_page' && includeAnswerKey ? ' + answer key' : ''} • A4 portrait • template-themed header/footer
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -701,6 +857,7 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
           pageNumber={renderSlice.items.length > 0 ? renderSlice.pageNumber : 1}
           pageTotal={pages.length || 1}
           answerKey={renderSlice.answerKey}
+          answerFormat={answerFormat}
         />
       </div>
     </div>
@@ -708,3 +865,4 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
 };
 
 DeckQuestionPaperModal.displayName = 'DeckQuestionPaperModal';
+

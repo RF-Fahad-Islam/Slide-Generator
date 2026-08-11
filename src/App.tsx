@@ -3,15 +3,20 @@ import { DeckConfig, MCQItem, SavedDeck } from './types';
 import { SAMPLE_DECKS } from './utils/bulkParser';
 import { useIndexedDBSync } from './hooks/useIndexedDBSync';
 import { db } from './db/dexie';
+import { getOrCreateDefaultWorkspace, saveReviewQueue } from './utils/workspaceStore';
+import { migrateLegacyDraftToDefaultWorkspace } from './utils/workspaceMigration';
 import { SidebarNav } from './components/SidebarNav';
 import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
+import { WorkspacesHome } from './components/workspaces/WorkspacesHome';
+import { WorkspaceEditor } from './components/workspaces/WorkspaceEditor';
 import { AIUploader } from './components/AIUploader';
 import { DeckManager } from './components/DeckManager';
 import { DeckSettingsPage } from './components/DeckSettingsPage';
 import { ExportModal } from './components/ExportModal';
 import { BatchExportModal } from './components/BatchExportModal';
 import { TemplateLibraryModal } from './components/TemplateLibraryModal';
+import { TemplateStudioModal } from './components/TemplateStudioModal';
 import { EditQuestionModal } from './components/EditQuestionModal';
 import { AddQuestionsModal } from './components/AddQuestionsModal';
 import { TemplateCreator } from './components/TemplateCreator';
@@ -45,9 +50,16 @@ import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSl
 export default function App() {
   // Application State
   const [items, setItems] = useState<MCQItem[]>(SAMPLE_DECKS[0].items);
-  const [reviewItems, setReviewItems] = useState<MCQItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys'>('home');
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+
+  // One-time, idempotent: seeds a "Default" workspace from the pre-Workspaces
+  // Manual Editor draft (if any was still pending), so upgrading never loses
+  // pasted-but-unapproved questions.
+  useEffect(() => {
+    migrateLegacyDraftToDefaultWorkspace();
+  }, []);
   const [isAnswerRevealMode, setIsAnswerRevealMode] = useState<boolean>(false);
   const [isOverviewMode, setIsOverviewMode] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
@@ -66,6 +78,7 @@ export default function App() {
   // persisted back to that deck's row in db.questionDecks (see effect below).
   const [editingSavedDeckId, setEditingSavedDeckId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+  const [isTemplateStudioOpen, setIsTemplateStudioOpen] = useState<boolean>(false);
 
   // "Add Questions" chooser modal — wide Slide Studio button → 3 source cards
   // (Question Bank / Manual Editor / Question Creator Form).
@@ -81,7 +94,6 @@ export default function App() {
   // Form" (a fresh empty question) — saving appends it to the deck instead of
   // updating an existing one.
   const [isCreatingQuestion, setIsCreatingQuestion] = useState<boolean>(false);
-  const [dedicatedEditItem, setDedicatedEditItem] = useState<MCQItem | null>(null);
 
   // Slide text box edit mode (overlay layer) + edit scope (deck-wide vs active slide only)
   const [isTextBoxEditMode, setIsTextBoxEditMode] = useState<boolean>(false);
@@ -444,9 +456,17 @@ export default function App() {
     setActiveTab('bank');
   };
 
-  const handleFromManualEditor = () => {
+  const handleFromManualEditor = async () => {
     setIsAddQuestionsOpen(false);
-    setActiveTab('manual');
+    // If exactly one workspace exists, jump straight into it; otherwise land on
+    // the Workspaces home so the user picks or creates one.
+    const workspaces = await db.workspaces.toArray();
+    if (workspaces.length === 1) {
+      setActiveWorkspaceId(workspaces[0].id);
+    } else {
+      setActiveWorkspaceId(null);
+    }
+    setActiveTab('workspaces');
   };
 
   const createEmptyQuestion = (): MCQItem => ({
@@ -468,9 +488,18 @@ export default function App() {
     setEditingQuestion(createEmptyQuestion());
   };
 
-  const handleReviewMCQs = (newItems: MCQItem[]) => {
-    setReviewItems(newItems);
-    setActiveTab('manual');
+  // AI Parser hand-off — lands the parsed batch in the currently open workspace's
+  // review queue, or the Default workspace if none is open, then navigates there.
+  const handleReviewMCQs = async (newItems: MCQItem[]) => {
+    const targetId = activeWorkspaceId ?? (await getOrCreateDefaultWorkspace()).id;
+    const target = await db.workspaces.get(targetId);
+    if (target) {
+      const existingIds = new Set(target.reviewQueue.map((q) => q.id));
+      const incoming = newItems.filter((q) => !existingIds.has(q.id));
+      await saveReviewQueue(target, [...target.reviewQueue, ...incoming]);
+    }
+    setActiveWorkspaceId(targetId);
+    setActiveTab('workspaces');
   };
 
   const handleImportToCurrentDeck = (itemsToAdd: MCQItem[]) => {
@@ -1119,6 +1148,20 @@ export default function App() {
                           <span className="hidden 2xl:inline">Deck Settings</span>
                         </button>
 
+                        {/* Interactive Template Studio (JSON Import/Export) */}
+                        <button
+                          onClick={() => setIsTemplateStudioOpen(true)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                            isAppLight
+                              ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                          }`}
+                          title="Interactive Template Studio — build custom themes & import/export JSON templates"
+                        >
+                          <LayoutTemplate className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="hidden 2xl:inline">Template Studio</span>
+                        </button>
+
                         {/* Download — Export modal scoped to the whole active deck */}
                         <button
                           onClick={() => {
@@ -1417,20 +1460,20 @@ export default function App() {
           )
         )}
 
-        {/* TAB 2: MANUAL EDITOR / QUESTION CREATOR */}
-        {activeTab === 'manual' && (
-          <ManualEditor
-            onAddMCQs={handleAddMCQs}
-            onClearAll={handleClearAll}
-            appTheme={appTheme}
-            items={items}
-            onUpdateItems={setItems}
-            reviewItems={reviewItems}
-            onClearReviewItems={() => setReviewItems([])}
-            prefillEditItem={dedicatedEditItem}
-            onPrefillConsumed={() => setDedicatedEditItem(null)}
-            onImportToQuestionBank={handleImportToQuestionBank}
-          />
+        {/* TAB 2: WORKSPACES — paste, review, and approve questions per project */}
+        {activeTab === 'workspaces' && (
+          activeWorkspaceId ? (
+            <WorkspaceEditor
+              workspaceId={activeWorkspaceId}
+              onBack={() => setActiveWorkspaceId(null)}
+              appTheme={appTheme}
+            />
+          ) : (
+            <WorkspacesHome
+              appTheme={appTheme}
+              onOpenWorkspace={(id) => setActiveWorkspaceId(id)}
+            />
+          )
         )}
 
         {/* TAB 3: AI PDF & TEXT PARSER */}
@@ -1533,18 +1576,6 @@ export default function App() {
             setSelectedIndex(items.length);
           }
         }}
-        onOpenInDedicatedEditor={(item) => {
-          setItems(prev => {
-            if (isCreatingQuestion) {
-              return ensureUniqueIds([...prev, item]);
-            }
-            return prev.map(q => (q.id === item.id ? item : q));
-          });
-          setEditingQuestion(null);
-          setIsCreatingQuestion(false);
-          setDedicatedEditItem(item);
-          setActiveTab('manual');
-        }}
         onSaveToQuestionBank={handleImportToQuestionBank}
         previousTags={items.length > 0 ? items[items.length - 1] : null}
         appTheme={appTheme}
@@ -1587,6 +1618,22 @@ export default function App() {
         isOpen={isLayoutModalOpen}
         onClose={() => setIsLayoutModalOpen(false)}
         onSelectLayout={addLayoutToDeck}
+        appTheme={appTheme}
+      />
+
+      {/* Interactive Template Studio Modal (JSON Import/Export) */}
+      <TemplateStudioModal
+        isOpen={isTemplateStudioOpen}
+        onClose={() => setIsTemplateStudioOpen(false)}
+        config={config}
+        onApplyTemplate={(templateId, customThemeOverride) => {
+          handleApplyDeckConfig({
+            ...config,
+            templateId,
+            customTheme: customThemeOverride || config.customTheme,
+            accentColorCustom: customThemeOverride?.accentColor || config.accentColorCustom,
+          });
+        }}
         appTheme={appTheme}
       />
 

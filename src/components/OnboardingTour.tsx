@@ -13,7 +13,7 @@ import { X, ChevronRight, ChevronLeft, Sparkles, Presentation } from 'lucide-rea
 // advance/exit the tour.
 // ---------------------------------------------------------------------------
 
-export type TourTab = 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys';
+export type TourTab = 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys';
 
 export interface TourStep {
   target: string; // CSS selector to highlight
@@ -56,10 +56,10 @@ export const defaultTourSteps: TourStep[] = [
     navigateTab: 'ai',
   },
   {
-    target: '[data-tour="nav-manual"]',
-    title: 'Manual Editor',
-    body: 'Prefer hands-on control? The Manual Editor lets you type questions and options one by one.',
-    navigateTab: 'manual',
+    target: '[data-tour="nav-workspaces"]',
+    title: 'Workspaces',
+    body: 'Paste raw question text, review it, and approve it into a workspace — each workspace keeps its own queue, default tags, and approved history (e.g. one per exam board).',
+    navigateTab: 'workspaces',
   },
   {
     target: '[data-tour="nav-preview"]',

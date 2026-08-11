@@ -20,7 +20,7 @@ interface MyDecksViewProps {
   onOpenDeckSettings: (items: MCQItem[], config?: DeckConfig, savedDeckId?: string) => void;
   onOpenSocialGenerator: (items: MCQItem[]) => void;
   onDownloadDeck: (deck: { items: MCQItem[]; config: DeckConfig }) => void;
-  onNavigateTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'manual' | 'settings' | 'templates' | 'ai-keys') => void;
+  onNavigateTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys') => void;
   appTheme?: 'dark' | 'light';
 }
 
@@ -153,7 +153,7 @@ export const MyDecksView: React.FC<MyDecksViewProps> = ({
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => onNavigateTab('manual')}
+            onClick={() => onNavigateTab('workspaces')}
             className="px-5 py-3 rounded-2xl border font-black text-sm flex items-center gap-2 shadow-lg transition-all cursor-pointer bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 shadow-amber-500/25 hover:brightness-110"
           >
             <Plus className="w-4 h-4" />
@@ -275,7 +275,7 @@ export const MyDecksView: React.FC<MyDecksViewProps> = ({
               No saved decks yet. Save your current presentation or create a new one.
             </p>
             <button
-              onClick={() => onNavigateTab('manual')}
+              onClick={() => onNavigateTab('workspaces')}
               className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow cursor-pointer transition-all"
             >
               Create New Deck
