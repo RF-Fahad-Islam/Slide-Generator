@@ -221,10 +221,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
     <div className="space-y-8 animate-fadeIn">
       {/* Main Settings Card */}
       <div
-        className={`p-8 lg:p-10 rounded-3xl border shadow-2xl ${
+        className={`p-8 lg:p-10 rounded-3xl border-2 shadow-2xl ${
           isAppLight
             ? 'glass-card-fatty-light border-slate-200'
-            : 'bg-slate-950/85 border-slate-800/80'
+            : 'glass-card-fatty border-slate-800'
         }`}
       >
         {/* Header */}
@@ -467,10 +467,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appTheme = 'dark' })
 
       {/* OCR Engine Card — deliberately separate key/provider from Structuring above */}
       <div
-        className={`p-8 lg:p-10 rounded-3xl border shadow-2xl ${
+        className={`p-8 lg:p-10 rounded-3xl border-2 shadow-2xl ${
           isAppLight
             ? 'glass-card-fatty-light border-slate-200'
-            : 'bg-slate-950/85 border-slate-800/80'
+            : 'glass-card-fatty border-slate-800'
         }`}
       >
         <div className={`flex items-center gap-5 pb-8 border-b ${isAppLight ? 'border-slate-200' : 'border-slate-800/80'}`}>

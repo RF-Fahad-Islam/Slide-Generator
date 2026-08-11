@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { DeckConfig, MCQItem, CustomThemeColors } from '../types';
 import { getTemplateById } from '../templates/registry';
 import { SlideCanvas } from './SlideCanvas';
+import { SlideThumb } from './SlideThumb';
 import { downloadJSON } from '../utils/mcqJson';
 import { saveTemplatePreset, getTemplatePresets, deleteTemplatePreset, DeckTemplatePreset } from '../utils/templatePresets';
 import { Palette, Download, Upload, Plus, Trash2, Check, X, Sliders, Eye } from 'lucide-react';
@@ -488,16 +489,14 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
               </span>
             </div>
 
-            <div className={`rounded-2xl border overflow-hidden p-2 shadow-xl ${
-              isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800'
-            }`}>
-              <SlideCanvas
-                item={SAMPLE_STUDIO_MCQ}
-                config={previewConfig}
-                currentIndex={0}
-                totalCount={1}
-              />
-            </div>
+            <SlideThumb
+              item={SAMPLE_STUDIO_MCQ}
+              config={previewConfig}
+              index={0}
+              totalCount={1}
+              forceShowExplanation={true}
+              className="w-full aspect-video rounded-2xl overflow-hidden border-2 border-amber-500/40 shadow-2xl bg-slate-950"
+            />
 
             {/* Saved User Presets List */}
             {savedPresets.length > 0 && (

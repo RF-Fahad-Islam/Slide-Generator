@@ -72,16 +72,16 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
       </div>
 
       {/* SECTION 1: BRAND IDENTITY & LOGO */}
-      <div className={`p-6 rounded-3xl border space-y-4 ${
-        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
+        isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
       }`}>
         <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-          <Award className="w-4 h-4" /> 1. Default Channel Branding & Logo
+          <Award className="w-5 h-5" /> 1. Default Channel Branding & Logo
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="space-y-1">
-            <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs sm:text-sm">
+          <div className="space-y-1.5">
+            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
               Default Brand / Coaching Name
             </label>
             <input
@@ -89,14 +89,14 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
               value={defaults.brandName}
               onChange={(e) => update({ brandName: e.target.value })}
               placeholder="e.g. NOBEL'S CLASSROOM"
-              className={`w-full border rounded-xl px-4 py-2.5 font-bold focus:outline-none focus:border-amber-500 ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
               }`}
             />
           </div>
 
-          <div className="space-y-1">
-            <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+          <div className="space-y-1.5">
+            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
               Default Subject / Badge Tag
             </label>
             <input
@@ -104,14 +104,14 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
               value={defaults.badgeTag}
               onChange={(e) => update({ badgeTag: e.target.value })}
               placeholder="e.g. Biology"
-              className={`w-full border rounded-xl px-4 py-2.5 font-bold focus:outline-none focus:border-amber-500 ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
               }`}
             />
           </div>
 
-          <div className="sm:col-span-2 space-y-1">
-            <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+          <div className="sm:col-span-2 space-y-1.5">
+            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
               Default Logo Image URL / Data URL
             </label>
             <input
@@ -119,21 +119,21 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
               value={defaults.logoUrl}
               onChange={(e) => update({ logoUrl: e.target.value })}
               placeholder="https://example.com/logo.png"
-              className={`w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:border-amber-500 ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              className={`w-full border-2 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
               }`}
             />
           </div>
 
-          <div className="space-y-1">
-            <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+          <div className="space-y-1.5">
+            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
               Default Logo Size
             </label>
             <select
               value={defaults.logoSize}
               onChange={(e) => update({ logoSize: e.target.value as any })}
-              className={`w-full border rounded-xl px-4 py-2.5 font-bold cursor-pointer ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm cursor-pointer focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
               }`}
             >
               <option value="sm">Small (48px)</option>
@@ -143,15 +143,15 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+          <div className="space-y-1.5">
+            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
               Default Logo Position
             </label>
             <select
               value={defaults.logoPosition}
               onChange={(e) => update({ logoPosition: e.target.value as any })}
-              className={`w-full border rounded-xl px-4 py-2.5 font-bold cursor-pointer ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm cursor-pointer focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
+                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
               }`}
             >
               <option value="top-left">Top Left</option>
@@ -163,8 +163,8 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
       </div>
 
       {/* SECTION 2: DEFAULT BACKGROUND GRAPHICS & OVERLAYS */}
-      <div className={`p-6 rounded-3xl border space-y-4 ${
-        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
+        isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
       }`}>
         <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
           <ImageIcon className="w-4 h-4" /> 2. Default Background Graphics & Overlays

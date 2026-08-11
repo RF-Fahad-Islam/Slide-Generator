@@ -12,6 +12,7 @@ import {
   DeckTemplatePreset,
 } from '../utils/templatePresets';
 import { SlideCanvas } from './SlideCanvas';
+import { SlideThumb } from './SlideThumb';
 import { BackgroundImageEditor } from './BackgroundImageEditor';
 import {
   Palette,
@@ -332,26 +333,26 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner Identity Header */}
-      <div className={`p-6 rounded-3xl border shadow-xl ${
-        isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-slate-100'
+      <div className={`p-6 sm:p-8 rounded-3xl border-2 shadow-2xl ${
+        isAppLight ? 'glass-card-fatty-light border-slate-200 text-slate-900' : 'glass-card-fatty border-slate-800 text-slate-100'
       }`}>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 shadow-lg shadow-amber-500/25 shrink-0">
-              <Wand2 className="w-7 h-7 stroke-[2.5]" />
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 shadow-lg shadow-amber-500/25 shrink-0">
+              <Wand2 className="w-8 h-8 stroke-[2.5]" />
             </div>
             <div>
-              <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2">
                 Template Creator & Design Studio
               </h2>
-              <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              <p className={`text-xs sm:text-sm font-semibold mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Full-suite design studio: customize palettes, typography, background graphics, branding & layouts with live 16:9 canvas preview
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border ${
-              isAppLight ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+            <span className={`text-xs font-mono font-black px-4 py-2 rounded-2xl border-2 ${
+              isAppLight ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
             }`}>
               Active Base: {activeTemplate.name}
             </span>
@@ -363,8 +364,8 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
         {/* LEFT: SLIDE EDITING CONTROLS (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           {/* Navigation Tabs */}
-          <div className={`flex items-center gap-1.5 p-1.5 rounded-2xl border overflow-x-auto ${
-            isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+          <div className={`flex items-center gap-2 p-2 rounded-3xl border-2 overflow-x-auto shadow-lg ${
+            isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
           }`}>
             {[
               { id: 'theme' as const, label: 'Theme & Colors', icon: Palette },
@@ -378,15 +379,15 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
                 key={id}
                 type="button"
                 onClick={() => setActiveTab(id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                   activeTab === id
-                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 border-2 border-amber-400'
                     : isAppLight
-                    ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 border-2 border-transparent'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white border-2 border-transparent'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-4 h-4" />
                 {label}
               </button>
             ))}
@@ -1089,9 +1090,14 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
             </div>
 
             {/* 16:9 Scaled Slide Canvas */}
-            <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-              <SlideCanvas item={previewItem} config={config} currentIndex={0} totalCount={1} />
-            </div>
+            <SlideThumb
+              item={previewItem}
+              config={config}
+              index={0}
+              totalCount={1}
+              forceShowExplanation={true}
+              className="w-full aspect-video rounded-2xl overflow-hidden border-2 border-amber-500/40 shadow-2xl bg-slate-950"
+            />
 
             {/* Save Current Design as Preset Form */}
             <form onSubmit={handleSavePreset} className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
