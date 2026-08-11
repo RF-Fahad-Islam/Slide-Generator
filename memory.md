@@ -37,17 +37,17 @@ All committed on `main`. Latest HEAD = `f6830dd`. Working tree clean.
    - Added `@font-face` definitions in `src/fonts.css` and imported via `@import "./fonts.css";` in `src/index.css`.
    - Ensures HTML-to-Image canvas rasterization and PDF/PPTX exports are 100% CORS-free, instant, and offline-capable.
 
+8. **Enlarged Slide Preview, Large Review Modal, Layout Library & 2x2 Enterprise EdTech Layout (`App.tsx`, `SlidePreviewModal.tsx`, `LayoutLibraryModal.tsx`, `slideElements.ts`)**
+   - Removed outer padded card wrapper around the Slide Studio slide canvas preview, maximizing visible preview width (`xl:col-span-8`).
+   - Created `SlidePreviewModal.tsx` ("Large Review" button & canvas overlay button) to review high-definition slides in a full-screen modal with keyboard arrow/esc navigation.
+   - Created `LayoutLibraryModal.tsx` ("Layouts" toolbar button) for browsing and selecting slide layout presets.
+   - Added Enterprise EdTech 2x2 Split Grid layout (`enterprise_2col_grid`) as default layout matching the reference design (2x2 option cards, question badge, stem card, prompt line, explanation callout, branding footer).
+
 ---
 
 ## Current State
 
-- On `main`, HEAD = `f6830dd`.
-- `npx tsc --noEmit` is 100% clean (0 errors).
-- Dev server running on `http://localhost:3000`.
+- On `main`, latest HEAD = `f10cb3a`.
+- `npx tsc --noEmit` and `npm run build` are 100% clean (0 errors).
+- Working tree clean.
 
----
-
-## Next Session Starts With
-
-1. Dev server is running on `http://localhost:3000`.
-2. Continue with any follow-up user feature requests or design tweaks.
