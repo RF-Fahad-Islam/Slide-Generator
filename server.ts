@@ -111,6 +111,7 @@ async function startServer() {
         signal: AbortSignal,
         provider: 'gemini' | 'openrouter',
         keys: { geminiKey?: string; openrouterKey?: string; openrouterModel?: string },
+        ocrMethod: 'model' | 'browser',
       ) => Promise<void>,
     ) =>
     async (req: express.Request, res: express.Response) => {
@@ -137,18 +138,23 @@ async function startServer() {
       const geminiKey = (req.headers['x-gemini-key'] as string) || process.env.GEMINI_API_KEY;
       const openrouterKey = (req.headers['x-openrouter-key'] as string) || process.env.OPENROUTER_API_KEY;
       const openrouterModel = (req.headers['x-openrouter-model'] as string) || 'google/gemini-2.5-flash';
+      // Only /api/ai/extract ever sends this header; Browser OCR needs no key
+      // at all, so the requirement below is skipped in that case only.
+      const ocrMethod = ((req.headers['x-ocr-method'] as string) || 'model') as 'model' | 'browser';
 
-      if (provider === 'gemini' && !geminiKey) {
-        emit({ type: 'error', message: 'Gemini API Key is missing. Add one in the Keys tab.' });
-        return res.end();
-      }
-      if (provider === 'openrouter' && !openrouterKey) {
-        emit({ type: 'error', message: 'OpenRouter API Key is missing. Add one in the Keys tab.' });
-        return res.end();
+      if (ocrMethod !== 'browser') {
+        if (provider === 'gemini' && !geminiKey) {
+          emit({ type: 'error', message: 'Gemini API Key is missing. Add one in the Keys tab.' });
+          return res.end();
+        }
+        if (provider === 'openrouter' && !openrouterKey) {
+          emit({ type: 'error', message: 'OpenRouter API Key is missing. Add one in the Keys tab.' });
+          return res.end();
+        }
       }
 
       try {
-        await run(req.body || {}, emit, abort.signal, provider, { geminiKey, openrouterKey, openrouterModel });
+        await run(req.body || {}, emit, abort.signal, provider, { geminiKey, openrouterKey, openrouterModel }, ocrMethod);
       } catch (err: any) {
         const rawErrorMsg = err?.message || 'AI parsing failed.';
         const sanitizedError = rawErrorMsg.replace(/(AIzaSy|sk-or-)[A-Za-z0-9_-]+/g, '[REDACTED_API_KEY]');
@@ -162,10 +168,10 @@ async function startServer() {
 
   // Stage 1 — raw text extraction / OCR. Streams raw text live, ends at stage1_done.
   // The client shows this text and asks the user to approve before Stage 2 runs.
-  app.post('/api/ai/extract', streamHandler(async (body, emit, signal, provider, keys) => {
+  app.post('/api/ai/extract', streamHandler(async (body, emit, signal, provider, keys, ocrMethod) => {
     const { promptText, mimeType, fileBase64, fileName } = body;
-    console.log(`[Ingestion] Stage 1 extract via ${provider} — source: ${fileName || mimeType || 'pasted text'}`);
-    await streamStage1({ promptText, mimeType, fileBase64, fileName, provider, keys, signal }, emit);
+    console.log(`[Ingestion] Stage 1 extract via ${ocrMethod === 'browser' ? 'browser OCR' : provider} — source: ${fileName || mimeType || 'pasted text'}`);
+    await streamStage1({ promptText, mimeType, fileBase64, fileName, provider, keys, signal, ocrMethod }, emit);
   }));
 
   // Stage 2 — structured MCQ extraction from approved raw text. Streams chunk events.

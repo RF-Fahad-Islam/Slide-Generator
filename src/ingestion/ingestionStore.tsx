@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useReducer, useRef } from 'react';
 import { MCQItem } from '../types';
+import { runBrowserOcr } from './browserOcr';
 
 export type IngestionStatus = 'idle' | 'extracting' | 'awaiting_approval' | 'structuring' | 'done' | 'error' | 'aborted';
 
@@ -54,7 +55,7 @@ const IDLE_STATE: IngestionState = {
   elapsed: 0,
 };
 
-type Action =
+export type Action =
   | { type: 'START_EXTRACT'; job: IngestionJob; sourceName: string }
   | { type: 'STAGE1_START'; kind: 'text' | 'vision'; sourceName: string; pageCount: number }
   | { type: 'STAGE1_RASTER'; pageNumber: number }
@@ -127,7 +128,10 @@ function reducer(state: IngestionState, action: Action): IngestionState {
   }
 }
 
-function buildHeaders() {
+// Structuring (stage2, and the `x-ai-provider`/`x-*-key` used for the local
+// text-fast-path request) — deliberately a different key/provider than OCR
+// below, so the two AI calls never share one quota.
+function buildStructureHeaders() {
   const activeProvider = (localStorage.getItem('mcqgen.provider') as 'gemini' | 'openrouter') || 'gemini';
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -142,11 +146,47 @@ function buildHeaders() {
   return headers;
 }
 
+// OCR (stage1's vision fallback) — own provider/key/method, independent of
+// structuring above. x-ocr-method tells the server whether to run vision AI
+// OCR itself or stream rasterized page images back for browser-side OCR.
+function buildOcrHeaders() {
+  const ocrMethod = (localStorage.getItem('mcqgen.ocrMethod') as 'model' | 'browser') || 'model';
+  const activeProvider = (localStorage.getItem('mcqgen.ocrProvider') as 'gemini' | 'openrouter') || 'gemini';
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-ocr-method': ocrMethod,
+    'x-ai-provider': activeProvider,
+  };
+  if (ocrMethod === 'browser') return headers;
+  if (activeProvider === 'gemini') {
+    headers['x-gemini-key'] = (localStorage.getItem('mcqgen.ocrGeminiKey') || '').trim();
+  } else {
+    headers['x-openrouter-key'] = (localStorage.getItem('mcqgen.ocrOpenrouterKey') || '').trim();
+    headers['x-openrouter-model'] = localStorage.getItem('mcqgen.ocrOpenrouterModel') || 'google/gemini-2.5-flash';
+  }
+  return headers;
+}
+
+export interface PendingOcrPage {
+  pageNumber: number;
+  dataUrl: string;
+}
+
+interface ConsumeStreamResult {
+  needsClientOcr: boolean;
+  pendingPages: PendingOcrPage[];
+  clientOcrWarnings: string[];
+}
+
 async function consumeStream(
   response: Response,
   dispatch: React.Dispatch<Action>,
   abort: AbortController,
-): Promise<void> {
+): Promise<ConsumeStreamResult> {
+  const pendingPages: PendingOcrPage[] = [];
+  let needsClientOcr = false;
+  let clientOcrWarnings: string[] = [];
+
   if (!response.ok || !response.body) {
     let errText = 'Failed to reach the AI pipeline.';
     try {
@@ -198,6 +238,13 @@ async function consumeStream(
         case 'stage1_page':
           dispatch({ type: 'STAGE1_PAGE', pageNumbers: event.pageNumber, text: event.text });
           break;
+        case 'stage1_client_ocr_page':
+          pendingPages.push({ pageNumber: event.pageNumber, dataUrl: event.dataUrl });
+          break;
+        case 'stage1_await_client_ocr':
+          needsClientOcr = true;
+          clientOcrWarnings = event.warnings || [];
+          break;
         case 'stage1_done':
           dispatch({ type: 'STAGE1_DONE', kind: event.kind, text: event.text, warnings: event.warnings || [] });
           break;
@@ -230,6 +277,8 @@ async function consumeStream(
   if (abort.signal.aborted) {
     dispatch({ type: 'ABORTED' });
   }
+
+  return { needsClientOcr, pendingPages, clientOcrWarnings };
 }
 
 export interface IngestionContextValue {
@@ -267,7 +316,7 @@ export const IngestionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const response = await fetch('/api/ai/extract', {
         method: 'POST',
-        headers: buildHeaders(),
+        headers: buildOcrHeaders(),
         signal: abort.signal,
         body: JSON.stringify({
           promptText: job.promptText || undefined,
@@ -276,7 +325,10 @@ export const IngestionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           fileName: job.fileName || undefined,
         }),
       });
-      await consumeStream(response, dispatch, abort);
+      const result = await consumeStream(response, dispatch, abort);
+      if (result.needsClientOcr) {
+        await runBrowserOcr(result.pendingPages, result.clientOcrWarnings, dispatch, abort.signal);
+      }
     } catch (err: any) {
       if (err?.name === 'AbortError' || abort.signal.aborted) {
         dispatch({ type: 'ABORTED' });
@@ -294,7 +346,7 @@ export const IngestionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const response = await fetch('/api/ai/structure', {
         method: 'POST',
-        headers: buildHeaders(),
+        headers: buildStructureHeaders(),
         signal: abort.signal,
         body: JSON.stringify({ text: state.rawText }),
       });
