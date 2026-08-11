@@ -14,7 +14,7 @@ import {
 } from '../utils/templateBoxLayout';
 import { hasAnswerDisplayStyle } from '../utils/answerSlides';
 import { MathText } from './MathText';
-import { Check } from 'lucide-react';
+import { Check, User, Sparkles, BookOpen } from 'lucide-react';
 
 interface SlideTextBoxLayerProps {
   boxes: SlideTextBox[];
@@ -290,6 +290,64 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           backgroundColor: box.bg,
           border: box.shape && box.shape !== 'plain' ? '1px solid rgba(255,255,255,0.12)' : undefined,
         } as React.CSSProperties;
+
+        // CUSTOM BINDINGS RENDERING (questionNumber, explanation, watermark)
+        if (box.bind === 'questionNumber') {
+          return (
+            <div
+              key={box.id}
+              className="absolute px-4 py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+              style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
+            >
+              <span>{content}</span>
+              <span>প্রশ্ন</span>
+            </div>
+          );
+        }
+
+        if (box.bind === 'explanation') {
+          return (
+            <div
+              key={box.id}
+              className="absolute p-6 rounded-3xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-100 shadow-2xl backdrop-blur-md"
+              style={{ left: box.x, top: box.y, width: box.w }}
+            >
+              <div className="flex items-center gap-2 text-emerald-300 font-black text-xl mb-1.5 tracking-wide">
+                <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
+                <span>ব্যাখ্যা (EXPLANATION):</span>
+              </div>
+              <div className="text-emerald-100 font-extrabold text-xl leading-relaxed">
+                <MathText text={item.explanation || content} />
+              </div>
+            </div>
+          );
+        }
+
+        if (box.bind === 'watermark') {
+          return (
+            <div key={box.id} className="absolute flex items-center gap-4" style={{ left: box.x, top: box.y }}>
+              {config.watermarkAvatar ? (
+                <img
+                  src={config.watermarkAvatar}
+                  alt="Avatar"
+                  className="w-12 h-12 rounded-full object-cover border-2 border-amber-400 shadow-xl shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full border-2 border-amber-400 bg-slate-900 text-amber-300 flex items-center justify-center font-black shadow-lg shrink-0">
+                  <User className="w-6 h-6" />
+                </div>
+              )}
+              <div>
+                <p className="text-xl font-extrabold text-white tracking-wide leading-tight">
+                  {config.watermarkHandle || "Hasnat Shuvro"}
+                </p>
+                <p className="text-sm font-bold text-amber-300/90 mt-0.5">
+                  Senior Instructor & Mentor
+                </p>
+              </div>
+            </div>
+          );
+        }
 
         if (box.shape === 'pill') {
           return (
