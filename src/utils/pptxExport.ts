@@ -173,6 +173,37 @@ export const exportDeckToPPTX = async (
       }
       return;
     }
+    if (box.bind === 'answer') {
+      if (!highlight) return;
+      const ansText = item.answer ? `✓  উত্তর: ${item.answer}` : '✓  উত্তর: খ';
+      const fontPt = (box.fontSize || 24) * PX_TO_PT;
+      const fontFace = getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim();
+      const radius = box.shape === 'pill' ? 0.5 : 0.16;
+
+      slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
+        x: box.x * PX_TO_IN,
+        y: box.y * PX_TO_IN,
+        w: (box.w || 400) * PX_TO_IN,
+        h: (box.h || (box.fontSize || 24) * 1.8) * PX_TO_IN,
+        fill: { color: colors.badgeFill || 'D1FAE5' },
+        line: { color: colors.optionSelectedBorder || '10B981', width: 1.5 },
+        rectRadius: radius,
+      });
+
+      slide.addText(ansText, {
+        x: box.x * PX_TO_IN,
+        y: box.y * PX_TO_IN,
+        w: (box.w || 400) * PX_TO_IN,
+        h: (box.h || (box.fontSize || 24) * 1.8) * PX_TO_IN,
+        fontSize: fontPt,
+        fontFace,
+        color: colors.badgeText || '065F46',
+        bold: true,
+        align: 'center',
+        valign: 'middle',
+      });
+      return;
+    }
     if (box.bind === 'explanation' && !includeExplanation) return;
 
     // OPTIONS — render each option as its own editable pill/card graphic, and

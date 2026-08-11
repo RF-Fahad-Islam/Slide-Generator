@@ -1,47 +1,56 @@
-# Memory — Manual Editor: Guided 2-Step Paste → Review Flow + Mid-Review Navigation Fix
+# Memory — Slide Generator & Text Box Studio Polish
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
-## What was built
+## Session Summary & Accomplishments
 
-All committed on `main`. Latest HEAD = `8ed9791`. Working tree clean.
+All changes committed on `main`. Latest HEAD = `0578188`. Working tree clean. `npm run build` 100% green.
 
-1. **Guided stepper header (`src/components/ManualEditor.tsx`)**
-   - Replaced the flat 3-pill tab switcher (`1. Raw Text` / `2. Question Reviewer` / `3. Form Question Creator`) with a numbered 2-step flow: **① Paste & Parse → ② Review & Add to Deck**, connected by a line. Step 1's number badge turns into a green checkmark once something has been parsed/queued.
-   - `activeSubTab` state itself is unchanged (`'bulk' | 'review' | 'single'`) — only the header UI changed.
-   - The single-question form (`'single'`) is no longer a numbered peer step. It's now a dashed secondary pill **"+ Add one manually"** off to the side (still opens the identical form; "Editing" badge preserved when editing).
-   - Parse button relabeled `Step 2: Send N MCQs to Review →`.
-   - Review Queue empty state got a dashed-border card + amber **"← Back to Step 1: Paste & Parse"** CTA (was previously a dead-end message with no way back).
+### 1. 8 Creative Design Elements & 16:9 Card Mockup Previews
+- **New Creative Elements (`src/utils/slideElements.ts`)**: Added 8 pre-styled element builders:
+  1. `Callout Tip Box`: Amber glow card with lightbulb icon for tips & notes.
+  2. `Formula / Code Container`: Dark slate monospace box (`'Fira Code'`) for math equations & code snippets.
+  3. `Teacher Quote Panel`: Translucent glass quote card with quote mark icon.
+  4. `Key Takeaway Card`: Emerald green summary banner with sparkles icon.
+  5. `Instructor Card`: Mentor badge with avatar icon, name (`Hasnat Shuvro`), and title subtext.
+  6. `Stat Highlight Pill`: Cyan capsule stat badge (`⚡ 98% SUCCESS RATE`).
+  7. `Alert Warning Banner`: High-priority rose warning card (`⚠️ EXAM WARNING`).
+  8. `Accent Divider`: Gold gradient section rule.
+- **16:9 Card Mockup Previews (`src/components/SlideTextBoxPanel.tsx`)**: Added `ElementMockupPreview` rendering visual 16:9 thumbnail previews on every element card in the Elements tab so users see the exact design (shapes, colors, icons, layout) before clicking to add.
 
-2. **Fixed a real navigation bug in `approveQueueItem`**
-   - Previously: clicking "Approve" on a single card in the review queue always called `onAddMCQs`, which in `App.tsx`'s `handleAddMCQs` unconditionally does `setActiveTab('preview')` — so approving ONE item while others were still pending instantly navigated the whole app away to Slide Studio, ejecting the user mid-review.
-   - Fix: only the LAST remaining queue item now behaves like "Approve All" (calls `onAddMCQs`, navigates — the deliberate "I'm done, show me the deck" moment). Every earlier approval now calls `onUpdateItems([...items, itemToApprove])` (append to the active deck without navigating) and shows a new 2.2s inline emerald toast (`queueToast` state) confirming the add + remaining count.
-   - `approveAllQueue` and `commitStagedToDeck` (staged single-form batch commit) were deliberately left unchanged — their navigate-to-preview behavior is correct/intentional there.
+### 2. Categorized Data Source / Binding Selector
+- Updated **Data Source / Binding** selector in `SlideTextBoxPanel.tsx` with optgroups:
+  - **Slide Data Fields (Auto-filled)**: Question Stem, Option Cards, Answer Key, Explanation, Passage, Prompt, Roman Items, Source Tag, Question Number, Brand Name, Header Title, Badge Tag, Footer Tag, Watermark, Page Counter.
+  - **Custom Written Content**: Free Text (Custom Written Text), Decorative Icon, Banner / Picture Box.
 
-3. **Docs updated per CLAUDE.md mandate**
-   - `context/progress-tracker.md` — new entry under "## UI Polish" dated 2026-08-11.
-   - `context/ui-registry.md` — `ManualEditor` registered-component entry extended with the stepper pattern + the approve-flow fix.
+### 3. Text Box Editor Auto-Population & Option Font Size Slider
+- **Text Box Auto-Population (`App.tsx`)**: Added automatic template text box population via `templateToTextBoxes(effectiveTextBoxConfig)` when enabling **Edit Text Boxes** or when `activeTextBoxes.length === 0`.
+- **Option Font Size Slider (`SlideTextBoxLayer.tsx`)**: Removed hardcoded `text-xl` and `text-2xl` Tailwind class overrides on option text `<span>` elements, allowing `box.fontSize` slider adjustments in `SlideTextBoxPanel` to resize option text dynamically on screen in real-time.
+- **Uncaught Error Fix (`SlideTextBoxPanel.tsx`)**: Added `slideCounter: Layers` to `BIND_ICONS` mapping dictionary to prevent `undefined` React element rendering errors.
 
-## Decisions made
+### 4. Header Badge Alignment & High-Contrast Colors
+- **Header Contrast & Position (`registry.ts`, `templateToTextBoxes.ts`, `SlideTextBoxLayer.tsx`)**: Updated `badgeText` color to high-contrast vibrant gold (`#fcd34d` / `text-amber-300`) with a gold border (`border border-amber-500/40`), right-aligned next to the page counter pill (`১ / ১`).
+- **Unobscured Overlay Button (`App.tsx`)**: Repositioned `Review Large` button from `top-4 right-4` to `bottom-4 right-4`.
 
-- Chose a **guided stepper** (not a "keep 3 tabs, polish only" option) after asking the user directly — this was a scope-defining decision confirmed via AskUserQuestion before implementation, since it's the higher-effort/higher-impact of two real options.
-- Kept the terminal "approve all → navigate to deck" behavior intact rather than removing all auto-navigation — it's a pre-existing, deliberate pattern also used by `AIUploader` and the staged-batch commit flow elsewhere in the app; only the *mid-batch* single-approve case was actually broken.
-- Did not touch the Single Question Form's internals, the Bulk Cards mode editor, or the Batch Tags editor — out of scope for this pass; only the top-level flow structure and the approve-navigation bug.
+### 5. Dedicated Answer Copy Slides & Navigation Drawer
+- **Drawer Interleaving (`DeckManager.tsx`)**: Every question card renders a child **Answer Copy Slide Sub-Card** (`[✓ ANSWER KEY SLIDE]`) when `answerMode === 'separate_slide'`.
+- **Physical Navigation (`App.tsx`)**: Slide Studio navigation steps through physical slide indices (`0, 1, 2, 3...`), displaying accurate page counts (`1 / 6`, `2 / 6`).
+- **PPTX Export (`pptxExport.ts`)**: PPTX export fallback uses `expandDeckSlides`, automatically including answer copy slides.
 
-## Problems solved
+---
 
-- The mid-review navigation-jump bug (see #2 above) — was not previously logged as a known issue in `progress-tracker.md`; discovered during this session's flow audit of `App.tsx`'s `handleAddMCQs`.
+## Current Architecture & File References
 
-## Current state
+- [src/utils/slideElements.ts](file:///c:/Users/User/Documents/Slide_Generator/Slide-Generator/src/utils/slideElements.ts): Element definitions, factory builders, Lucide icon library, and composed layouts.
+- [src/components/SlideTextBoxPanel.tsx](file:///c:/Users/User/Documents/Slide_Generator/Slide-Generator/src/components/SlideTextBoxPanel.tsx): Free-form Text Box Editor panel with layer reordering, `ElementMockupPreview`, categorized Data Binding selector, and style controls.
+- [src/components/SlideTextBoxLayer.tsx](file:///c:/Users/User/Documents/Slide_Generator/Slide-Generator/src/components/SlideTextBoxLayer.tsx): Canvas text box overlay renderer.
+- [src/components/SlideTextBoxOverlay.tsx](file:///c:/Users/User/Documents/Slide_Generator/Slide-Generator/src/components/SlideTextBoxOverlay.tsx): Interactive pointer capture drag & resize canvas overlay.
+- [src/App.tsx](file:///c:/Users/User/Documents/Slide_Generator/Slide-Generator/src/App.tsx): Root state manager, active deck handler, and navigation control.
 
-- On `main`, latest local HEAD = `8ed9791`, local `main` is ahead of `origin/main` (6 commits before this session's push, see below).
-- `npx tsc --noEmit` clean. Manually verified in-browser (Chrome via the Browser pane): light + dark theme, multi-item approve stays in queue + shows toast, last-item approve navigates to Slide Studio like Approve All did, empty-state back button, "Add one manually" secondary path — all working.
-- No known regressions; `AIUploader`, CSV import, staged single-form batch flow, and Bulk Cards mode were not modified and were not re-tested this session (unchanged code paths).
+---
 
-## Next session starts with
+## Status & Verification
 
-- Nothing queued. If further Manual Editor polish is wanted: the "Live Parse Preview" wide strip (Raw Text mode only) is now somewhat redundant with Cards mode and could be simplified or removed in a future pass — noted but deliberately left alone this session to keep the change surgical.
-
-## Open questions
-
-- None blocking. `/grill-me` was requested by the user at the start of this session but does not exist as an available skill or a project-defined skill under `.agents/skills/` — flagged to the user, not resolved (may need to be created if they actually want it).
+- **Build**: `npm run build` 100% clean with 0 TypeScript compilation errors.
+- **Git HEAD**: `0578188` on `main`.
+- **Browser Tests**: Verified live on `http://localhost:3000` with screenshots and video recordings.

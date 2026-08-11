@@ -256,24 +256,40 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   });
 
   // -------------------------------------------------------------------------
-  // Explanation — shown when the deck has it enabled. Sits above the footer.
+  // Answer Pill — positionable answer badge for Answer slides (y: 35)
   // -------------------------------------------------------------------------
-  if (config.showExplanationInSlide) {
-    boxes.push({
-      id: bid('mdl_explanation'),
-      bind: 'explanation',
-      x: cardX,
-      y: 840,
-      w: cardW,
-      fontSize: 20,
-      color: textColor,
-      align: 'left',
-      bold: false,
-      fontFamily: bodyFont,
-      shape: 'card',
-      bg: 'rgba(16,185,129,0.12)',
-    });
-  }
+  boxes.push({
+    id: bid('ans_pill'),
+    bind: 'answer',
+    x: 760,
+    y: 35,
+    w: 400,
+    fontSize: 24,
+    color: isLight ? '#065f46' : '#ecfdf5',
+    align: 'center',
+    bold: true,
+    fontFamily: bodyFont,
+    shape: 'pill',
+    bg: isLight ? 'rgba(209,250,229,0.95)' : 'rgba(16,185,129,0.25)',
+  });
+
+  // -------------------------------------------------------------------------
+  // Explanation — positionable explanation card for Answer slides (y: 840)
+  // -------------------------------------------------------------------------
+  boxes.push({
+    id: bid('mdl_explanation'),
+    bind: 'explanation',
+    x: cardX,
+    y: 840,
+    w: cardW,
+    fontSize: 20,
+    color: textColor,
+    align: 'left',
+    bold: false,
+    fontFamily: bodyFont,
+    shape: 'card',
+    bg: isLight ? 'rgba(240,253,244,0.95)' : 'rgba(16,185,129,0.15)',
+  });
 
   // -------------------------------------------------------------------------
   // Footer — watermark + footer tag near bottom edge

@@ -74,8 +74,8 @@ export const getSlideBoxContent = (
 ): string => {
   switch (box.bind) {
     case 'stem': return item.stem;
-    case 'answer': return item.answer || '';
-    case 'explanation': return item.explanation || '';
+    case 'answer': return item.answer ? `উত্তর: ${item.answer}` : 'উত্তর: খ';
+    case 'explanation': return item.explanation || 'ব্যাখ্যা: (এখানে উত্তর ব্যাখ্যা থাকবে)';
     case 'passage': return item.passage || '';
     case 'prompt': return item.prompt || '';
     case 'roman': return (item.romanItems || []).join('\n');

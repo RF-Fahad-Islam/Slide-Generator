@@ -64,7 +64,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none">
-      {showAnswerPill && item.answer && (
+      {showAnswerPill && item.answer && !boxes.some(b => b.bind === 'answer') && (
         <div
           className={`absolute left-1/2 -translate-x-1/2 top-5 flex items-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl ${
             isLight
@@ -80,7 +80,8 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         // Skip optional structural boxes that have no content on this slide
         if (box.bind === 'roman' && !(item.romanItems || []).length) return null;
         if (box.bind === 'prompt' && !item.prompt) return null;
-        if (box.bind === 'explanation' && (!item.explanation || !showExplanationCard)) return null;
+        if (box.bind === 'explanation' && !isAnswerVariant && !showExplanationCard && !item.explanation) return null;
+        if (box.bind === 'answer' && !showAnswerPill && !isAnswerVariant) return null;
         if (box.bind === 'source' && getSourceTags(item).length === 0) return null;
 
         // Adaptive-layout overrides for the preset template card/roman/prompt/
@@ -309,12 +310,45 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           );
         }
 
+        if (box.bind === 'answer') {
+          const ansContent = item.answer ? `উত্তর: ${item.answer}` : 'উত্তর: খ';
+          return (
+            <div
+              key={box.id}
+              className={`absolute flex items-center justify-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl ${
+                isLight
+                  ? 'bg-emerald-100 border-emerald-500 text-emerald-900'
+                  : 'bg-emerald-500/20 border-emerald-400 text-emerald-100'
+              }`}
+              style={{
+                left: box.x,
+                top: box.y,
+                width: box.w,
+                fontSize: box.fontSize,
+                backgroundColor: box.bg || undefined,
+                color: box.color || undefined,
+                fontFamily: getBoxFontFamily(box, config),
+              }}
+            >
+              <Check className="w-5 h-5 stroke-[3] shrink-0" />
+              <span className="font-black"><MathText text={ansContent} /></span>
+            </div>
+          );
+        }
+
         if (box.bind === 'explanation') {
           return (
             <div
               key={box.id}
               className="absolute p-6 rounded-3xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-100 shadow-2xl backdrop-blur-md"
-              style={{ left: box.x, top: box.y, width: box.w }}
+              style={{
+                left: box.x,
+                top: box.y,
+                width: box.w,
+                backgroundColor: box.bg || undefined,
+                color: box.color || undefined,
+                fontFamily: getBoxFontFamily(box, config),
+              }}
             >
               <div className="flex items-center gap-2 text-emerald-300 font-black text-xl mb-1.5 tracking-wide">
                 <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />

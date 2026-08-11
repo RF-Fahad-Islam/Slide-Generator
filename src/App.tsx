@@ -46,7 +46,7 @@ import { SavePresetModal } from './components/SavePresetModal';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, Maximize2, SquareStack, BookmarkPlus } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
-import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
+import { expandDeckSlides, questionSlideIndex, AnswerMode, effectiveAnswerMode, SlideRef } from './utils/answerSlides';
 
 export default function App() {
   // Application State
@@ -423,11 +423,20 @@ export default function App() {
   }, [activeTab, selectedIndex, expandedSlides.length]);
 
   const toggleAnswerReveal = () => {
-    setIsAnswerRevealMode(prev => {
-      const next = !prev;
-      setConfig(c => ({ ...c, showAnswerInSlide: next }));
-      return next;
-    });
+    const currentQIndex = activeSlideRef?.questionIndex ?? 0;
+    const isCurrentlyActive = effectiveAnswerMode(config) === 'separate_slide' || isAnswerRevealMode;
+    const nextState = !isCurrentlyActive;
+    const nextMode: AnswerMode = nextState ? 'separate_slide' : 'hidden';
+
+    setIsAnswerRevealMode(nextState);
+    setConfig(c => ({
+      ...c,
+      answerMode: nextMode,
+      showAnswerInSlide: nextState,
+    }));
+
+    const nextSlides = expandDeckSlides(items, { ...config, answerMode: nextMode, showAnswerInSlide: nextState });
+    setSelectedIndex(questionSlideIndex(nextSlides, currentQIndex));
   };
 
   const ensureUniqueIds = (itemsList: MCQItem[]): MCQItem[] => {
