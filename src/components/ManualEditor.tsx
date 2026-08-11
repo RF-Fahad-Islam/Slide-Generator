@@ -120,6 +120,10 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
   const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
   const [queueEditDraft, setQueueEditDraft] = useState<MCQItem | null>(null);
 
+  // Brief inline confirmation shown after approving one item mid-queue (we stay
+  // put instead of navigating away, so this closes the feedback loop).
+  const [queueToast, setQueueToast] = useState<string | null>(null);
+
   // Sync when reviewItems prop updates
   useEffect(() => {
     if (reviewItems && reviewItems.length > 0) {
@@ -403,15 +407,31 @@ iii. অস্ত্রোপচার
     }
   };
 
-  // Approve a single item from the review queue into active deck
+  // Approve a single item from the review queue into active deck.
+  // Important: only the LAST item in the queue behaves like "Approve All" and
+  // jumps to Slide Studio (that's the natural "I'm done, show me the deck"
+  // moment). Approving any other item keeps you on the review queue — it used
+  // to unconditionally call onAddMCQs, which navigated the whole app away to
+  // the Preview tab after every single approval, kicking you out mid-review.
   const approveQueueItem = (id: string) => {
     const itemToApprove = unapprovedQueue.find((q) => q.id === id);
-    if (itemToApprove) {
+    if (!itemToApprove) return;
+    const remaining = unapprovedQueue.filter((q) => q.id !== id);
+    rememberItems([itemToApprove]);
+
+    if (remaining.length === 0) {
       onAddMCQs([itemToApprove]);
-      rememberItems([itemToApprove]);
-      setUnapprovedQueue((prev) => prev.filter((q) => q.id !== id));
-      if (editingId === id) resetForm();
+      if (onClearReviewItems) onClearReviewItems();
+    } else if (onUpdateItems) {
+      onUpdateItems([...items, itemToApprove]);
+      setQueueToast(`✓ Added to Active Deck — ${remaining.length} more to review.`);
+      setTimeout(() => setQueueToast(null), 2200);
+    } else {
+      onAddMCQs([itemToApprove]);
     }
+
+    setUnapprovedQueue(remaining);
+    if (editingId === id) resetForm();
   };
 
   // Approve all items from the review queue into active deck
@@ -612,70 +632,94 @@ iii. অস্ত্রোপচার
             </span>
           </h2>
           <p className={`text-sm mt-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-            Paste raw exam text, import CSV spreadsheets, or craft single questions — every MCQ passes through the review queue before joining your deck.
+            Paste raw exam text or a CSV, review what gets parsed, then send it to your deck — two steps, start to finish.
           </p>
         </div>
       </div>
 
-      {/* Header Bar & Tab Switcher */}
-      <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-4 ${isAppLight ? 'border-slate-200' : 'border-slate-700/50'}`}>
-        <div className={`flex flex-wrap items-center gap-2 p-1.5 rounded-2xl border ${
-          isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950/20 border-slate-700/50'
-        }`}>
+      {/* Guided Step Flow: Paste → Review. "Add one manually" is a separate, secondary path. */}
+      <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-5 ${isAppLight ? 'border-slate-200' : 'border-slate-700/50'}`}>
+        <div className="flex items-center gap-2.5">
+          {/* Step 1 */}
           <button
             onClick={() => { setActiveSubTab('bulk'); setFormNotice(null); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2.5 pl-2.5 pr-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer border ${
               activeSubTab === 'bulk'
-                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-md font-black'
                 : isAppLight
-                ? 'text-slate-700 hover:bg-slate-100'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                ? 'bg-white border-slate-200 text-slate-700 hover:border-amber-300'
+                : 'bg-slate-950/40 border-slate-700/50 text-slate-300 hover:text-white hover:border-amber-500/40'
             }`}
           >
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 ${
+              activeSubTab === 'bulk'
+                ? 'bg-slate-950 text-amber-400'
+                : parsedPreview.length > 0 || unapprovedQueue.length > 0
+                ? 'bg-emerald-500 text-slate-950'
+                : isAppLight ? 'bg-slate-200 text-slate-600' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {activeSubTab !== 'bulk' && (parsedPreview.length > 0 || unapprovedQueue.length > 0) ? <Check className="w-3 h-3 stroke-[3]" /> : '1'}
+            </span>
             <FileText className="w-4 h-4" />
-            <span>1. Raw Text & CSV Parser</span>
+            <span>Paste & Parse</span>
           </button>
 
+          {/* Connector */}
+          <div className={`w-6 sm:w-10 h-px shrink-0 ${isAppLight ? 'bg-slate-300' : 'bg-slate-700'}`} />
+
+          {/* Step 2 */}
           <button
             onClick={() => { setActiveSubTab('review'); setFormNotice(null); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all relative cursor-pointer ${
+            className={`flex items-center gap-2.5 pl-2.5 pr-4 py-2 rounded-2xl text-xs font-bold transition-all relative cursor-pointer border ${
               activeSubTab === 'review'
-                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-md font-black'
                 : isAppLight
-                ? 'text-slate-700 hover:bg-slate-100'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                ? 'bg-white border-slate-200 text-slate-700 hover:border-amber-300'
+                : 'bg-slate-950/40 border-slate-700/50 text-slate-300 hover:text-white hover:border-amber-500/40'
             }`}
           >
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 ${
+              activeSubTab === 'review'
+                ? 'bg-slate-950 text-amber-400'
+                : isAppLight ? 'bg-slate-200 text-slate-600' : 'bg-slate-800 text-slate-400'
+            }`}>
+              2
+            </span>
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>2. Question Reviewer</span>
+            <span>Review & Add to Deck</span>
             {unapprovedQueue.length > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-mono text-[10px] font-black animate-pulse">
+              <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-black ${
+                activeSubTab === 'review' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950 animate-pulse'
+              }`}>
                 {unapprovedQueue.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => { setActiveSubTab('single'); setFormNotice(null); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeSubTab === 'single'
-                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                : isAppLight
-                ? 'text-slate-700 hover:bg-slate-100'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            <span>3. Form Question Creator</span>
-            {editingId && (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-bold">
-                Editing
               </span>
             )}
           </button>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setActiveSubTab('single'); setFormNotice(null); }}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border border-dashed ${
+              activeSubTab === 'single'
+                ? isAppLight
+                  ? 'bg-indigo-50 border-indigo-400 text-indigo-700'
+                  : 'bg-indigo-500/10 border-indigo-500/50 text-indigo-300'
+                : isAppLight
+                ? 'border-slate-300 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'
+                : 'border-slate-700 text-slate-400 hover:border-indigo-500/40 hover:text-indigo-300'
+            }`}
+            title="Skip pasting — type a single question from scratch"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add one manually</span>
+            {editingId && (
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-black">
+                Editing
+              </span>
+            )}
+          </button>
+
           {items.length > 0 && (
             <button
               onClick={onClearAll}
@@ -1144,8 +1188,7 @@ iii. অস্ত্রোপচার
               >
                 <Sparkles className="w-5 h-5 fill-slate-950" />
                 <span>
-                  Parse Questions into Review Creator ({parsedPreview.length}{' '}
-                  MCQs) →
+                  Step 2: Send {parsedPreview.length} MCQ{parsedPreview.length === 1 ? '' : 's'} to Review →
                 </span>
               </button>
             </div>
@@ -1522,14 +1565,23 @@ iii. অস্ত্রোপচার
       {/* SUB-TAB 2: QUESTION REVIEWER QUEUE (Review, Edit & Approve Gatekeeper) */}
       {activeSubTab === 'review' && (
         <div className="space-y-6">
+          {queueToast && (
+            <div className={`flex items-center gap-2.5 p-3.5 rounded-2xl text-xs font-bold ${
+              isAppLight ? 'bg-emerald-50 border border-emerald-300 text-emerald-800' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
+            }`}>
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{queueToast}</span>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30">
             <div>
               <h3 className="text-base font-black text-amber-500 flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                Questions Creator Review Queue ({unapprovedQueue.length} Pending Approval)
+                Step 2: Review Queue ({unapprovedQueue.length} Pending Approval)
               </h3>
               <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                All parsed questions from AI, bulk text, or CSV pass through here for your inspection & editing before joining your active slide deck.
+                Check each question, fix anything the parser missed, then Approve it into your Active Deck — one at a time or all at once.
               </p>
             </div>
 
@@ -1573,12 +1625,20 @@ iii. অস্ত্রোপচার
           </div>
 
           {unapprovedQueue.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 space-y-3">
+            <div className={`text-center py-16 space-y-3 rounded-3xl border border-dashed ${isAppLight ? 'border-slate-300' : 'border-slate-700'}`}>
               <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-500 stroke-[1.5]" />
-              <h4 className="text-base font-bold text-slate-200">No Pending Questions in Queue</h4>
+              <h4 className={`text-base font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Nothing waiting for review</h4>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Paste raw text into the "Parser" tab or run the AI PDF Parser to send MCQs into this review queue.
+                Paste text or a CSV in Step 1, or run the AI PDF Parser, to send MCQs here for review.
               </p>
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('bulk')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 cursor-pointer transition-all"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Back to Step 1: Paste & Parse</span>
+              </button>
             </div>
           ) : (
             <div className="space-y-4">
