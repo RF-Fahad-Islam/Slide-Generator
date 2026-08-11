@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { MCQItem, DeckConfig, CustomThemeColors } from '../types';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
-import { getTemplateById, TEMPLATES } from '../templates/registry';
+import { getTemplateById, TEMPLATES, resolveTheme, areThemesEqual } from '../templates/registry';
 import { getTemplatePresets } from '../utils/templatePresets';
 import { SlideCanvas } from './SlideCanvas';
 import { DeckCard } from './DeckCard';
@@ -592,7 +592,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
             </h3>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-slate-400 font-mono">
-                Current: {getTemplateById(effectiveHomeConfig.templateId, effectiveHomeConfig.customTheme).name}
+                Current: {resolveTheme(effectiveHomeConfig).templateName}
               </span>
               {hasThemeOverride && onResetSlideTheme && (
                 <button
@@ -673,12 +673,11 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {savedPresets.map((preset) => {
-                  const tmpl = getTemplateById(preset.design.templateId, preset.design.customTheme);
-                  const isSelected =
-                    effectiveHomeConfig.templateId === preset.design.templateId &&
-                    JSON.stringify(effectiveHomeConfig.customTheme) === JSON.stringify(preset.design.customTheme);
-                  const accent = preset.design.customTheme?.accentColor || tmpl.styles.accentColor;
-                  const bg = preset.design.customTheme?.bg || `#${tmpl.styles.hexColors.bg}`;
+                  const presetConfig = { templateId: preset.design.templateId, customTheme: preset.design.customTheme } as DeckConfig;
+                  const presetTheme = resolveTheme(presetConfig);
+                  const isSelected = areThemesEqual(effectiveHomeConfig, presetConfig);
+                  const accent = presetTheme.colors.accentColor;
+                  const bg = presetTheme.colors.bg;
                   return (
                     <button
                       key={preset.id}
@@ -697,7 +696,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
                           ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                           : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
                       }`}
-                      title={preset.description || tmpl.name}
+                      title={preset.description || presetTheme.templateName}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div

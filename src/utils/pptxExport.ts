@@ -7,6 +7,7 @@ import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
 import { getSlideIcon } from './slideElements';
 import { chunkAnswerKeyPages, AnswerKeyPage } from './answerKeySlides';
+import { resolveTheme } from './themeResolver';
 import {
   TPL_CARD_ID,
   TPL_STEM_ID,
@@ -14,6 +15,7 @@ import {
   TPL_PROMPT_ID,
   TPL_OPTIONS_ID,
   computeTemplateCardMetrics,
+  splitRomanLabel,
 } from './templateBoxLayout';
 
 export interface PptxSlideSpec {
@@ -45,8 +47,8 @@ export const exportDeckToPPTX = async (
   pptx.company = config.brandName || "NOBEL'S CLASSROOM";
   pptx.author = config.watermarkHandle || 'Instructor';
 
-  const template = getTemplateById(config.templateId);
-  const colors = template.styles.hexColors;
+  const globalTheme = resolveTheme(config);
+  const colors = globalTheme.colors;
 
   // Physical slide list — explicit (question + answer pairs) or one per item.
   const slideSpecs: PptxSlideSpec[] = slides ?? items.map((item, i) => ({ item, questionIndex: i, isAnswerSlide: false }));
@@ -343,14 +345,14 @@ export const exportDeckToPPTX = async (
   // move, resize or delete them. Uses the per-slide effective config so
   // slide-level (customConfig) background overrides are respected.
   const renderSlideBackground = (slide: any, cfg: DeckConfig, bgDataUrl?: string) => {
-    const slideTemplate = getTemplateById(cfg.templateId, cfg.customTheme);
-    const slideColors = slideTemplate.styles.hexColors;
-    const slideBgUrl = getBackgroundPresetUrl(cfg.bgPreset, cfg.bgImageUrl);
-    const slideIsLight = slideTemplate.themeType === 'light';
-    const gradientStops = slideTemplate.styles.bgGradientStops;
+    const slideTheme = resolveTheme(cfg);
+    const slideColors = slideTheme.colors;
+    const slideBgUrl = slideTheme.background.url;
+    const slideIsLight = slideTheme.isLight;
+    const gradientStops = slideTheme.background.gradientStops;
 
     slide.background = {
-      color: slideBgUrl ? '0F172A' : gradientStops ? gradientStops[1] : slideColors.bg,
+      color: slideBgUrl ? '0F172A' : gradientStops ? gradientStops[1] : slideColors.bgHex,
     };
 
     // A pre-rendered raster of the exact background stack (gradient/color,

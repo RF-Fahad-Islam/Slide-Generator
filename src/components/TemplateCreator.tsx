@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MCQItem, DeckConfig } from '../types';
-import { TEMPLATES } from '../templates/registry';
+import { TEMPLATES, areThemesEqual } from '../templates/registry';
 import { FONT_PRESETS } from '../utils/fontPresets';
 import { BACKGROUND_PRESETS } from '../utils/backgroundPresets';
 import {
@@ -384,9 +384,8 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
             {presets.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {presets.map((preset) => {
-                  const isCurrent =
-                    config.templateId === preset.design.templateId &&
-                    JSON.stringify(config.customTheme) === JSON.stringify(preset.design.customTheme);
+                  const presetConfig = { templateId: preset.design.templateId, customTheme: preset.design.customTheme } as DeckConfig;
+                  const isCurrent = areThemesEqual(config, presetConfig);
                   return (
                     <div
                       key={preset.id}

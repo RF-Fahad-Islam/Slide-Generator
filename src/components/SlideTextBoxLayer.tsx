@@ -2,7 +2,7 @@ import React from 'react';
 import { DeckConfig, MCQItem, SlideTextBox, getSourceTags } from '../types';
 import { getSlideBoxContent, getBoxFontFamily } from '../utils/slideTextBoxes';
 import { getSlideIcon } from '../utils/slideElements';
-import { getTemplateById } from '../templates/registry';
+import { resolveTheme } from '../utils/themeResolver';
 import {
   TPL_CARD_ID,
   TPL_STEM_ID,
@@ -41,13 +41,10 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
 }) => {
   if (boxes.length === 0) return null;
 
-  const template = getTemplateById(config.templateId, config.customTheme);
-  const isLight = template.themeType === 'light';
-  const hex = template.styles.hexColors;
-  const accent = template.styles.accentColor;
-  const isHexAccent = /^#[0-9A-Fa-f]{6}$/.test(accent);
-  const romanBadgeBg = isHexAccent ? `${accent}26` : 'rgba(255,255,255,0.14)';
-  const romanBadgeBorder = isHexAccent ? `${accent}55` : 'rgba(255,255,255,0.28)';
+  const theme = resolveTheme(config);
+  const isLight = theme.isLight;
+  const romanBadgeBg = theme.colors.romanBadgeBg;
+  const romanBadgeBorder = theme.colors.romanBadgeBorder;
 
   // Granular display feature evaluation
   const isRevealActive = isAnswerVariant || showAnswerHighlight;
@@ -160,9 +157,9 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                   const highlight = showOptionHighlight && isCorrectOption;
                   const containerStyle: React.CSSProperties = highlight
                     ? {
-                        backgroundColor: `${hex.optionSelectedBg}38`,
-                        border: `2px solid ${hex.optionSelectedBorder}`,
-                        color: hex.optionSelectedText,
+                        backgroundColor: theme.colors.optionSelectedBg,
+                        border: `2px solid ${theme.colors.optionSelectedBorder}`,
+                        color: theme.colors.optionSelectedText,
                       }
                     : { backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.15)' };
                   if (box.shape === 'pill') {
@@ -192,7 +189,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     );
                   }
                   return (
-                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: hex.optionSelectedText } : undefined}>
+                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: theme.colors.optionSelectedText } : undefined}>
                       <span className="font-black shrink-0">{opt.key}.</span>
                       <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
                       {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
@@ -237,7 +234,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         height: '1.6em',
                         padding: '0 0.55em',
                         backgroundColor: romanBadgeBg,
-                        color: accent,
+                        color: theme.colors.accentColor,
                         border: `1px solid ${romanBadgeBorder}`,
                       }}
                     >

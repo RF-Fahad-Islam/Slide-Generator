@@ -33,7 +33,7 @@ import { IngestionToast } from './components/IngestionToast';
 import { IngestionProvider } from './ingestion/ingestionStore';
 import { MathText } from './components/MathText';
 import { OnboardingTour, defaultTourSteps, TourTab } from './components/OnboardingTour';
-import { getTemplateById } from './templates/registry';
+import { getTemplateById, resolveTheme } from './templates/registry';
 import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
 import { loadGlobalDefaults } from './utils/globalDefaults';
@@ -730,16 +730,16 @@ export default function App() {
 
   const currentItem = items[activeQuestionIndex] || placeholderItem;
 
-  const activeTemplate = getTemplateById(config.templateId);
-  const isLightTemplate = activeTemplate.themeType === 'light';
+  const activeDeckTheme = resolveTheme(config);
+  const activeTemplate = activeDeckTheme.template;
+  const isLightTemplate = activeDeckTheme.isLight;
   const isAppLight = appTheme === 'light';
 
   // Active slide's effective theme (deck config + slide-level override) — used by
   // the quick Light/Dark toggle so theme choices stay slide-specific.
-  const activeSlideConfigOverride = items[activeQuestionIndex]?.customConfig;
-  const activeSlideTemplateId = activeSlideConfigOverride?.templateId || config.templateId;
-  const activeSlideTheme = getTemplateById(activeSlideTemplateId, activeSlideConfigOverride?.customTheme);
-  const isActiveSlideLight = activeSlideTheme.themeType === 'light';
+  const activeSlideResolvedTheme = resolveTheme(config, items[activeQuestionIndex]?.customConfig);
+  const activeSlideTheme = activeSlideResolvedTheme.template;
+  const isActiveSlideLight = activeSlideResolvedTheme.isLight;
 
   return (
     <IngestionProvider>

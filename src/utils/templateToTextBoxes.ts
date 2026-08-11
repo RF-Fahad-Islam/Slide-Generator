@@ -1,5 +1,5 @@
 import { DeckConfig, SlideTextBox } from '../types';
-import { getTemplateById } from '../templates/registry';
+import { resolveTheme } from './themeResolver';
 import { classroomTextBoxes } from './slideElements';
 
 // Builds the deck's text-box layer from the active preset template so the
@@ -34,17 +34,16 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   // Classroom view already has its own enforced box layout.
   if (config.layoutMode === 'class_mode') return classroomTextBoxes();
 
-  const template = getTemplateById(config.templateId, config.customTheme);
-  const styles = template.styles;
-  const isLight = template.themeType === 'light';
-  const hc = styles.hexColors;
+  const theme = resolveTheme(config);
+  const isLight = theme.isLight;
+  const hc = theme.colors;
 
-  const textColor = `#${hc.textColor}`;
-  const accent = styles.accentColor;
-  const headerFont = config.headerFont || config.fontFamily || styles.fontFamily;
-  const bodyFont = config.bodyFont || config.fontFamily || styles.fontFamily;
-  const optionsFont = config.optionsFont || config.fontFamily || styles.fontFamily;
-  const footerFont = config.footerFont || config.fontFamily || styles.fontFamily;
+  const textColor = theme.colors.textColor;
+  const accent = theme.colors.accentColor;
+  const headerFont = theme.fonts.headerFont;
+  const bodyFont = theme.fonts.bodyFont;
+  const optionsFont = theme.fonts.optionsFont;
+  const footerFont = theme.fonts.footerFont;
 
   const headerSize = HEADER_SIZES[config.headerFontSize || 'md'] || 30;
   const bodySize = BODY_SIZES[config.bodyFontSize || 'lg'] || 30;
@@ -121,12 +120,12 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
         y: 44,
         w: 640,
         fontSize: 18,
-        color: `#${hc.badgeText}`,
+        color: theme.colors.badgeText,
         align: 'center',
         bold: true,
         fontFamily: headerFont,
         shape: 'pill',
-        bg: hexToRgba(hc.badgeFill, isLight ? 0.9 : 0.22),
+        bg: hexToRgba(hc.badgeFillHex, isLight ? 0.9 : 0.22),
       });
     }
   }
@@ -155,7 +154,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     bold: false,
     fontFamily: bodyFont,
     shape: 'card',
-    bg: hexToRgba(hc.cardBg, isLight ? 0.95 : 0.9),
+    bg: hexToRgba(hc.cardBgHex, isLight ? 0.95 : 0.9),
   });
   boxes.push({
     id: bid('mdl_qnum'),
@@ -238,7 +237,7 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     bold: false,
     fontFamily: optionsFont,
     shape: 'card',
-    bg: hexToRgba(hc.optionBg, isLight ? 0.9 : 0.55),
+    bg: hexToRgba(hc.optionBgHex, isLight ? 0.9 : 0.55),
   });
 
   // -------------------------------------------------------------------------

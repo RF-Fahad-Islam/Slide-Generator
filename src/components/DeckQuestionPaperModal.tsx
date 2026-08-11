@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MCQItem, DeckConfig, getSourceTags, getEffectiveBadgeTag } from '../types';
-import { getTemplateById, TEMPLATES } from '../templates/registry';
+import { getTemplateById, TEMPLATES, resolveTheme } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { MathText } from './MathText';
 import { toPng } from 'html-to-image';
@@ -52,27 +52,27 @@ const PaperPage = ({
   answerKey?: boolean;
   answerFormat?: PdfAnswerFormat;
 }) => {
-  const tmpl = getTemplateById(config.templateId, config.customTheme);
-  const colors = tmpl.styles.hexColors;
-  const accent = config.accentColorCustom || tmpl.styles.accentColor || '#f59e0b';
-  const isLightTmpl = tmpl.themeType === 'light';
+  const theme = resolveTheme(config);
+  const colors = theme.colors;
+  const accent = theme.colors.accentColor;
+  const isLightTmpl = theme.isLight;
 
   const qNumber = (idx: number) => {
     const n = idx + 1;
     return config.questionNumberFormat === 'bangla' ? banglaDigits(n) : String(n);
   };
 
-  const ink = isLightTmpl ? '#0f172a' : '#f8fafc';
-  const inkMuted = isLightTmpl ? '#475569' : '#94a3b8';
-  const titleInk = isLightTmpl ? '#0f172a' : '#ffffff';
-  const cardBorder = isLightTmpl ? '#e2e8f0' : '#334155';
+  const ink = theme.colors.ink;
+  const inkMuted = theme.colors.inkMuted;
+  const titleInk = theme.colors.titleInk;
+  const cardBorder = theme.colors.cardBorderInk;
 
   // Full-page background mirrors the slide: theme bg color for dark templates
   // + the deck's background preset graphics (cover) + a readability tint layer.
-  const bgUrl = getBackgroundPresetUrl(config.bgPreset, config.bgImageUrl);
-  const bgOpacity = config.bgImageOpacity !== undefined ? config.bgImageOpacity : 0.85;
-  const overlayDarkness = config.bgOverlayDarkness !== undefined ? config.bgOverlayDarkness : 0.4;
-  const pageBg = isLightTmpl ? '#ffffff' : `#${colors.bg || '0F172A'}`;
+  const bgUrl = theme.background.url;
+  const bgOpacity = theme.background.opacity;
+  const overlayDarkness = theme.background.overlayDarkness;
+  const pageBg = isLightTmpl ? '#ffffff' : theme.colors.bg;
 
   return (
     <div

@@ -407,3 +407,7 @@ export function getTemplateById(id: string, customTheme?: CustomThemeColors): Te
   if (customTheme) return createCustomTemplateDefinition(customTheme);
   return TEMPLATES[0];
 }
+
+export { resolveTheme, areThemesEqual } from '../utils/themeResolver';
+export type { ResolvedTheme, ResolvedColors, ResolvedBackground, ResolvedFonts } from '../utils/themeResolver';
+
