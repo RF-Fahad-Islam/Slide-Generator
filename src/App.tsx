@@ -6,6 +6,7 @@ import { db } from './db/dexie';
 import { getOrCreateDefaultWorkspace, saveReviewQueue } from './utils/workspaceStore';
 import { migrateLegacyDraftToDefaultWorkspace } from './utils/workspaceMigration';
 import { SidebarNav } from './components/SidebarNav';
+import { HeaderNavbar } from './components/HeaderNavbar';
 import { SlideCanvas } from './components/SlideCanvas';
 import { ManualEditor } from './components/ManualEditor';
 import { WorkspacesHome } from './components/workspaces/WorkspacesHome';
@@ -33,7 +34,7 @@ import { IngestionToast } from './components/IngestionToast';
 import { IngestionProvider } from './ingestion/ingestionStore';
 import { MathText } from './components/MathText';
 import { OnboardingTour, defaultTourSteps, TourTab } from './components/OnboardingTour';
-import { getTemplateById, resolveTheme } from './templates/registry';
+import { getTemplateById, resolveTheme, TEMPLATES } from './templates/registry';
 import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
 import { loadGlobalDefaults, createDefaultDeckConfig } from './utils/globalDefaults';
@@ -43,7 +44,7 @@ import { SlidePreviewModal } from './components/SlidePreviewModal';
 import { LayoutLibraryModal } from './components/LayoutLibraryModal';
 import { AnswerModeModal } from './components/AnswerModeModal';
 import { SavePresetModal } from './components/SavePresetModal';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, Maximize2, SquareStack, BookmarkPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, Maximize2, SquareStack, BookmarkPlus, Plus, Sparkles, Database } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
 import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
@@ -51,8 +52,8 @@ import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSl
 export default function App() {
   // Application State
   const [items, setItems] = useState<MCQItem[]>(SAMPLE_DECKS[0].items);
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys'>('home');
+  const [selectedIndex, setSelectedIndex] = useState<number>(2);
+  const [activeTab, setActiveTab] = useState<'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'manual' | 'settings' | 'templates' | 'ai-keys'>('preview');
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
   // One-time, idempotent: seeds a "Default" workspace from the pre-Workspaces
@@ -730,28 +731,26 @@ export default function App() {
     <div
       className={`min-h-screen transition-colors duration-300 ${
         isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
-      } flex flex-col lg:flex-row font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}
+      } flex flex-col font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}
     >
-      {/* Sidebar Navigation (Desktop) + Mobile Drawer */}
-      <SidebarNav
+      {/* Top Header Navbar */}
+      <HeaderNavbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         questionCount={items.length}
-        onOpenExportModal={() => {
-          setIsBatchExportModalOpen(true);
-        }}
+        templateId={config.templateId || 'nobel-dark'}
+        onSelectTemplate={(id) => setConfig(prev => ({ ...prev, templateId: id }))}
+        onLoadSample={handleLoadSample}
+        onOpenExportModal={() => setIsBatchExportModalOpen(true)}
         isSyncing={isSyncing}
         lastSavedTime={lastSavedTime}
         appTheme={appTheme}
         onToggleAppTheme={() => setAppTheme(t => t === 'dark' ? 'light' : 'dark')}
-        onStartTour={() => setIsTourOpen(true)}
-        isMobileDrawerOpen={isMobileDrawerOpen}
-        onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
         onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
       />
 
       {/* Main Content View Container */}
-      <main className="flex-1 min-w-0 max-w-[1600px] w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-10">
+      <main className="flex-1 min-w-0 max-w-7xl xl:max-w-[1700px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* TAB 0: HOME - SLIDE DECKS LIST & TOOL SELECTOR */}
         {activeTab === 'home' && (
           <SlideDecksHome
@@ -1029,299 +1028,112 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              /* SINGLE SLIDE PREVIEW & DECK MANAGER SIDE-BY-SIDE */
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 xl:gap-10 items-start">
-                {/* LEFT: LIVE CANVAS DISPLAY (wider column span for big preview) */}
-                <div className={`flex flex-col gap-6 ${isTextBoxEditMode ? 'xl:col-span-8' : 'xl:col-span-8'}`}>
-                  {/* Slide Name & Controls Bar — compact two-row strip */}
-                  <div
-                    data-tour="studio-toolbar"
-                    className={`rounded-3xl border shadow-2xl p-4 sm:p-5 ${
-                    isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900/90 border-white/10 text-white backdrop-blur-xl'
-                  }`}>
-                    {/* ROW 1 — slide identity + primary studio actions (Large Review, Theme, Deck Settings, Download, slide nav) */}
-                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-                      {/* Current Slide Name & Back Button to All Slides */}
-                      <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
-                        <button
-                          onClick={() => setIsOverviewMode(true)}
-                          className="px-3.5 py-2 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/35 text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer shrink-0 shadow-md shadow-amber-500/10"
-                          title="View all created slides in grid view"
-                        >
-                          <LayoutGrid className="w-4 h-4 text-amber-400" />
-                          <span className="hidden 2xl:inline">View All Slides ({expandedSlides.length})</span>
-                        </button>
+              <div className="space-y-6">
+                {/* TOOLBAR SUB-BAR: Preset Buttons, Theme Dropdown, Export Button */}
+                <div className={`p-4 rounded-3xl border shadow-xl flex flex-wrap items-center justify-between gap-4 ${
+                  isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900/90 border-slate-800/80'
+                }`}>
+                  {/* Left: Quick Sample Buttons + Theme Selector */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => { handleLoadSample(0); setSelectedIndex(2); }}
+                      className={`px-4 py-2 rounded-2xl text-xs font-extrabold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isAppLight ? 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200' : 'bg-slate-800/90 border-slate-700 text-slate-200 hover:bg-slate-800'
+                      }`}
+                    >
+                      <Plus className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Biology Sample</span>
+                    </button>
 
-                        {expandedSlides.length > 0 && (
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-mono text-xs font-black border border-amber-400 shrink-0 shadow-sm">
-                              Slide #{selectedIndex + 1}
-                            </span>
-                            {activeSlideRef?.isAnswerSlide && (
-                              <span className="px-2.5 py-1 rounded-xl bg-emerald-500 text-slate-950 font-mono text-xs font-black border border-emerald-400 shrink-0 shadow-sm">
-                                Answer
-                              </span>
-                            )}
-                            <h3 className="text-xs sm:text-sm font-bold truncate max-w-[200px] sm:max-w-[320px]">
-                              <MathText text={currentItem.stem} />
-                            </h3>
-                          </div>
-                        )}
-                      </div>
+                    <button
+                      onClick={() => { handleLoadSample(1); setSelectedIndex(0); }}
+                      className={`px-4 py-2 rounded-2xl text-xs font-extrabold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isAppLight ? 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200' : 'bg-slate-800/90 border-slate-700 text-slate-200 hover:bg-slate-800'
+                      }`}
+                    >
+                      <Plus className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Math/Physics Sample</span>
+                    </button>
 
-                      {/* ROW 1 actions — Large Review, Theme, Deck Settings, Download, slide nav */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Large Review Modal Button */}
-                        <button
-                          onClick={() => setIsLargePreviewOpen(true)}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            isAppLight
-                              ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
-                          }`}
-                          title="Review slide in a large HD modal"
-                        >
-                          <Maximize2 className="w-3.5 h-3.5 text-amber-500" />
-                          <span className="hidden 2xl:inline">Large Review</span>
-                        </button>
-
-                        {/* Quick Theme Toggle (Minimal Light vs Nobel Dark) — applies to the ACTIVE slide only */}
-                        <button
-                          onClick={() => {
-                            applyThemeToActiveSlide({
-                              templateId: isActiveSlideLight ? 'nobel-dark' : 'minimal-light',
-                            });
-                          }}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            isActiveSlideLight
-                              ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/20'
-                              : isAppLight
-                              ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
-                              : 'bg-slate-950/80 text-slate-200 border-white/10 hover:border-amber-500/40 hover:text-white'
-                          }`}
-                          title="Toggle Light / Dark Theme (active slide only)"
-                        >
-                          {isActiveSlideLight ? (
-                            <>
-                              <Sun className="w-3.5 h-3.5 text-slate-950" />
-                              <span className="hidden 2xl:inline">☀️ Light Theme</span>
-                            </>
-                          ) : (
-                            <>
-                              <Moon className="w-3.5 h-3.5 text-amber-400" />
-                              <span className="hidden 2xl:inline">🌙 Dark Theme</span>
-                            </>
-                          )}
-                        </button>
-
-                        {/* Deck Settings — deck-scoped branding/layout modal (draft + live preview + Apply to All) */}
-                        <button
-                          onClick={() => {
-                            setEditingSavedDeckId(null);
-                            setIsDeckSettingsOpen(true);
-                          }}
-                          data-tour="studio-deck-settings"
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            isAppLight
-                              ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
-                              : 'bg-slate-950/80 text-slate-200 border-white/10 hover:border-amber-500/40 hover:text-white'
-                          }`}
-                          title="Open Deck Settings — branding, fonts, layout mode, background & banners for this deck"
-                        >
-                          <Sliders className="w-3.5 h-3.5 text-amber-500" />
-                          <span className="hidden 2xl:inline">Deck Settings</span>
-                        </button>
-
-                        {/* Save Current Design as Preset Button */}
-                        <button
-                          onClick={() => setIsSavePresetOpen(true)}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            isAppLight
-                              ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
-                          }`}
-                          title="Save active slide's effective design (colors, typography, background) as a preset template"
-                        >
-                          <BookmarkPlus className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="hidden 2xl:inline">Save as Preset</span>
-                        </button>
-
-                        {/* Interactive Template Studio (JSON Import/Export) */}
-                        <button
-                          onClick={() => setIsTemplateStudioOpen(true)}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            isAppLight
-                              ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
-                          }`}
-                          title="Interactive Template Studio — build custom themes & import/export JSON templates"
-                        >
-                          <LayoutTemplate className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="hidden 2xl:inline">Template Studio</span>
-                        </button>
-
-                        {/* Download — Export modal scoped to the whole active deck */}
-                        <button
-                          onClick={() => {
-                            setExportScope('all');
-                            setIsExportModalOpen(true);
-                          }}
-                          disabled={items.length === 0}
-                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            isAppLight
-                              ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
-                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
-                          } disabled:opacity-40 disabled:cursor-not-allowed`}
-                          title="Download the whole deck — PPTX, PDF, PNG, ZIP"
-                          data-tour="studio-download"
-                        >
-                          <Download className="w-3.5 h-3.5 text-amber-500" />
-                          <span className="hidden 2xl:inline">Download</span>
-                        </button>
-
-                        {/* Previous / Next Slide Nav */}
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setSelectedIndex(prev => Math.max(0, prev - 1))}
-                            disabled={selectedIndex === 0 || expandedSlides.length === 0}
-                            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                            title="Previous Slide (Left Arrow)"
-                          >
-                            <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-                          </button>
-
-                          <span className="text-xs font-bold px-2 font-mono">
-                            {expandedSlides.length > 0 ? selectedIndex + 1 : 0} / {expandedSlides.length}
-                          </span>
-
-                          <button
-                            onClick={() => setSelectedIndex(prev => Math.min(expandedSlides.length - 1, prev + 1))}
-                            disabled={selectedIndex >= expandedSlides.length - 1 || expandedSlides.length === 0}
-                            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                            title="Next Slide (Right Arrow)"
-                          >
-                            <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* ROW 2 — secondary controls (font, layouts, apply design to all, templates, reveal, text boxes) */}
-                    <div className={`flex flex-wrap items-center gap-2 mt-3 pt-3 border-t ${
-                      isAppLight ? 'border-slate-200' : 'border-slate-800'
+                    {/* Theme Selector Dropdown */}
+                    <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border text-xs font-extrabold ${
+                      isAppLight ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'
                     }`}>
-                      {/* Quick Font Family Selector */}
-                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border ${
-                        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-                      }`}>
-                        <Type className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <select
-                          value={config.fontFamily || "'Kalpurush', serif"}
-                          onChange={(e) => setConfig(prev => ({ ...prev, fontFamily: e.target.value }))}
-                          className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer max-w-[150px] truncate"
-                          title="Change Slide Font"
-                        >
-                          {FONT_PRESETS.map((f) => (
-                            <option key={f.id} value={f.family} className="bg-slate-900 text-white">
-                              {f.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Layout Library Modal Opener */}
-                      <button
-                        onClick={() => setIsLayoutModalOpen(true)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                          isAppLight
-                            ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
-                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
-                        }`}
-                        title="Choose slide layout design from the Layout Library"
+                      <span className="text-amber-400">🌸</span>
+                      <select
+                        value={config.templateId || 'nobel-dark'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, templateId: e.target.value }))}
+                        className="bg-transparent font-black focus:outline-none cursor-pointer"
                       >
-                        <SquareStack className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="hidden 2xl:inline">Layouts</span>
-                      </button>
-
-                      {/* Apply the active slide's design (theme + box layout) to every slide */}
-                      <button
-                        onClick={applyActiveSlideDesignToAll}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                          isAppLight
-                            ? 'bg-white text-slate-700 border-slate-300 hover:border-amber-400 hover:text-amber-700'
-                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-amber-500/60 hover:text-amber-300'
-                        }`}
-                        title="Make this slide's theme and text-box layout the design for every slide in the deck"
-                      >
-                        <Copy className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="hidden 2xl:inline">Apply Slide Design to All</span>
-                      </button>
-
-                      {/* Template Store Modal Opener */}
-                      <button
-                        onClick={() => setIsTemplateModalOpen(true)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                          isAppLight
-                            ? 'bg-white text-slate-700 border-slate-300 hover:text-slate-900'
-                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
-                        }`}
-                        title="Open the template store — save the current slide format or switch to a saved template"
-                      >
-                        <LayoutTemplate className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="hidden 2xl:inline">Templates</span>
-                      </button>
-
-                      {/* Answer Mode Button Group (Open Modal + Quick Eye Toggle) */}
-                      <div className="flex items-center">
-                        <button
-                          onClick={() => setIsAnswerModeModalOpen(true)}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-l-xl text-xs font-extrabold transition-all border border-r-0 cursor-pointer ${
-                            isAnswerRevealMode
-                              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
-                              : isAppLight
-                              ? 'bg-slate-100 text-slate-700 border-slate-300 hover:text-slate-900'
-                              : 'bg-slate-800 text-slate-200 border-slate-700 hover:text-white'
-                          }`}
-                          title="Open Answer Mode & Reveal Settings modal"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="hidden 2xl:inline">Answer Mode</span>
-                        </button>
-                        <button
-                          onClick={() => setIsAnswerRevealMode(prev => !prev)}
-                          className={`p-2 rounded-r-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            isAnswerRevealMode
-                              ? 'bg-emerald-400 text-slate-950 border-emerald-400'
-                              : isAppLight
-                              ? 'bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300'
-                              : 'bg-slate-700 text-slate-200 border-slate-700 hover:bg-slate-600'
-                          }`}
-                          title="Quick toggle answer reveal"
-                        >
-                          {isAnswerRevealMode ? <CheckCircle2 className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-
-                      {/* Slide Text Box Edit Mode Toggle */}
-                      <button
-                        onClick={() => {
-                          setIsTextBoxEditMode(prev => !prev);
-                          if (isTextBoxEditMode) setSelectedTextBoxId(null);
-                        }}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                          isTextBoxEditMode
-                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
-                            : isAppLight
-                            ? 'bg-slate-100 text-slate-700 border-slate-300 hover:text-slate-900'
-                            : 'bg-slate-800 text-slate-200 border-slate-700 hover:text-white'
-                        }`}
-                        title="Add/Edit draggable text boxes over every slide"
-                      >
-                        <PenTool className="w-3.5 h-3.5" />
-                        <span className="hidden 2xl:inline">{isTextBoxEditMode ? 'Editing Text Boxes' : 'Edit Text Boxes'}</span>
-                      </button>
+                        {TEMPLATES.map((t) => (
+                          <option key={t.id} value={t.id} className="bg-slate-900 text-white">
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
+
+                  {/* Right: Export Slides Button */}
+                  <button
+                    onClick={() => {
+                      setExportScope('all');
+                      setIsExportModalOpen(true);
+                    }}
+                    disabled={items.length === 0}
+                    className="px-5 py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 flex items-center gap-2 hover:brightness-110 transition-all cursor-pointer disabled:opacity-40"
+                  >
+                    <Download className="w-4 h-4 stroke-[2.5]" />
+                    <span>Export Slides</span>
+                  </button>
+                </div>
+
+                {/* SINGLE SLIDE PREVIEW & DECK MANAGER SIDE-BY-SIDE */}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 xl:gap-10 items-start">
+                  {/* LEFT: LIVE CANVAS DISPLAY */}
+                  <div className={`flex flex-col gap-5 ${isTextBoxEditMode ? 'xl:col-span-8' : 'xl:col-span-7'}`}>
+                    {/* Left Column Controls Bar: Slide Navigation + Hide Answer Key */}
+                    <div className={`flex items-center justify-between p-3.5 rounded-2xl border shadow-md ${
+                      isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900/90 border-slate-800/80'
+                    }`}>
+                      {/* Left: Slide navigation < Slide 3 of 3 > */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSelectedIndex(prev => Math.max(0, prev - 1))}
+                          disabled={selectedIndex === 0 || expandedSlides.length === 0}
+                          className="p-2 rounded-xl bg-slate-950 text-amber-400 hover:bg-slate-800 border border-slate-800 disabled:opacity-30 transition-colors cursor-pointer"
+                          title="Previous Slide"
+                        >
+                          <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                        </button>
+                        <span className="text-xs font-black px-3 font-mono">
+                          Slide {expandedSlides.length > 0 ? selectedIndex + 1 : 0} of {expandedSlides.length}
+                        </span>
+                        <button
+                          onClick={() => setSelectedIndex(prev => Math.min(expandedSlides.length - 1, prev + 1))}
+                          disabled={selectedIndex >= expandedSlides.length - 1 || expandedSlides.length === 0}
+                          className="p-2 rounded-xl bg-slate-950 text-amber-400 hover:bg-slate-800 border border-slate-800 disabled:opacity-30 transition-colors cursor-pointer"
+                          title="Next Slide"
+                        >
+                          <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                        </button>
+                      </div>
+
+                      {/* Right: Hide Answer Key toggle */}
+                      <button
+                        onClick={() => setIsAnswerRevealMode(prev => !prev)}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                          isAnswerRevealMode
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                            : isAppLight
+                            ? 'bg-slate-100 text-slate-700 border-slate-300'
+                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        {isAnswerRevealMode ? <Eye className="w-3.5 h-3.5 text-emerald-400" /> : <EyeOff className="w-3.5 h-3.5 text-amber-400" />}
+                        <span>{isAnswerRevealMode ? 'Show Answer Key' : 'Hide Answer Key'}</span>
+                      </button>
+                    </div>
 
                   {/* Responsive Slide Canvas Preview — clean direct container for max width and size */}
                   <div className="relative w-full overflow-hidden flex items-center justify-center">
@@ -1453,10 +1265,11 @@ export default function App() {
                   )}
                 </div>
               </div>
-            )}
-          </div>
-          )
-        )}
+            </div>
+          )}
+        </div>
+        )
+      )}
 
         {/* TAB 2: WORKSPACES — paste, review, and approve questions per project */}
         {activeTab === 'workspaces' && (
