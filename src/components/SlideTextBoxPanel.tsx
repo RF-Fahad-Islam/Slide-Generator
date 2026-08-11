@@ -61,6 +61,7 @@ const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
   badgeTag: Layers,
   footerTag: Layers,
   watermark: Layers,
+  slideCounter: Layers,
   free: Plus,
   icon: Shapes,
   image: FileImage,
