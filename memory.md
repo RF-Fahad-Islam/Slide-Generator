@@ -43,11 +43,18 @@ All committed on `main`. Latest HEAD = `f6830dd`. Working tree clean.
    - Created `LayoutLibraryModal.tsx` ("Layouts" toolbar button) for browsing and selecting slide layout presets.
    - Added Enterprise EdTech 2x2 Split Grid layout (`enterprise_2col_grid`) as default layout matching the reference design (2x2 option cards, question badge, stem card, prompt line, explanation callout, branding footer).
 
+9. **Expandable Answer Mode Modal & Multi-Select Display Features (`AnswerModeModal.tsx`, `answerSlides.ts`, `SlideCanvas.tsx`, `SlideTextBoxLayer.tsx`, `App.tsx`)**
+   - Created `AnswerModeModal.tsx` opened from the toolbar Answer Mode button group or quick reveal eye toggle.
+   - Added `answerDisplayStyles` array (`('highlight_option' | 'answer_pill' | 'explanation_card')[]`) to `DeckConfig` allowing users to multi-select any combination of Option Card Coloring, Answer Badge Pill (`[✓] উত্তর: গ`), and Explanation Box.
+   - Added "Include Dedicated Answer Slides in Active Deck" toggle (`separate_slide` mode), dynamically doubling physical slide count (`3 Qs → 6 Slides`).
+   - Added Deck-Wide vs Active Slide Only scope switch in the modal.
+
 ---
 
 ## Current State
 
-- On `main`, latest HEAD = `f10cb3a`.
+- On `main`, latest HEAD = `8da7595`.
 - `npx tsc --noEmit` and `npm run build` are 100% clean (0 errors).
 - Working tree clean.
+
 
