@@ -36,7 +36,7 @@ import { OnboardingTour, defaultTourSteps, TourTab } from './components/Onboardi
 import { getTemplateById, resolveTheme } from './templates/registry';
 import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
-import { loadGlobalDefaults } from './utils/globalDefaults';
+import { loadGlobalDefaults, createDefaultDeckConfig } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
 import { SlidePreviewModal } from './components/SlidePreviewModal';
@@ -145,33 +145,18 @@ export default function App() {
     setIsTourOpen(false);
   };
 
-  // Deck Branding Config State — the preset template's default layout is built
-  // as editable text boxes (templateToTextBoxes) so opening Edit Text Boxes in
-  // Slide Studio lets the user move/resize/restyle every element.
-  const globalDefaults = loadGlobalDefaults();
+  // Deck Branding Config State — initialized with user's saved global app defaults
   const [config, setConfig] = useState<DeckConfig>(() => {
-    const base: DeckConfig = {
-      templateId: globalDefaults.defaultTemplateId,
-      brandName: "NOBEL'S CLASSROOM",
-      logoUrl: '',
-      logoSize: 'md',
-      logoPosition: 'top-left',
+    const base: DeckConfig = createDefaultDeckConfig({
+      deckName: SAMPLE_DECKS[0]?.name || 'Untitled Deck',
       headerTitle: 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
-      badgeTag: '৯ম-১০ম শ্রেণি | জীববিজ্ঞান',
       footerTag: 'BIOMISSION',
-      watermarkAvatar: '',
       watermarkHandle: 'Hasnat Shuvro',
       aspectRatio: '16:9',
       showAnswerInSlide: false,
       answerMode: 'hidden',
       showExplanationInSlide: false,
-      questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
-      fontFamily: "'Kalpurush', serif",
-      bgPreset: 'none',
-      bgImageOpacity: 1.0,
-      bgOverlayDarkness: 0.0,
-      deckName: SAMPLE_DECKS[0]?.name || 'Untitled Deck',
-    };
+    });
     return { ...base, slideTextBoxes: templateToTextBoxes(base) };
   });
 
@@ -540,12 +525,9 @@ export default function App() {
     setSelectedIndex(0);
     setActiveTab('preview');
     setConfig((prev) => {
-      const merged = {
+      const merged = createDefaultDeckConfig({
         ...prev,
-        deckName: globalDefaults.defaultDeckName,
-        templateId: globalDefaults.defaultTemplateId,
-        questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
-      };
+      });
       return { ...merged, slideTextBoxes: templateToTextBoxes(merged) };
     });
     alert(`Created new presentation deck with ${selectedItems.length} selected questions!`);

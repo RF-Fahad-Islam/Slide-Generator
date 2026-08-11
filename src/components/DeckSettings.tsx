@@ -3,6 +3,7 @@ import { DeckConfig, CustomThemeColors, getEffectiveBadgeTag } from '../types';
 import { TEMPLATES, getTemplateById } from '../templates/registry';
 import { BACKGROUND_PRESETS, getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { FONT_PRESETS, getFontPresetByFamily } from '../utils/fontPresets';
+import { saveGlobalDefaults } from '../utils/globalDefaults';
 import { BackgroundImageEditor, BgImageEditorResult } from './BackgroundImageEditor';
 import {
   getTemplatePresets,
@@ -353,6 +354,35 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
     setSavedPresets(getTemplatePresets());
   };
 
+  const [globalSavedNotice, setGlobalSavedNotice] = useState(false);
+
+  const handleSaveAsAppDefaults = () => {
+    saveGlobalDefaults({
+      defaultDeckName: config.deckName || 'Untitled Deck',
+      defaultTemplateId: config.templateId || 'nobel-dark',
+      defaultQuestionNumberFormat: config.questionNumberFormat || 'bangla',
+      brandName: config.brandName || "NOBEL'S CLASSROOM",
+      badgeTag: config.badgeTag || 'Biology',
+      logoUrl: config.logoUrl || '',
+      logoSize: config.logoSize || 'md',
+      logoPosition: config.logoPosition || 'top-left',
+      bgPreset: config.bgPreset || 'none',
+      bgImageUrl: config.bgImageUrl,
+      bgImageFit: config.bgImageFit || 'cover',
+      bgImageOpacity: config.bgImageOpacity ?? 0.85,
+      bgOverlayDarkness: config.bgOverlayDarkness ?? 0.4,
+      useHeaderBanner: config.useHeaderBanner,
+      headerBannerUrl: config.headerBannerUrl,
+      useFooterBanner: config.useFooterBanner,
+      footerBannerUrl: config.footerBannerUrl,
+      fontFamily: config.fontFamily || "'Hind Siliguri', sans-serif",
+      accentColorCustom: config.accentColorCustom,
+      customTheme: config.customTheme,
+    });
+    setGlobalSavedNotice(true);
+    setTimeout(() => setGlobalSavedNotice(false), 2500);
+  };
+
   // Settings Scope: 'global' applies to all slides without overrides; 'slide' applies to active slide ONLY
   const [settingsScope, setSettingsScope] = useState<'global' | 'slide'>('global');
   const [settingsTab, setSettingsTab] = useState<'typography' | 'layout' | 'background' | 'theme' | 'header' | 'presets'>('typography');
@@ -601,8 +631,19 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
                 : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
             }`}
           >
-            <Target className="w-4 h-4" />
+            <Target className="w-4 h-4 text-indigo-400" />
             <span>🎯 Slide #{activeSlideIndex + 1} Scope</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveAsAppDefaults}
+            disabled={globalSavedNotice}
+            className="px-4 py-2 rounded-2xl text-sm font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-80"
+            title="Save current deck's brand logo, name, background graphic & font as the global app default for all new decks"
+          >
+            <Save className="w-4 h-4" />
+            <span>{globalSavedNotice ? 'Saved as App Defaults!' : 'Set as App Defaults'}</span>
           </button>
 
           {hasSlideOverride && onResetActiveSlideConfig && (
