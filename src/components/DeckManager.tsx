@@ -234,8 +234,6 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     onEdit={onEditQuestion ? () => onEditQuestion(item) : undefined}
                     onDuplicate={() => duplicateItem(item, idx)}
                     onDelete={() => deleteItem(item.id)}
-                    onMoveUp={idx > 0 ? () => moveItem(idx, idx - 1) : undefined}
-                    onMoveDown={idx < items.length - 1 ? () => moveItem(idx, idx + 1) : undefined}
                   />
                 );
               })}

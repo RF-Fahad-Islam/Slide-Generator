@@ -147,11 +147,18 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           ) : null;
         }
 
-        // OPTIONS with pre-designed shapes
+        // OPTIONS with pre-designed shapes & 2-column card grid support
         if (box.bind === 'options') {
+          const is2Col = (config.optionsLayout || '2col') === '2col';
+          const gridClass = box.shape === 'pill'
+            ? 'flex flex-wrap gap-3'
+            : is2Col
+            ? 'grid grid-cols-2 gap-4'
+            : 'space-y-2.5';
+
           return (
             <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={{ ...base, top: boxTop }}>
-              <div className={box.shape === 'pill' ? 'flex flex-wrap gap-3' : 'space-y-2.5'}>
+              <div className={gridClass}>
                 {item.options.map(opt => {
                   const isCorrectOption = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
                   const highlight = showOptionHighlight && isCorrectOption;
@@ -160,18 +167,31 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         backgroundColor: theme.colors.optionSelectedBg,
                         border: `2px solid ${theme.colors.optionSelectedBorder}`,
                         color: theme.colors.optionSelectedText,
+                        boxShadow: '0 10px 25px rgba(245,158,11,0.2)',
                       }
-                    : { backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.15)' };
+                    : {
+                        backgroundColor: box.bg,
+                        border: isLight ? '2px solid rgba(226,232,240,0.9)' : '1px solid rgba(255,255,255,0.15)',
+                        color: isLight ? '#0f172a' : '#f8fafc',
+                      };
                   if (box.shape === 'pill') {
                     return (
                       <span
                         key={opt.key}
-                        className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full"
+                        className="inline-flex items-center gap-3 px-6 py-3 rounded-full shadow-lg"
                         style={containerStyle}
                       >
-                        <span className="font-black shrink-0">{opt.key}.</span>
-                        <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
-                        {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0" />}
+                        <span className={`w-8 h-8 rounded-full font-black text-lg flex items-center justify-center shrink-0 ${
+                          highlight ? 'bg-amber-400 text-slate-950' : isLight ? 'bg-slate-900 text-white' : 'bg-white/10 text-white'
+                        }`}>
+                          {opt.key}
+                        </span>
+                        <span className="flex-1 min-w-0 text-xl font-bold"><MathText text={opt.text} /></span>
+                        {highlight && (
+                          <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
+                            <Check className="w-5 h-5 stroke-[3.5]" />
+                          </div>
+                        )}
                       </span>
                     );
                   }
@@ -179,12 +199,24 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     return (
                       <div
                         key={opt.key}
-                        className="flex items-center gap-3 px-5 py-3.5 rounded-2xl"
+                        className="flex items-center gap-4 px-5 py-4 rounded-2xl shadow-xl backdrop-blur-md"
                         style={containerStyle}
                       >
-                        <span className="font-black shrink-0">{opt.key}.</span>
-                        <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
-                        {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
+                        <div className={`w-11 h-11 rounded-2xl font-black text-xl flex items-center justify-center shrink-0 shadow-md ${
+                          highlight
+                            ? 'bg-amber-400 text-slate-950'
+                            : isLight
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-white/10 text-white border border-white/15'
+                        }`}>
+                          {opt.key}
+                        </div>
+                        <span className="flex-1 min-w-0 text-xl lg:text-2xl font-extrabold leading-snug"><MathText text={opt.text} /></span>
+                        {highlight && (
+                          <div className="w-10 h-10 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-lg animate-pulse">
+                            <Check className="w-6 h-6 stroke-[3.5]" />
+                          </div>
+                        )}
                       </div>
                     );
                   }

@@ -27,6 +27,7 @@ interface AnswerModeModalProps {
   activeSlideConfig?: Partial<DeckConfig>;
   onApplyConfig: (updated: DeckConfig) => void;
   onApplyActiveSlideConfig?: (updatedOverride: Partial<DeckConfig>) => void;
+  onAppendAnswerSlidesToDeck?: () => void;
   totalQuestions: number;
   appTheme: 'dark' | 'light';
 }
@@ -38,6 +39,7 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
   activeSlideConfig,
   onApplyConfig,
   onApplyActiveSlideConfig,
+  onAppendAnswerSlidesToDeck,
   totalQuestions,
   appTheme,
 }) => {
@@ -371,6 +373,17 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
               >
                 🎬 Dedicated Answer Slides Mode
               </button>
+              {onAppendAnswerSlidesToDeck && (
+                <button
+                  onClick={onAppendAnswerSlidesToDeck}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    isLight ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300'
+                  }`}
+                  title="Physically append an answer copy slide after every question in the deck items list"
+                >
+                  ➕ Append Answer Slides to Deck
+                </button>
+              )}
             </div>
           </div>
         </div>
