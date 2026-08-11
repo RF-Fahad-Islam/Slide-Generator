@@ -61,7 +61,7 @@
 - [x] 2026-08-05 — `src/utils/pptxExport.ts`: Hybrid PPTX with pre-rendered slide images + native fallback
 - [x] 2026-08-05 — Background image presets (`src/utils/backgroundPresets.ts`)
 - [x] 2026-08-05 — Font presets system (`src/utils/fontPresets.ts`)
-- [ ] Paginated standalone answer-key slides (`answerKeyList`)
+- [x] 2026-08-11 — Paginated standalone answer-key slides (`answerKeySlides.ts`, `pptxExport.ts`, `ExportModal.tsx`)
 
 ## Phase 5 — Template Management
 - [x] 2026-08-05 — `DeckSettings.tsx`: Custom branding, logo positioning, background overlays, typography presets, header/footer banners
@@ -69,7 +69,7 @@
 - [x] 2026-08-05 — Per-slide configuration overrides
 - [x] 2026-08-05 — `SlideDecksHome.tsx`: Deck library home view with quick actions
 - [x] 2026-08-05 — `QuestionBankView.tsx`: Local question bank with tagging, subject filter, search, bulk deck import
-- [ ] Interactive template studio with JSON template import/export
+- [x] 2026-08-11 — Interactive template studio (`TemplateStudioModal.tsx`) with live 16:9 canvas preview, custom color token palette editor, and JSON template import/export
 
 ## UI Polish
 - [x] 2026-08-11 — **Manual Editor: guided 2-step Paste → Review flow + fixed mid-review navigation bug** — Replaced the flat 3-pill tab switcher (`1. Raw Text` / `2. Question Reviewer` / `3. Form Question Creator`) with a numbered stepper (`activeSubTab` unchanged — same 3 states, only the header UI changed): **Step 1 "Paste & Parse"** and **Step 2 "Review & Add to Deck"**, connected by a line, with a green checkmark replacing the number once step 1 has produced parsed/queued MCQs. The single-question form (`activeSubTab === 'single'`) is no longer numbered as a peer step — it's now a dashed secondary pill "+ Add one manually" to the side (still opens the identical form, "Editing" badge preserved). Parse button relabeled `Step 2: Send N MCQs to Review →`; Review Queue empty state got a dashed card + "← Back to Step 1: Paste & Parse" CTA button (was a dead-end message). **Real bug fixed**: `approveQueueItem` (single "Approve" click on one card) unconditionally called `onAddMCQs`, which in `App.tsx` always does `setActiveTab('preview')` — so approving ONE item while others were still pending in the queue instantly navigated the whole app away to Slide Studio, ejecting the user mid-review. Fixed so only the LAST remaining item behaves like "Approve All" (commits via `onAddMCQs` + navigates, the natural "I'm done" moment); approving any earlier item now commits via `onUpdateItems([...items, itemToApprove])` (append without navigating) and shows a 2.2s inline emerald toast (`queueToast` state) confirming the add + remaining count, so the user stays in the queue and gets feedback without being kicked out. `npx tsc --noEmit` clean; manually verified in-browser (light + dark theme, multi-item approve stays put + toast, last-item approve navigates to Slide Studio like Approve All, empty-state back button, "Add one manually" secondary path).

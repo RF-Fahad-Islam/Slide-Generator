@@ -12,6 +12,7 @@ import { DeckSettingsPage } from './components/DeckSettingsPage';
 import { ExportModal } from './components/ExportModal';
 import { BatchExportModal } from './components/BatchExportModal';
 import { TemplateLibraryModal } from './components/TemplateLibraryModal';
+import { TemplateStudioModal } from './components/TemplateStudioModal';
 import { EditQuestionModal } from './components/EditQuestionModal';
 import { AddQuestionsModal } from './components/AddQuestionsModal';
 import { TemplateCreator } from './components/TemplateCreator';
@@ -66,6 +67,7 @@ export default function App() {
   // persisted back to that deck's row in db.questionDecks (see effect below).
   const [editingSavedDeckId, setEditingSavedDeckId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+  const [isTemplateStudioOpen, setIsTemplateStudioOpen] = useState<boolean>(false);
 
   // "Add Questions" chooser modal — wide Slide Studio button → 3 source cards
   // (Question Bank / Manual Editor / Question Creator Form).
@@ -1119,6 +1121,20 @@ export default function App() {
                           <span className="hidden 2xl:inline">Deck Settings</span>
                         </button>
 
+                        {/* Interactive Template Studio (JSON Import/Export) */}
+                        <button
+                          onClick={() => setIsTemplateStudioOpen(true)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                            isAppLight
+                              ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                          }`}
+                          title="Interactive Template Studio — build custom themes & import/export JSON templates"
+                        >
+                          <LayoutTemplate className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="hidden 2xl:inline">Template Studio</span>
+                        </button>
+
                         {/* Download — Export modal scoped to the whole active deck */}
                         <button
                           onClick={() => {
@@ -1587,6 +1603,22 @@ export default function App() {
         isOpen={isLayoutModalOpen}
         onClose={() => setIsLayoutModalOpen(false)}
         onSelectLayout={addLayoutToDeck}
+        appTheme={appTheme}
+      />
+
+      {/* Interactive Template Studio Modal (JSON Import/Export) */}
+      <TemplateStudioModal
+        isOpen={isTemplateStudioOpen}
+        onClose={() => setIsTemplateStudioOpen(false)}
+        config={config}
+        onApplyTemplate={(templateId, customThemeOverride) => {
+          handleApplyDeckConfig({
+            ...config,
+            templateId,
+            customTheme: customThemeOverride || config.customTheme,
+            accentColorCustom: customThemeOverride?.accentColor || config.accentColorCustom,
+          });
+        }}
         appTheme={appTheme}
       />
 

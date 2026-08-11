@@ -6,6 +6,7 @@ import { getSlideBoxContent, getBoxFontFamily } from './slideTextBoxes';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
 import { getSlideIcon } from './slideElements';
+import { chunkAnswerKeyPages, AnswerKeyPage } from './answerKeySlides';
 import {
   TPL_CARD_ID,
   TPL_STEM_ID,
@@ -32,7 +33,8 @@ export const exportDeckToPPTX = async (
   // full-bleed picture layer so the exported gradient is pixel-identical to
   // the live preview. Falls back to an approximated shape/gradient render
   // when a slide has no corresponding raster.
-  backgroundDataUrls?: string[]
+  backgroundDataUrls?: string[],
+  includeAnswerKeySlides = false
 ) => {
   onProgress?.('Initializing 16:9 PowerPoint Presentation...');
 
@@ -836,6 +838,95 @@ export const exportDeckToPPTX = async (
 
     slide.addNotes(notesLines);
   });
+
+  // Standalone Answer Key Slides (if requested)
+  if (includeAnswerKeySlides && items.length > 0) {
+    onProgress?.('Generating Standalone Answer Key Slides...');
+    const akPages = chunkAnswerKeyPages(items, 20);
+
+    akPages.forEach((page) => {
+      const akSlide = pptx.addSlide();
+      akSlide.background = { color: colors.bg.replace('#', '') };
+
+      // Header Banner
+      akSlide.addShape(pptx.ShapeType?.rect || 'rect', {
+        x: 0.5,
+        y: 0.4,
+        w: 12.33,
+        h: 0.9,
+        fill: { color: colors.cardBg.replace('#', '') },
+        line: { color: colors.cardBorder.replace('#', ''), width: 1 },
+      });
+
+      akSlide.addText(`ANSWER KEY SLIDE (${page.startIndex}–${page.endIndex} / ${items.length})`, {
+        x: 0.7,
+        y: 0.45,
+        w: 8.0,
+        h: 0.4,
+        fontSize: 18,
+        bold: true,
+        color: colors.titleColor.replace('#', ''),
+      });
+
+      akSlide.addText(config.headerTitle || 'MCQ Exam Answer Sheet', {
+        x: 0.7,
+        y: 0.85,
+        w: 8.0,
+        h: 0.3,
+        fontSize: 12,
+        color: colors.textColor.replace('#', ''),
+      });
+
+      // 4-Column Grid of Answer Keys
+      const cols = 4;
+      const rowsPerCol = 5;
+      const colWidth = 2.9;
+      const startX = 0.5;
+      const startY = 1.6;
+
+      page.entries.forEach((entry, idx) => {
+        const colIdx = Math.floor(idx / rowsPerCol);
+        const rowIdx = idx % rowsPerCol;
+        const cellX = startX + colIdx * (colWidth + 0.2);
+        const cellY = startY + rowIdx * 0.95;
+        const accentHex = (((colors as any).accentColor || colors.badgeFill || colors.titleColor) || '10B981').replace('#', '');
+
+        // Entry Cell Box
+        akSlide.addShape(pptx.ShapeType?.rect || 'rect', {
+          x: cellX,
+          y: cellY,
+          w: colWidth,
+          h: 0.85,
+          fill: { color: colors.cardBg.replace('#', '') },
+          line: { color: accentHex, width: 1.5 },
+        });
+
+        // Question Number & Key Badge
+        akSlide.addText(`Q${entry.questionNumber}. [ ${entry.answerKey} ]`, {
+          x: cellX + 0.1,
+          y: cellY + 0.1,
+          w: colWidth - 0.2,
+          h: 0.35,
+          fontSize: 14,
+          bold: true,
+          color: accentHex,
+        });
+
+        // Answer Snippet
+        const cleanAnswerText = cleanLatex(entry.answerText || '');
+        akSlide.addText(cleanAnswerText.slice(0, 35) + (cleanAnswerText.length > 35 ? '...' : ''), {
+          x: cellX + 0.1,
+          y: cellY + 0.45,
+          w: colWidth - 0.2,
+          h: 0.3,
+          fontSize: 11,
+          color: colors.textColor.replace('#', ''),
+        });
+      });
+
+      akSlide.addNotes(`Answer Key Slide - Questions ${page.startIndex} to ${page.endIndex}`);
+    });
+  }
 
   onProgress?.('Generating .pptx file...');
   const fileName = `${(config.brandName || 'MCQ_Deck').replace(/[^a-zA-Z0-9_-]/g, '_')}_16x9_Presentation.pptx`;
