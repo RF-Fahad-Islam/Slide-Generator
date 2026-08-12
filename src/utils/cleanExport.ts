@@ -19,7 +19,7 @@ export const safeToPng = async (
 
   try {
     const dataUrl = await toPng(el, {
-      pixelRatio: 1.5,
+      pixelRatio: 2,
       cacheBust: false,
       ...options,
     });

@@ -165,7 +165,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               <img
                 src={box.imageUrl}
                 alt="Slide Banner"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover img-crisp"
                 draggable={false}
               />
             </div>
@@ -412,7 +412,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                 <img
                   src={config.watermarkAvatar}
                   alt="Avatar"
-                  className="w-12 h-12 rounded-full object-cover border-2 border-amber-400 shadow-xl shrink-0"
+                  className="w-12 h-12 rounded-full object-cover border-2 border-amber-400 shadow-xl shrink-0 img-crisp"
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full border-2 border-amber-400 bg-slate-900 text-amber-300 flex items-center justify-center font-black shadow-lg shrink-0">

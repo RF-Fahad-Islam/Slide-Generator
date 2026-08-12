@@ -380,3 +380,20 @@
   background-color: #fef3c7 !important;
 }
 
+/* High-DPI 75"+ Smart Board Crisp Image & Anti-Aliasing Optimizations */
+#slide-canvas-root img,
+.to-png-export img,
+[data-exporting="true"] img,
+.img-crisp {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: high-quality;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#slide-canvas-root {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+

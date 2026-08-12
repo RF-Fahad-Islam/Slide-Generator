@@ -97,6 +97,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
         renderAsImages,
         includeExplanation,
         embedFonts,
+        exportPixelRatio: 2,
       }
     );
     onClose();

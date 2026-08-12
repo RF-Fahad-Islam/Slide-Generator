@@ -13,7 +13,7 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { downloadJSON } from '../utils/mcqJson';
 import jsPDF from 'jspdf';
-import { FileArchive, CheckCircle2, Loader2, X, Presentation, ExternalLink, FileText } from 'lucide-react';
+import { FileArchive, CheckCircle2, Loader2, X, Presentation, ExternalLink, FileText, Monitor } from 'lucide-react';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -75,6 +75,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
   const [includeAnswerKeySlides, setIncludeAnswerKeySlides] = useState<boolean>(false);
   const [renderAsImages, setRenderAsImages] = useState<boolean>(false);
+  const [exportPixelRatio, setExportPixelRatio] = useState<number>(2); // Default to 2.0 = 4K UHD for 75"+ Smart Boards
   const embedFonts = true;
 
   if (!isOpen) return null;
@@ -104,6 +105,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       includeExplanation,
       includeAnswerKeySlides,
       embedFonts,
+      exportPixelRatio,
     });
     onClose();
   };
@@ -120,6 +122,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       includeExplanation,
       includeAnswerKeySlides: false,
       embedFonts,
+      exportPixelRatio,
     });
     onClose();
   };
@@ -128,10 +131,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const downloadSingleSlide = () => {
     if (!currentSlide) return;
     const deckTitle = config.deckName || config.brandName || 'Slide';
-    enqueueExport('png', `${deckTitle} - Slide #${currentSlide.questionIndex + 1} PNG`, '1920x1080 Image', {
+    enqueueExport('png', `${deckTitle} - Slide #${currentSlide.questionIndex + 1} PNG`, `${1920 * exportPixelRatio}x${1080 * exportPixelRatio} Image`, {
       items,
       config,
       currentSlide,
+      exportPixelRatio,
     });
     onClose();
   };
@@ -146,6 +150,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       scopeSlides,
       isCurrentScope,
       currentSlide,
+      exportPixelRatio,
     });
     onClose();
   };
@@ -158,6 +163,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       items,
       config,
       scopeSlides,
+      exportPixelRatio,
     });
     onClose();
   };
@@ -225,6 +231,58 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         </div>
 
         <div className="space-y-4">
+          {/* Smart Board & Screen Resolution Quality Selector */}
+          <div className={`p-4 rounded-2xl border space-y-2.5 ${
+            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/90 border-slate-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${
+                isAppLight ? 'text-slate-800' : 'text-slate-200'
+              }`}>
+                <Monitor className="w-4 h-4 text-amber-500" />
+                Export Resolution (Smart Board Quality)
+              </span>
+              <span className="text-[11px] font-mono font-bold text-amber-400">
+                {1920 * exportPixelRatio} x {1080 * exportPixelRatio} px
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { ratio: 1, label: '1080p Standard', detail: '1920x1080' },
+                { ratio: 2, label: '4K Board Ready', detail: '3840x2160 (75"+ Smart Board)', badge: 'Recommended' },
+                { ratio: 3, label: '6K Ultra Crisp', detail: '5760x3240' },
+                { ratio: 4, label: '8K Super HD', detail: '7680x4320' },
+              ].map((opt) => {
+                const isActive = exportPixelRatio === opt.ratio;
+                return (
+                  <button
+                    key={opt.ratio}
+                    type="button"
+                    onClick={() => setExportPixelRatio(opt.ratio)}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      isActive
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-lg shadow-amber-500/20'
+                        : isAppLight
+                        ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold truncate">{opt.label}</span>
+                      {opt.badge && isActive && (
+                        <span className="text-[9px] font-black uppercase bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded">
+                          75" Board
+                        </span>
+                      )}
+                    </div>
+                    <div className={`text-[10px] font-mono mt-0.5 ${isActive ? 'text-slate-900 font-bold' : 'text-slate-400'}`}>
+                      {opt.detail}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 shadow-lg ${
             isAppLight
               ? 'bg-amber-50 border-amber-300 shadow-amber-200/30'

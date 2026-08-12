@@ -257,14 +257,14 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                 <img
                   src={effectiveConfig.headerBannerUrl}
                   alt="Custom Header Banner"
-                  className="w-full max-h-[140px] object-contain rounded-2xl shadow-xl border border-white/20"
+                  className="w-full max-h-[140px] object-contain rounded-2xl shadow-xl border border-white/20 img-crisp"
                 />
                 {/* Floating overlay badges for mandatory Logo and Paging Counter */}
                 <div className="absolute inset-0 flex items-center justify-between px-6 pointer-events-none">
                   {showBrandLogo && (
                     <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-white/20 text-white shadow-xl pointer-events-auto">
                       {effectiveConfig.logoUrl ? (
-                        <img src={effectiveConfig.logoUrl} alt="Logo" className="w-8 h-8 object-contain rounded-lg" />
+                        <img src={effectiveConfig.logoUrl} alt="Logo" className="w-8 h-8 object-contain rounded-lg img-crisp" />
                       ) : (
                         <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 font-black flex items-center justify-center text-base">
                           {effectiveConfig.brandName ? effectiveConfig.brandName.charAt(0).toUpperCase() : 'R'}
@@ -330,7 +330,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                     <img
                       src={effectiveConfig.logoUrl}
                       alt="Brand Logo"
-                      className={`${logoDimensions} object-contain rounded-2xl bg-black/10 p-1.5 border border-slate-300 shadow-xl`}
+                      className={`${logoDimensions} object-contain rounded-2xl bg-black/10 p-1.5 border border-slate-300 shadow-xl img-crisp`}
                     />
                   </div>
                 ) : (
@@ -553,7 +553,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                 <img
                   src={item.stemImage}
                   alt="Question Diagram"
-                  className="max-h-56 object-contain rounded-2xl border border-slate-300 bg-white p-2.5 shadow-2xl"
+                  className="max-h-56 object-contain rounded-2xl border border-slate-300 bg-white p-2.5 shadow-2xl img-crisp"
                 />
               </div>
             )}
@@ -688,14 +688,14 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             <img
               src={effectiveConfig.footerBannerUrl}
               alt="Custom Footer Banner"
-              className="w-full max-h-[110px] object-contain rounded-2xl shadow-xl"
+              className="w-full max-h-[110px] object-contain rounded-2xl shadow-xl img-crisp"
             />
             {/* Floating overlay badge for Instructor Info on footer banner */}
             {showInstructorInfo && (
               <div className="absolute inset-0 flex items-center justify-start px-6 pointer-events-none">
                 <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-white/20 text-white shadow-xl pointer-events-auto">
                   {effectiveConfig.watermarkAvatar ? (
-                    <img src={effectiveConfig.watermarkAvatar} alt="Instructor Avatar" className="w-8 h-8 rounded-full object-cover border border-amber-400" />
+                    <img src={effectiveConfig.watermarkAvatar} alt="Instructor Avatar" className="w-8 h-8 rounded-full object-cover border border-amber-400 img-crisp" />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-slate-900 border border-amber-400 text-amber-300 flex items-center justify-center font-bold">
                       <User className="w-4 h-4" />
@@ -722,7 +722,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                   <img
                     src={effectiveConfig.watermarkAvatar}
                     alt="Instructor Avatar"
-                    className="w-13 h-13 rounded-full object-cover border-2 border-amber-400 shadow-xl"
+                    className="w-13 h-13 rounded-full object-cover border-2 border-amber-400 shadow-xl img-crisp"
                     style={accentBorderStyle}
                   />
                 ) : (

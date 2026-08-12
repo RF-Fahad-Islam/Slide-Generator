@@ -36,6 +36,7 @@ export interface ExportJobParams {
   embedFonts?: boolean;
   isCurrentScope?: boolean;
   selectedDecks?: SavedDeck[];
+  exportPixelRatio?: number; // Pixel ratio multiplier (1.0 = 1080p, 2.0 = 4K UHD 75"+ Board, 4.0 = 8K)
 }
 
 export interface ExportTask {
@@ -184,11 +185,13 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const config = params.config;
       const items = params.items;
 
+      const pixelRatio = params.exportPixelRatio || 2;
+
       if (type === 'png') {
         const currentSlide = params.currentSlide;
         if (!currentSlide) throw new Error('No slide selected for PNG export');
 
-        updateTaskState(id, { progress: 30, progressMsg: 'Rendering active slide PNG (1920x1080)...' });
+        updateTaskState(id, { progress: 30, progressMsg: `Rendering active slide PNG (${1920 * pixelRatio}x${1080 * pixelRatio})...` });
         setFullRenderState({
           item: currentSlide.item,
           config,
@@ -202,7 +205,7 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
         const targetEl = fullCanvasRef.current;
         if (!targetEl) throw new Error('Canvas element not ready');
 
-        const dataUrl = await safeToPng(targetEl, { pixelRatio: 2, fontEmbedCSS });
+        const dataUrl = await safeToPng(targetEl, { pixelRatio, fontEmbedCSS });
         const deckPrefix = (config.deckName || config.brandName || 'Slide').replace(/\s+/g, '_');
         const fileName = `${deckPrefix}_q${currentSlide.questionIndex + 1}${currentSlide.isAnswerSlide ? '_ans' : ''}.png`;
         saveAs(dataUrl, fileName);
@@ -245,7 +248,7 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
             const el = fullCanvasRef.current;
             if (el) {
               try {
-                const url = await safeToPng(el, { fontEmbedCSS });
+                const url = await safeToPng(el, { pixelRatio, fontEmbedCSS });
                 fullSlideDataUrls.push(url);
               } catch {
                 fullSlideDataUrls.push('');
@@ -271,7 +274,7 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
             const el = bgCanvasRef.current;
             if (el) {
               try {
-                const url = await safeToPng(el, { fontEmbedCSS });
+                const url = await safeToPng(el, { pixelRatio, fontEmbedCSS });
                 backgroundDataUrls.push(url);
               } catch {
                 backgroundDataUrls.push('');
@@ -303,7 +306,7 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
             const el = mathOverlayCanvasRef.current;
             if (el) {
               try {
-                const url = await safeToPng(el, { fontEmbedCSS });
+                const url = await safeToPng(el, { pixelRatio, fontEmbedCSS });
                 mathOverlayDataUrls.push(url);
               } catch {
                 mathOverlayDataUrls.push('');
@@ -364,7 +367,7 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
           const targetEl = fullCanvasRef.current;
           if (targetEl) {
-            const dataUrl = await safeToPng(targetEl, { pixelRatio: 2, fontEmbedCSS });
+            const dataUrl = await safeToPng(targetEl, { pixelRatio, fontEmbedCSS });
             const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
             folder?.file(`${padIndex}_${ref.isAnswerSlide ? 'ans' : 'q'}.png`, base64, { base64: true });
           }
@@ -401,7 +404,7 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
           const targetEl = fullCanvasRef.current;
           if (targetEl) {
-            const dataUrl = await safeToPng(targetEl, { fontEmbedCSS });
+            const dataUrl = await safeToPng(targetEl, { pixelRatio, fontEmbedCSS });
             if (i > 0) pdf.addPage([1920, 1080], 'landscape');
             pdf.addImage(dataUrl, 'PNG', 0, 0, 1920, 1080);
           }
@@ -455,7 +458,7 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
             const el = bgCanvasRef.current;
             if (el) {
               try {
-                const dataUrl = await safeToPng(el, { fontEmbedCSS });
+                const dataUrl = await safeToPng(el, { pixelRatio, fontEmbedCSS });
                 renderedUrls.push(dataUrl);
               } catch {
                 renderedUrls.push('');
