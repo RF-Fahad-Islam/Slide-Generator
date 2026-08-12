@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 import { DeckConfig, MCQItem, getSourceTags, getEffectiveBadgeTag } from '../types';
-import { hasAnswerDisplayStyle } from '../utils/answerSlides';
+import { hasAnswerDisplayStyle, effectiveAnswerMode } from '../utils/answerSlides';
 import { resolveTheme } from '../utils/themeResolver';
 import { formatSlideQNumber, checkIsOptionCorrect, ensureAnswerBox } from '../utils/slideTextBoxes';
 import { SlideTextBoxLayer } from './SlideTextBoxLayer';
@@ -154,14 +154,17 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   }[effectiveConfig.logoSize || 'md'];
 
   const isAnswerVariant = slideVariant === 'answer';
-  const isSeparateSlideMode = effectiveConfig.answerMode === 'separate_slide';
+  const answerModeResolved = effectiveAnswerMode(effectiveConfig);
 
   // If separate_slide mode is active, question slides (isAnswerVariant = false) stay clean.
   // Dedicated answer slides (isAnswerVariant = true) get all configured answer settings.
-  // If separate_slide mode is off, reveal settings apply in-place on the question slide when reveal is active.
-  const allowRevealOnCurrentSlide = isSeparateSlideMode
+  // If highlight mode is active, reveal settings apply in-place on the question slide.
+  // If hidden mode is active, question slides stay clean unless manually revealed.
+  const allowRevealOnCurrentSlide = answerModeResolved === 'separate_slide'
     ? isAnswerVariant
-    : (isAnswerVariant || effectiveConfig.showAnswerInSlide || effectiveConfig.showExplanationInSlide || isAnswerRevealMode);
+    : answerModeResolved === 'highlight'
+    ? true
+    : (isAnswerVariant || isAnswerRevealMode);
 
   const showAnswerHighlight = allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'highlight_option');
   const showAnswerPill = allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'answer_pill');

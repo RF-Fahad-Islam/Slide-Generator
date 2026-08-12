@@ -59,10 +59,12 @@ export const resolveSlideAnswerFlags = (
   config: Pick<DeckConfig, 'answerMode' | 'showAnswerInSlide' | 'answerDisplayStyles' | 'showExplanationInSlide'>,
   isAnswerSlide: boolean
 ): SlideAnswerFlags => {
-  const isSeparateSlideMode = effectiveAnswerMode(config) === 'separate_slide';
-  const allowRevealOnCurrentSlide = isSeparateSlideMode
+  const mode = effectiveAnswerMode(config);
+  const allowRevealOnCurrentSlide = mode === 'separate_slide'
     ? isAnswerSlide
-    : (isAnswerSlide || !!config.showAnswerInSlide || !!config.showExplanationInSlide);
+    : mode === 'highlight'
+    ? true
+    : isAnswerSlide;
   return {
     showOptionHighlight: allowRevealOnCurrentSlide && hasAnswerDisplayStyle(config, 'highlight_option'),
     showAnswerPill: allowRevealOnCurrentSlide && hasAnswerDisplayStyle(config, 'answer_pill'),

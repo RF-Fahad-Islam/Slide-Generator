@@ -549,25 +549,28 @@ export default function App() {
 
   const toggleAnswerReveal = () => {
     const currentQIndex = activeSlideRef?.questionIndex ?? 0;
-    const isSeparate = config.answerMode === 'separate_slide';
-    const isCurrentlyActive = isSeparate || isAnswerRevealMode || Boolean(config.showAnswerInSlide);
-    const nextState = !isCurrentlyActive;
+    const effectiveMode = effectiveAnswerMode(config);
 
-    setIsAnswerRevealMode(nextState);
+    // Cycle modes: separate_slide -> highlight -> hidden -> separate_slide
+    const nextMode: AnswerMode =
+      effectiveMode === 'separate_slide'
+        ? 'highlight'
+        : effectiveMode === 'highlight'
+        ? 'hidden'
+        : 'separate_slide';
 
-    // If deck is explicitly in separate_slide mode, toggle between separate_slide and hidden.
-    // Otherwise toggle in-place reveal (showAnswerInSlide).
-    const nextMode: AnswerMode = isSeparate
-      ? (nextState ? 'separate_slide' : 'hidden')
-      : (config.answerMode || 'hidden');
+    const isHighlight = nextMode === 'highlight';
 
-    setConfig(c => ({
-      ...c,
+    setIsAnswerRevealMode(isHighlight);
+
+    const updatedConfig: DeckConfig = {
+      ...config,
       answerMode: nextMode,
-      showAnswerInSlide: nextState,
-    }));
+      showAnswerInSlide: isHighlight,
+    };
 
-    const nextSlides = expandDeckSlides(items, { ...config, answerMode: nextMode, showAnswerInSlide: nextState });
+    setConfig(updatedConfig);
+    const nextSlides = expandDeckSlides(items, updatedConfig);
     setSelectedIndex(questionSlideIndex(nextSlides, currentQIndex));
   };
 
@@ -1459,12 +1462,14 @@ export default function App() {
                         <span className="hidden 2xl:inline">Templates</span>
                       </button>
 
-                      {/* Answer Mode Button Group (Open Modal + Quick Dedicated Answer Slide Toggle) */}
+                      {/* Answer Mode Button Group (Open Modal + Quick Mode Cycle Toggle) */}
                       <div className="flex items-center">
                         <button
                           onClick={() => setIsAnswerModeModalOpen(true)}
                           className={`flex items-center gap-1.5 px-3 py-2 rounded-l-xl text-xs font-extrabold transition-all border border-r-0 cursor-pointer ${
-                            config.answerMode === 'separate_slide' || isAnswerRevealMode
+                            effectiveAnswerMode(config) === 'separate_slide'
+                              ? 'bg-purple-500 text-white border-purple-400 shadow-md shadow-purple-500/20'
+                              : effectiveAnswerMode(config) === 'highlight'
                               ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
                               : isAppLight
                               ? 'bg-slate-100 text-slate-700 border-slate-300 hover:text-slate-900'
@@ -1472,21 +1477,35 @@ export default function App() {
                           }`}
                           title="Open Answer Mode & Reveal Settings modal"
                         >
-                          <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                          <Eye className="w-3.5 h-3.5" />
                           <span className="hidden 2xl:inline">Answer Mode</span>
                         </button>
                         <button
                           onClick={toggleAnswerReveal}
                           className={`p-2 rounded-r-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            config.answerMode === 'separate_slide' || isAnswerRevealMode
+                            effectiveAnswerMode(config) === 'separate_slide'
+                              ? 'bg-purple-600 text-white border-purple-400'
+                              : effectiveAnswerMode(config) === 'highlight'
                               ? 'bg-emerald-400 text-slate-950 border-emerald-400'
                               : isAppLight
                               ? 'bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300'
                               : 'bg-slate-700 text-slate-200 border-slate-700 hover:bg-slate-600'
                           }`}
-                          title={config.answerMode === 'separate_slide' || isAnswerRevealMode ? 'Turn OFF dedicated answer slides' : 'Turn ON dedicated answer slides'}
+                          title={
+                            effectiveAnswerMode(config) === 'separate_slide'
+                              ? 'Mode: Dedicated Answer Slides (Click to switch to In-Place Reveal)'
+                              : effectiveAnswerMode(config) === 'highlight'
+                              ? 'Mode: In-Place Reveal (Click to switch to Hidden)'
+                              : 'Mode: Hidden (Click to switch to Dedicated Answer Slides)'
+                          }
                         >
-                          {config.answerMode === 'separate_slide' || isAnswerRevealMode ? <CheckCircle2 className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                          {effectiveAnswerMode(config) === 'separate_slide' ? (
+                            <Presentation className="w-3.5 h-3.5" />
+                          ) : effectiveAnswerMode(config) === 'highlight' ? (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          ) : (
+                            <EyeOff className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       </div>
 

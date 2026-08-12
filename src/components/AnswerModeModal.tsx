@@ -86,7 +86,11 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
 
   const handleSave = () => {
     const updatedStyles = selectedStyles;
-    const nextMode: AnswerMode = useSeparateSlides ? 'separate_slide' : 'highlight';
+    const nextMode: AnswerMode = useSeparateSlides
+      ? 'separate_slide'
+      : updatedStyles.length > 0
+      ? 'highlight'
+      : 'hidden';
     const showExplanation = updatedStyles.includes('explanation_card');
     const showAnswer = updatedStyles.includes('highlight_option') || updatedStyles.includes('answer_pill');
 
