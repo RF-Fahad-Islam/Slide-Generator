@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MCQItem, DeckConfig, SavedDeck } from '../types';
 import { db } from '../db/dexie';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
-import { downloadJSON } from '../utils/mcqJson';
+import { downloadJSON, exportFullDeckPackage, parseFullDeckPackage } from '../utils/mcqJson';
 import { DeckCard } from './DeckCard';
 import {
   Library,
@@ -11,6 +11,8 @@ import {
   FolderPlus,
   Sparkles,
   RefreshCw,
+  Upload,
+  Copy,
 } from 'lucide-react';
 
 interface MyDecksViewProps {
@@ -116,11 +118,70 @@ export const MyDecksView: React.FC<MyDecksViewProps> = ({
     }
   };
 
+  const jsonInputRef = useRef<HTMLInputElement>(null);
+
   const handleExportDeckJson = (deck: SavedDeck) => {
-    downloadJSON(
-      { name: deck.name, subject: deck.subject, badgeTag: deck.badgeTag, items: deck.items },
-      `${deck.name.replace(/[^a-z0-9]+/gi, '_').toLowerCase()}_mcqs.json`
-    );
+    exportFullDeckPackage({
+      name: deck.name,
+      subject: deck.subject,
+      description: deck.description,
+      badgeTag: deck.badgeTag,
+      config: deck.config,
+      items: deck.items,
+    });
+  };
+
+  const handleDuplicateDeck = async (deck: SavedDeck) => {
+    try {
+      const duplicated: SavedDeck = {
+        ...deck,
+        id: `deck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: `${deck.name} (Copy)`,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        items: JSON.parse(JSON.stringify(deck.items)),
+        config: JSON.parse(JSON.stringify(deck.config)),
+      };
+      await db.questionDecks.put(duplicated);
+      setSavedDecks(prev => [duplicated, ...prev]);
+      showTemporarySuccess(`Duplicated deck as "${duplicated.name}"!`);
+    } catch (err) {
+      console.error('Failed to duplicate deck:', err);
+      alert('Error duplicating deck.');
+    }
+  };
+
+  const handleImportDeckJsonFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const raw = JSON.parse(text);
+      const parsed = parseFullDeckPackage(raw, currentConfig);
+      if (!parsed || parsed.items.length === 0) {
+        alert('Invalid deck JSON file. No questions or slides found.');
+        return;
+      }
+      const newDeck: SavedDeck = {
+        id: `deck_${Date.now()}`,
+        name: parsed.name,
+        subject: parsed.subject || 'Imported',
+        description: parsed.description,
+        badgeTag: parsed.badgeTag || parsed.subject || 'Imported',
+        items: parsed.items,
+        config: parsed.config,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      await db.questionDecks.put(newDeck);
+      setSavedDecks(prev => [newDeck, ...prev]);
+      showTemporarySuccess(`Successfully imported deck "${newDeck.name}" with ${newDeck.items.length} slide(s)!`);
+    } catch (err) {
+      console.error('Failed to import deck JSON:', err);
+      alert('Error reading or parsing deck JSON file.');
+    } finally {
+      if (e.target) e.target.value = '';
+    }
   };
 
   const showTemporarySuccess = (msg: string) => {
@@ -153,7 +214,26 @@ export const MyDecksView: React.FC<MyDecksViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-3">
+          <input
+            type="file"
+            ref={jsonInputRef}
+            accept=".json"
+            onChange={handleImportDeckJsonFile}
+            className="hidden"
+          />
+          <button
+            onClick={() => jsonInputRef.current?.click()}
+            className={`px-5 py-3 rounded-2xl border text-sm font-black flex items-center gap-2 shadow-lg transition-all cursor-pointer ${
+              isAppLight
+                ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+            }`}
+            title="Import a full slide deck JSON package with exact config & slides"
+          >
+            <Upload className="w-4 h-4 text-amber-400" />
+            <span>Import Deck JSON</span>
+          </button>
           <button
             onClick={() => (onStartNewDeck ? onStartNewDeck() : onNavigateTab('workspaces'))}
             className="px-5 py-3 rounded-2xl border font-black text-sm flex items-center gap-2 shadow-lg transition-all cursor-pointer bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 shadow-amber-500/25 hover:brightness-110"
@@ -308,6 +388,7 @@ export const MyDecksView: React.FC<MyDecksViewProps> = ({
                     : `Download "${deck.name}" as PPTX / PDF / PNG / ZIP`
                 }
                 onExportJson={() => handleExportDeckJson(deck)}
+                onDuplicate={() => handleDuplicateDeck(deck)}
                 onDelete={() => handleDeleteDeck(deck.id, deck.name)}
               />
             ))}

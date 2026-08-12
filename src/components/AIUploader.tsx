@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MCQItem } from '../types';
+import { parseFullDeckPackage } from '../utils/mcqJson';
 import { useIngestion } from '../ingestion/ingestionStore';
 import { Sparkles, Upload, FileText, AlertCircle, CheckCircle2, Edit3, KeyRound, X, ScanText, Hash, Layers, Copy, ClipboardCheck, Database } from 'lucide-react';
 
@@ -40,6 +41,24 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
         return;
       }
       setFile(selectedFile);
+
+      if (selectedFile.name.toLowerCase().endsWith('.json')) {
+        const jsonReader = new FileReader();
+        jsonReader.onload = (evt) => {
+          try {
+            const rawText = evt.target?.result as string;
+            const parsedObj = JSON.parse(rawText);
+            const fullDeck = parseFullDeckPackage(parsedObj, {} as any);
+            if (fullDeck && fullDeck.items.length > 0) {
+              onAddMCQs(fullDeck.items);
+              setErrorMsg(null);
+            }
+          } catch (err) {
+            console.error('Failed to parse uploaded JSON deck:', err);
+          }
+        };
+        jsonReader.readAsText(selectedFile);
+      }
 
       const reader = new FileReader();
       reader.onload = (evt) => {
@@ -196,7 +215,7 @@ export const AIUploader: React.FC<AIUploaderProps> = ({
             >
               <input
                 type="file"
-                accept=".pdf,image/*,.txt,.doc,.docx"
+                accept=".pdf,image/*,.txt,.doc,.docx,.json"
                 onChange={handleFileChange}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />

@@ -1,9 +1,22 @@
-import { MCQItem } from '../types';
+import { MCQItem, DeckConfig } from '../types';
 
 // ---------------------------------------------------------------------------
-// MCQ JSON import / export helpers — used by the Question Bank (JSON import)
-// and the Export modal ("Extract MCQs (.json)").
+// MCQ JSON import / export helpers — used by the Question Bank (JSON import),
+// My Decks (Deck Package Backup/Restore), and Export Modal.
 // ---------------------------------------------------------------------------
+
+export interface FullDeckPackage {
+  version: '2.0';
+  type: 'slide_deck_package';
+  name: string;
+  subject?: string;
+  description?: string;
+  badgeTag?: string;
+  createdAt?: number;
+  updatedAt?: number;
+  config: DeckConfig;
+  items: MCQItem[];
+}
 
 const sanitizeOption = (raw: any): { key: string; text: string; isCorrect?: boolean } => {
   if (!raw) return { key: 'A', text: '' };
@@ -44,6 +57,8 @@ export const normalizeMCQ = (raw: any, idx: number): MCQItem | null => {
         : [String(raw.source)]
       : undefined,
     explanation: raw.explanation ? String(raw.explanation) : undefined,
+    customConfig: raw.customConfig && typeof raw.customConfig === 'object' ? raw.customConfig : undefined,
+    tags: raw.tags && typeof raw.tags === 'object' ? raw.tags : undefined,
   };
 };
 
@@ -76,4 +91,79 @@ export const downloadJSON = (data: unknown, filename: string) => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+};
+
+/**
+ * Packages a complete slide deck (config, custom slide layouts, and items) into an exact JSON backup file.
+ */
+export const exportFullDeckPackage = (
+  deck: {
+    name: string;
+    subject?: string;
+    description?: string;
+    badgeTag?: string;
+    config: DeckConfig;
+    items: MCQItem[];
+  },
+  customFilename?: string
+) => {
+  const pkg: FullDeckPackage = {
+    version: '2.0',
+    type: 'slide_deck_package',
+    name: deck.name || 'Slide Deck',
+    subject: deck.subject,
+    description: deck.description,
+    badgeTag: deck.badgeTag || deck.config?.badgeTag,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    config: deck.config,
+    items: deck.items,
+  };
+
+  const safeTitle = (deck.name || 'Deck').replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+  const filename = customFilename || `${safeTitle}_full_deck.json`;
+  downloadJSON(pkg, filename);
+};
+
+/**
+ * Parses an uploaded JSON payload into a full deck package (config, items, metadata).
+ */
+export const parseFullDeckPackage = (
+  raw: unknown,
+  fallbackConfig: DeckConfig
+): {
+  name: string;
+  subject?: string;
+  description?: string;
+  badgeTag?: string;
+  config: DeckConfig;
+  items: MCQItem[];
+} | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as any;
+
+  const items = normalizeMCQs(obj);
+  if (items.length === 0) return null;
+
+  const name = String(obj.name || obj.deckName || obj.title || 'Imported Slide Deck');
+  const subject = obj.subject ? String(obj.subject) : undefined;
+  const description = obj.description ? String(obj.description) : undefined;
+  const badgeTag = obj.badgeTag ? String(obj.badgeTag) : undefined;
+
+  let config: DeckConfig = { ...fallbackConfig };
+  if (obj.config && typeof obj.config === 'object') {
+    config = {
+      ...fallbackConfig,
+      ...obj.config,
+    };
+  }
+
+  return {
+    name,
+    subject,
+    description,
+    badgeTag,
+    config,
+    items,
+  };
 };

@@ -2,7 +2,7 @@ import React from 'react';
 import { MCQItem, DeckConfig } from '../types';
 import { resolveTheme } from '../utils/themeResolver';
 import { DeckSlideThumb } from './DeckSlideThumb';
-import { Presentation, Sliders, Share2, Download, FileText, Trash2, Calendar } from 'lucide-react';
+import { Presentation, Sliders, Share2, Download, FileText, Trash2, Calendar, Copy } from 'lucide-react';
 
 interface DeckCardProps {
   id: string;
@@ -23,6 +23,7 @@ interface DeckCardProps {
   downloadDisabled?: boolean;
   downloadTitle?: string;
   onExportJson?: () => void;
+  onDuplicate?: () => void;
   onDelete?: () => void;
 }
 
@@ -47,12 +48,13 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   downloadDisabled,
   downloadTitle,
   onExportJson,
+  onDuplicate,
   onDelete,
 }) => {
   const isAppLight = appTheme === 'light';
   const theme = resolveTheme(config || { templateId: 'nobel-dark' } as DeckConfig);
   const tmpl = theme.template;
-  const hasTertiary = onDownload || onExportJson || onDelete;
+  const hasTertiary = onDownload || onExportJson || onDuplicate || onDelete;
 
   return (
     <div
@@ -192,10 +194,22 @@ export const DeckCard: React.FC<DeckCardProps> = ({
                   className={`text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors ${
                     isAppLight ? 'text-amber-700 hover:text-amber-900' : 'text-amber-400 hover:text-amber-300'
                   }`}
-                  title="Download this deck as re-importable JSON"
+                  title="Download this deck as full re-importable JSON package"
                 >
                   <FileText className="w-3 h-3" />
                   Export JSON
+                </button>
+              )}
+              {onDuplicate && (
+                <button
+                  onClick={onDuplicate}
+                  className={`text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                    isAppLight ? 'text-indigo-700 hover:text-indigo-900' : 'text-indigo-400 hover:text-indigo-300'
+                  }`}
+                  title="Create an exact duplicate of this slide deck"
+                >
+                  <Copy className="w-3 h-3" />
+                  Duplicate
                 </button>
               )}
               {onDelete && (

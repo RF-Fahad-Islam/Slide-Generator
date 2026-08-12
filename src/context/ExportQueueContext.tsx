@@ -9,7 +9,7 @@ import { safeToPng } from '../utils/cleanExport';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { downloadJSON } from '../utils/mcqJson';
+import { downloadJSON, exportFullDeckPackage } from '../utils/mcqJson';
 import jsPDF from 'jspdf';
 
 export type ExportTaskType =
@@ -157,10 +157,14 @@ export const ExportQueueProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       if (type === 'json_deck') {
         const { config, items } = params;
-        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({ config, items }, null, 2));
-        const deckPrefix = (config.deckName || config.brandName || 'Deck').replace(/\s+/g, '_');
-        saveAs(dataStr, `${deckPrefix}_mcq_backup.json`);
-        updateTaskState(id, { status: 'completed', progress: 100, progressMsg: 'JSON export completed' });
+        exportFullDeckPackage({
+          name: config.deckName || config.brandName || 'Deck',
+          subject: config.badgeTag,
+          badgeTag: config.badgeTag,
+          config,
+          items,
+        });
+        updateTaskState(id, { status: 'completed', progress: 100, progressMsg: 'Full slide deck JSON package saved' });
         return;
       }
 
