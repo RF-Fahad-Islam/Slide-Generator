@@ -103,72 +103,106 @@ export const exportDeckToPPTX = async (
   const PX_TO_IN = 13.333 / 1920;
   const PX_TO_PT = PX_TO_IN * 72;
 
-  // Convert a CSS color (hex, hex8, rgb, rgba) to a solid 6-digit hex for PPTX.
-  // rgba() is composited over the slide's base background so the editable shape
-  // approximates the translucent tint SlideCanvas renders.
-  const cssColorToHex = (css: string, baseBg: string = '0F172A'): string => {
-    const s = (css || '').trim();
-    const hex6 = s.match(/^#([0-9a-fA-F]{6})/);
-    if (hex6) return hex6[1].toUpperCase();
-    const hex3 = s.match(/^#([0-9a-fA-F]{3})\b/);
-    if (hex3) {
-      const [r, g, b] = hex3[1];
-      return (r + r + g + g + b + b).toUpperCase();
+  // Helper to parse CSS colors (hex3, hex6, hex8, rgb, rgba, and glass tokens)
+  const parseCssColor = (css: string): { r: number; g: number; b: number; a: number } | null => {
+    if (!css) return null;
+    const s = css.trim().toLowerCase();
+
+    // Preset glass class names & common Tailwind translucent tokens
+    if (s.includes('glass-card-fatty-light')) return { r: 255, g: 255, b: 255, a: 0.95 };
+    if (s.includes('glass-card-fatty')) return { r: 15, g: 23, b: 42, a: 0.85 };
+    if (s.includes('bg-slate-900/90')) return { r: 15, g: 23, b: 42, a: 0.90 };
+    if (s.includes('bg-slate-900/80')) return { r: 15, g: 23, b: 42, a: 0.80 };
+    if (s.includes('bg-slate-950/90')) return { r: 2, g: 6, b: 23, a: 0.90 };
+    if (s.includes('bg-slate-950/80')) return { r: 2, g: 6, b: 23, a: 0.80 };
+    if (s.includes('bg-emerald-950/80')) return { r: 2, g: 44, b: 34, a: 0.80 };
+    if (s.includes('bg-amber-950/70')) return { r: 69, g: 26, b: 3, a: 0.70 };
+    if (s.includes('bg-black/40')) return { r: 0, g: 0, b: 0, a: 0.40 };
+    if (s.includes('bg-black/30')) return { r: 0, g: 0, b: 0, a: 0.30 };
+
+    // Hex 8: #RRGGBBAA
+    const hex8 = s.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (hex8) {
+      return {
+        r: parseInt(hex8[1], 16),
+        g: parseInt(hex8[2], 16),
+        b: parseInt(hex8[3], 16),
+        a: parseInt(hex8[4], 16) / 255,
+      };
     }
+
+    // Hex 6: #RRGGBB
+    const hex6 = s.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (hex6) {
+      return {
+        r: parseInt(hex6[1], 16),
+        g: parseInt(hex6[2], 16),
+        b: parseInt(hex6[3], 16),
+        a: 1,
+      };
+    }
+
+    // Hex 4: #RGBA
+    const hex4 = s.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+    if (hex4) {
+      return {
+        r: parseInt(hex4[1] + hex4[1], 16),
+        g: parseInt(hex4[2] + hex4[2], 16),
+        b: parseInt(hex4[3] + hex4[3], 16),
+        a: parseInt(hex4[4] + hex4[4], 16) / 255,
+      };
+    }
+
+    // Hex 3: #RGB
+    const hex3 = s.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+    if (hex3) {
+      return {
+        r: parseInt(hex3[1] + hex3[1], 16),
+        g: parseInt(hex3[2] + hex3[2], 16),
+        b: parseInt(hex3[3] + hex3[3], 16),
+        a: 1,
+      };
+    }
+
+    // RGBA / RGB: rgba(r, g, b, a)
     const rgba = s.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?\s*\)/i);
     if (rgba) {
-      const [r, g, b] = [parseFloat(rgba[1]), parseFloat(rgba[2]), parseFloat(rgba[3])];
-      const a = rgba[4] === undefined ? 1 : (rgba[4].endsWith('%') ? parseFloat(rgba[4]) / 100 : parseFloat(rgba[4]));
-      // baseBg may arrive as "#020617" (with '#') or "020617" — strip the hash
-      // so the RGB slice is aligned; otherwise the first channel parses to NaN
-      // and the blend emits an invalid hex ("NANxxxx") that PowerPoint renders
-      // as black.
-      const cleanBase = (baseBg || '').replace(/^#/, '').trim();
-      const base = [parseInt(cleanBase.slice(0, 2), 16), parseInt(cleanBase.slice(2, 4), 16), parseInt(cleanBase.slice(4, 6), 16)];
-      const blend = base.map((c, i) => Math.round(([r, g, b][i] * a) + (Number.isNaN(c) ? 0 : c) * (1 - a)));
-      return blend.map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase();
+      const r = Math.round(parseFloat(rgba[1]));
+      const g = Math.round(parseFloat(rgba[2]));
+      const b = Math.round(parseFloat(rgba[3]));
+      const aStr = rgba[4];
+      const a = aStr === undefined ? 1 : aStr.endsWith('%') ? parseFloat(aStr) / 100 : parseFloat(aStr);
+      return { r: Number.isNaN(r) ? 0 : r, g: Number.isNaN(g) ? 0 : g, b: Number.isNaN(b) ? 0 : b, a: Number.isNaN(a) ? 1 : a };
     }
-    return s.replace(/^#/, '').toUpperCase();
-  };
 
-  // True translucency for an rgba() fill — returns the raw hex + a pptxgenjs
-  // `transparency` (0-100) so the shape stays translucent and the real slide
-  // background (or background raster) shows through, exactly like the DOM's
-  // `background-color: rgba(...)`. Solid colors return undefined transparency.
-  // This matters for "glass" pill/card elements (badge tag, counter, etc.).
-  const cssFillTransparency = (css: string): number | undefined => {
-    const s = (css || '').trim();
-    const rgba = s.match(/rgba\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)[,\s/]+([\d.]+%?)\s*\)/i);
-    if (!rgba) return undefined;
-    const a = rgba[4].endsWith('%') ? parseFloat(rgba[4]) / 100 : parseFloat(rgba[4]);
-    if (a >= 1) return undefined;
-    return Math.round((1 - a) * 100);
-  };
-
-  // Parse a CSS color (hex / rgb / rgba) to its RAW rgb as a 6-digit hex,
-  // IGNORING alpha. Used when a transparency value is applied too: pre-blending
-  // rgba over the base background (cssColorToHex) AND then adding transparency
-  // darkens the fill twice; the raw color + pptxgenjs transparency reproduces
-  // the DOM's translucent rgba over whatever is actually behind the shape.
-  const cssRgbHex = (css: string): string | null => {
-    const s = (css || '').trim();
-    const hex6 = s.match(/^#([0-9a-fA-F]{6})/);
-    if (hex6) return hex6[1].toUpperCase();
-    const hex3 = s.match(/^#([0-9a-fA-F]{3})\b/);
-    if (hex3) {
-      const [r, g, b] = hex3[1];
-      return (r + r + g + g + b + b).toUpperCase();
-    }
-    const rgb = s.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+[\d.]+%?)?\s*\)/i);
-    if (rgb) {
-      const [r, g, b] = [
-        Math.round(parseFloat(rgb[1])),
-        Math.round(parseFloat(rgb[2])),
-        Math.round(parseFloat(rgb[3])),
-      ];
-      return [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase();
-    }
     return null;
+  };
+
+  // Convert a CSS color to a solid 6-digit hex for PPTX (blends alpha over base background).
+  const cssColorToHex = (css: string, baseBg: string = '0F172A'): string => {
+    const parsed = parseCssColor(css);
+    if (!parsed) return (css || '').replace(/^#/, '').toUpperCase();
+    if (parsed.a >= 0.999) {
+      return [parsed.r, parsed.g, parsed.b].map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+    const cleanBase = (baseBg || '').replace(/^#/, '').trim();
+    const base = [parseInt(cleanBase.slice(0, 2), 16), parseInt(cleanBase.slice(2, 4), 16), parseInt(cleanBase.slice(4, 6), 16)];
+    const blend = [parsed.r, parsed.g, parsed.b].map((c, i) => Math.round((c * parsed.a) + (Number.isNaN(base[i]) ? 0 : base[i]) * (1 - parsed.a)));
+    return blend.map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase();
+  };
+
+  // True translucency for an rgba() or glass fill — returns pptxgenjs `transparency` (0-100).
+  const cssFillTransparency = (css: string): number | undefined => {
+    const parsed = parseCssColor(css);
+    if (!parsed || parsed.a >= 0.999) return undefined;
+    return Math.round((1 - parsed.a) * 100);
+  };
+
+  // Parse a CSS color to its RAW RGB hex ignoring alpha.
+  const cssRgbHex = (css: string): string | null => {
+    const parsed = parseCssColor(css);
+    if (!parsed) return null;
+    return [parsed.r, parsed.g, parsed.b].map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase();
   };
 
   // Render a lucide icon as an inline SVG data URL so decorative icon elements

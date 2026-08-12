@@ -278,7 +278,7 @@
   }
 }
 
-/* Prevent SVG foreignObject canvas backdrop-filter corruptions & glass bleed-through on image exports */
+/* Prevent SVG foreignObject canvas backdrop-filter corruptions on image exports */
 [data-exporting="true"],
 [data-exporting="true"] *,
 .to-png-export,
@@ -287,41 +287,3 @@
   -webkit-backdrop-filter: none !important;
 }
 
-/* Hide heavy CSS box-blur ambient glows during canvas export to prevent SVG foreignObject rectangular block smudges */
-[data-exporting="true"] .blur-3xl,
-[data-exporting="true"] .blur-2xl,
-.to-png-export .blur-3xl,
-.to-png-export .blur-2xl {
-  display: none !important;
-}
-
-/* Force translucent glass card containers to solid opaque fills during export so background graphics do not bleed into text */
-[data-exporting="true"] .glass-card-fatty,
-[data-exporting="true"] .glass-card-fatty-light,
-.to-png-export .glass-card-fatty,
-.to-png-export .glass-card-fatty-light {
-  background-color: var(--brand-card-bg, #0f172a) !important;
-}
-
-[data-exporting="true"] .bg-slate-900\/90,
-[data-exporting="true"] .bg-slate-900\/80,
-[data-exporting="true"] .bg-slate-950\/80,
-[data-exporting="true"] .bg-slate-950\/90,
-[data-exporting="true"] .bg-emerald-950\/80,
-[data-exporting="true"] .bg-amber-950\/70,
-[data-exporting="true"] .bg-black\/40,
-[data-exporting="true"] .bg-black\/30,
-[data-exporting="true"] .slide-box-card-bg,
-[data-exporting="true"] .slide-box-option-bg,
-.to-png-export .bg-slate-900\/90,
-.to-png-export .bg-slate-900\/80,
-.to-png-export .bg-slate-950\/80,
-.to-png-export .bg-slate-950\/90,
-.to-png-export .bg-emerald-950\/80,
-.to-png-export .bg-amber-950\/70,
-.to-png-export .bg-black\/40,
-.to-png-export .bg-black\/30,
-.to-png-export .slide-box-card-bg,
-.to-png-export .slide-box-option-bg {
-  background-color: var(--brand-card-bg, #0f172a) !important;
-}
