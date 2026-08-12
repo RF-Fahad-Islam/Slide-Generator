@@ -20,18 +20,20 @@ export const AddQuestionsBanner: React.FC<AddQuestionsBannerProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`w-full rounded-3xl border shadow-2xl p-4 sm:p-5 flex items-center justify-between gap-4 transition-all cursor-pointer group hover:-translate-y-0.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 border-emerald-400 text-slate-950 hover:shadow-emerald-500/30 ${
+      className={`w-full rounded-2xl sm:rounded-3xl border shadow-2xl p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 transition-all cursor-pointer group hover:-translate-y-0.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 border-emerald-400 text-slate-950 hover:shadow-emerald-500/30 ${
         isAppLight ? 'shadow-emerald-500/20' : ''
       }`}
     >
-      <div className="flex items-center gap-4 min-w-0">
-        <span className="p-3 rounded-2xl bg-slate-950/10 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-          <PlusCircle className="w-6 h-6 stroke-[2.5]" />
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <span className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-950/10 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
+          <PlusCircle className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
         </span>
         <div className="text-left min-w-0">
-          <div className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
-            Add Questions
-            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-950 text-emerald-300">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="text-base sm:text-lg font-black tracking-tight leading-tight">
+              Add Questions
+            </span>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-950 text-emerald-300 shrink-0">
               {count} in deck
             </span>
           </div>
@@ -40,8 +42,8 @@ export const AddQuestionsBanner: React.FC<AddQuestionsBannerProps> = ({
           </div>
         </div>
       </div>
-      <span className="shrink-0 px-4 py-2 rounded-xl bg-slate-950 text-emerald-300 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-transform group-hover:translate-x-1">
-        Choose Source <ArrowRight className="w-4 h-4" />
+      <span className="shrink-0 self-end sm:self-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-950 text-emerald-300 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-transform group-hover:translate-x-1">
+        Choose Source <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </span>
     </button>
   );
