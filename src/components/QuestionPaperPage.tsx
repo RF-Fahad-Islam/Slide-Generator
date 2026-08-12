@@ -1,7 +1,7 @@
 import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import { MCQItem, DeckConfig, getSourceTags, getEffectiveBadgeTag } from '../types';
 import { MathText } from './MathText';
-import { toPng } from 'html-to-image';
+import { safeToPng } from '../utils/cleanExport';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import jsPDF from 'jspdf';
 
@@ -58,7 +58,7 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
             await new Promise((r) => setTimeout(r, 150));
             const el = pageRef.current;
             if (!el) continue;
-            const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
+            const dataUrl = await safeToPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
             if (addedPage > 0) pdf.addPage('a4', 'portrait');
             pdf.addImage(dataUrl, 'PNG', 0, 0, PAGE_W, PAGE_H);
             addedPage++;
@@ -70,7 +70,7 @@ export const QuestionPaperPage = forwardRef<QuestionPaperHandle, QuestionPaperPa
             await new Promise((r) => setTimeout(r, 150));
             const el = pageRef.current;
             if (el) {
-              const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
+              const dataUrl = await safeToPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
               pdf.addPage('a4', 'portrait');
               pdf.addImage(dataUrl, 'PNG', 0, 0, PAGE_W, PAGE_H);
             }

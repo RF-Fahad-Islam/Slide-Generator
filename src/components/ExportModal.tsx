@@ -7,7 +7,6 @@ import { SlideTextBoxLayer } from './SlideTextBoxLayer';
 import { boxContentHasMath, ensureAnswerBox } from '../utils/slideTextBoxes';
 import { DeckQuestionPaperModal } from './DeckQuestionPaperModal';
 import { expandDeckSlides, effectiveAnswerMode, effectiveShowAnswerInSlide, SlideRef, resolveSlideAnswerFlags } from '../utils/answerSlides';
-import { toPng } from 'html-to-image';
 import { safeToPng } from '../utils/cleanExport';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import JSZip from 'jszip';

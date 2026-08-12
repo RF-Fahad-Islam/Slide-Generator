@@ -25,7 +25,6 @@ import {
   LayoutTemplate,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { toPng } from 'html-to-image';
 import { safeToPng } from '../utils/cleanExport';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import { SlideTextBoxLayer } from './SlideTextBoxLayer';

@@ -386,7 +386,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
           <div className={`col-span-7 flex flex-col gap-4 h-full ${questionPosClass}`}>
             <div
               style={{ fontFamily: bodyFont }}
-              className={`p-6 rounded-3xl ${styles.cardBg} backdrop-blur-md border border-white/10 shadow-2xl space-y-3`}
+              className={`p-6 rounded-3xl ${styles.cardBg} backdrop-blur-md border border-white/10 shadow-2xl space-y-3 slide-box-card-bg`}
             >
               {/* Question Stem Text */}
               <div className={`flex items-start gap-3 ${bodySizeClass} ${bodyWeightClass} ${questionAlignClass} leading-relaxed tracking-wide drop-shadow-sm ${
@@ -464,7 +464,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               return (
                 <div
                   key={oIdx}
-                  className={`relative flex items-center gap-5 p-5 rounded-2xl transition-all border backdrop-blur-md shadow-xl ${
+                  className={`relative flex items-center gap-5 p-5 rounded-2xl transition-all border backdrop-blur-md shadow-xl slide-box-option-bg ${
                     isCorrect
                       ? (isLight
                           ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-emerald-400/30'
@@ -513,7 +513,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
           {/* Question Stem Box */}
           <div
             style={{ fontFamily: bodyFont }}
-            className={`p-7 rounded-3xl ${styles.cardBg} backdrop-blur-md transition-all shadow-xl`}
+            className={`p-7 rounded-3xl ${styles.cardBg} backdrop-blur-md transition-all shadow-xl slide-box-card-bg`}
           >
             {/* Source Tag Badge */}
             {getSourceTags(item).length > 0 && (
@@ -607,7 +607,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               return (
                 <div
                   key={oIdx}
-                  className={`relative flex items-center gap-4 p-5 rounded-2xl transition-all border backdrop-blur-md shadow-lg ${
+                  className={`relative flex items-center gap-4 p-5 rounded-2xl transition-all border backdrop-blur-md shadow-lg slide-box-option-bg ${
                     isCorrect
                       ? (isLight
                           ? 'bg-amber-100 border-2 border-amber-500 text-slate-950 shadow-amber-300/40 ring-2 ring-amber-400'

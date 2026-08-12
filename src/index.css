@@ -278,12 +278,84 @@
   }
 }
 
-/* Prevent SVG foreignObject canvas backdrop-filter corruptions on image exports */
+/* Prevent SVG foreignObject canvas backdrop-filter corruptions & glass distortions on exports */
 [data-exporting="true"],
 [data-exporting="true"] *,
 .to-png-export,
 .to-png-export * {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* Soften heavy box-shadows to crisp borders/subtle shadows during rasterization */
+[data-exporting="true"] .shadow-2xl,
+[data-exporting="true"] .shadow-xl,
+[data-exporting="true"] .shadow-lg,
+.to-png-export .shadow-2xl,
+.to-png-export .shadow-xl,
+.to-png-export .shadow-lg {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Solid theme-matched opaque fallback colors for translucent glass cards & option boxes */
+[data-exporting="true"] .slide-box-card-bg,
+[data-exporting="true"] .slide-box-option-bg,
+[data-exporting="true"] .glass-card-fatty,
+.to-png-export .slide-box-card-bg,
+.to-png-export .slide-box-option-bg,
+.to-png-export .glass-card-fatty {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Specific translucent utility background classes converted to solid opaque shades */
+[data-exporting="true"] .bg-slate-900\/90,
+[data-exporting="true"] .bg-slate-900\/80,
+.to-png-export .bg-slate-900\/90,
+.to-png-export .bg-slate-900\/80 {
+  background-color: #0f172a !important;
+}
+
+[data-exporting="true"] .bg-indigo-950\/85,
+[data-exporting="true"] .bg-indigo-950\/80,
+.to-png-export .bg-indigo-950\/85,
+.to-png-export .bg-indigo-950\/80 {
+  background-color: #0c102b !important;
+}
+
+[data-exporting="true"] .bg-emerald-950\/80,
+[data-exporting="true"] .bg-emerald-950\/70,
+.to-png-export .bg-emerald-950\/80,
+.to-png-export .bg-emerald-950\/70 {
+  background-color: #032b1d !important;
+}
+
+[data-exporting="true"] .bg-purple-950\/80,
+.to-png-export .bg-purple-950\/80 {
+  background-color: #1e0936 !important;
+}
+
+[data-exporting="true"] .bg-slate-950\/80,
+[data-exporting="true"] .bg-slate-950\/70,
+.to-png-export .bg-slate-950\/80,
+.to-png-export .bg-slate-950\/70 {
+  background-color: #090d16 !important;
+}
+
+[data-exporting="true"] .bg-amber-950\/70,
+.to-png-export .bg-amber-950\/70 {
+  background-color: #261704 !important;
+}
+
+[data-exporting="true"] .bg-black\/40,
+[data-exporting="true"] .bg-black\/50,
+.to-png-export .bg-black\/40,
+.to-png-export .bg-black\/50 {
+  background-color: #0b0f19 !important;
+}
+
+[data-exporting="true"] .bg-amber-100\/90,
+.to-png-export .bg-amber-100\/90 {
+  background-color: #fef3c7 !important;
 }
 

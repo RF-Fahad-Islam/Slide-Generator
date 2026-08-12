@@ -13,6 +13,10 @@ export const safeToPng = async (
 ): Promise<string> => {
   el.setAttribute('data-exporting', 'true');
   el.classList.add('to-png-export');
+
+  // Trigger style reflow so data-exporting rules take effect immediately before capture
+  void el.offsetHeight;
+
   try {
     const dataUrl = await toPng(el, {
       pixelRatio: 1.5,

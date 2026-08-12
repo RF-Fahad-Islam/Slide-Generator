@@ -3,7 +3,7 @@ import { MCQItem, DeckConfig, getSourceTags, getEffectiveBadgeTag } from '../typ
 import { getTemplateById, TEMPLATES, resolveTheme } from '../templates/registry';
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { MathText } from './MathText';
-import { toPng } from 'html-to-image';
+import { safeToPng } from '../utils/cleanExport';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import jsPDF from 'jspdf';
 import { Download, FileText, Loader2, X, Layers, CheckCircle2 } from 'lucide-react';
@@ -516,7 +516,7 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
         await new Promise((r) => setTimeout(r, 150));
         const el = pageRef.current;
         if (!el) continue;
-        const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
+        const dataUrl = await safeToPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
         if (addedPage > 0) pdf.addPage([PAGE_W, PAGE_H], 'portrait');
         const pdfW = pdf.internal.pageSize.getWidth();
         const pdfH = pdf.internal.pageSize.getHeight();
@@ -530,7 +530,7 @@ export const DeckQuestionPaperModal: React.FC<DeckQuestionPaperModalProps> = ({
         await new Promise((r) => setTimeout(r, 150));
         const el = pageRef.current;
         if (el) {
-          const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
+          const dataUrl = await safeToPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
           pdf.addPage([PAGE_W, PAGE_H], 'portrait');
           const pdfW = pdf.internal.pageSize.getWidth();
           const pdfH = pdf.internal.pageSize.getHeight();

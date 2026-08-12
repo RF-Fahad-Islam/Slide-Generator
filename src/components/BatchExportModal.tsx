@@ -4,7 +4,6 @@ import { db } from '../db/dexie';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { exportDeckToPPTX } from '../utils/pptxExport';
 import { SlideCanvas } from './SlideCanvas';
-import { toPng } from 'html-to-image';
 import { safeToPng } from '../utils/cleanExport';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import { X, Download, Check, RefreshCw, CheckCircle2, Layers, CheckSquare } from 'lucide-react';
