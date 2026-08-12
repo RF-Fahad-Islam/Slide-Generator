@@ -620,7 +620,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                 <h4 className={`text-lg font-black uppercase tracking-wider mb-0.5 ${
                   isLight ? 'text-emerald-900' : 'text-emerald-300'
                 }`}>
-                  ব্যাখ্যা (Explanation):
+                  Explanation:
                 </h4>
                 <div className={`text-xl font-semibold leading-relaxed ${
                   isLight ? 'text-slate-950' : 'text-slate-100'

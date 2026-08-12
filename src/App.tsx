@@ -418,11 +418,18 @@ export default function App() {
 
   const toggleAnswerReveal = () => {
     const currentQIndex = activeSlideRef?.questionIndex ?? 0;
-    const isCurrentlyActive = effectiveAnswerMode(config) === 'separate_slide' || isAnswerRevealMode;
+    const isSeparate = config.answerMode === 'separate_slide';
+    const isCurrentlyActive = isSeparate || isAnswerRevealMode || Boolean(config.showAnswerInSlide);
     const nextState = !isCurrentlyActive;
-    const nextMode: AnswerMode = nextState ? 'separate_slide' : 'hidden';
 
     setIsAnswerRevealMode(nextState);
+
+    // If deck is explicitly in separate_slide mode, toggle between separate_slide and hidden.
+    // Otherwise toggle in-place reveal (showAnswerInSlide).
+    const nextMode: AnswerMode = isSeparate
+      ? (nextState ? 'separate_slide' : 'hidden')
+      : (config.answerMode || 'hidden');
+
     setConfig(c => ({
       ...c,
       answerMode: nextMode,
