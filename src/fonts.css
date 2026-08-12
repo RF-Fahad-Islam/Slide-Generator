@@ -106,3 +106,20 @@
   font-display: swap;
   src: url('/fonts/PlayfairDisplay-Variable.ttf') format('truetype');
 }
+
+/* Fira Code (Monospace — formula & code containers) */
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/FiraCode-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/FiraCode-Regular.ttf') format('truetype');
+}

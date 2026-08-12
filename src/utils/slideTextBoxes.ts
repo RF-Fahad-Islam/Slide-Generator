@@ -1,4 +1,5 @@
 import { MCQItem, SlideTextBox, SlideTextBoxBind, DeckConfig, getSourceTags, getEffectiveBadgeTag } from '../types';
+import { textContainsMath } from './latexFormatter';
 
 export const SLIDE_BOX_BINDS: { bind: SlideTextBoxBind; label: string }[] = [
   { bind: 'stem', label: '+ Question' },
@@ -129,4 +130,26 @@ export const getSlideBoxContent = (
     case 'image': return '';
     default: return box.text || '';
   }
+};
+
+// True if a text box's rendered content contains LaTeX/math that the DOM
+// typesets via KaTeX but PPTX native text cannot reproduce — such boxes must
+// be rasterized to an image for the editable export to stay faithful.
+// Options boxes check every option's text (each option is typeset separately).
+export const boxContentHasMath = (
+  box: SlideTextBox,
+  item?: MCQItem,
+  config?: DeckConfig,
+  currentIndex: number = 0,
+  totalCount: number = 1
+): boolean => {
+  if (box.bind === 'options') {
+    const opts = item?.options || [];
+    return opts.some(o => textContainsMath(o.text));
+  }
+  if (box.bind === 'roman') {
+    return (item?.romanItems || []).some(r => textContainsMath(r));
+  }
+  const content = getSlideBoxContent(box, item, config, currentIndex, totalCount);
+  return textContainsMath(content);
 };

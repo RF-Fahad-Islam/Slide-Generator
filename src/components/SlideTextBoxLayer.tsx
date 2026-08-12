@@ -26,6 +26,9 @@ interface SlideTextBoxLayerProps {
   // 'answer' renders a dedicated answer slide — adds the "উত্তর" strip above
   // the boxes, matching SlideCanvas's answer variant.
   isAnswerVariant?: boolean;
+  // Optional: only render boxes with these ids. Used to rasterize just the
+  // boxes PPTX can't reproduce natively (LaTeX/math content) as images.
+  renderBoxIds?: string[];
 }
 
 // Renders the deck-wide text-box overlay layer for a slide. Shared between
@@ -40,8 +43,14 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   totalCount = 1,
   showAnswerHighlight,
   isAnswerVariant = false,
+  renderBoxIds,
 }) => {
   if (boxes.length === 0) return null;
+
+  // Optional id filter (raster-only renders) — everything else stays the same
+  // so a single box renders at its exact coordinates for offscreen capture.
+  const visibleBoxes = renderBoxIds ? boxes.filter(b => renderBoxIds.includes(b.id)) : boxes;
+  if (visibleBoxes.length === 0) return null;
 
   const theme = resolveTheme(config);
   const isLight = theme.isLight;
@@ -68,7 +77,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none">
-      {showAnswerPill && item.answer && !boxes.some(b => b.bind === 'answer') && (
+      {!renderBoxIds && showAnswerPill && item.answer && !boxes.some(b => b.bind === 'answer') && (
         <div
           className={`absolute left-1/2 -translate-x-1/2 top-5 flex items-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl ${
             isLight
@@ -80,7 +89,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           <span className="text-2xl font-black">উত্তর: {item.answer}</span>
         </div>
       )}
-      {boxes.map(box => {
+      {visibleBoxes.map(box => {
         // Skip optional structural boxes that have no content on this slide
         if (box.bind === 'roman' && !(item.romanItems || []).length) return null;
         if (box.bind === 'prompt' && !item.prompt) return null;

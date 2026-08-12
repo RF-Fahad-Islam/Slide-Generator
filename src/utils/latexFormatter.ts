@@ -4,6 +4,21 @@
  * into clean, standard KaTeX-compatible expressions.
  */
 
+// True if the text contains anything the DOM renderer would typeset via KaTeX
+// (MathText): $...$, $$...$$, \(...\) / \[...\] delimiters, or bare math
+// macros like \frac \sqrt \int \lim that MathText auto-wraps. PPTX native text
+// CANNOT reproduce these — such elements must be rasterized as images instead.
+export function textContainsMath(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return (
+    /\$\$[\s\S]*?\$\$/.test(text) ||
+    /\$[^$]+\$/.test(text) ||
+    /\\\([\s\S]*?\\\)/.test(text) ||
+    /\\\[[\s\S]*?\\\]/.test(text) ||
+    /\\(?:frac|sqrt|int|sum|prod|lim|sin|cos|tan|ln|log|cdot|times|div|pm|alpha|beta|gamma|delta|theta|lambda|pi|sigma|omega|Rightarrow|rightarrow|leftarrow|begin\{)/.test(text)
+  );
+}
+
 export function preprocessLatex(raw: string): string {
   if (!raw) return raw;
 

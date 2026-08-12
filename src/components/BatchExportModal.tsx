@@ -5,6 +5,7 @@ import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { exportDeckToPPTX } from '../utils/pptxExport';
 import { SlideCanvas } from './SlideCanvas';
 import { toPng } from 'html-to-image';
+import { getFontEmbedCSS } from '../utils/fontEmbed';
 import { X, Download, Check, RefreshCw, CheckCircle2, Layers, CheckSquare } from 'lucide-react';
 
 interface BatchExportModalProps {
@@ -106,6 +107,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
         // Rasterize the exact background stack (gradient/image/tint/glows) for
         // every slide so the PPTX gets a pixel-accurate picture layer instead
         // of an approximated gradient shape — mirrors ExportModal's PPTX flow.
+        const fontEmbedCSS = await getFontEmbedCSS();
         const backgroundDataUrls: string[] = [];
         for (let qi = 0; qi < deck.items.length; qi++) {
           setBgRenderSlide({ item: deck.items[qi], config: deck.config, questionIndex: qi });
@@ -113,7 +115,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
           await new Promise(r => setTimeout(r, 100));
           const el = bgCanvasRef.current;
           if (el) {
-            const dataUrl = await toPng(el, { cacheBust: true });
+            const dataUrl = await toPng(el, { cacheBust: true, fontEmbedCSS });
             backgroundDataUrls.push(dataUrl);
           }
         }

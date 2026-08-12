@@ -44,6 +44,35 @@ export const effectiveAnswerMode = (config: Pick<DeckConfig, 'answerMode' | 'sho
 export const effectiveShowAnswerInSlide = (config: Pick<DeckConfig, 'answerMode' | 'showAnswerInSlide'>): boolean =>
   effectiveAnswerMode(config) === 'highlight';
 
+// Answer-reveal gating for a single physical slide — the ONE source of truth
+// for which answer features (option highlight / answer pill / explanation card)
+// are visible on this slide. SlideCanvas (the DOM reference), pptxExport (the
+// native editable exporter) and ExportModal's math-overlay rasterizer must all
+// resolve the same flags, or the exported PPTX drifts from the preview.
+export interface SlideAnswerFlags {
+  showOptionHighlight: boolean;
+  showAnswerPill: boolean;
+  showExplanationCard: boolean;
+}
+
+export const resolveSlideAnswerFlags = (
+  config: Pick<DeckConfig, 'answerMode' | 'showAnswerInSlide' | 'answerDisplayStyles' | 'showExplanationInSlide'>,
+  isAnswerSlide: boolean
+): SlideAnswerFlags => {
+  const isSeparateSlideMode = effectiveAnswerMode(config) === 'separate_slide';
+  // Mirrors SlideCanvas exactly (the DOM reference): on dedicated answer slides
+  // the reveal is always active; on question slides it activates when the deck
+  // is not separate_slide and in-place reveal is on.
+  const allowRevealOnCurrentSlide = isSeparateSlideMode
+    ? isAnswerSlide
+    : (isAnswerSlide || !!config.showAnswerInSlide);
+  return {
+    showOptionHighlight: isAnswerSlide || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(config, 'highlight_option')),
+    showAnswerPill: isAnswerSlide || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(config, 'answer_pill')),
+    showExplanationCard: isAnswerSlide || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(config, 'explanation_card')),
+  };
+};
+
 export interface SlideRef {
   item: MCQItem;
   questionIndex: number; // index into the deck items (question-number badge + answer lookup)

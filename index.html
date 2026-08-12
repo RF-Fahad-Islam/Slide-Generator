@@ -4,13 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EdTech MCQ Slide Generator</title>
-    <!-- Kalpurush Bangla Font & Google Fonts -->
-    <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@400;600;700;800&family=Atma:wght@500;700&family=Hind+Siliguri:wght@400;500;600;700&family=Mina:wght@400;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Poppins:wght@400;600;700;800&family=Tiro+Bangla:ital@0;1&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <!-- KaTeX CSS for LaTeX math rendering -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhFAXsFRLyJJxVbUX0s6hC/rk5uza06nBGIQC8w8N35P557930UpPt142d1" crossorigin="anonymous">
+    <!-- All fonts are self-hosted in src/fonts.css + public/fonts/ (single source
+         of truth). No external font CDNs: exports (PNG/PDF/ZIP via html-to-image)
+         embed the same-origin font files deterministically, and the app works
+         fully offline. KaTeX CSS is also bundled locally via src/index.css. -->
   </head>
   <body class="bg-slate-950 text-slate-100 font-['Kalpurush','Hind_Siliguri',serif] antialiased selection:bg-indigo-500 selection:text-white">
     <div id="root"></div>

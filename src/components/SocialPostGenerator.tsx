@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
+import { getFontEmbedCSS } from '../utils/fontEmbed';
 import { SlideTextBoxLayer } from './SlideTextBoxLayer';
 import { SlideTextBoxOverlay } from './SlideTextBoxOverlay';
 import { SlideTextBoxPanel } from './SlideTextBoxPanel';
@@ -416,10 +417,12 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         downloadDataUrl(canvas.toDataURL('image/png'));
       } catch (html2canvasErr) {
         console.warn('html2canvas failed, falling back to html-to-image:', html2canvasErr);
+        const fontEmbedCSS = await getFontEmbedCSS();
         const dataUrl = await toPng(postCanvasRef.current, {
           pixelRatio: 2,
           cacheBust: true,
           backgroundColor: null,
+          fontEmbedCSS,
         });
         downloadDataUrl(dataUrl);
       }

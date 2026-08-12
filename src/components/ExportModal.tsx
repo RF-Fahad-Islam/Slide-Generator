@@ -3,9 +3,12 @@ import { DeckConfig, MCQItem } from '../types';
 import { exportDeckToPPTX, PptxSlideSpec } from '../utils/pptxExport';
 import { SlideCanvas } from './SlideCanvas';
 import { SlideThumb } from './SlideThumb';
+import { SlideTextBoxLayer } from './SlideTextBoxLayer';
+import { boxContentHasMath } from '../utils/slideTextBoxes';
 import { DeckQuestionPaperModal } from './DeckQuestionPaperModal';
-import { expandDeckSlides, effectiveAnswerMode, effectiveShowAnswerInSlide, SlideRef } from '../utils/answerSlides';
+import { expandDeckSlides, effectiveAnswerMode, effectiveShowAnswerInSlide, SlideRef, resolveSlideAnswerFlags } from '../utils/answerSlides';
 import { toPng } from 'html-to-image';
+import { getFontEmbedCSS } from '../utils/fontEmbed';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { downloadJSON } from '../utils/mcqJson';
@@ -80,10 +83,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // The slide ref currently being rasterized for a background-only PPTX capture.
   const [bgRenderSlideRef, setBgRenderSlideRef] = useState<SlideRef | null>(null);
   const bgExportCanvasRef = useRef<HTMLDivElement | null>(null);
+  // The slide currently being rasterized for its transparent LaTeX/math box
+  // overlay (only math boxes render; everything else is transparent).
+  const [mathOverlaySlideRef, setMathOverlaySlideRef] = useState<SlideRef | null>(null);
+  const mathOverlayCanvasRef = useRef<HTMLDivElement | null>(null);
   // Whether answer slides include the explanation box (defaults to ON — answer
   // slides always showed it before; the toggle lets exports drop it).
   const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
   const [includeAnswerKeySlides, setIncludeAnswerKeySlides] = useState<boolean>(false);
+  // When true the PPTX embeds each slide as an exact full-bleed image of the
+  // live preview (pixel-identical, non-editable layers) instead of native
+  // editable text/shape layers.
+  const [renderAsImages, setRenderAsImages] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -105,6 +116,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // scope, so the PPTX export can embed it as one pixel-accurate picture
   // layer instead of approximating gradients with shapes.
   const renderBackgroundDataUrls = async (): Promise<string[]> => {
+    // D14 invariant — must await webfonts before ANY rasterization, otherwise
+    // a fresh page load can rasterize blank/fallback glyphs (esp. Bangla) into
+    // the exported background picture layer.
+    await document.fonts.ready;
+    const fontEmbedCSS = await getFontEmbedCSS();
     const backgroundDataUrls: string[] = [];
     for (let i = 0; i < scopeSlides.length; i++) {
       const ref = scopeSlides[i];
@@ -113,7 +129,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const el = bgExportCanvasRef.current;
       if (el) {
         try {
-          const url = await toPng(el, { pixelRatio: 1.5, cacheBust: true });
+          const url = await toPng(el, { pixelRatio: 1.5, cacheBust: true, fontEmbedCSS });
           backgroundDataUrls.push(url);
         } catch {
           backgroundDataUrls.push('');
@@ -123,6 +139,80 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       }
     }
     return backgroundDataUrls;
+  };
+
+  // Renders the EXACT full slide (background + text + shapes + icons — the
+  // whole DOM renderer output) for each slide in scope, so the PPTX can embed
+  // pixel-identical pictures instead of native layers.
+  const renderFullSlideDataUrls = async (): Promise<string[]> => {
+    // D14 invariant — must await webfonts before ANY rasterization.
+    await document.fonts.ready;
+    const fontEmbedCSS = await getFontEmbedCSS();
+    const fullSlideDataUrls: string[] = [];
+    for (let i = 0; i < scopeSlides.length; i++) {
+      const ref = scopeSlides[i];
+      setRenderSlideRef(ref);
+      setProgressMsg(`Rendering exact slide image ${i + 1} of ${scopeSlides.length}...`);
+      await new Promise((r) => setTimeout(r, 150));
+      const el = exportCanvasRef.current;
+      if (el) {
+        try {
+          const url = await toPng(el, { pixelRatio: 1.5, cacheBust: true, fontEmbedCSS });
+          fullSlideDataUrls.push(url);
+        } catch {
+          fullSlideDataUrls.push('');
+        }
+      } else {
+        fullSlideDataUrls.push('');
+      }
+    }
+    return fullSlideDataUrls;
+  };
+
+  // Boxes whose rendered content contains LaTeX/math that PPTX native text
+  // cannot reproduce (it would strip math to plain text). Used both when
+  // rasterizing the math overlay and when rendering it offscreen, so the
+  // detection can never drift between the two.
+  const getMathBoxIds = (ref: SlideRef): string[] => {
+    const effConfig: DeckConfig = { ...config, ...(ref.item.customConfig || {}) };
+    const boxes = effConfig.slideTextBoxes || [];
+    return boxes
+      .filter(b => boxContentHasMath(b, ref.item, effConfig, ref.questionIndex))
+      .map(b => b.id);
+  };
+
+  // Renders a transparent overlay containing ONLY the boxes whose content has
+  // LaTeX/math (which PPTX native text can't reproduce — it would strip math
+  // to plain text). The overlay is captured from the DOM renderer so KaTeX
+  // typesets math exactly like the preview; native layers are drawn beneath.
+  // Slides with no math boxes yield '' (no overlay) for that position.
+  const renderMathOverlayDataUrls = async (): Promise<string[]> => {
+    await document.fonts.ready;
+    const fontEmbedCSS = await getFontEmbedCSS();
+    const mathOverlayDataUrls: string[] = [];
+    for (let i = 0; i < scopeSlides.length; i++) {
+      const ref = scopeSlides[i];
+      const mathBoxIds = getMathBoxIds(ref);
+      if (mathBoxIds.length === 0) {
+        mathOverlayDataUrls.push('');
+        continue;
+      }
+      setMathOverlaySlideRef(ref);
+      setProgressMsg(`Rendering math overlay ${i + 1} of ${scopeSlides.length}...`);
+      await new Promise((r) => setTimeout(r, 150));
+      const el = mathOverlayCanvasRef.current;
+      if (el) {
+        try {
+          const url = await toPng(el, { pixelRatio: 1.5, cacheBust: true, fontEmbedCSS });
+          mathOverlayDataUrls.push(url);
+        } catch {
+          mathOverlayDataUrls.push('');
+        }
+      } else {
+        mathOverlayDataUrls.push('');
+      }
+    }
+    return mathOverlayDataUrls;
   };
 
   const toPptxSpecs = (): PptxSlideSpec[] =>
@@ -135,8 +225,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     setIsExporting(true);
     try {
       const specs = toPptxSpecs();
-      const backgroundDataUrls = await renderBackgroundDataUrls();
-      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, includeAnswerKeySlides);
+      const backgroundDataUrls = renderAsImages ? [] : await renderBackgroundDataUrls();
+      const fullSlideDataUrls = renderAsImages ? await renderFullSlideDataUrls() : undefined;
+      const mathOverlayDataUrls = renderAsImages ? undefined : await renderMathOverlayDataUrls();
+      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, includeAnswerKeySlides, fullSlideDataUrls, mathOverlayDataUrls);
     } catch (err: any) {
       console.error('PPTX Export Error:', err);
       alert('Failed to generate PowerPoint presentation: ' + err.message);
@@ -144,17 +236,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       setIsExporting(false);
       setProgressMsg('');
       setBgRenderSlideRef(null);
+      setRenderSlideRef(null);
+      setMathOverlaySlideRef(null);
     }
   };
 
-  // Export for Google Slides: Downloads the same editable PPTX & opens Google Drive upload prompt
+  // Export for Google Slides: Downloads the same PPTX & opens Google Drive upload prompt
   const handleExportGoogleSlides = async () => {
     if (scopeSlides.length === 0) return;
     setIsExporting(true);
     try {
       const specs = toPptxSpecs();
-      const backgroundDataUrls = await renderBackgroundDataUrls();
-      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls);
+      const backgroundDataUrls = renderAsImages ? [] : await renderBackgroundDataUrls();
+      const fullSlideDataUrls = renderAsImages ? await renderFullSlideDataUrls() : undefined;
+      const mathOverlayDataUrls = renderAsImages ? undefined : await renderMathOverlayDataUrls();
+      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, undefined, fullSlideDataUrls, mathOverlayDataUrls);
       setShowGoogleSlidesGuide(true);
     } catch (err: any) {
       console.error('Google Slides PPTX Export Error:', err);
@@ -163,6 +259,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       setIsExporting(false);
       setProgressMsg('');
       setBgRenderSlideRef(null);
+      setRenderSlideRef(null);
+      setMathOverlaySlideRef(null);
     }
   };
 
@@ -174,13 +272,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     setRenderSlideRef(currentSlide);
 
     try {
+      await document.fonts.ready;
       await new Promise(r => setTimeout(r, 100));
       const targetEl = exportCanvasRef.current || slideRef.current;
       if (!targetEl) throw new Error('Slide element not ready');
 
+      const fontEmbedCSS = await getFontEmbedCSS();
       const dataUrl = await toPng(targetEl, {
         pixelRatio: 2,
         cacheBust: true,
+        fontEmbedCSS,
       });
 
       const deckPrefix = (config.deckName || config.brandName || 'Slide').replace(/\s+/g, '_');
@@ -203,8 +304,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     const zip = new JSZip();
 
     try {
+      await document.fonts.ready;
       const deckPrefix = (config.deckName || config.brandName || 'Slides').replace(/\s+/g, '_');
       const folder = zip.folder(`${deckPrefix}_MCQs`);
+      const fontEmbedCSS = await getFontEmbedCSS();
 
       for (let i = 0; i < scopeSlides.length; i++) {
         const ref = scopeSlides[i];
@@ -218,6 +321,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           const dataUrl = await toPng(targetEl, {
             pixelRatio: 2,
             cacheBust: true,
+            fontEmbedCSS,
           });
           const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
           folder?.file(`${padIndex}_${ref.isAnswerSlide ? 'ans' : 'q'}.png`, base64, { base64: true });
@@ -247,6 +351,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     if (scopeSlides.length === 0) return;
     setIsExporting(true);
     try {
+      await document.fonts.ready;
+      const fontEmbedCSS = await getFontEmbedCSS();
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'px',
@@ -265,6 +371,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         const dataUrl = await toPng(targetEl, {
           pixelRatio: 1.5,
           cacheBust: true,
+          fontEmbedCSS,
         });
 
         if (i > 0) pdf.addPage([1920, 1080], 'landscape');
@@ -358,18 +465,35 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 </h4>
               </div>
               <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                {isCurrentScope
+                {renderAsImages
+                  ? isCurrentScope
+                    ? `Embeds slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1} as an exact high-res image — pixel-identical to the preview, non-editable layers.`
+                    : 'Embeds every slide as an exact high-res image — pixel-identical to the preview, non-editable layers.'
+                  : isCurrentScope
                   ? `Generates a single 16:9 PowerPoint slide for slide #${(currentSlide?.physicalIndex ?? currentIndex) + 1} with editable text fields & layers, over a pixel-accurate background image.`
                   : 'Generates editable 16:9 PowerPoint slides — text fields, shapes & icons stay as selectable native layers, on top of a pixel-accurate background image layer (preserves gradients exactly).'}
               </p>
             </div>
-            <button
-              onClick={downloadPPTX}
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
+                isAppLight ? 'text-slate-700' : 'text-slate-300'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={renderAsImages}
+                  onChange={(e) => setRenderAsImages(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
+                />
+                Exact slide images
+              </label>
+              <button
+                onClick={downloadPPTX}
               disabled={isExporting}
               className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 hover:brightness-110 shrink-0 cursor-pointer disabled:opacity-50 transition-all"
             >
               Export PPTX
             </button>
+            </div>
           </div>
 
           <div className={`p-5 rounded-2xl border flex items-center justify-between gap-4 shadow-lg ${
@@ -737,6 +861,46 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             mode="backgroundOnly"
           />
         )}
+      </div>
+
+      {/* Hidden Offscreen 1920x1080 Transparent Container for PPTX LaTeX/math
+          box overlays — renders ONLY the boxes whose content contains math
+          (KaTeX typesets it exactly like the preview); everything else stays
+          transparent so the native editable layers beneath show through. */}
+      <div
+        style={{
+          position: 'fixed',
+          left: '-9999px',
+          top: '-9999px',
+          width: '1920px',
+          height: '1080px',
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: -100,
+        }}
+      >
+        {mathOverlaySlideRef && (() => {
+          const effConfig: DeckConfig = { ...config, ...(mathOverlaySlideRef.item.customConfig || {}) };
+          const boxes = effConfig.slideTextBoxes || [];
+          const mathBoxIds = getMathBoxIds(mathOverlaySlideRef);
+          // Answer-reveal gating resolved by the SHARED resolver so the overlay
+          // matches the exact slide variant and the editable native layers.
+          const revealFlags = resolveSlideAnswerFlags(effConfig, mathOverlaySlideRef.isAnswerSlide);
+          return (
+            <div ref={mathOverlayCanvasRef} style={{ width: '1920px', height: '1080px', position: 'relative' }}>
+              <SlideTextBoxLayer
+                boxes={boxes}
+                item={mathOverlaySlideRef.item}
+                config={effConfig}
+                currentIndex={mathOverlaySlideRef.questionIndex}
+                totalCount={items.length}
+                showAnswerHighlight={revealFlags.showOptionHighlight}
+                isAnswerVariant={mathOverlaySlideRef.isAnswerSlide}
+                renderBoxIds={mathBoxIds}
+              />
+            </div>
+          );
+        })()}
       </div>
 
       {/* Question Paper modal — opens separately with file name, template, MCQs per page & answer key */}

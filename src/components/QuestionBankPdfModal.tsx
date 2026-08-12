@@ -4,6 +4,7 @@ import { getTemplateById, TEMPLATES, resolveTheme } from '../templates/registry'
 import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { MathText } from './MathText';
 import { toPng } from 'html-to-image';
+import { getFontEmbedCSS } from '../utils/fontEmbed';
 import jsPDF from 'jspdf';
 import { Download, FileText, Loader2, X, Layers, CheckCircle2 } from 'lucide-react';
 
@@ -502,6 +503,7 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
     setIsExporting(true);
     try {
       await document.fonts.ready;
+      const fontEmbedCSS = await getFontEmbedCSS();
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [PAGE_W, PAGE_H] });
       let addedPage = 0;
 
@@ -511,7 +513,7 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
         await new Promise((r) => setTimeout(r, 150));
         const el = pageRef.current;
         if (!el) continue;
-        const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
+        const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
         if (addedPage > 0) pdf.addPage([PAGE_W, PAGE_H], 'portrait');
         const pdfW = pdf.internal.pageSize.getWidth();
         const pdfH = pdf.internal.pageSize.getHeight();
@@ -525,7 +527,7 @@ export const QuestionBankPdfModal: React.FC<QuestionBankPdfModalProps> = ({
         await new Promise((r) => setTimeout(r, 150));
         const el = pageRef.current;
         if (el) {
-          const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true });
+          const dataUrl = await toPng(el, { pixelRatio: 2, cacheBust: true, fontEmbedCSS });
           pdf.addPage([PAGE_W, PAGE_H], 'portrait');
           const pdfW = pdf.internal.pageSize.getWidth();
           const pdfH = pdf.internal.pageSize.getHeight();
