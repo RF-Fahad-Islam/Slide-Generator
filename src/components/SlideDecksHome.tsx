@@ -44,6 +44,7 @@ interface SlideDecksHomeProps {
   onOpenDeck: (items: MCQItem[], deckTitle?: string) => void;
   onOpenDeckSettings: (items: MCQItem[], config?: DeckConfig) => void;
   onOpenSocialGenerator: (items: MCQItem[]) => void;
+  onStartNewDeck?: () => void;
   onNavigateTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys') => void;
   onSelectTheme?: (selection: ThemeSelection) => void;
   onResetSlideTheme?: () => void;
@@ -78,6 +79,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
   onOpenDeck,
   onOpenDeckSettings,
   onOpenSocialGenerator,
+  onStartNewDeck,
   onNavigateTab,
   onSelectTheme,
   onResetSlideTheme,
@@ -224,7 +226,7 @@ export const SlideDecksHome: React.FC<SlideDecksHomeProps> = ({
           {/* Primary + secondary CTAs */}
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button
-              onClick={() => onNavigateTab('workspaces')}
+              onClick={() => (onStartNewDeck ? onStartNewDeck() : onNavigateTab('workspaces'))}
               className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 cursor-pointer transition-all hover:-translate-y-0.5"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />

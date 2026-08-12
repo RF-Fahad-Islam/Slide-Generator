@@ -20,6 +20,7 @@ interface MyDecksViewProps {
   onOpenDeckSettings: (items: MCQItem[], config?: DeckConfig, savedDeckId?: string) => void;
   onOpenSocialGenerator: (items: MCQItem[]) => void;
   onDownloadDeck: (deck: { items: MCQItem[]; config: DeckConfig }) => void;
+  onStartNewDeck?: () => void;
   onNavigateTab: (tab: 'home' | 'decks' | 'social' | 'preview' | 'bank' | 'ai' | 'workspaces' | 'settings' | 'templates' | 'ai-keys') => void;
   appTheme?: 'dark' | 'light';
 }
@@ -31,6 +32,7 @@ export const MyDecksView: React.FC<MyDecksViewProps> = ({
   onOpenDeckSettings,
   onOpenSocialGenerator,
   onDownloadDeck,
+  onStartNewDeck,
   onNavigateTab,
   appTheme = 'dark',
 }) => {
@@ -153,7 +155,7 @@ export const MyDecksView: React.FC<MyDecksViewProps> = ({
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => onNavigateTab('workspaces')}
+            onClick={() => (onStartNewDeck ? onStartNewDeck() : onNavigateTab('workspaces'))}
             className="px-5 py-3 rounded-2xl border font-black text-sm flex items-center gap-2 shadow-lg transition-all cursor-pointer bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 shadow-amber-500/25 hover:brightness-110"
           >
             <Plus className="w-4 h-4" />

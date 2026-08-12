@@ -537,6 +537,22 @@ export default function App() {
     return true;
   };
 
+  const handleStartNewDeck = () => {
+    setEditingSavedDeckId(null);
+    setItems([]);
+    setSelectedIndex(0);
+    const defaults = loadGlobalDefaults();
+    const freshConfig = createDefaultDeckConfig({
+      deckName: 'New Presentation Deck',
+      headerTitle: '',
+      brandName: defaults.brandName || "NOBEL'S CLASSROOM",
+      badgeTag: defaults.badgeTag || 'General',
+      logoUrl: defaults.logoUrl || '',
+    });
+    setConfig({ ...freshConfig, slideTextBoxes: templateToTextBoxes(freshConfig) });
+    setIsAddQuestionsOpen(true);
+  };
+
   const handleCreateNewDeckFromSelection = (selectedItems: MCQItem[]) => {
     setEditingSavedDeckId(null);
     setItems(ensureUniqueIds(selectedItems));
@@ -779,6 +795,7 @@ export default function App() {
             onOpenDeck={handleOpenDeck}
             onOpenDeckSettings={handleOpenDeckSettings}
             onOpenSocialGenerator={handleOpenSocialGenerator}
+            onStartNewDeck={handleStartNewDeck}
             onNavigateTab={setActiveTab}
             onSelectTheme={applyThemeToActiveSlide}
             onResetSlideTheme={resetActiveSlideTheme}
@@ -797,6 +814,7 @@ export default function App() {
             onOpenDeckSettings={handleOpenDeckSettings}
             onOpenSocialGenerator={handleOpenSocialGenerator}
             onDownloadDeck={handleDownloadDeck}
+            onStartNewDeck={handleStartNewDeck}
             onNavigateTab={setActiveTab}
             appTheme={appTheme}
           />
