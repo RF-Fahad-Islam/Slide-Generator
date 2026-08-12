@@ -1,6 +1,7 @@
 import pptxgen from 'pptxgenjs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { saveAs } from 'file-saver';
 import { DeckConfig, MCQItem, SlideTextBox, getSourceTags, getEffectiveBadgeTag } from '../types';
 import { getSlideBoxContent, getBoxFontFamily, boxContentHasMath } from './slideTextBoxes';
 import { getBackgroundPresetUrl } from './backgroundPresets';
@@ -9,6 +10,7 @@ import { getSlideIcon } from './slideElements';
 import { chunkAnswerKeyPages, AnswerKeyPage } from './answerKeySlides';
 import { resolveTheme } from './themeResolver';
 import { expandDeckSlides, resolveSlideAnswerFlags } from './answerSlides';
+import { getUsedFontFamilies, embedFontsInPptx } from './pptxFontEmbed';
 import {
   TPL_CARD_ID,
   TPL_STEM_ID,
@@ -51,7 +53,11 @@ export const exportDeckToPPTX = async (
   // rendered by the DOM renderer so math typesets exactly like the preview.
   // Native layers are drawn beneath, and the boxes these overlays cover are
   // skipped from the native path so nothing doubles up.
-  mathOverlayDataUrls?: string[]
+  mathOverlayDataUrls?: string[],
+  // Embed the deck's actual font files into the .pptx (PowerPoint embedded
+  // fonts) so it renders correctly on machines that don't have the fonts
+  // installed. Only the families the deck uses are embedded. Defaults ON.
+  embedFonts = true
 ) => {
   onProgress?.('Initializing 16:9 PowerPoint Presentation...');
 
@@ -1341,6 +1347,23 @@ export const exportDeckToPPTX = async (
   onProgress?.('Generating .pptx file...');
   const baseTitle = config.deckName || 'MCQ_Deck';
   const fileName = `${baseTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.pptx`;
+
+  // Embed the deck's actual font files so the editable PPTX renders correctly
+  // on machines that don't have the fonts installed (PowerPoint embedded
+  // fonts). Reference-only exports fall back to a simple writeFile download.
+  if (embedFonts) {
+    const usedFamilies = getUsedFontFamilies(config, items);
+    if (usedFamilies.length > 0) {
+      onProgress?.('Embedding fonts for viewers without them installed...');
+      const raw = await pptx.write({ outputType: 'blob' });
+      const blob = raw instanceof Blob ? raw : new Blob([raw as ArrayBuffer | Uint8Array | string]);
+      const withFonts = await embedFontsInPptx(blob, usedFamilies);
+      saveAs(withFonts, fileName);
+      onProgress?.('Presentation generated successfully!');
+      return;
+    }
+  }
+
   await pptx.writeFile({ fileName });
   onProgress?.('Presentation generated successfully!');
 };

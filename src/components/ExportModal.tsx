@@ -95,6 +95,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // live preview (pixel-identical, non-editable layers) instead of native
   // editable text/shape layers.
   const [renderAsImages, setRenderAsImages] = useState<boolean>(false);
+  // When true the PPTX bundles the deck's actual font files (PowerPoint
+  // embedded fonts) so it renders correctly on machines that don't have the
+  // fonts installed. Defaults ON.
+  const [embedFonts, setEmbedFonts] = useState<boolean>(true);
 
   if (!isOpen) return null;
 
@@ -228,7 +232,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const backgroundDataUrls = renderAsImages ? [] : await renderBackgroundDataUrls();
       const fullSlideDataUrls = renderAsImages ? await renderFullSlideDataUrls() : undefined;
       const mathOverlayDataUrls = renderAsImages ? undefined : await renderMathOverlayDataUrls();
-      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, includeAnswerKeySlides, fullSlideDataUrls, mathOverlayDataUrls);
+      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, includeAnswerKeySlides, fullSlideDataUrls, mathOverlayDataUrls, embedFonts);
     } catch (err: any) {
       console.error('PPTX Export Error:', err);
       alert('Failed to generate PowerPoint presentation: ' + err.message);
@@ -250,7 +254,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const backgroundDataUrls = renderAsImages ? [] : await renderBackgroundDataUrls();
       const fullSlideDataUrls = renderAsImages ? await renderFullSlideDataUrls() : undefined;
       const mathOverlayDataUrls = renderAsImages ? undefined : await renderMathOverlayDataUrls();
-      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, undefined, fullSlideDataUrls, mathOverlayDataUrls);
+      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, undefined, fullSlideDataUrls, mathOverlayDataUrls, embedFonts);
       setShowGoogleSlidesGuide(true);
     } catch (err: any) {
       console.error('Google Slides PPTX Export Error:', err);
@@ -485,6 +489,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
                 />
                 Exact slide images
+              </label>
+              <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
+                isAppLight ? 'text-slate-700' : 'text-slate-300'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={embedFonts}
+                  onChange={(e) => setEmbedFonts(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
+                />
+                Embed fonts
               </label>
               <button
                 onClick={downloadPPTX}
