@@ -96,29 +96,37 @@ export const formatSlideQNumber = (idx: number, format: string) => {
 
 export const getSlideBoxContent = (
   box: SlideTextBox,
-  item: MCQItem,
-  config: DeckConfig,
-  currentIndex: number,
+  item?: MCQItem,
+  config?: DeckConfig,
+  currentIndex: number = 0,
   totalCount: number = 1
 ): string => {
+  if (box.bind !== 'options' && box.text !== undefined && box.text !== null && box.text !== '') {
+    return box.text;
+  }
+  const fmt = config?.questionNumberFormat || 'bangla';
+  const dummyItem: MCQItem = { id: 'dummy', questionType: 'standard', stem: '', options: [], answer: '' };
+  const targetItem = item || dummyItem;
+
   switch (box.bind) {
-    case 'stem': return item.stem;
-    case 'answer': return item.answer ? `উত্তর: ${item.answer}` : 'উত্তর: খ';
-    case 'explanation': return item.explanation || 'ব্যাখ্যা: (এখানে উত্তর ব্যাখ্যা থাকবে)';
-    case 'passage': return item.passage || '';
-    case 'prompt': return item.prompt || '';
-    case 'roman': return (item.romanItems || []).join('\n');
-    case 'source': return getSourceTags(item).join(' · ');
-    case 'questionNumber': return formatSlideQNumber(currentIndex, config.questionNumberFormat);
-    case 'brand': return config.brandName || "NOBEL'S CLASSROOM";
-    case 'headerTitle': return config.headerTitle || 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া';
-    case 'badgeTag': return getEffectiveBadgeTag(config, item);
-    case 'footerTag': return config.footerTag || 'BIOMISSION';
-    case 'watermark': return config.watermarkHandle || 'Hasnat Shuvro';
-    case 'slideCounter': return `${formatSlideQNumber(currentIndex, config.questionNumberFormat)} / ${formatSlideQNumber(Math.max(0, totalCount - 1), config.questionNumberFormat)}`;
+    case 'stem': return targetItem.stem || '';
+    case 'answer': return targetItem.answer ? `উত্তর: ${targetItem.answer}` : 'উত্তর: খ';
+    case 'explanation': return targetItem.explanation || 'ব্যাখ্যা: (এখানে উত্তর ব্যাখ্যা থাকবে)';
+    case 'passage': return targetItem.passage || '';
+    case 'prompt': return targetItem.prompt || '';
+    case 'roman': return (targetItem.romanItems || []).join('\n');
+    case 'source': return getSourceTags(targetItem).join(' · ');
+    case 'questionNumber': return formatSlideQNumber(currentIndex, fmt);
+    case 'brand': return config?.brandName || "NOBEL'S CLASSROOM";
+    case 'headerTitle': return config?.headerTitle || 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া';
+    case 'badgeTag': return config ? getEffectiveBadgeTag(config, targetItem) : '';
+    case 'footerTag': return config?.footerTag || 'BIOMISSION';
+    case 'watermark': return config?.watermarkHandle || 'Hasnat Shuvro';
+    case 'slideCounter': return `${formatSlideQNumber(currentIndex, fmt)} / ${formatSlideQNumber(Math.max(1, totalCount), fmt)}`;
     case 'free': return box.text || '';
     case 'options': return '';
     case 'icon': return '';
     case 'image': return '';
+    default: return box.text || '';
   }
 };

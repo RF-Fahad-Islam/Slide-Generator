@@ -337,7 +337,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         // CUSTOM BINDINGS RENDERING (explanation, watermark)
 
         if (box.bind === 'answer') {
-          const ansContent = item.answer ? `উত্তর: ${item.answer}` : 'উত্তর: খ';
+          const ansContent = content;
           return (
             <div
               key={box.id}
@@ -383,7 +383,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                 <span>Explanation:</span>
               </div>
               <div className="text-emerald-100 font-extrabold text-xl leading-relaxed">
-                <MathText text={item.explanation || content} />
+                <MathText text={content} />
               </div>
             </div>
           );
@@ -405,7 +405,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               )}
               <div>
                 <p className="text-xl font-extrabold text-white tracking-wide leading-tight">
-                  {config.watermarkHandle || "Hasnat Shuvro"}
+                  {content}
                 </p>
                 <p className="text-sm font-bold text-amber-300/90 mt-0.5">
                   Senior Instructor & Mentor
@@ -416,14 +416,13 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         }
 
         if (box.bind === 'slideCounter') {
-          const countStr = `${formatSlideQNumber(currentIndex, config.questionNumberFormat)} / ${formatSlideQNumber(Math.max(1, totalCount), config.questionNumberFormat)}`;
           return (
             <div
               key={box.id}
               className="absolute px-5 py-2.5 rounded-2xl bg-slate-900/90 border border-white/20 text-amber-300 font-mono font-extrabold text-lg shadow-md flex items-center justify-center"
               style={{ left: box.x, top: box.y, width: box.w, height: box.h || undefined }}
             >
-              <span>{countStr}</span>
+              <span>{content}</span>
             </div>
           );
         }

@@ -14,8 +14,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Check } from 'lucide-react';
-import { DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
-import { SLIDE_BOX_BINDS, SLIDE_BOX_COLOR_PRESETS } from '../utils/slideTextBoxes';
+import { DeckConfig, MCQItem, SlideTextBox, SlideTextBoxBind } from '../types';
+import { SLIDE_BOX_BINDS, SLIDE_BOX_COLOR_PRESETS, getSlideBoxContent } from '../utils/slideTextBoxes';
 import { FONT_PRESETS } from '../utils/fontPresets';
 import {
   SLIDE_ICON_LIBRARY,
@@ -94,6 +94,8 @@ interface SlideTextBoxPanelProps {
   selectedIds?: string[];
   appTheme: 'dark' | 'light';
   config: DeckConfig; // effective config (global + active-slide overrides)
+  item?: MCQItem;
+  currentIndex?: number;
   textBoxScope: 'global' | 'slide';
   hasTextBoxOverride: boolean;
   onChangeTextBoxScope: (scope: 'global' | 'slide') => void;
@@ -429,6 +431,8 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   selectedIds,
   appTheme,
   config,
+  item,
+  currentIndex = 0,
   textBoxScope,
   hasTextBoxOverride,
   onChangeTextBoxScope,
@@ -991,7 +995,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                     )}
                   </div>
                   <textarea
-                    value={selectedBox.text !== undefined ? selectedBox.text : (selectedBox.bind === 'free' ? '' : selectedBox.text || '')}
+                    value={selectedBox.text !== undefined ? selectedBox.text : getSlideBoxContent(selectedBox, item, config, currentIndex)}
                     onChange={(e) => onUpdateBox(selectedBox.id, { text: e.target.value })}
                     rows={selectedBox.bind === 'stem' || selectedBox.bind === 'passage' || selectedBox.bind === 'explanation' || selectedBox.bind === 'free' ? 4 : 2}
                     placeholder={selectedBox.bind === 'free' ? 'Type custom text content here...' : 'Type to override box content...'}

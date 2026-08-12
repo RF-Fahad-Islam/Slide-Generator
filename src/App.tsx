@@ -1604,6 +1604,8 @@ export default function App() {
                         selectedIds={selectedTextBoxIds}
                         appTheme={appTheme}
                         config={effectiveTextBoxConfig}
+                        item={currentItem}
+                        currentIndex={activeQuestionIndex}
                         textBoxScope={textBoxScope}
                         hasTextBoxOverride={hasTextBoxOverride}
                         onChangeTextBoxScope={changeTextBoxScope}
