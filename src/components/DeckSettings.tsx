@@ -19,6 +19,7 @@ import { templateToTextBoxes } from '../utils/templateToTextBoxes';
 import { LogoUploader } from './settings/LogoUploader';
 import { InstructorProfileForm } from './settings/InstructorProfileForm';
 import { LayoutBannerControls } from './settings/LayoutBannerControls';
+import { QuestionNumberChanger } from './QuestionNumberChanger';
 
 interface DeckSettingsProps {
   config: DeckConfig;
@@ -1757,20 +1758,11 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
               />
             </label>
 
-            <div>
-              <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Question Numbering Format:</label>
-              <select
-                value={config.questionNumberFormat}
-                onChange={(e) => handleChange('questionNumberFormat', e.target.value)}
-                className={`w-full border rounded-xl px-4 py-2.5 text-sm font-mono font-bold ${
-                  isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-                }`}
-              >
-                <option value="bangla">Bangla (১, ২, ৩...)</option>
-                <option value="english">English (1, 2, 3...)</option>
-                <option value="q_prefix">Q Prefix (Q1, Q2, Q3...)</option>
-              </select>
-            </div>
+            <QuestionNumberChanger
+              value={config.questionNumberFormat}
+              onChange={(fmt) => handleChange('questionNumberFormat', fmt)}
+              appTheme={appTheme}
+            />
           </div>
         </div>
       </div>

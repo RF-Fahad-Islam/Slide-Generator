@@ -19,6 +19,7 @@ import {
   Layers,
   HelpCircle,
 } from 'lucide-react';
+import { QuestionNumberChanger, QuestionNumberFormat } from './QuestionNumberChanger';
 
 interface AnswerModeModalProps {
   isOpen: boolean;
@@ -70,6 +71,11 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
     targetConfig.answerMode === 'separate_slide'
   );
 
+  // Question number format state
+  const [numberFormat, setNumberFormat] = useState<QuestionNumberFormat>(() =>
+    targetConfig.questionNumberFormat || 'bangla'
+  );
+
   if (!isOpen) return null;
 
   const toggleStyle = (style: AnswerDisplayStyle) => {
@@ -90,6 +96,7 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
         answerDisplayStyles: updatedStyles,
         showAnswerInSlide: showAnswer,
         showExplanationInSlide: showExplanation,
+        questionNumberFormat: numberFormat,
       });
     } else {
       onApplyConfig({
@@ -98,6 +105,7 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
         answerDisplayStyles: updatedStyles,
         showAnswerInSlide: showAnswer,
         showExplanationInSlide: showExplanation,
+        questionNumberFormat: numberFormat,
       });
     }
     onClose();
@@ -364,6 +372,13 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
               </button>
             </div>
           </div>
+
+          {/* QUESTION NUMBER CHANGER TOOL */}
+          <QuestionNumberChanger
+            value={numberFormat}
+            onChange={setNumberFormat}
+            appTheme={appTheme}
+          />
 
           {/* QUICK PRESETS */}
           <div className="space-y-2">

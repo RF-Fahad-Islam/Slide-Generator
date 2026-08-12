@@ -14,6 +14,7 @@ import {
 import { SlideCanvas } from './SlideCanvas';
 import { SlideThumb } from './SlideThumb';
 import { BackgroundImageEditor } from './BackgroundImageEditor';
+import { QuestionNumberChanger } from './QuestionNumberChanger';
 import {
   Palette,
   Save,
@@ -900,21 +901,11 @@ export const TemplateCreator: React.FC<TemplateCreatorProps> = ({
                   <Globe className="w-4 h-4" /> 2. Numbering Digits & Text Alignment
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div className="space-y-1">
-                    <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                      Question Number Digits
-                    </label>
-                    <select
-                      value={config.questionNumberFormat || 'bangla'}
-                      onChange={(e) => onApplyConfig({ ...config, questionNumberFormat: e.target.value as any })}
-                      className={`w-full px-3 py-2 rounded-xl border ${
-                        isAppLight ? 'bg-slate-50 border-slate-300' : 'bg-slate-950 border-slate-800'
-                      }`}
-                    >
-                      <option value="bangla">Bangla Digits (১, ২, ৩...)</option>
-                      <option value="english">English Digits (1, 2, 3...)</option>
-                    </select>
-                  </div>
+                  <QuestionNumberChanger
+                    value={config.questionNumberFormat || 'bangla'}
+                    onChange={(fmt) => onApplyConfig({ ...config, questionNumberFormat: fmt })}
+                    appTheme={isAppLight ? 'light' : 'dark'}
+                  />
 
                   <div className="space-y-1">
                     <label className={`font-bold block ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>

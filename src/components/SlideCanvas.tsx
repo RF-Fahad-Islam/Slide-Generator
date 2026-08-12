@@ -381,11 +381,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               )}
 
               {/* Prompt line (e.g. "নিচের কোনটি সঠিক?") */}
-              {(item.prompt || (item.romanItems && item.romanItems.length > 0 ? "নিচের কোনটি সঠিক?" : undefined)) && (
+              {item.prompt && (
                 <p className={`pt-2 text-xl font-bold italic ${
                   isLight ? 'text-amber-800' : 'text-amber-300'
                 }`} style={accentTextStyle}>
-                  {item.prompt || "নিচের কোনটি সঠিক?"}
+                  {item.prompt}
                 </p>
               )}
             </div>
@@ -527,11 +527,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             )}
 
             {/* Prompt line (e.g. "নিচের কোনটি সঠিক?") */}
-            {(item.prompt || (item.romanItems && item.romanItems.length > 0 ? "নিচের কোনটি সঠিক?" : undefined)) && (
+            {item.prompt && (
               <p className={`mt-4 text-2xl font-bold italic ${
                 isLight ? 'text-amber-800' : 'text-amber-300'
               }`} style={accentTextStyle}>
-                {item.prompt || "নিচের কোনটি সঠিক?"}
+                {item.prompt}
               </p>
             )}
           </div>

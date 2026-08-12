@@ -90,11 +90,6 @@ export function getEffectiveBadgeTag(
   return `${base} | ${chapter}`;
 }
 
-/**
- * Normalizes an MCQ's source into a string[] of source tags.
- * Handles legacy single-string `source` values from older saved decks.
- * Falls back to default source badge if empty.
- */
 export function getSourceTags(
   item: Pick<MCQItem, 'source'>,
   fallbackSource?: string
@@ -107,9 +102,6 @@ export function getSourceTags(
   }
   if (tags.length === 0 && fallbackSource && fallbackSource.trim().length > 0) {
     tags = [fallbackSource.trim()];
-  }
-  if (tags.length === 0) {
-    tags = ['রাজশাহী বোর্ড ২০২৩'];
   }
   return tags;
 }

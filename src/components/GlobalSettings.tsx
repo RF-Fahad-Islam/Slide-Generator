@@ -23,6 +23,7 @@ import { TEMPLATES } from '../templates/registry';
 import { FONT_PRESETS } from '../utils/fontPresets';
 import { BackgroundPicker } from './BackgroundPicker';
 import { AnswerModeModal } from './AnswerModeModal';
+import { QuestionNumberChanger } from './QuestionNumberChanger';
 import { DeckConfig } from '../types';
 import { LogoUploader } from './settings/LogoUploader';
 import { InstructorProfileForm } from './settings/InstructorProfileForm';
@@ -377,17 +378,11 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
                 isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
               }`}
             />
-            <select
+            <QuestionNumberChanger
               value={defaults.defaultQuestionNumberFormat}
-              onChange={(e) => update({ defaultQuestionNumberFormat: e.target.value as GlobalDefaults['defaultQuestionNumberFormat'] })}
-              className={`w-full border rounded-xl px-3 py-2.5 text-xs font-mono font-bold cursor-pointer ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            >
-              <option value="bangla">Bangla (১, ২, ৩...)</option>
-              <option value="english">English (1, 2, 3...)</option>
-              <option value="q_prefix">Q Prefix (Q1...)</option>
-            </select>
+              onChange={(fmt) => update({ defaultQuestionNumberFormat: fmt })}
+              appTheme={appTheme}
+            />
           </div>
         </div>
       </div>
