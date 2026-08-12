@@ -24,6 +24,9 @@ import { FONT_PRESETS } from '../utils/fontPresets';
 import { BackgroundPicker } from './BackgroundPicker';
 import { AnswerModeModal } from './AnswerModeModal';
 import { DeckConfig } from '../types';
+import { LogoUploader } from './settings/LogoUploader';
+import { InstructorProfileForm } from './settings/InstructorProfileForm';
+import { LayoutBannerControls } from './settings/LayoutBannerControls';
 import {
   GlobalDefaults,
   DEFAULT_GLOBAL_DEFAULTS,
@@ -80,99 +83,27 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
       </div>
 
       {/* SECTION 1: BRAND IDENTITY & LOGO */}
-      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
-        isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
-      }`}>
-        <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-          <Award className="w-5 h-5" /> 1. Default Channel Branding & Logo
-        </h3>
+      <LogoUploader
+        logoUrl={defaults.logoUrl}
+        logoSize={defaults.logoSize}
+        brandName={defaults.brandName}
+        onLogoUrlChange={(url) => update({ logoUrl: url })}
+        onLogoSizeChange={(size) => update({ logoSize: size })}
+        onBrandNameChange={(name) => update({ brandName: name })}
+        isAppLight={isAppLight}
+      />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs sm:text-sm">
-          <div className="space-y-1.5">
-            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-              Default Brand / Coaching Name
-            </label>
-            <input
-              type="text"
-              value={defaults.brandName}
-              onChange={(e) => update({ brandName: e.target.value })}
-              placeholder="e.g. NOBEL'S CLASSROOM"
-              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
-            />
-          </div>
+      <InstructorProfileForm
+        watermarkHandle={defaults.watermarkHandle}
+        watermarkAvatar={defaults.watermarkAvatar}
+        footerTag={defaults.footerTag}
+        onWatermarkHandleChange={(handle) => update({ watermarkHandle: handle })}
+        onWatermarkAvatarChange={(avatar) => update({ watermarkAvatar: avatar })}
+        onFooterTagChange={(tag) => update({ footerTag: tag })}
+        isAppLight={isAppLight}
+      />
 
-          <div className="space-y-1.5">
-            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-              Default Subject / Badge Tag
-            </label>
-            <input
-              type="text"
-              value={defaults.badgeTag}
-              onChange={(e) => update({ badgeTag: e.target.value })}
-              placeholder="e.g. Biology"
-              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
-            />
-          </div>
-
-          <div className="sm:col-span-2 space-y-1.5">
-            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-              Default Logo Image URL / Data URL
-            </label>
-            <input
-              type="text"
-              value={defaults.logoUrl}
-              onChange={(e) => update({ logoUrl: e.target.value })}
-              placeholder="https://example.com/logo.png"
-              className={`w-full border-2 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-              Default Logo Size
-            </label>
-            <select
-              value={defaults.logoSize}
-              onChange={(e) => update({ logoSize: e.target.value as any })}
-              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm cursor-pointer focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
-            >
-              <option value="sm">Small (48px)</option>
-              <option value="md">Medium (64px)</option>
-              <option value="lg">Large (80px)</option>
-              <option value="xl">Extra Large (100px)</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-              Default Logo Position
-            </label>
-            <select
-              value={defaults.logoPosition}
-              onChange={(e) => update({ logoPosition: e.target.value as any })}
-              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm cursor-pointer focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
-            >
-              <option value="top-left">Top Left</option>
-              <option value="top-right">Top Right</option>
-              <option value="header-inline">Header Inline</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 2: DEFAULT BACKGROUND GRAPHICS & OVERLAYS — shared with per-deck
-          Background tab so preset vs. custom-image selection always behaves
-          identically (mutually exclusive) everywhere in the app. */}
+      {/* SECTION 2: DEFAULT BACKGROUND GRAPHICS & OVERLAYS */}
       <BackgroundPicker
         title="2. Default Background Graphics & Overlays"
         description="Select or upload the default background image applied to every newly created deck"
@@ -188,138 +119,19 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
       />
 
       {/* SECTION 3: DEFAULT SLIDE LAYOUT & HEADER MODE */}
-      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
-        isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
-      }`}>
-        <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-          <SlidersHorizontal className="w-4 h-4" /> 3. Default Slide Layout & Header Mode
-        </h3>
-
-        <div className="space-y-2">
-          <label className={`text-xs font-bold block uppercase tracking-wider ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-            Default Layout Format
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => update({ layoutMode: 'standard' })}
-              className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-2 ${
-                (defaults.layoutMode || 'standard') === 'standard'
-                  ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg'
-                  : isAppLight
-                  ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>🖥️ Standard Center Presentation</span>
-              {(defaults.layoutMode || 'standard') === 'standard' && <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => update({ layoutMode: 'class_mode' })}
-              className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-2 ${
-                defaults.layoutMode === 'class_mode'
-                  ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg'
-                  : isAppLight
-                  ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>📐 Classroom View</span>
-              {defaults.layoutMode === 'class_mode' && <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />}
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className={`text-xs font-bold block uppercase tracking-wider ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-              Default Header Mode
-            </label>
-            <select
-              value={defaults.headerType || 'manual'}
-              onChange={(e) => update({ headerType: e.target.value as GlobalDefaults['headerType'] })}
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm font-bold cursor-pointer ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            >
-              <option value="manual">Manual Text Header</option>
-              <option value="banner">Custom Banner Image</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label className={`text-xs font-bold block uppercase tracking-wider ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-              Default Aspect Ratio
-            </label>
-            <select
-              value={defaults.aspectRatio || '16:9'}
-              onChange={(e) => update({ aspectRatio: e.target.value as GlobalDefaults['aspectRatio'] })}
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm font-bold cursor-pointer ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            >
-              <option value="16:9">16:9 (Widescreen)</option>
-              <option value="4:5">4:5 (Portrait Post)</option>
-              <option value="9:16">9:16 (Story / Reel)</option>
-            </select>
-          </div>
-        </div>
-
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t ${isAppLight ? 'border-slate-200' : 'border-slate-900'}`}>
-          <div className={`p-4 rounded-2xl border space-y-3 ${isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Header Banner</span>
-              <label className={`flex items-center gap-2 cursor-pointer text-xs font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
-                <input
-                  type="checkbox"
-                  checked={!!defaults.useHeaderBanner}
-                  onChange={(e) => update({ useHeaderBanner: e.target.checked })}
-                  className="w-4 h-4 accent-amber-500 rounded"
-                />
-                Enable by default
-              </label>
-            </div>
-            {defaults.useHeaderBanner && (
-              <input
-                type="text"
-                value={defaults.headerBannerUrl || ''}
-                onChange={(e) => update({ headerBannerUrl: e.target.value })}
-                placeholder="Default header banner image URL"
-                className={`w-full border rounded-xl px-3 py-2 text-xs font-mono ${
-                  isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
-                }`}
-              />
-            )}
-          </div>
-
-          <div className={`p-4 rounded-2xl border space-y-3 ${isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Footer Banner</span>
-              <label className={`flex items-center gap-2 cursor-pointer text-xs font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
-                <input
-                  type="checkbox"
-                  checked={!!defaults.useFooterBanner}
-                  onChange={(e) => update({ useFooterBanner: e.target.checked })}
-                  className="w-4 h-4 accent-amber-500 rounded"
-                />
-                Enable by default
-              </label>
-            </div>
-            {defaults.useFooterBanner && (
-              <input
-                type="text"
-                value={defaults.footerBannerUrl || ''}
-                onChange={(e) => update({ footerBannerUrl: e.target.value })}
-                placeholder="Default footer banner image URL"
-                className={`w-full border rounded-xl px-3 py-2 text-xs font-mono ${
-                  isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
-                }`}
-              />
-            )}
-          </div>
-        </div>
-      </div>
+      <LayoutBannerControls
+        layoutMode={defaults.layoutMode}
+        useHeaderBanner={defaults.useHeaderBanner}
+        headerBannerUrl={defaults.headerBannerUrl}
+        useFooterBanner={defaults.useFooterBanner}
+        footerBannerUrl={defaults.footerBannerUrl}
+        onLayoutModeChange={(mode) => update({ layoutMode: mode })}
+        onUseHeaderBannerChange={(val) => update({ useHeaderBanner: val })}
+        onHeaderBannerUrlChange={(val) => update({ headerBannerUrl: val })}
+        onUseFooterBannerChange={(val) => update({ useFooterBanner: val })}
+        onFooterBannerUrlChange={(val) => update({ footerBannerUrl: val })}
+        isAppLight={isAppLight}
+      />
 
       {/* SECTION 4: DEFAULT GRANULAR TYPOGRAPHY CONTROLS */}
       <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${

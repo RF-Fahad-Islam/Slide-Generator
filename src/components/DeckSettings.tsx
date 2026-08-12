@@ -16,6 +16,9 @@ import {
 import { Sliders, Upload, Palette, User, Award, BookOpen, Image as ImageIcon, SlidersHorizontal, CheckCircle2, Eye, Type, Sun, Moon, Sparkles, Layers, RefreshCw, Layers3, Target, Globe, LayoutTemplate, Save, Trash2 } from 'lucide-react';
 import { effectiveShowAnswerInSlide } from '../utils/answerSlides';
 import { templateToTextBoxes } from '../utils/templateToTextBoxes';
+import { LogoUploader } from './settings/LogoUploader';
+import { InstructorProfileForm } from './settings/InstructorProfileForm';
+import { LayoutBannerControls } from './settings/LayoutBannerControls';
 
 interface DeckSettingsProps {
   config: DeckConfig;
@@ -1062,208 +1065,20 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
 
       {/* SECTION 1.5: LAYOUT MODE & FULL-WIDTH CUSTOM BANNERS */}
       {settingsTab === 'layout' && (
-      <div className={`p-6 rounded-3xl border space-y-6 ${
-        isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-      }`}>
-        <div className={`border-b pb-4 ${isAppLight ? 'border-slate-200' : 'border-slate-800/80'}`}>
-          <h3 className={`text-base font-extrabold uppercase tracking-wider flex items-center gap-2 ${
-            isAppLight ? 'text-amber-700' : 'text-amber-300'
-          }`}>
-            <SlidersHorizontal className="w-4 h-4 text-amber-400" />
-            Slide Layout Mode & Full-Width Custom Banners
-          </h3>
-          <p className="text-sm text-slate-400 mt-0.5">
-            Switch between Standard Presentation layout and Classroom View (live writing mode), or supply full-width graphic banners for Header & Footer
-          </p>
-        </div>
-
-        {/* Layout Mode Selector Cards */}
-        <div className="space-y-2">
-          <label className={`text-sm font-bold block uppercase tracking-wider ${
-            isAppLight ? 'text-slate-700' : 'text-slate-200'
-          }`}>
-            Slide Layout Format:
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => handleChange('layoutMode', 'standard')}
-              className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-2 ${
-                (config.layoutMode || 'standard') === 'standard'
-                  ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg'
-                  : isAppLight
-                  ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>🖥️ Standard Center Presentation</span>
-                {(config.layoutMode || 'standard') === 'standard' && <CheckCircle2 className="w-4 h-4 text-amber-400" />}
-              </div>
-              <p className={`text-sm leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                Classic 2-column options grid at bottom with question stem centered in the middle. Best for standard video recordings & projectors.
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (onEnforceClassroomView) {
-                  onEnforceClassroomView();
-                } else {
-                  handleChange('layoutMode', 'class_mode');
-                }
-              }}
-              className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-2 ${
-                config.layoutMode === 'class_mode'
-                  ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg'
-                  : isAppLight
-                  ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              {/* Graphics preview — classroom view slide mock (stem top-left, writing space center, options right) */}
-              <div className={`relative w-full aspect-[16/9] rounded-xl overflow-hidden border flex items-stretch ${
-                isAppLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-950 border-slate-800'
-              }`}>
-                {/* Brand strip */}
-                <div className="absolute top-2 left-3 h-2.5 w-24 rounded-full bg-amber-400/80" />
-                <div className="absolute top-2 left-30 h-2 w-40 rounded-full bg-slate-400/50" />
-                {/* Left: stem card (top) + writing space (center) */}
-                <div className="flex-1 flex flex-col gap-2 p-3 pr-0">
-                  <div className="h-5 rounded-md border border-slate-500/50 bg-slate-700/30 mt-3" />
-                  <div className="flex-1 min-h-[28px] rounded-md border border-dashed border-amber-400/70 bg-slate-800/40 flex items-center justify-center">
-                    <span className="text-[7px] font-black uppercase tracking-widest text-amber-300/70">✏️ Writing Space</span>
-                  </div>
-                </div>
-                {/* Right: options stacked vertically */}
-                <div className="w-[26%] p-3 pl-2 flex flex-col gap-1.5 justify-center">
-                  <div className="h-2.5 rounded-full bg-slate-500/60" />
-                  <div className="h-2.5 rounded-full bg-slate-500/60" />
-                  <div className="h-2.5 rounded-full bg-slate-500/60" />
-                  <div className="h-2.5 rounded-full bg-amber-400/70" />
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-white'}`}>📐 Classroom View</span>
-                {config.layoutMode === 'class_mode' && <CheckCircle2 className="w-4 h-4 text-amber-400" />}
-              </div>
-              <p className={`text-sm leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                Question stem on top-left leaving wide blank room in center for live stylus writing & math derivation. Options stacked vertically on right!
-              </p>
-            </button>
-          </div>
-        </div>
-
-        {/* Full Width Banners Section */}
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t ${
-          isAppLight ? 'border-slate-200' : 'border-slate-900'
-        }`}>
-          {/* Header Banner */}
-          <div className={`p-4 rounded-2xl border space-y-3 ${
-            isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Graphic Header Banner</span>
-              <label className={`flex items-center gap-2 cursor-pointer text-sm font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
-                <input
-                  type="checkbox"
-                  checked={!!config.useHeaderBanner}
-                  onChange={(e) => handleChange('useHeaderBanner', e.target.checked)}
-                  className="w-4 h-4 accent-amber-500 rounded"
-                />
-                Enable Header Banner Image
-              </label>
-            </div>
-
-            {config.useHeaderBanner && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={config.headerBannerUrl || ''}
-                    onChange={(e) => handleChange('headerBannerUrl', e.target.value)}
-                    placeholder="Paste header image banner URL or upload file"
-                    className={`w-full border rounded-xl px-3 py-1.5 text-sm font-mono ${
-                      isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
-                    }`}
-                  />
-                  <label className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-sm font-bold cursor-pointer shrink-0">
-                    Upload
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          const r = new FileReader();
-                          r.onload = (evt) => evt.target?.result && handleChange('headerBannerUrl', evt.target.result as string);
-                          r.readAsDataURL(e.target.files[0]);
-                        }
-                      }}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                {config.headerBannerUrl && (
-                  <img src={config.headerBannerUrl} alt="Header Banner Preview" className="w-full max-h-16 object-contain rounded-lg border border-slate-800 bg-black/40" />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Footer Banner */}
-          <div className={`p-4 rounded-2xl border space-y-3 ${
-            isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>Full-Width Graphic Footer Banner</span>
-              <label className={`flex items-center gap-2 cursor-pointer text-sm font-bold ${isAppLight ? 'text-amber-700' : 'text-amber-300'}`}>
-                <input
-                  type="checkbox"
-                  checked={!!config.useFooterBanner}
-                  onChange={(e) => handleChange('useFooterBanner', e.target.checked)}
-                  className="w-4 h-4 accent-amber-500 rounded"
-                />
-                Enable Footer Banner Image
-              </label>
-            </div>
-
-            {config.useFooterBanner && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={config.footerBannerUrl || ''}
-                    onChange={(e) => handleChange('footerBannerUrl', e.target.value)}
-                    placeholder="Paste footer image banner URL or upload file"
-                    className={`w-full border rounded-xl px-3 py-1.5 text-sm font-mono ${
-                      isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
-                    }`}
-                  />
-                  <label className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-sm font-bold cursor-pointer shrink-0">
-                    Upload
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          const r = new FileReader();
-                          r.onload = (evt) => evt.target?.result && handleChange('footerBannerUrl', evt.target.result as string);
-                          r.readAsDataURL(e.target.files[0]);
-                        }
-                      }}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                {config.footerBannerUrl && (
-                  <img src={config.footerBannerUrl} alt="Footer Banner Preview" className="w-full max-h-16 object-contain rounded-lg border border-slate-800 bg-black/40" />
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        <LayoutBannerControls
+          layoutMode={config.layoutMode}
+          useHeaderBanner={config.useHeaderBanner}
+          headerBannerUrl={config.headerBannerUrl}
+          useFooterBanner={config.useFooterBanner}
+          footerBannerUrl={config.footerBannerUrl}
+          onLayoutModeChange={(mode) => handleChange('layoutMode', mode)}
+          onUseHeaderBannerChange={(val) => handleChange('useHeaderBanner', val)}
+          onHeaderBannerUrlChange={(val) => handleChange('headerBannerUrl', val)}
+          onUseFooterBannerChange={(val) => handleChange('useFooterBanner', val)}
+          onFooterBannerUrlChange={(val) => handleChange('footerBannerUrl', val)}
+          onEnforceClassroomView={onEnforceClassroomView}
+          isAppLight={isAppLight}
+        />
       )}
 
       {/* SECTION 2: SLIDE BACKGROUND IMAGE & PRESETS */}
@@ -1799,216 +1614,93 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             </div>
           </div>
         )}
+
         {!isBannerMode && (
-        <>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Brand Logo & Name */}
-          <div className={`p-5 rounded-2xl border space-y-4 ${
-            isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-          }`}>
-          <label className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${
-            isAppLight ? 'text-amber-700' : 'text-amber-300'
-          }`}>
-            <Award className="w-4 h-4 text-amber-400" />
-            Brand Logo (On Every Slide)
-          </label>
-
-          {/* Logo Upload Box */}
-          <div className="flex items-center gap-4">
-            {config.logoUrl ? (
-              <div className="relative group">
-                <img
-                  src={config.logoUrl}
-                  alt="Brand Logo Preview"
-                  className="w-16 h-16 object-contain rounded-2xl bg-black/40 p-1.5 border border-slate-700 shadow-md"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleChange('logoUrl', '')}
-                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-sm font-bold flex items-center justify-center hover:bg-rose-600"
-                  title="Remove Logo"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <div className={`w-16 h-16 rounded-2xl border border-dashed flex items-center justify-center text-sm text-center p-2 ${
-                isAppLight ? 'bg-slate-100 border-slate-300 text-slate-500' : 'bg-slate-900 border-slate-700 text-slate-500'
-              }`}>
-                No Logo
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label className={`text-sm px-3 py-1.5 rounded-xl border cursor-pointer flex items-center gap-1.5 font-semibold ${
-                isAppLight ? 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200'
-              }`}>
-                <Upload className="w-3.5 h-3.5" />
-                Upload Logo
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload('logoUrl', e)}
-                  className="hidden"
-                />
-              </label>
-              <p className="text-sm text-slate-500">PNG / SVG logo with transparent background recommended.</p>
-            </div>
-          </div>
-
-          {/* Logo Size Control */}
-          <div>
-            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Logo Display Size:</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {[
-                { id: 'sm', label: 'Small' },
-                { id: 'md', label: 'Medium' },
-                { id: 'lg', label: 'Large' },
-                { id: 'xl', label: 'XL' },
-              ].map((sz) => (
-                <button
-                  key={sz.id}
-                  type="button"
-                  onClick={() => handleChange('logoSize', sz.id)}
-                  className={`py-1.5 px-2 rounded-xl text-sm font-bold border transition-all ${
-                    config.logoSize === sz.id
-                      ? 'bg-amber-500 text-slate-950 border-amber-400'
-                      : isAppLight
-                      ? 'bg-white text-slate-700 border-slate-300'
-                      : 'bg-slate-900 text-slate-300 border-slate-800'
-                  }`}
-                >
-                  {sz.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Coaching / Brand Name:</label>
-            <input
-              type="text"
-              value={config.brandName}
-              onChange={(e) => handleChange('brandName', e.target.value)}
-              placeholder="e.g. NOBEL'S CLASSROOM"
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 font-bold ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            />
-          </div>
-        </div>
-      </div>
-
-        {/* Header Chapter & Class Badge */}
-        <div className={`p-5 rounded-2xl border space-y-3 ${
-          isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-        }`}>
-          <label className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${
-            isAppLight ? 'text-amber-700' : 'text-amber-300'
-          }`}>
-            <BookOpen className="w-4 h-4 text-amber-400" />
-            Subject Header & Badge
-          </label>
-          <div>
-            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Chapter Name <span className="font-normal opacity-70">(optional)</span>:</label>
-            <input
-              type="text"
-              value={config.chapterName || ''}
-              onChange={(e) => handleChapterNameChange(e.target.value)}
-              placeholder="e.g. অধ্যায় ৮ঃ রেচন প্রক্রিয়া"
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            />
-            <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-              Auto-fills the header title below and appends to the slide badge tag.
-            </p>
-          </div>
-          <div>
-            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Header Chapter Title:</label>
-            <input
-              type="text"
-              value={config.headerTitle}
-              onChange={(e) => handleChange('headerTitle', e.target.value)}
-              placeholder="e.g. অধ্যায় ৮ঃ রেচন প্রক্রিয়া"
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            />
-          </div>
-          <div>
-            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Class / Subject Badge Tag:</label>
-            <input
-              type="text"
-              value={config.badgeTag}
-              onChange={(e) => handleChange('badgeTag', e.target.value)}
-              placeholder="e.g. ৯-১০ম শ্রেণি | জীববিজ্ঞান"
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            />
-            {config.chapterName ? (
-              <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Slide badge: <span className="font-bold">{getEffectiveBadgeTag(config)}</span>
-              </p>
-            ) : (
-              <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Set a chapter name above to auto-append it to the badge.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Instructor Avatar & Handle */}
-        <div className={`p-5 rounded-2xl border space-y-3 ${
-          isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
-        }`}>
-          <label className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${
-            isAppLight ? 'text-amber-700' : 'text-amber-300'
-          }`}>
-            <User className="w-4 h-4 text-amber-400" />
-            Instructor Watermark
-          </label>
-          <div>
-            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Instructor Name:</label>
-            <input
-              type="text"
-              value={config.watermarkHandle}
-              onChange={(e) => handleChange('watermarkHandle', e.target.value)}
-              placeholder="e.g. Hasnat Shuvro"
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            />
-          </div>
-          <div>
-            <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Footer Brand Tag:</label>
-            <input
-              type="text"
-              value={config.footerTag}
-              onChange={(e) => handleChange('footerTag', e.target.value)}
-              placeholder="e.g. BIOMISSION"
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
-              }`}
-            />
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <label className={`text-sm px-3 py-1.5 rounded-xl border cursor-pointer flex items-center gap-1.5 font-semibold ${
-              isAppLight ? 'bg-white border-slate-300 text-slate-700 hover:text-slate-900' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
-            }`}>
-              <Upload className="w-3.5 h-3.5" />
-              Upload Avatar Photo
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageUpload('watermarkAvatar', e)}
-                className="hidden"
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Brand Logo & Name */}
+              <LogoUploader
+                logoUrl={config.logoUrl}
+                logoSize={config.logoSize}
+                brandName={config.brandName}
+                onLogoUrlChange={(url) => handleChange('logoUrl', url)}
+                onLogoSizeChange={(size) => handleChange('logoSize', size)}
+                onBrandNameChange={(name) => handleChange('brandName', name)}
+                isAppLight={isAppLight}
               />
-            </label>
-          </div>
-        </div>
-        </>
+
+              {/* Header Chapter & Class Badge */}
+              <div className={`p-5 rounded-2xl border space-y-3 ${
+                isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+              }`}>
+                <label className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${
+                  isAppLight ? 'text-amber-700' : 'text-amber-300'
+                }`}>
+                  <BookOpen className="w-4 h-4 text-amber-400" />
+                  Subject Header & Badge
+                </label>
+                <div>
+                  <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Chapter Name <span className="font-normal opacity-70">(optional)</span>:</label>
+                  <input
+                    type="text"
+                    value={config.chapterName || ''}
+                    onChange={(e) => handleChapterNameChange(e.target.value)}
+                    placeholder="e.g. অধ্যায় ৮ঃ রেচন প্রক্রিয়া"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
+                      isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                  />
+                  <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Auto-fills the header title below and appends to the slide badge tag.
+                  </p>
+                </div>
+                <div>
+                  <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Header Chapter Title:</label>
+                  <input
+                    type="text"
+                    value={config.headerTitle}
+                    onChange={(e) => handleChange('headerTitle', e.target.value)}
+                    placeholder="e.g. অধ্যায় ৮ঃ রেচন প্রক্রিয়া"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
+                      isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm mb-1 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Class / Subject Badge Tag:</label>
+                  <input
+                    type="text"
+                    value={config.badgeTag}
+                    onChange={(e) => handleChange('badgeTag', e.target.value)}
+                    placeholder="e.g. ৯-১০ম শ্রেণি | জীববিজ্ঞান"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm ${
+                      isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                  />
+                  {config.chapterName ? (
+                    <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Slide badge: <span className="font-bold">{getEffectiveBadgeTag(config)}</span>
+                    </p>
+                  ) : (
+                    <p className={`text-xs mt-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Set a chapter name above to auto-append it to the badge.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Instructor Avatar & Handle */}
+              <InstructorProfileForm
+                watermarkHandle={config.watermarkHandle}
+                watermarkAvatar={config.watermarkAvatar}
+                footerTag={config.footerTag}
+                onWatermarkHandleChange={(handle) => handleChange('watermarkHandle', handle)}
+                onWatermarkAvatarChange={(avatar) => handleChange('watermarkAvatar', avatar)}
+                onFooterTagChange={(tag) => handleChange('footerTag', tag)}
+                isAppLight={isAppLight}
+              />
+            </div>
+          </>
         )}
 
         {/* Toggles: Answer Display Mode & Numbering Format */}
