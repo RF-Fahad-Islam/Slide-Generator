@@ -198,6 +198,11 @@ export interface DeckConfig {
   bgOverlayDarkness: number; // 0.0 to 0.9 overlay tint for text legibility
   // Deck-wide text box overlay layer (editable in the preview tab, rendered on every slide)
   slideTextBoxes?: SlideTextBox[];
+  // Mandatory element visibility toggles (default to true)
+  showQuestionNumber?: boolean;
+  showInstructorInfo?: boolean;
+  showBrandLogo?: boolean;
+  showPagingCounter?: boolean;
 }
 
 export type SlideTextBoxBind =

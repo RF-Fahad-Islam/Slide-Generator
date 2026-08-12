@@ -8,11 +8,19 @@ interface LayoutBannerControlsProps {
   headerBannerUrl?: string;
   useFooterBanner?: boolean;
   footerBannerUrl?: string;
+  showBrandLogo?: boolean;
+  showPagingCounter?: boolean;
+  showQuestionNumber?: boolean;
+  showInstructorInfo?: boolean;
   onLayoutModeChange: (mode: 'standard' | 'class_mode') => void;
   onUseHeaderBannerChange: (val: boolean) => void;
   onHeaderBannerUrlChange: (val: string) => void;
   onUseFooterBannerChange: (val: boolean) => void;
   onFooterBannerUrlChange: (val: string) => void;
+  onShowBrandLogoChange?: (val: boolean) => void;
+  onShowPagingCounterChange?: (val: boolean) => void;
+  onShowQuestionNumberChange?: (val: boolean) => void;
+  onShowInstructorInfoChange?: (val: boolean) => void;
   onEnforceClassroomView?: () => void;
   isAppLight?: boolean;
 }
@@ -23,11 +31,19 @@ export const LayoutBannerControls: React.FC<LayoutBannerControlsProps> = ({
   headerBannerUrl = '',
   useFooterBanner = false,
   footerBannerUrl = '',
+  showBrandLogo = true,
+  showPagingCounter = true,
+  showQuestionNumber = true,
+  showInstructorInfo = true,
   onLayoutModeChange,
   onUseHeaderBannerChange,
   onHeaderBannerUrlChange,
   onUseFooterBannerChange,
   onFooterBannerUrlChange,
+  onShowBrandLogoChange,
+  onShowPagingCounterChange,
+  onShowQuestionNumberChange,
+  onShowInstructorInfoChange,
   onEnforceClassroomView,
   isAppLight = false,
 }) => {
@@ -60,11 +76,75 @@ export const LayoutBannerControls: React.FC<LayoutBannerControlsProps> = ({
           }`}
         >
           <SlidersHorizontal className="w-4 h-4 text-amber-400" />
-          Slide Layout Mode & Full-Width Custom Banners
+          Slide Layout Mode & Mandatory Elements Visibility
         </h3>
         <p className={`text-sm mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-          Switch between Standard Presentation layout and Classroom View (live writing mode), or supply full-width graphic banners for Header & Footer
+          Configure core slide elements (Question Numbering, Instructor Info, Logo/Brand, Paging Counter), switch layout formats, or upload custom header & footer banners
         </p>
+      </div>
+
+      {/* Mandatory Core Slide Elements Visibility Controls */}
+      <div className={`p-4 rounded-2xl border space-y-3 ${isAppLight ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-900/60 border-amber-500/30'}`}>
+        <span className={`text-sm font-extrabold uppercase tracking-wider block ${isAppLight ? 'text-amber-900' : 'text-amber-300'}`}>
+          Mandatory Slide Elements Visibility:
+        </span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <label className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+            showQuestionNumber
+              ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+              : isAppLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
+          }`}>
+            <input
+              type="checkbox"
+              checked={showQuestionNumber}
+              onChange={(e) => onShowQuestionNumberChange && onShowQuestionNumberChange(e.target.checked)}
+              className="w-4 h-4 accent-amber-500 rounded"
+            />
+            <span>1️⃣ Question Number</span>
+          </label>
+
+          <label className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+            showInstructorInfo
+              ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+              : isAppLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
+          }`}>
+            <input
+              type="checkbox"
+              checked={showInstructorInfo}
+              onChange={(e) => onShowInstructorInfoChange && onShowInstructorInfoChange(e.target.checked)}
+              className="w-4 h-4 accent-amber-500 rounded"
+            />
+            <span>👨‍🏫 Instructor Info</span>
+          </label>
+
+          <label className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+            showBrandLogo
+              ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+              : isAppLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
+          }`}>
+            <input
+              type="checkbox"
+              checked={showBrandLogo}
+              onChange={(e) => onShowBrandLogoChange && onShowBrandLogoChange(e.target.checked)}
+              className="w-4 h-4 accent-amber-500 rounded"
+            />
+            <span>🏷️ Brand Logo & Name</span>
+          </label>
+
+          <label className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+            showPagingCounter
+              ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+              : isAppLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-slate-950 border-slate-800 text-slate-400'
+          }`}>
+            <input
+              type="checkbox"
+              checked={showPagingCounter}
+              onChange={(e) => onShowPagingCounterChange && onShowPagingCounterChange(e.target.checked)}
+              className="w-4 h-4 accent-amber-500 rounded"
+            />
+            <span>📄 Paging Counter</span>
+          </label>
+        </div>
       </div>
 
       {/* Layout Mode Selector Cards */}

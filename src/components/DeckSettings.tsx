@@ -407,6 +407,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
       showAnswerInSlide: config.showAnswerInSlide ?? false,
       answerDisplayStyles: config.answerDisplayStyles,
       showExplanationInSlide: config.showExplanationInSlide ?? false,
+      showQuestionNumber: config.showQuestionNumber ?? true,
+      showInstructorInfo: config.showInstructorInfo ?? true,
+      showBrandLogo: config.showBrandLogo ?? true,
+      showPagingCounter: config.showPagingCounter ?? true,
     });
     setGlobalSavedNotice(true);
     setTimeout(() => setGlobalSavedNotice(false), 2500);
@@ -1072,11 +1076,19 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
           headerBannerUrl={config.headerBannerUrl}
           useFooterBanner={config.useFooterBanner}
           footerBannerUrl={config.footerBannerUrl}
+          showBrandLogo={config.showBrandLogo !== false}
+          showPagingCounter={config.showPagingCounter !== false}
+          showQuestionNumber={config.showQuestionNumber !== false}
+          showInstructorInfo={config.showInstructorInfo !== false}
           onLayoutModeChange={(mode) => handleChange('layoutMode', mode)}
           onUseHeaderBannerChange={(val) => handleChange('useHeaderBanner', val)}
           onHeaderBannerUrlChange={(val) => handleChange('headerBannerUrl', val)}
           onUseFooterBannerChange={(val) => handleChange('useFooterBanner', val)}
           onFooterBannerUrlChange={(val) => handleChange('footerBannerUrl', val)}
+          onShowBrandLogoChange={(val) => handleChange('showBrandLogo', val)}
+          onShowPagingCounterChange={(val) => handleChange('showPagingCounter', val)}
+          onShowQuestionNumberChange={(val) => handleChange('showQuestionNumber', val)}
+          onShowInstructorInfoChange={(val) => handleChange('showInstructorInfo', val)}
           onEnforceClassroomView={onEnforceClassroomView}
           isAppLight={isAppLight}
         />

@@ -1290,6 +1290,13 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   fontFamily={config.fontFamily}
                   customStem={customStem}
                   customOptions={customOptions}
+                  questionNumber={selectedQuestionIndex + 1}
+                  totalCount={items.length || 1}
+                  showBrandLogo={config.showBrandLogo !== false}
+                  showPagingCounter={config.showPagingCounter !== false}
+                  showQuestionNumber={config.showQuestionNumber !== false}
+                  showInstructorInfo={config.showInstructorInfo !== false}
+                  watermarkHandle={config.watermarkHandle}
                 />
               ) : (
                 <ClassicQuizCard
@@ -1298,6 +1305,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   config={{ ...config, brandName: customBrandName, logoUrl: customLogoUrl }}
                   customHeaderTitle={customHeaderTitle}
                   questionNumber={selectedQuestionIndex + 1}
+                  totalCount={items.length || 1}
                   aspectClass={getAspectClass()}
                   bgStyle={getBgStyle()}
                   customBgImageUrl={customDesign.bgImageUrl}

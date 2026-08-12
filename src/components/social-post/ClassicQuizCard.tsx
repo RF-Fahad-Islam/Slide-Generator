@@ -9,6 +9,7 @@ interface ClassicQuizCardProps {
   config: DeckConfig;
   customHeaderTitle: string;
   questionNumber: number;
+  totalCount?: number;
   aspectClass: string;
   bgStyle: string;
   customBgImageUrl?: string;
@@ -31,6 +32,7 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
       config,
       customHeaderTitle,
       questionNumber,
+      totalCount = 1,
       aspectClass,
       bgStyle,
       customBgImageUrl,
@@ -50,6 +52,11 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
     const stemText = customStem !== undefined ? customStem : item.stem;
     const optionsList = customOptions && customOptions.length > 0 ? customOptions : item.options;
 
+    const showBrandLogo = config.showBrandLogo !== false;
+    const showPagingCounter = config.showPagingCounter !== false;
+    const showQuestionNumber = config.showQuestionNumber !== false;
+    const showInstructorInfo = config.showInstructorInfo !== false;
+
     return (
       <div
         ref={ref}
@@ -68,45 +75,62 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
       >
         {/* Top Brand Banner Bar */}
         <div className="flex items-center justify-between border-b border-white/15 pb-4 z-10">
-          <div className="flex items-center gap-3">
-            {activeLogo ? (
-              <img
-                src={activeLogo}
-                alt="Logo"
-                className="w-10 h-10 object-contain rounded-xl bg-black/20 p-1 border border-white/20"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-amber-500/30">
-                {activeBrand ? activeBrand.charAt(0).toUpperCase() : 'R'}
+          {showBrandLogo ? (
+            <div className="flex items-center gap-3">
+              {activeLogo ? (
+                <img
+                  src={activeLogo}
+                  alt="Logo"
+                  className="w-10 h-10 object-contain rounded-xl bg-black/20 p-1 border border-white/20"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-amber-500/30">
+                  {activeBrand ? activeBrand.charAt(0).toUpperCase() : 'R'}
+                </div>
+              )}
+              <div>
+                <h3 className="text-sm font-black tracking-wide uppercase leading-tight drop-shadow-sm">
+                  {activeBrand}
+                </h3>
+                <p className="text-xs font-bold text-amber-400 mt-0.5">
+                  {customHeaderTitle || config.headerTitle || 'আজকের কুইজ'}
+                </p>
               </div>
-            )}
+            </div>
+          ) : (
             <div>
-              <h3 className="text-sm font-black tracking-wide uppercase leading-tight drop-shadow-sm">
-                {activeBrand}
-              </h3>
-              <p className="text-xs font-bold text-amber-400 mt-0.5">
+              <p className="text-xs font-bold text-amber-400">
                 {customHeaderTitle || config.headerTitle || 'আজকের কুইজ'}
               </p>
             </div>
-          </div>
-
-          {getEffectiveBadgeTag(config, item) && (
-            <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
-              {getEffectiveBadgeTag(config, item)}
-            </span>
           )}
+
+          <div className="flex items-center gap-2">
+            {getEffectiveBadgeTag(config, item) && (
+              <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                {getEffectiveBadgeTag(config, item)}
+              </span>
+            )}
+            {showPagingCounter && (
+              <span className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-slate-900/80 border border-white/20 text-amber-300 shrink-0">
+                {questionNumber} / {totalCount}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Question Stem Box */}
         <div className="my-auto py-4 space-y-4 z-10">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shadow">
-              {questionNumber}
-            </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-              প্রশ্নঃ
-            </span>
-          </div>
+          {showQuestionNumber && (
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shadow">
+                {questionNumber}
+              </span>
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                প্রশ্নঃ
+              </span>
+            </div>
+          )}
 
           <h2 className="text-lg sm:text-xl font-extrabold leading-relaxed text-white drop-shadow">
             <MathText text={stemText} />
@@ -149,10 +173,12 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
 
         {/* Footer Watermark Bar */}
         <div className="flex items-center justify-between border-t border-white/15 pt-3 text-xs font-bold z-10">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <User className="w-3.5 h-3.5 text-amber-400" />
-            <span>{config.watermarkHandle || 'Hasnat Shuvro'}</span>
-          </span>
+          {showInstructorInfo ? (
+            <span className="flex items-center gap-1.5 text-slate-300">
+              <User className="w-3.5 h-3.5 text-amber-400" />
+              <span>{config.watermarkHandle || 'Hasnat Shuvro'}</span>
+            </span>
+          ) : <span />}
           <span className="font-mono text-amber-400 font-extrabold tracking-widest uppercase">
             {config.footerTag || 'BIOMISSION'}
           </span>

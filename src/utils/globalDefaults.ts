@@ -61,6 +61,12 @@ export interface GlobalDefaults {
   showAnswerInSlide: boolean;
   answerDisplayStyles?: DeckConfig['answerDisplayStyles'];
   showExplanationInSlide: boolean;
+
+  // Mandatory Element Visibility Toggles
+  showQuestionNumber: boolean;
+  showInstructorInfo: boolean;
+  showBrandLogo: boolean;
+  showPagingCounter: boolean;
 }
 
 const GLOBAL_DEFAULTS_KEY = 'mcqgen.globalDefaults_v2';
@@ -110,6 +116,10 @@ export const DEFAULT_GLOBAL_DEFAULTS: GlobalDefaults = {
   showAnswerInSlide: false,
   answerDisplayStyles: undefined,
   showExplanationInSlide: false,
+  showQuestionNumber: true,
+  showInstructorInfo: true,
+  showBrandLogo: true,
+  showPagingCounter: true,
 };
 
 export const loadGlobalDefaults = (): GlobalDefaults => {
@@ -182,6 +192,10 @@ export const createDefaultDeckConfig = (overrides?: Partial<DeckConfig>): DeckCo
     answerMode: overrides?.answerMode ?? defaults.answerMode,
     answerDisplayStyles: overrides?.answerDisplayStyles ?? defaults.answerDisplayStyles,
     showExplanationInSlide: overrides?.showExplanationInSlide ?? defaults.showExplanationInSlide,
+    showQuestionNumber: overrides?.showQuestionNumber ?? defaults.showQuestionNumber,
+    showInstructorInfo: overrides?.showInstructorInfo ?? defaults.showInstructorInfo,
+    showBrandLogo: overrides?.showBrandLogo ?? defaults.showBrandLogo,
+    showPagingCounter: overrides?.showPagingCounter ?? defaults.showPagingCounter,
     ...overrides,
   };
 };

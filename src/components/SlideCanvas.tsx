@@ -193,6 +193,10 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? `${accentColor}26` : undefined;
   const accentBorderSoft =
     accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? `${accentColor}66` : undefined;
+  const showBrandLogo = effectiveConfig.showBrandLogo !== false;
+  const showPagingCounter = effectiveConfig.showPagingCounter !== false;
+  const showQuestionNumber = effectiveConfig.showQuestionNumber !== false;
+  const showInstructorInfo = effectiveConfig.showInstructorInfo !== false;
 
   return (
     <div
@@ -243,24 +247,52 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
       {/* TOP HEADER BAR (Full Width Image Banner OR Default Structured Header) */}
       <div className="relative z-10 shrink-0">
         {isHeaderBannerMode ? (
-          <div className="w-full flex items-center justify-between pb-2 border-b border-white/10">
+          <div className="w-full relative pb-2 border-b border-white/10">
             {effectiveConfig.headerBannerUrl ? (
-              <img
-                src={effectiveConfig.headerBannerUrl}
-                alt="Custom Header Banner"
-                className="w-full max-h-[140px] object-contain rounded-2xl shadow-xl border border-white/20"
-              />
+              <div className="relative w-full">
+                <img
+                  src={effectiveConfig.headerBannerUrl}
+                  alt="Custom Header Banner"
+                  className="w-full max-h-[140px] object-contain rounded-2xl shadow-xl border border-white/20"
+                />
+                {/* Floating overlay badges for mandatory Logo and Paging Counter */}
+                <div className="absolute inset-0 flex items-center justify-between px-6 pointer-events-none">
+                  {showBrandLogo && (
+                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-white/20 text-white shadow-xl pointer-events-auto">
+                      {effectiveConfig.logoUrl ? (
+                        <img src={effectiveConfig.logoUrl} alt="Logo" className="w-8 h-8 object-contain rounded-lg" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 font-black flex items-center justify-center text-base">
+                          {effectiveConfig.brandName ? effectiveConfig.brandName.charAt(0).toUpperCase() : 'R'}
+                        </div>
+                      )}
+                      <span className="font-extrabold text-lg uppercase tracking-wide">
+                        {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
+                      </span>
+                    </div>
+                  )}
+                  {showPagingCounter && (
+                    <div className="px-4 py-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-white/20 text-amber-300 font-mono font-bold text-lg shadow-xl ml-auto pointer-events-auto">
+                      {currentIndex + 1} / {totalCount}
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
               /* Graphic Header Banner Fallback Preview */
               <div className="w-full h-[120px] rounded-2xl bg-gradient-to-r from-teal-900 via-emerald-950 to-slate-900 border-2 border-emerald-400/60 flex items-center justify-between px-8 shadow-2xl">
                 <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-2xl bg-amber-400 text-slate-950 font-black text-3xl flex items-center justify-center shadow-lg">
-                    {effectiveConfig.brandName ? effectiveConfig.brandName.charAt(0).toUpperCase() : 'R'}
-                  </div>
+                  {showBrandLogo && (
+                    <div className="w-14 h-14 rounded-2xl bg-amber-400 text-slate-950 font-black text-3xl flex items-center justify-center shadow-lg">
+                      {effectiveConfig.brandName ? effectiveConfig.brandName.charAt(0).toUpperCase() : 'R'}
+                    </div>
+                  )}
                   <div>
-                    <h2 className="text-3xl font-black text-white tracking-wide">
-                      {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
-                    </h2>
+                    {showBrandLogo && (
+                      <h2 className="text-3xl font-black text-white tracking-wide">
+                        {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
+                      </h2>
+                    )}
                     <p className="text-xl font-bold text-amber-300 mt-0.5 flex items-center gap-2">
                       <BookOpen className="w-5 h-5 text-amber-400 shrink-0" />
                       <span>{effectiveConfig.headerTitle || "অধ্যায় ৮ঃ রেচন প্রক্রিয়া"}</span>
@@ -272,9 +304,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                   <div className="px-6 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xl shadow-md">
                     {getEffectiveBadgeTag(effectiveConfig, item) || "৯ম-১০ম শ্রেণি | জীববিজ্ঞান"}
                   </div>
-                  <div className="px-4 py-2 rounded-xl bg-slate-900 text-white border border-slate-700 font-mono font-bold text-lg">
-                    {currentIndex + 1} / {totalCount}
-                  </div>
+                  {showPagingCounter && (
+                    <div className="px-4 py-2 rounded-xl bg-slate-900 text-white border border-slate-700 font-mono font-bold text-lg">
+                      {currentIndex + 1} / {totalCount}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -285,30 +319,39 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             className={`flex items-center justify-between pb-5 border-b backdrop-blur-xs ${isLight ? 'border-slate-300/80' : 'border-white/15'}`}
           >
             {/* Brand Logo & Name */}
-            <div className="flex items-center gap-5">
-              {effectiveConfig.logoUrl ? (
-                <div className="shrink-0 flex items-center justify-center">
-                  <img
-                    src={effectiveConfig.logoUrl}
-                    alt="Brand Logo"
-                    className={`${logoDimensions} object-contain rounded-2xl bg-black/10 p-1.5 border border-slate-300 shadow-xl`}
-                  />
+            {showBrandLogo ? (
+              <div className="flex items-center gap-5">
+                {effectiveConfig.logoUrl ? (
+                  <div className="shrink-0 flex items-center justify-center">
+                    <img
+                      src={effectiveConfig.logoUrl}
+                      alt="Brand Logo"
+                      className={`${logoDimensions} object-contain rounded-2xl bg-black/10 p-1.5 border border-slate-300 shadow-xl`}
+                    />
+                  </div>
+                ) : (
+                  <div className={`${logoDimensions} rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black text-3xl flex items-center justify-center shadow-xl shadow-amber-500/20 shrink-0`} style={accentBgStyle}>
+                    {effectiveConfig.brandName ? effectiveConfig.brandName.charAt(0).toUpperCase() : 'R'}
+                  </div>
+                )}
+                <div>
+                  <h2 className={`${headerSizeClass} font-black tracking-wider uppercase drop-shadow-sm ${isLight ? 'text-slate-950' : 'text-white'}`}>
+                    {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
+                  </h2>
+                  <p className={`text-lg font-bold flex items-center gap-2 mt-1 drop-shadow-sm ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
+                    <BookOpen className={`w-5 h-5 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} style={accentTextStyle} />
+                    <span style={accentTextStyle}>{effectiveConfig.headerTitle || "অধ্যায় ৮ঃ রেচন প্রক্রিয়া"}</span>
+                  </p>
                 </div>
-              ) : (
-                <div className={`${logoDimensions} rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 font-black text-3xl flex items-center justify-center shadow-xl shadow-amber-500/20 shrink-0`} style={accentBgStyle}>
-                  {effectiveConfig.brandName ? effectiveConfig.brandName.charAt(0).toUpperCase() : 'R'}
-                </div>
-              )}
+              </div>
+            ) : (
               <div>
-                <h2 className={`${headerSizeClass} font-black tracking-wider uppercase drop-shadow-sm ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                  {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
-                </h2>
-                <p className={`text-lg font-bold flex items-center gap-2 mt-1 drop-shadow-sm ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
+                <p className={`text-lg font-bold flex items-center gap-2 drop-shadow-sm ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
                   <BookOpen className={`w-5 h-5 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} style={accentTextStyle} />
                   <span style={accentTextStyle}>{effectiveConfig.headerTitle || "অধ্যায় ৮ঃ রেচন প্রক্রিয়া"}</span>
                 </p>
               </div>
-            </div>
+            )}
 
             {/* Badge Tag & Slide Count */}
             <div className="flex items-center gap-4">
@@ -317,13 +360,15 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                   {getEffectiveBadgeTag(effectiveConfig, item)}
                 </div>
               )}
-              <div className={`px-5 py-2.5 rounded-2xl border text-lg font-extrabold shadow-md ${
-                isLight
-                  ? 'bg-white border-slate-300 text-slate-900 font-mono'
-                  : 'bg-slate-900/80 border-white/20 text-amber-300 font-mono'
-              }`}>
-                {currentIndex + 1} / {totalCount}
-              </div>
+              {showPagingCounter && (
+                <div className={`px-5 py-2.5 rounded-2xl border text-lg font-extrabold shadow-md ${
+                  isLight
+                    ? 'bg-white border-slate-300 text-slate-900 font-mono'
+                    : 'bg-slate-900/80 border-white/20 text-amber-300 font-mono'
+                }`}>
+                  {currentIndex + 1} / {totalCount}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -343,9 +388,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               <div className={`flex items-start gap-3 ${bodySizeClass} ${bodyWeightClass} ${questionAlignClass} leading-relaxed tracking-wide drop-shadow-sm ${
                 isLight ? 'text-slate-950' : 'text-white'
               }`}>
-                <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xl shrink-0" style={accentBgStyle}>
-                  {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
-                </span>
+                {showQuestionNumber && (
+                  <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xl shrink-0" style={accentBgStyle}>
+                    {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
+                  </span>
+                )}
                 <div className="flex-1">
                   <MathText text={item.stem} />
                 </div>
@@ -467,9 +514,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             {/* Header: Number, Source */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30" style={accentBgStyle}>
-                  {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
-                </span>
+                {showQuestionNumber && (
+                  <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30" style={accentBgStyle}>
+                    {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
+                  </span>
+                )}
                 <span className={`text-3xl font-extrabold ${styles.titleColor}`}>
                   প্রশ্ন
                 </span>
@@ -635,12 +684,29 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
       {/* BOTTOM FOOTER BAR (Full Width Image Banner OR Default Structured Footer) */}
       <div className="relative z-10 shrink-0">
         {effectiveConfig.useFooterBanner && effectiveConfig.footerBannerUrl ? (
-          <div className="w-full flex justify-center pt-2">
+          <div className="w-full relative pt-2">
             <img
               src={effectiveConfig.footerBannerUrl}
               alt="Custom Footer Banner"
               className="w-full max-h-[110px] object-contain rounded-2xl shadow-xl"
             />
+            {/* Floating overlay badge for Instructor Info on footer banner */}
+            {showInstructorInfo && (
+              <div className="absolute inset-0 flex items-center justify-start px-6 pointer-events-none">
+                <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-white/20 text-white shadow-xl pointer-events-auto">
+                  {effectiveConfig.watermarkAvatar ? (
+                    <img src={effectiveConfig.watermarkAvatar} alt="Instructor Avatar" className="w-8 h-8 rounded-full object-cover border border-amber-400" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-slate-900 border border-amber-400 text-amber-300 flex items-center justify-center font-bold">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
+                  <span className="font-bold text-base tracking-wide">
+                    {effectiveConfig.watermarkHandle || "Hasnat Shuvro"}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div
@@ -650,34 +716,36 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             }`}
           >
             {/* Watermark / Instructor Info */}
-            <div className="flex items-center gap-4">
-              {effectiveConfig.watermarkAvatar ? (
-                <img
-                  src={effectiveConfig.watermarkAvatar}
-                  alt="Instructor Avatar"
-                  className="w-13 h-13 rounded-full object-cover border-2 border-amber-400 shadow-xl"
-                  style={accentBorderStyle}
-                />
-              ) : (
-                <div className={`w-13 h-13 rounded-full border-2 border-amber-400 flex items-center justify-center font-bold shadow-lg ${
-                  isLight ? 'bg-slate-200 text-slate-900' : 'bg-slate-900 text-amber-300'
-                }`} style={accentBorderStyle}>
-                  <User className="w-6 h-6" />
+            {showInstructorInfo ? (
+              <div className="flex items-center gap-4">
+                {effectiveConfig.watermarkAvatar ? (
+                  <img
+                    src={effectiveConfig.watermarkAvatar}
+                    alt="Instructor Avatar"
+                    className="w-13 h-13 rounded-full object-cover border-2 border-amber-400 shadow-xl"
+                    style={accentBorderStyle}
+                  />
+                ) : (
+                  <div className={`w-13 h-13 rounded-full border-2 border-amber-400 flex items-center justify-center font-bold shadow-lg ${
+                    isLight ? 'bg-slate-200 text-slate-900' : 'bg-slate-900 text-amber-300'
+                  }`} style={accentBorderStyle}>
+                    <User className="w-6 h-6" />
+                  </div>
+                )}
+                <div>
+                  <p className={`${footerSizeClass} font-bold tracking-wide ${
+                    isLight ? 'text-slate-950' : 'text-white'
+                  }`}>
+                    {effectiveConfig.watermarkHandle || "Hasnat Shuvro"}
+                  </p>
+                  <p className={`text-base font-semibold ${
+                    isLight ? 'text-amber-800' : 'text-amber-300/90'
+                  }`}>
+                    Senior Instructor & Mentor
+                  </p>
                 </div>
-              )}
-              <div>
-                <p className={`${footerSizeClass} font-bold tracking-wide ${
-                  isLight ? 'text-slate-950' : 'text-white'
-                }`}>
-                  {effectiveConfig.watermarkHandle || "Hasnat Shuvro"}
-                </p>
-                <p className={`text-base font-semibold ${
-                  isLight ? 'text-amber-800' : 'text-amber-300/90'
-                }`}>
-                  Senior Instructor & Mentor
-                </p>
               </div>
-            </div>
+            ) : <div />}
 
             {/* Footer Tag Brand Watermark */}
             <div className="flex items-center gap-3">

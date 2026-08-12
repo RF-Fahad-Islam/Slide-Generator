@@ -20,6 +20,13 @@ interface QuizTimeCardProps {
   fontFamily?: string;
   customStem?: string;
   customOptions?: { key: string; text: string; isCorrect?: boolean }[];
+  questionNumber?: number;
+  totalCount?: number;
+  showBrandLogo?: boolean;
+  showPagingCounter?: boolean;
+  showQuestionNumber?: boolean;
+  showInstructorInfo?: boolean;
+  watermarkHandle?: string;
 }
 
 // "Quiz Time" reaction-post template — dark navy/gold or custom theme branded card
@@ -42,6 +49,13 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
       fontFamily,
       customStem,
       customOptions,
+      questionNumber = 1,
+      totalCount = 1,
+      showBrandLogo = true,
+      showPagingCounter = true,
+      showQuestionNumber = true,
+      showInstructorInfo = true,
+      watermarkHandle = 'Hasnat Shuvro',
     },
     ref
   ) => {
@@ -76,35 +90,50 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
       >
         {/* Brand header bar */}
         <div className="px-6 pt-5 pb-4 flex items-center justify-between gap-3 relative z-[1]">
-          <div>
-            <p className={`text-[10px] font-bold tracking-[0.25em] uppercase ${
-              isLightBg ? 'text-slate-600' : 'text-slate-300/70'
-            }`}>
-              {brandName || 'Your Brand'} Presents
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-black leading-none tracking-tight drop-shadow">
-              {leadWords ? (
-                <>
-                  <span className={isLightBg ? 'text-slate-900' : 'text-white'}>{leadWords} </span>
-                  <span className="text-amber-500">{lastWord}</span>
-                </>
-              ) : (
-                <span className="text-amber-500">{rawTitle}</span>
-              )}
-            </h2>
-          </div>
-
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt="Logo"
-              className="w-12 h-12 rounded-2xl object-contain border-2 border-white/20 shadow shrink-0 bg-black/30 p-1"
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-slate-950 border-2 border-amber-300 flex items-center justify-center font-black text-base shadow shrink-0">
-              {brandName ? brandName.charAt(0).toUpperCase() : 'Q'}
+          {showBrandLogo ? (
+            <div>
+              <p className={`text-[10px] font-bold tracking-[0.25em] uppercase ${
+                isLightBg ? 'text-slate-600' : 'text-slate-300/70'
+              }`}>
+                {brandName || 'Your Brand'} Presents
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-black leading-none tracking-tight drop-shadow">
+                {leadWords ? (
+                  <>
+                    <span className={isLightBg ? 'text-slate-900' : 'text-white'}>{leadWords} </span>
+                    <span className="text-amber-500">{lastWord}</span>
+                  </>
+                ) : (
+                  <span className="text-amber-500">{rawTitle}</span>
+                )}
+              </h2>
             </div>
+          ) : (
+            <h2 className="text-2xl sm:text-3xl font-black leading-none tracking-tight drop-shadow">
+              <span className="text-amber-500">{rawTitle}</span>
+            </h2>
           )}
+
+          <div className="flex items-center gap-2 shrink-0">
+            {showBrandLogo && (
+              logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="w-10 h-10 rounded-2xl object-contain border-2 border-white/20 shadow shrink-0 bg-black/30 p-1"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 border-2 border-amber-300 flex items-center justify-center font-black text-base shadow shrink-0">
+                  {brandName ? brandName.charAt(0).toUpperCase() : 'Q'}
+                </div>
+              )
+            )}
+            {showPagingCounter && (
+              <span className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-slate-900/80 border border-white/20 text-amber-300">
+                {questionNumber} / {totalCount}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className={`h-[3px] ${isLightBg ? 'bg-amber-400' : 'bg-gradient-to-r from-transparent via-amber-400 to-transparent'}`} />
@@ -114,6 +143,11 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
           <div className={`border rounded-2xl px-5 py-4 text-center ${
             isLightBg ? 'bg-white/80 border-slate-300/80 shadow-sm' : 'bg-slate-900/60 border-white/10'
           }`}>
+            {showQuestionNumber && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 font-black text-xs mb-2">
+                Q{questionNumber}
+              </div>
+            )}
             <p className={`text-sm sm:text-base font-semibold leading-relaxed ${
               isLightBg ? 'text-slate-900' : 'text-white'
             }`}>
@@ -147,13 +181,18 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
           <p className="text-amber-400 font-black text-sm sm:text-base leading-snug drop-shadow-sm">{ctaText}</p>
         </div>
 
-        {/* Comment prompt footer bar */}
-        <div className={`py-2.5 text-center relative z-[1] border-t ${
+        {/* Comment prompt & Instructor watermark footer bar */}
+        <div className={`py-2.5 px-6 flex items-center justify-between relative z-[1] border-t ${
           isLightBg ? 'bg-slate-200/80 border-slate-300' : 'bg-slate-950/70 border-white/10'
         }`}>
           <p className={`text-[10px] sm:text-[11px] font-bold tracking-[0.2em] uppercase ${
             isLightBg ? 'text-slate-700' : 'text-slate-400'
           }`}>{subCtaText}</p>
+          {showInstructorInfo && watermarkHandle && (
+            <span className="text-[10px] font-extrabold text-amber-400 tracking-wider">
+              {watermarkHandle}
+            </span>
+          )}
         </div>
       </div>
     );

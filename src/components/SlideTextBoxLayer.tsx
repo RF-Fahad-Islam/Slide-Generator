@@ -85,6 +85,10 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         if (box.bind === 'prompt' && !item.prompt) return null;
         if (box.bind === 'explanation' && !isAnswerVariant && !showExplanationCard && !item.explanation) return null;
         if (box.bind === 'answer' && !showAnswerPill && !isAnswerVariant) return null;
+        if (box.bind === 'brand' && config.showBrandLogo === false) return null;
+        if (box.bind === 'slideCounter' && config.showPagingCounter === false) return null;
+        if (box.bind === 'questionNumber' && config.showQuestionNumber === false) return null;
+        if (box.bind === 'watermark' && config.showInstructorInfo === false) return null;
 
         // Adaptive-layout overrides for card/roman/prompt/options boxes
         const isTargetCard = cardBox && box.id === cardBox.id;
@@ -322,7 +326,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         }
 
         // TEXT BINDS WITH PRE-DESIGNED SHAPES
-        const content = getSlideBoxContent(box, item, config, currentIndex);
+        const content = getSlideBoxContent(box, item, config, currentIndex, totalCount);
         const textBase = {
           fontSize: box.fontSize,
           color: box.color,

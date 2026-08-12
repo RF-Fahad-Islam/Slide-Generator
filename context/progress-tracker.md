@@ -54,7 +54,7 @@
 - [x] 2026-08-05 — `DeckManager.tsx`: Reorderable question deck list with search, delete, duplicate controls
 - [x] 2026-08-06 — `@dnd-kit/core` + `@dnd-kit/sortable` drag-and-drop sortable question reordering (`SortableQuestionCard.tsx`): grip-handle drag, PointerSensor (5px) + KeyboardSensor (`sortableKeyboardCoordinates`), drag disabled while search filter active, MoveUp/MoveDown buttons removed, dragged card gets `opacity-50 shadow-2xl`
 
-## Phase 4 — Export Breadth
+- [x] 2026-08-12 — Mandate Question Numbering, Instructor Info, Logo/Brand, and Paging Counter across all slide layouts (Standard, Classroom, Banners, SLIDE_LAYOUTS presets) and Social Post templates (`ClassicQuizCard`, `QuizTimeCard`) with deck-level visibility toggles
 - [x] 2026-08-05 — `ExportModal.tsx`: PPTX presentation export, multi-slide PNG image download, and PDF export (`jspdf`)
 - [x] 2026-08-05 — `SocialPostGenerator.tsx`: Multi-aspect ratio templates (1:1, 4:5, 9:16, 16:9) with reaction quiz formats
 - [x] 2026-08-05 — ZIP archive download (`jszip`) with dual question (`01_q.png`) and answer reveal (`01_ans.png`) slide PNG packaging

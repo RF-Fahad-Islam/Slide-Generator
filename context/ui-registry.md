@@ -34,6 +34,8 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
 | Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
 
+> **2026-08-12 — Mandatory Layout Elements & Controls.** Added `showQuestionNumber`, `showInstructorInfo`, `showBrandLogo`, `showPagingCounter` visibility toggles to `DeckConfig` and `GlobalDefaults`. Enforced all 4 elements across slide canvas layouts (Standard, Classroom, Banner modes), all preset definitions in `SLIDE_LAYOUTS` and `templateToTextBoxes.ts`, and social post cards (`ClassicQuizCard.tsx`, `QuizTimeCard.tsx`). Added translucent floating overlay badges for custom Header/Footer banners and visibility checkboxes in `LayoutBannerControls.tsx`.
+
 > **2026-08-07 — App accent is gold (`amber-*`).** An experimental app-chrome-wide
 > `amber → orange` sweep was applied and then fully reverted to amber. Slide-content
 > rendering stays amber too (`SlideCanvas.tsx`, `templates/registry.ts`,
