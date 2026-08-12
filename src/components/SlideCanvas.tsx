@@ -255,14 +255,15 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               <div className="w-full h-[120px] rounded-2xl bg-gradient-to-r from-teal-900 via-emerald-950 to-slate-900 border-2 border-emerald-400/60 flex items-center justify-between px-8 shadow-2xl">
                 <div className="flex items-center gap-5">
                   <div className="w-14 h-14 rounded-2xl bg-amber-400 text-slate-950 font-black text-3xl flex items-center justify-center shadow-lg">
-                    R
+                    {effectiveConfig.brandName ? effectiveConfig.brandName.charAt(0).toUpperCase() : 'R'}
                   </div>
                   <div>
                     <h2 className="text-3xl font-black text-white tracking-wide">
-                      {effectiveConfig.brandName || "NOBEL'S CLASSROOM"}
+                      {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
                     </h2>
-                    <p className="text-xl font-bold text-amber-300 mt-0.5">
-                      {effectiveConfig.headerTitle || "অধ্যায় ৮ঃ রেচন প্রক্রিয়া"}
+                    <p className="text-xl font-bold text-amber-300 mt-0.5 flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-amber-400 shrink-0" />
+                      <span>{effectiveConfig.headerTitle || "অধ্যায় ৮ঃ রেচন প্রক্রিয়া"}</span>
                     </p>
                   </div>
                 </div>
@@ -300,14 +301,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               )}
               <div>
                 <h2 className={`${headerSizeClass} font-black tracking-wider uppercase drop-shadow-sm ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                  {effectiveConfig.brandName || "NOBEL'S CLASSROOM"}
+                  {effectiveConfig.brandName || "RAKIB'S CLASSROOM"}
                 </h2>
-                {effectiveConfig.headerTitle && (
-                  <p className={`text-lg font-bold flex items-center gap-2 mt-1 drop-shadow-sm ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
-                    <BookOpen className={`w-5 h-5 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} style={accentTextStyle} />
-                    <span style={accentTextStyle}>{effectiveConfig.headerTitle}</span>
-                  </p>
-                )}
+                <p className={`text-lg font-bold flex items-center gap-2 mt-1 drop-shadow-sm ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
+                  <BookOpen className={`w-5 h-5 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} style={accentTextStyle} />
+                  <span style={accentTextStyle}>{effectiveConfig.headerTitle || "অধ্যায় ৮ঃ রেচন প্রক্রিয়া"}</span>
+                </p>
               </div>
             </div>
 
@@ -356,12 +355,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               {getSourceTags(item).length > 0 && (
                 <div className="pt-2 flex items-center flex-wrap gap-2">
                   {getSourceTags(item).map((tag) => (
-                    <div key={tag} className={`flex items-center gap-2 px-4 py-1.5 rounded-xl font-extrabold text-base shadow-sm border ${
+                    <div key={tag} className={`flex items-center gap-2.5 px-4 py-1.5 rounded-full font-extrabold text-base shadow-md border backdrop-blur-md ${
                       isLight
-                        ? 'bg-amber-100 border-amber-300 text-amber-950'
-                        : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                        ? 'bg-amber-100/90 border-amber-400 text-amber-950 shadow-amber-900/10'
+                        : 'bg-amber-950/70 border-amber-500/50 text-amber-300 shadow-black/40'
                     }`} style={accentColor ? { backgroundColor: accentBgSoft, borderColor: accentBorderSoft, color: accentColor } : undefined}>
-                      <Award className="w-5 h-5" />
+                      <Award className="w-5 h-5 text-amber-400 shrink-0 stroke-[2.5]" />
                       <span>{tag}</span>
                     </div>
                   ))}
@@ -382,11 +381,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               )}
 
               {/* Prompt line (e.g. "নিচের কোনটি সঠিক?") */}
-              {item.prompt && (
+              {(item.prompt || (item.romanItems && item.romanItems.length > 0 ? "নিচের কোনটি সঠিক?" : undefined)) && (
                 <p className={`pt-2 text-xl font-bold italic ${
                   isLight ? 'text-amber-800' : 'text-amber-300'
                 }`} style={accentTextStyle}>
-                  {item.prompt}
+                  {item.prompt || "নিচের কোনটি সঠিক?"}
                 </p>
               )}
             </div>
@@ -479,12 +478,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
               {getSourceTags(item).length > 0 && (
                 <div className="flex items-center flex-wrap gap-2">
                   {getSourceTags(item).map((tag) => (
-                    <div key={tag} className={`flex items-center gap-2 px-5 py-1.5 rounded-full font-bold text-lg shadow-sm border ${
+                    <div key={tag} className={`flex items-center gap-2.5 px-5 py-1.5 rounded-full font-extrabold text-lg shadow-md border backdrop-blur-md ${
                       isLight
-                        ? 'bg-amber-100 border-amber-300 text-amber-950'
-                        : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                        ? 'bg-amber-100/90 border-amber-400 text-amber-950 shadow-amber-900/10'
+                        : 'bg-amber-950/70 border-amber-500/50 text-amber-300 shadow-black/40'
                     }`} style={accentColor ? { backgroundColor: accentBgSoft, borderColor: accentBorderSoft, color: accentColor } : undefined}>
-                      <Award className="w-5 h-5" />
+                      <Award className="w-5 h-5 text-amber-400 shrink-0 stroke-[2.5]" />
                       <span>{tag}</span>
                     </div>
                   ))}
@@ -528,11 +527,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             )}
 
             {/* Prompt line (e.g. "নিচের কোনটি সঠিক?") */}
-            {item.prompt && (
+            {(item.prompt || (item.romanItems && item.romanItems.length > 0 ? "নিচের কোনটি সঠিক?" : undefined)) && (
               <p className={`mt-4 text-2xl font-bold italic ${
                 isLight ? 'text-amber-800' : 'text-amber-300'
               }`} style={accentTextStyle}>
-                {item.prompt}
+                {item.prompt || "নিচের কোনটি সঠিক?"}
               </p>
             )}
           </div>

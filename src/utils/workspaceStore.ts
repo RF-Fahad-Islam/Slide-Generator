@@ -10,7 +10,7 @@ const createDefaultDeckConfig = (name: string): DeckConfig => {
   const globalDefaults = loadGlobalDefaults();
   const base: DeckConfig = {
     templateId: globalDefaults.defaultTemplateId,
-    brandName: globalDefaults.brandName || "NOBEL'S CLASSROOM",
+    brandName: globalDefaults.brandName || "RAKIB'S CLASSROOM",
     logoUrl: globalDefaults.logoUrl || '',
     logoSize: globalDefaults.logoSize || 'md',
     logoPosition: globalDefaults.logoPosition || 'top-left',

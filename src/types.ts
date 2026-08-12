@@ -78,9 +78,12 @@ export function getEffectiveBadgeTag(
     }
   }
 
+  if (!base) {
+    base = '৯ম-১০ম শ্রেণি | জীববিজ্ঞান';
+  }
+
   const chapter = (config.chapterName || '').trim();
   if (!chapter) return base;
-  if (!base) return chapter;
 
   const segments = base.split('|').map((s) => s.trim());
   if (segments.includes(chapter)) return base;
@@ -90,15 +93,25 @@ export function getEffectiveBadgeTag(
 /**
  * Normalizes an MCQ's source into a string[] of source tags.
  * Handles legacy single-string `source` values from older saved decks.
+ * Falls back to default source badge if empty.
  */
-export function getSourceTags(item: Pick<MCQItem, 'source'>): string[] {
+export function getSourceTags(
+  item: Pick<MCQItem, 'source'>,
+  fallbackSource?: string
+): string[] {
+  let tags: string[] = [];
   if (Array.isArray(item.source)) {
-    return item.source.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
+    tags = item.source.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
+  } else if (typeof item.source === 'string' && item.source.trim().length > 0) {
+    tags = [item.source.trim()];
   }
-  if (typeof item.source === 'string' && item.source.trim().length > 0) {
-    return [item.source.trim()];
+  if (tags.length === 0 && fallbackSource && fallbackSource.trim().length > 0) {
+    tags = [fallbackSource.trim()];
   }
-  return [];
+  if (tags.length === 0) {
+    tags = ['রাজশাহী বোর্ড ২০২৩'];
+  }
+  return tags;
 }
 
 export interface SavedDeck {

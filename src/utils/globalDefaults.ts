@@ -69,7 +69,7 @@ export const DEFAULT_GLOBAL_DEFAULTS: GlobalDefaults = {
   defaultDeckName: 'Untitled Deck',
   defaultTemplateId: 'nobel-dark',
   defaultQuestionNumberFormat: 'bangla',
-  brandName: "NOBEL'S CLASSROOM",
+  brandName: "RAKIB'S CLASSROOM",
   badgeTag: '৯ম-১০ম শ্রেণি | জীববিজ্ঞান',
   logoUrl: '',
   logoSize: 'md',

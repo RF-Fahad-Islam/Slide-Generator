@@ -14,7 +14,7 @@ import {
 } from '../utils/templateBoxLayout';
 import { hasAnswerDisplayStyle } from '../utils/answerSlides';
 import { MathText } from './MathText';
-import { Check, User, Sparkles, BookOpen } from 'lucide-react';
+import { Check, User, Sparkles, BookOpen, Award } from 'lucide-react';
 
 interface SlideTextBoxLayerProps {
   boxes: SlideTextBox[];
@@ -52,7 +52,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const isRevealActive = isAnswerVariant || showAnswerHighlight;
   const showOptionHighlight = isRevealActive && hasAnswerDisplayStyle(config, 'highlight_option');
   const showAnswerPill = isRevealActive && hasAnswerDisplayStyle(config, 'answer_pill');
-  const showExplanationCard = hasAnswerDisplayStyle(config, 'explanation_card');
+  const showExplanationCard = isRevealActive && hasAnswerDisplayStyle(config, 'explanation_card');
 
   const cardBox = boxes.find(b => b.bind === 'free' && (b.shape === 'card' || b.shape === 'banner')) || boxes.find(b => b.bind === 'stem');
   const stemBox = boxes.find(b => b.bind === 'stem');
@@ -85,7 +85,6 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         if (box.bind === 'prompt' && !item.prompt) return null;
         if (box.bind === 'explanation' && !isAnswerVariant && !showExplanationCard && !item.explanation) return null;
         if (box.bind === 'answer' && !showAnswerPill && !isAnswerVariant) return null;
-        if (box.bind === 'source' && getSourceTags(item).length === 0) return null;
 
         // Adaptive-layout overrides for card/roman/prompt/options boxes
         const isTargetCard = cardBox && box.id === cardBox.id;
@@ -150,6 +149,41 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               />
             </div>
           ) : null;
+        }
+
+        // CUSTOM BINDINGS RENDERING (questionNumber, source, explanation, watermark)
+        if (box.bind === 'source') {
+          const sources = getSourceTags(item);
+          return (
+            <div key={box.id} className="absolute flex items-center justify-end flex-wrap gap-2" style={{ left: box.x, top: box.y, width: box.w }}>
+              {sources.map((srcTag) => (
+                <div
+                  key={srcTag}
+                  className="inline-flex items-center gap-2.5 px-5 py-1.5 rounded-full border border-amber-500/50 bg-amber-950/70 text-amber-300 font-extrabold text-lg shadow-md backdrop-blur-md"
+                >
+                  <Award className="w-5 h-5 text-amber-400 shrink-0 stroke-[2.5]" />
+                  <span>{srcTag}</span>
+                </div>
+              ))}
+            </div>
+          );
+        }
+
+        if (box.bind === 'questionNumber') {
+          return (
+            <div
+              key={box.id}
+              className="absolute flex items-center gap-3"
+              style={{ left: box.x, top: box.y }}
+            >
+              <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+                {formatSlideQNumber(currentIndex, config.questionNumberFormat)}
+              </span>
+              <span className="text-3xl font-extrabold text-amber-400">
+                প্রশ্ন
+              </span>
+            </div>
+          );
         }
 
         // OPTIONS with pre-designed shapes & 2-column card grid support
@@ -298,19 +332,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           border: box.shape && box.shape !== 'plain' ? '1px solid rgba(255,255,255,0.12)' : undefined,
         } as React.CSSProperties;
 
-        // CUSTOM BINDINGS RENDERING (questionNumber, explanation, watermark)
-        if (box.bind === 'questionNumber') {
-          return (
-            <div
-              key={box.id}
-              className="absolute px-4 py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
-              style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
-            >
-              <span>{content}</span>
-              <span>প্রশ্ন</span>
-            </div>
-          );
-        }
+        // CUSTOM BINDINGS RENDERING (explanation, watermark)
 
         if (box.bind === 'answer') {
           const ansContent = item.answer ? `উত্তর: ${item.answer}` : 'উত্তর: খ';
@@ -339,6 +361,8 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         }
 
         if (box.bind === 'explanation') {
+          if (!showExplanationCard && !isAnswerVariant) return null;
+
           return (
             <div
               key={box.id}
@@ -354,7 +378,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
             >
               <div className="flex items-center gap-2 text-emerald-300 font-black text-xl mb-1.5 tracking-wide">
                 <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
-                <span>ব্যাখ্যা (EXPLANATION):</span>
+                <span>Explanation:</span>
               </div>
               <div className="text-emerald-100 font-extrabold text-xl leading-relaxed">
                 <MathText text={item.explanation || content} />
