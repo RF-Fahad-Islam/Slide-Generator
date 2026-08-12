@@ -78,7 +78,7 @@ export const TEMPLATES: TemplateDefinition[] = [
         titleColor: "F59E0B",
         textColor: "FFFFFF",
         badgeFill: "F59E0B",
-        badgeText: "020617",
+        badgeText: "FCD34D",
         optionBg: "1E293B",
         optionBorder: "334155",
         optionSelectedBg: "78350F",
@@ -407,3 +407,7 @@ export function getTemplateById(id: string, customTheme?: CustomThemeColors): Te
   if (customTheme) return createCustomTemplateDefinition(customTheme);
   return TEMPLATES[0];
 }
+
+export { resolveTheme, areThemesEqual } from '../utils/themeResolver';
+export type { ResolvedTheme, ResolvedColors, ResolvedBackground, ResolvedFonts } from '../utils/themeResolver';
+

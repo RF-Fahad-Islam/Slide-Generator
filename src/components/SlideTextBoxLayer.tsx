@@ -1,8 +1,8 @@
 import React from 'react';
 import { DeckConfig, MCQItem, SlideTextBox, getSourceTags } from '../types';
-import { getSlideBoxContent, getBoxFontFamily } from '../utils/slideTextBoxes';
+import { getSlideBoxContent, getBoxFontFamily, formatSlideQNumber } from '../utils/slideTextBoxes';
 import { getSlideIcon } from '../utils/slideElements';
-import { getTemplateById } from '../templates/registry';
+import { resolveTheme } from '../utils/themeResolver';
 import {
   TPL_CARD_ID,
   TPL_STEM_ID,
@@ -14,13 +14,14 @@ import {
 } from '../utils/templateBoxLayout';
 import { hasAnswerDisplayStyle } from '../utils/answerSlides';
 import { MathText } from './MathText';
-import { Check } from 'lucide-react';
+import { Check, User, Sparkles, BookOpen } from 'lucide-react';
 
 interface SlideTextBoxLayerProps {
   boxes: SlideTextBox[];
   item: MCQItem;
   config: DeckConfig; // effective config (deck + per-slide overrides)
   currentIndex: number;
+  totalCount?: number;
   showAnswerHighlight: boolean;
   // 'answer' renders a dedicated answer slide — adds the "উত্তর" strip above
   // the boxes, matching SlideCanvas's answer variant.
@@ -36,18 +37,16 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   item,
   config,
   currentIndex,
+  totalCount = 1,
   showAnswerHighlight,
   isAnswerVariant = false,
 }) => {
   if (boxes.length === 0) return null;
 
-  const template = getTemplateById(config.templateId, config.customTheme);
-  const isLight = template.themeType === 'light';
-  const hex = template.styles.hexColors;
-  const accent = template.styles.accentColor;
-  const isHexAccent = /^#[0-9A-Fa-f]{6}$/.test(accent);
-  const romanBadgeBg = isHexAccent ? `${accent}26` : 'rgba(255,255,255,0.14)';
-  const romanBadgeBorder = isHexAccent ? `${accent}55` : 'rgba(255,255,255,0.28)';
+  const theme = resolveTheme(config);
+  const isLight = theme.isLight;
+  const romanBadgeBg = theme.colors.romanBadgeBg;
+  const romanBadgeBorder = theme.colors.romanBadgeBorder;
 
   // Granular display feature evaluation
   const isRevealActive = isAnswerVariant || showAnswerHighlight;
@@ -55,17 +54,20 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const showAnswerPill = isRevealActive && hasAnswerDisplayStyle(config, 'answer_pill');
   const showExplanationCard = hasAnswerDisplayStyle(config, 'explanation_card');
 
-  const cardBox = boxes.find(b => b.id.startsWith(TPL_CARD_ID));
-  const stemBox = boxes.find(b => b.id.startsWith(TPL_STEM_ID));
-  const romanBox = boxes.find(b => b.id.startsWith(TPL_ROMAN_ID));
-  const optionsBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_OPTIONS_ID));
+  const cardBox = boxes.find(b => b.bind === 'free' && (b.shape === 'card' || b.shape === 'banner')) || boxes.find(b => b.bind === 'stem');
+  const stemBox = boxes.find(b => b.bind === 'stem');
+  const romanBox = boxes.find(b => b.bind === 'roman');
+  const promptBox = boxes.find(b => b.bind === 'prompt');
+  const optionsBoxForMetrics = boxes.find(b => b.bind === 'options');
+  const is2Column = !!(cardBox && optionsBoxForMetrics && optionsBoxForMetrics.x > cardBox.x + 300);
+
   const cardMetrics = cardBox
-    ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y)
+    ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y, is2Column)
     : undefined;
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none">
-      {showAnswerPill && item.answer && (
+      {showAnswerPill && item.answer && !boxes.some(b => b.bind === 'answer') && (
         <div
           className={`absolute left-1/2 -translate-x-1/2 top-5 flex items-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl ${
             isLight
@@ -81,20 +83,20 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         // Skip optional structural boxes that have no content on this slide
         if (box.bind === 'roman' && !(item.romanItems || []).length) return null;
         if (box.bind === 'prompt' && !item.prompt) return null;
-        if (box.bind === 'explanation' && (!item.explanation || !showExplanationCard)) return null;
+        if (box.bind === 'explanation' && !isAnswerVariant && !showExplanationCard && !item.explanation) return null;
+        if (box.bind === 'answer' && !showAnswerPill && !isAnswerVariant) return null;
         if (box.bind === 'source' && getSourceTags(item).length === 0) return null;
 
-        // Adaptive-layout overrides for the preset template card/roman/prompt/
-        // options boxes — see the cardMetrics computation above.
-        const isTplCard = box.id.startsWith(TPL_CARD_ID);
-        const isTplOptions = box.id.startsWith(TPL_OPTIONS_ID);
-        const isTplRoman = box.id.startsWith(TPL_ROMAN_ID);
-        const isTplPrompt = box.id.startsWith(TPL_PROMPT_ID);
+        // Adaptive-layout overrides for card/roman/prompt/options boxes
+        const isTargetCard = cardBox && box.id === cardBox.id;
+        const isTargetOptions = box.bind === 'options';
+        const isTargetRoman = box.bind === 'roman';
+        const isTargetPrompt = box.bind === 'prompt';
         let boxTop = box.y;
-        if (isTplOptions && cardMetrics) boxTop = cardMetrics.optionsY;
-        else if (isTplRoman && cardMetrics?.romanY !== undefined) boxTop = cardMetrics.romanY;
-        else if (isTplPrompt && cardMetrics?.promptY !== undefined) boxTop = cardMetrics.promptY;
-        const boxHeight = isTplCard && cardMetrics ? cardMetrics.cardH : box.h;
+        if (isTargetOptions && cardMetrics) boxTop = cardMetrics.optionsY;
+        else if (isTargetRoman && cardMetrics?.romanY !== undefined) boxTop = cardMetrics.romanY;
+        else if (isTargetPrompt && cardMetrics?.promptY !== undefined) boxTop = cardMetrics.promptY;
+        const boxHeight = isTargetCard && cardMetrics ? cardMetrics.cardH : box.h;
 
         const base: React.CSSProperties = {
           left: box.x,
@@ -150,31 +152,53 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           ) : null;
         }
 
-        // OPTIONS with pre-designed shapes
+        // OPTIONS with pre-designed shapes & 2-column card grid support
         if (box.bind === 'options') {
+          const is2Col = (config.optionsLayout || '2col') === '2col';
+          const gridClass = box.shape === 'pill'
+            ? 'flex flex-wrap gap-3'
+            : is2Col
+            ? 'grid grid-cols-2 gap-4'
+            : 'space-y-2.5';
+
           return (
             <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={{ ...base, top: boxTop }}>
-              <div className={box.shape === 'pill' ? 'flex flex-wrap gap-3' : 'space-y-2.5'}>
+              <div className={gridClass}>
                 {item.options.map(opt => {
                   const isCorrectOption = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
                   const highlight = showOptionHighlight && isCorrectOption;
                   const containerStyle: React.CSSProperties = highlight
                     ? {
-                        backgroundColor: `${hex.optionSelectedBg}38`,
-                        border: `2px solid ${hex.optionSelectedBorder}`,
-                        color: hex.optionSelectedText,
+                        backgroundColor: theme.colors.optionSelectedBg,
+                        border: `2px solid ${theme.colors.optionSelectedBorder}`,
+                        color: theme.colors.optionSelectedText,
+                        boxShadow: '0 10px 25px rgba(245,158,11,0.2)',
+                        fontSize: box.fontSize ? `${box.fontSize}px` : undefined,
                       }
-                    : { backgroundColor: box.bg, border: '1px solid rgba(255,255,255,0.15)' };
+                    : {
+                        backgroundColor: box.bg,
+                        border: isLight ? '2px solid rgba(226,232,240,0.9)' : '1px solid rgba(255,255,255,0.15)',
+                        color: isLight ? '#0f172a' : '#f8fafc',
+                        fontSize: box.fontSize ? `${box.fontSize}px` : undefined,
+                      };
                   if (box.shape === 'pill') {
                     return (
                       <span
                         key={opt.key}
-                        className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full"
+                        className="inline-flex items-center gap-3 px-6 py-3 rounded-full shadow-lg"
                         style={containerStyle}
                       >
-                        <span className="font-black shrink-0">{opt.key}.</span>
-                        <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
-                        {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0" />}
+                        <span className={`w-8 h-8 rounded-full font-black text-lg flex items-center justify-center shrink-0 ${
+                          highlight ? 'bg-amber-400 text-slate-950' : isLight ? 'bg-slate-900 text-white' : 'bg-white/10 text-white'
+                        }`}>
+                          {opt.key}
+                        </span>
+                        <span className="flex-1 min-w-0 font-bold" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
+                        {highlight && (
+                          <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
+                            <Check className="w-5 h-5 stroke-[3.5]" />
+                          </div>
+                        )}
                       </span>
                     );
                   }
@@ -182,19 +206,31 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     return (
                       <div
                         key={opt.key}
-                        className="flex items-center gap-3 px-5 py-3.5 rounded-2xl"
+                        className="flex items-center gap-4 px-5 py-4 rounded-2xl shadow-xl backdrop-blur-md"
                         style={containerStyle}
                       >
-                        <span className="font-black shrink-0">{opt.key}.</span>
-                        <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
-                        {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
+                        <div className={`w-11 h-11 rounded-2xl font-black text-xl flex items-center justify-center shrink-0 shadow-md ${
+                          highlight
+                            ? 'bg-amber-400 text-slate-950'
+                            : isLight
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-white/10 text-white border border-white/15'
+                        }`}>
+                          {opt.key}
+                        </div>
+                        <span className="flex-1 min-w-0 font-extrabold leading-snug" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
+                        {highlight && (
+                          <div className="w-10 h-10 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-lg animate-pulse">
+                            <Check className="w-6 h-6 stroke-[3.5]" />
+                          </div>
+                        )}
                       </div>
                     );
                   }
                   return (
-                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: hex.optionSelectedText } : undefined}>
+                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: theme.colors.optionSelectedText, fontSize: box.fontSize ? `${box.fontSize}px` : undefined } : { fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}>
                       <span className="font-black shrink-0">{opt.key}.</span>
-                      <span className="flex-1 min-w-0"><MathText text={opt.text} /></span>
+                      <span className="flex-1 min-w-0" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
                       {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
                     </div>
                   );
@@ -237,7 +273,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         height: '1.6em',
                         padding: '0 0.55em',
                         backgroundColor: romanBadgeBg,
-                        color: accent,
+                        color: theme.colors.accentColor,
                         border: `1px solid ${romanBadgeBorder}`,
                       }}
                     >
@@ -262,12 +298,116 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           border: box.shape && box.shape !== 'plain' ? '1px solid rgba(255,255,255,0.12)' : undefined,
         } as React.CSSProperties;
 
+        // CUSTOM BINDINGS RENDERING (questionNumber, explanation, watermark)
+        if (box.bind === 'questionNumber') {
+          return (
+            <div
+              key={box.id}
+              className="absolute px-4 py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+              style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
+            >
+              <span>{content}</span>
+              <span>প্রশ্ন</span>
+            </div>
+          );
+        }
+
+        if (box.bind === 'answer') {
+          const ansContent = item.answer ? `উত্তর: ${item.answer}` : 'উত্তর: খ';
+          return (
+            <div
+              key={box.id}
+              className={`absolute flex items-center justify-center gap-2.5 px-6 py-2.5 rounded-full border-2 shadow-xl ${
+                isLight
+                  ? 'bg-emerald-100 border-emerald-500 text-emerald-900'
+                  : 'bg-emerald-500/20 border-emerald-400 text-emerald-100'
+              }`}
+              style={{
+                left: box.x,
+                top: box.y,
+                width: box.w,
+                fontSize: box.fontSize,
+                backgroundColor: box.bg || undefined,
+                color: box.color || undefined,
+                fontFamily: getBoxFontFamily(box, config),
+              }}
+            >
+              <Check className="w-5 h-5 stroke-[3] shrink-0" />
+              <span className="font-black"><MathText text={ansContent} /></span>
+            </div>
+          );
+        }
+
+        if (box.bind === 'explanation') {
+          return (
+            <div
+              key={box.id}
+              className="absolute p-6 rounded-3xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-100 shadow-2xl backdrop-blur-md"
+              style={{
+                left: box.x,
+                top: box.y,
+                width: box.w,
+                backgroundColor: box.bg || undefined,
+                color: box.color || undefined,
+                fontFamily: getBoxFontFamily(box, config),
+              }}
+            >
+              <div className="flex items-center gap-2 text-emerald-300 font-black text-xl mb-1.5 tracking-wide">
+                <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
+                <span>ব্যাখ্যা (EXPLANATION):</span>
+              </div>
+              <div className="text-emerald-100 font-extrabold text-xl leading-relaxed">
+                <MathText text={item.explanation || content} />
+              </div>
+            </div>
+          );
+        }
+
+        if (box.bind === 'watermark') {
+          return (
+            <div key={box.id} className="absolute flex items-center gap-4" style={{ left: box.x, top: box.y }}>
+              {config.watermarkAvatar ? (
+                <img
+                  src={config.watermarkAvatar}
+                  alt="Avatar"
+                  className="w-12 h-12 rounded-full object-cover border-2 border-amber-400 shadow-xl shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full border-2 border-amber-400 bg-slate-900 text-amber-300 flex items-center justify-center font-black shadow-lg shrink-0">
+                  <User className="w-6 h-6" />
+                </div>
+              )}
+              <div>
+                <p className="text-xl font-extrabold text-white tracking-wide leading-tight">
+                  {config.watermarkHandle || "Hasnat Shuvro"}
+                </p>
+                <p className="text-sm font-bold text-amber-300/90 mt-0.5">
+                  Senior Instructor & Mentor
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        if (box.bind === 'slideCounter') {
+          const countStr = `${formatSlideQNumber(currentIndex, config.questionNumberFormat)} / ${formatSlideQNumber(Math.max(1, totalCount), config.questionNumberFormat)}`;
+          return (
+            <div
+              key={box.id}
+              className="absolute px-5 py-2.5 rounded-2xl bg-slate-900/90 border border-white/20 text-amber-300 font-mono font-extrabold text-lg shadow-md flex items-center justify-center"
+              style={{ left: box.x, top: box.y, width: box.w, height: box.h || undefined }}
+            >
+              <span>{countStr}</span>
+            </div>
+          );
+        }
+
         if (box.shape === 'pill') {
           return (
-            <div key={box.id} className="absolute" style={{ left: box.x, top: box.y, width: box.w }}>
+            <div key={box.id} className="absolute flex justify-end" style={{ left: box.x, top: box.y, width: box.w }}>
               <div
-                className="inline-flex items-center px-7 py-2.5 rounded-full whitespace-pre-wrap leading-snug"
-                style={{ ...textBase, textAlign: 'center', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' }}
+                className="inline-flex items-center px-6 py-2.5 rounded-full whitespace-pre-wrap leading-snug border border-amber-500/40 text-amber-300 font-extrabold shadow-lg backdrop-blur-md"
+                style={{ ...textBase, textAlign: box.align || 'center', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' }}
               >
                 <MathText text={content} />
               </div>

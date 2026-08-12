@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle2, User } from 'lucide-react';
 import { MathText } from '../MathText';
 import { DeckConfig, MCQItem, BgImageFit, getEffectiveBadgeTag } from '../../types';
+import { resolveTheme } from '../../utils/themeResolver';
 
 interface ClassicQuizCardProps {
   item: MCQItem;
@@ -43,6 +44,7 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
     },
     ref
   ) => {
+    const theme = resolveTheme(config);
     const activeBrand = brandName !== undefined ? brandName : (config.brandName || "NOBEL'S CLASSROOM");
     const activeLogo = logoUrl !== undefined ? logoUrl : config.logoUrl;
     const stemText = customStem !== undefined ? customStem : item.stem;
@@ -52,7 +54,7 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
       <div
         ref={ref}
         style={{
-          fontFamily: config.fontFamily || "'Kalpurush', serif",
+          fontFamily: theme.fonts.defaultFont,
           ...(customBgImageUrl
             ? {
                 backgroundImage: `url("${customBgImageUrl}")`,

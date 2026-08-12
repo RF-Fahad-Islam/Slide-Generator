@@ -1,7 +1,6 @@
 import React, { forwardRef } from 'react';
 import { DeckConfig, MCQItem, getSourceTags, getEffectiveBadgeTag } from '../types';
-import { getTemplateById } from '../templates/registry';
-import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
+import { resolveTheme } from '../utils/themeResolver';
 import { formatSlideQNumber } from '../utils/slideTextBoxes';
 import { SlideTextBoxLayer } from './SlideTextBoxLayer';
 import { MathText } from './MathText';
@@ -38,21 +37,21 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   forceShowExplanation,
   mode = 'full',
 }, ref) => {
-  // Merge global deck config with slide-specific scope overrides (item.customConfig)
+  // Single authoritative theme resolution for colors, bg, fonts, and CSS vars
+  const theme = resolveTheme(config, item.customConfig);
   const effectiveConfig: DeckConfig = {
     ...config,
     ...(item.customConfig || {}),
   };
 
-  const template = getTemplateById(effectiveConfig.templateId, effectiveConfig.customTheme);
+  const template = theme.template;
   const styles = template.styles;
-  const isLight = template.themeType === 'light';
-  const defaultFont = effectiveConfig.fontFamily || styles.fontFamily || "'Kalpurush', serif";
-
-  const headerFont = effectiveConfig.headerFont || defaultFont;
-  const bodyFont = effectiveConfig.bodyFont || defaultFont;
-  const optionsFont = effectiveConfig.optionsFont || defaultFont;
-  const footerFont = effectiveConfig.footerFont || defaultFont;
+  const isLight = theme.isLight;
+  const defaultFont = theme.fonts.defaultFont;
+  const headerFont = theme.fonts.headerFont;
+  const bodyFont = theme.fonts.bodyFont;
+  const optionsFont = theme.fonts.optionsFont;
+  const footerFont = theme.fonts.footerFont;
 
   // Font Size Mappings
   const headerSizeClass = {
@@ -138,14 +137,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     fontFamily: defaultFont,
   };
 
-  // Resolve Background Image URL (preset or uploaded)
-  const bgImageUrl = getBackgroundPresetUrl(effectiveConfig.bgPreset, effectiveConfig.bgImageUrl);
-  const bgOpacity = effectiveConfig.bgImageOpacity !== undefined ? effectiveConfig.bgImageOpacity : 0.85;
-  const overlayDarkness = effectiveConfig.bgOverlayDarkness !== undefined ? effectiveConfig.bgOverlayDarkness : 0.4;
-  // Fit mode: cover (default) | contain | stretch
-  const bgFit = effectiveConfig.bgImageFit || 'cover';
-  const bgSizeStyle = bgFit === 'contain' ? 'contain' : bgFit === 'stretch' ? '100% 100%' : 'cover';
-  const bgPosStyle = bgFit === 'contain' ? 'center' : 'center';
+  // Resolved Background configuration from unified theme
+  const bgImageUrl = theme.background.url;
+  const bgOpacity = theme.background.opacity;
+  const overlayDarkness = theme.background.overlayDarkness;
+  const bgSizeStyle = theme.background.cssSize;
+  const bgPosStyle = theme.background.cssPosition;
 
   // Logo Size mapping
   const logoDimensions = {
@@ -692,6 +689,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
         item={item}
         config={effectiveConfig}
         currentIndex={currentIndex}
+        totalCount={totalCount}
         showAnswerHighlight={showAnswerHighlight}
         isAnswerVariant={isAnswerVariant}
       />

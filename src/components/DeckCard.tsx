@@ -1,6 +1,6 @@
 import React from 'react';
 import { MCQItem, DeckConfig } from '../types';
-import { getTemplateById } from '../templates/registry';
+import { resolveTheme } from '../utils/themeResolver';
 import { DeckSlideThumb } from './DeckSlideThumb';
 import { Presentation, Sliders, Share2, Download, FileText, Trash2, Calendar } from 'lucide-react';
 
@@ -50,7 +50,8 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   onDelete,
 }) => {
   const isAppLight = appTheme === 'light';
-  const tmpl = getTemplateById(config?.templateId || 'nobel-dark');
+  const theme = resolveTheme(config || { templateId: 'nobel-dark' } as DeckConfig);
+  const tmpl = theme.template;
   const hasTertiary = onDownload || onExportJson || onDelete;
 
   return (

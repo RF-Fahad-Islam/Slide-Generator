@@ -56,7 +56,7 @@ const NAV_GROUPS: { label: string; items: { id: NavTab; label: string; icon: typ
     label: 'Create',
     items: [
       { id: 'ai', label: 'AI PDF Parser', icon: Sparkles },
-      { id: 'workspaces', label: 'Workspaces', icon: FolderKanban },
+      { id: 'workspaces', label: 'MCQ Import', icon: FolderKanban },
     ],
   },
   {

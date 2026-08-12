@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DeckConfig, TemplateDefinition } from '../types';
-import { TEMPLATES, getTemplateById } from '../templates/registry';
+import { TEMPLATES, getTemplateById, resolveTheme, areThemesEqual } from '../templates/registry';
 import {
   getTemplatePresets,
   saveTemplatePreset,
@@ -234,12 +234,12 @@ export const TemplateLibraryModal: React.FC<TemplateLibraryModalProps> = ({
           {presets.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {presets.map((preset) => {
-                const tmpl = getTemplateById(preset.design.templateId, preset.design.customTheme);
-                const isCurrent =
-                  config.templateId === preset.design.templateId &&
-                  JSON.stringify(config.customTheme) === JSON.stringify(preset.design.customTheme);
-                const accent = preset.design.customTheme?.accentColor || tmpl.styles.accentColor;
-                const bg = preset.design.customTheme?.bg || tmpl.styles.hexColors.bg;
+                const presetConfig = { templateId: preset.design.templateId, customTheme: preset.design.customTheme } as DeckConfig;
+                const presetTheme = resolveTheme(presetConfig);
+                const tmpl = presetTheme.template;
+                const isCurrent = areThemesEqual(config, presetConfig);
+                const accent = presetTheme.colors.accentColor;
+                const bg = presetTheme.colors.bg;
                 return (
                   <div
                     key={preset.id}

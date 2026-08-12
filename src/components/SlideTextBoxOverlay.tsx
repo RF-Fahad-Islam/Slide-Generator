@@ -49,6 +49,10 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
 
   const startDrag = (e: React.PointerEvent, boxId: string, type: 'move' | 'resize') => {
     e.stopPropagation();
+    const targetEl = e.currentTarget as HTMLElement;
+    if (targetEl.setPointerCapture && e.pointerId !== undefined) {
+      try { targetEl.setPointerCapture(e.pointerId); } catch {}
+    }
     const box = boxes.find(b => b.id === boxId);
     if (!box) return;
     onSelect(boxId);
@@ -60,21 +64,24 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
       const dx = (ev.clientX - d.startX) / scale;
       const dy = (ev.clientY - d.startY) / scale;
       if (d.type === 'move') {
-        onMove(d.boxId, clamp(d.orig.x + dx, 0, designW - d.orig.w), clamp(d.orig.y + dy, 0, designH - 40));
+        onMove(d.boxId, clamp(Math.round(d.orig.x + dx), 0, designW - d.orig.w), clamp(Math.round(d.orig.y + dy), 0, designH - 40));
       } else {
         const isElement = d.orig.bind === 'icon' || d.orig.bind === 'image';
-        const newW = clamp(d.orig.w + dx, 60, designW - d.orig.x);
+        const newW = clamp(Math.round(d.orig.w + dx), 60, designW - d.orig.x);
         if (isElement) {
           // Aspect-locked resize: keep the box's original width:height ratio
           const ratio = d.orig.h && d.orig.h > 0 ? d.orig.w / d.orig.h : 16 / 9;
-          const newH = clamp(newW / ratio, 40, designH - d.orig.y);
+          const newH = clamp(Math.round(newW / ratio), 40, designH - d.orig.y);
           onResize(d.boxId, { w: newW, h: newH });
         } else {
           onResize(d.boxId, { w: newW });
         }
       }
     };
-    const handleUp = () => {
+    const handleUp = (ev: PointerEvent) => {
+      if (targetEl.releasePointerCapture && ev.pointerId !== undefined) {
+        try { targetEl.releasePointerCapture(ev.pointerId); } catch {}
+      }
       dragRef.current = null;
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);

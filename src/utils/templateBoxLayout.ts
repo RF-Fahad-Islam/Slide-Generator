@@ -45,26 +45,23 @@ export function computeTemplateCardMetrics(
   cardBox: SlideTextBox,
   stemBox: SlideTextBox | undefined,
   romanBox: SlideTextBox | undefined,
-  baseOptionsY: number
+  baseOptionsY: number,
+  is2Column: boolean = false
 ): TemplateCardMetrics {
   const hasRoman = (item.romanItems || []).length > 0;
   const hasPrompt = !!item.prompt;
 
-  // Nothing extra to fit under the stem — keep the existing compact card.
-  if (!hasRoman && !hasPrompt) {
-    return { cardH: COMPACT_CARD_H, optionsY: cardBox.y + COMPACT_CARD_H + COMPACT_CARD_GAP };
-  }
-
+  const stemY = stemBox?.y ?? (cardBox.y + STEM_TOP_OFFSET);
   const stemFontSize = stemBox?.fontSize || 30;
   const stemW = stemBox?.w || cardBox.w - 72;
   const stemLines = estimateWrappedLines(item.stem, stemFontSize, stemW);
   const stemH = Math.max(1, stemLines) * (stemFontSize * 1.3);
 
-  let contentBottom = cardBox.y + STEM_TOP_OFFSET + stemH;
+  let currentY = stemY + stemH;
   let romanTop: number | undefined;
 
   if (hasRoman) {
-    romanTop = contentBottom + ROMAN_TOP_GAP;
+    romanTop = currentY + 14;
     const romanFontSize = romanBox?.fontSize || 20;
     const romanW = (romanBox?.w || stemW) - 8;
     const romanLines = (item.romanItems || []).reduce(
@@ -72,17 +69,23 @@ export function computeTemplateCardMetrics(
       0
     );
     const romanH = ROMAN_PAD_Y + romanLines * ROMAN_LINE_H;
-    contentBottom = romanTop + romanH;
+    currentY = romanTop + romanH;
   }
 
   let promptY: number | undefined;
   if (hasPrompt) {
-    promptY = contentBottom + PROMPT_GAP;
-    contentBottom = promptY + PROMPT_LINE_H;
+    promptY = currentY + 14;
+    currentY = promptY + PROMPT_LINE_H;
   }
 
-  const cardH = Math.max(BASE_CARD_H, contentBottom - cardBox.y + CARD_BOTTOM_PAD);
-  const optionsY = Math.max(baseOptionsY, cardBox.y + cardH + COMPACT_CARD_GAP);
+  const defaultMinH = cardBox.h || BASE_CARD_H;
+  const cardH = (!hasRoman && !hasPrompt && stemLines <= 2)
+    ? Math.min(COMPACT_CARD_H, defaultMinH)
+    : Math.max(defaultMinH, currentY - cardBox.y + CARD_BOTTOM_PAD);
+
+  const optionsY = is2Column
+    ? baseOptionsY
+    : Math.max(baseOptionsY, cardBox.y + cardH + COMPACT_CARD_GAP);
 
   return { cardH, romanY: romanTop, promptY, optionsY };
 }

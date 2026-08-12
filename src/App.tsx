@@ -33,19 +33,20 @@ import { IngestionToast } from './components/IngestionToast';
 import { IngestionProvider } from './ingestion/ingestionStore';
 import { MathText } from './components/MathText';
 import { OnboardingTour, defaultTourSteps, TourTab } from './components/OnboardingTour';
-import { getTemplateById } from './templates/registry';
+import { getTemplateById, resolveTheme } from './templates/registry';
 import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
-import { loadGlobalDefaults } from './utils/globalDefaults';
+import { loadGlobalDefaults, createDefaultDeckConfig } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { SlideTextBox, SlideTextBoxBind } from './types';
 import { SlidePreviewModal } from './components/SlidePreviewModal';
 import { LayoutLibraryModal } from './components/LayoutLibraryModal';
 import { AnswerModeModal } from './components/AnswerModeModal';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, Maximize2, SquareStack } from 'lucide-react';
+import { SavePresetModal } from './components/SavePresetModal';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Presentation, LayoutGrid, ArrowLeft, CheckCircle2, Type, Sun, Moon, PenTool, PenLine, LayoutTemplate, Copy, FileText, Download, Sliders, Maximize2, SquareStack, BookmarkPlus } from 'lucide-react';
 import { FONT_PRESETS } from './utils/fontPresets';
 import { applyDesignToConfig } from './utils/templatePresets';
-import { expandDeckSlides, questionSlideIndex, SlideRef } from './utils/answerSlides';
+import { expandDeckSlides, questionSlideIndex, AnswerMode, effectiveAnswerMode, SlideRef } from './utils/answerSlides';
 
 export default function App() {
   // Application State
@@ -79,6 +80,7 @@ export default function App() {
   const [editingSavedDeckId, setEditingSavedDeckId] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [isTemplateStudioOpen, setIsTemplateStudioOpen] = useState<boolean>(false);
+  const [isSavePresetOpen, setIsSavePresetOpen] = useState<boolean>(false);
 
   // "Add Questions" chooser modal — wide Slide Studio button → 3 source cards
   // (Question Bank / Manual Editor / Question Creator Form).
@@ -143,33 +145,12 @@ export default function App() {
     setIsTourOpen(false);
   };
 
-  // Deck Branding Config State — the preset template's default layout is built
-  // as editable text boxes (templateToTextBoxes) so opening Edit Text Boxes in
-  // Slide Studio lets the user move/resize/restyle every element.
-  const globalDefaults = loadGlobalDefaults();
+  // Deck Branding Config State — initialized with user's saved global app defaults
   const [config, setConfig] = useState<DeckConfig>(() => {
-    const base: DeckConfig = {
-      templateId: globalDefaults.defaultTemplateId,
-      brandName: "NOBEL'S CLASSROOM",
-      logoUrl: '',
-      logoSize: 'md',
-      logoPosition: 'top-left',
-      headerTitle: 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
-      badgeTag: '৯ম-১০ম শ্রেণি | জীববিজ্ঞান',
-      footerTag: 'BIOMISSION',
-      watermarkAvatar: '',
-      watermarkHandle: 'Hasnat Shuvro',
-      aspectRatio: '16:9',
-      showAnswerInSlide: false,
-      answerMode: 'hidden',
-      showExplanationInSlide: false,
-      questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
-      fontFamily: "'Kalpurush', serif",
-      bgPreset: 'none',
-      bgImageOpacity: 1.0,
-      bgOverlayDarkness: 0.0,
+    const base: DeckConfig = createDefaultDeckConfig({
       deckName: SAMPLE_DECKS[0]?.name || 'Untitled Deck',
-    };
+      headerTitle: 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
+    });
     return { ...base, slideTextBoxes: templateToTextBoxes(base) };
   });
 
@@ -240,6 +221,13 @@ export default function App() {
   const hasTextBoxOverride = !!slideTextBoxOverride;
   const activeTextBoxes: SlideTextBox[] = slideTextBoxOverride ?? config.slideTextBoxes ?? [];
   const effectiveTextBoxConfig: DeckConfig = { ...config, ...(items[activeQuestionIndex]?.customConfig || {}) };
+
+  // When text box edit mode is enabled, ensure active text boxes are populated
+  useEffect(() => {
+    if (isTextBoxEditMode && activeTextBoxes.length === 0) {
+      setTextBoxes(() => templateToTextBoxes(effectiveTextBoxConfig));
+    }
+  }, [isTextBoxEditMode, activeTextBoxes.length]);
 
   const setTextBoxes = (updater: (boxes: SlideTextBox[]) => SlideTextBox[]) => {
     if (textBoxScope === 'slide' && items[activeQuestionIndex]) {
@@ -420,13 +408,30 @@ export default function App() {
         }
       } else if (e.key === ' ') {
         e.preventDefault();
-        setIsAnswerRevealMode(prev => !prev);
+        toggleAnswerReveal();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTab, selectedIndex, expandedSlides.length]);
+
+  const toggleAnswerReveal = () => {
+    const currentQIndex = activeSlideRef?.questionIndex ?? 0;
+    const isCurrentlyActive = effectiveAnswerMode(config) === 'separate_slide' || isAnswerRevealMode;
+    const nextState = !isCurrentlyActive;
+    const nextMode: AnswerMode = nextState ? 'separate_slide' : 'hidden';
+
+    setIsAnswerRevealMode(nextState);
+    setConfig(c => ({
+      ...c,
+      answerMode: nextMode,
+      showAnswerInSlide: nextState,
+    }));
+
+    const nextSlides = expandDeckSlides(items, { ...config, answerMode: nextMode, showAnswerInSlide: nextState });
+    setSelectedIndex(questionSlideIndex(nextSlides, currentQIndex));
+  };
 
   const ensureUniqueIds = (itemsList: MCQItem[]): MCQItem[] => {
     const seenIds = new Set<string>();
@@ -538,12 +543,9 @@ export default function App() {
     setSelectedIndex(0);
     setActiveTab('preview');
     setConfig((prev) => {
-      const merged = {
+      const merged = createDefaultDeckConfig({
         ...prev,
-        deckName: globalDefaults.defaultDeckName,
-        templateId: globalDefaults.defaultTemplateId,
-        questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
-      };
+      });
       return { ...merged, slideTextBoxes: templateToTextBoxes(merged) };
     });
     alert(`Created new presentation deck with ${selectedItems.length} selected questions!`);
@@ -730,16 +732,16 @@ export default function App() {
 
   const currentItem = items[activeQuestionIndex] || placeholderItem;
 
-  const activeTemplate = getTemplateById(config.templateId);
-  const isLightTemplate = activeTemplate.themeType === 'light';
+  const activeDeckTheme = resolveTheme(config);
+  const activeTemplate = activeDeckTheme.template;
+  const isLightTemplate = activeDeckTheme.isLight;
   const isAppLight = appTheme === 'light';
 
   // Active slide's effective theme (deck config + slide-level override) — used by
   // the quick Light/Dark toggle so theme choices stay slide-specific.
-  const activeSlideConfigOverride = items[activeQuestionIndex]?.customConfig;
-  const activeSlideTemplateId = activeSlideConfigOverride?.templateId || config.templateId;
-  const activeSlideTheme = getTemplateById(activeSlideTemplateId, activeSlideConfigOverride?.customTheme);
-  const isActiveSlideLight = activeSlideTheme.themeType === 'light';
+  const activeSlideResolvedTheme = resolveTheme(config, items[activeQuestionIndex]?.customConfig);
+  const activeSlideTheme = activeSlideResolvedTheme.template;
+  const isActiveSlideLight = activeSlideResolvedTheme.isLight;
 
   return (
     <IngestionProvider>
@@ -1148,6 +1150,20 @@ export default function App() {
                           <span className="hidden 2xl:inline">Deck Settings</span>
                         </button>
 
+                        {/* Save Current Design as Preset Button */}
+                        <button
+                          onClick={() => setIsSavePresetOpen(true)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                            isAppLight
+                              ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                              : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                          }`}
+                          title="Save active slide's effective design (colors, typography, background) as a preset template"
+                        >
+                          <BookmarkPlus className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="hidden 2xl:inline">Save as Preset</span>
+                        </button>
+
                         {/* Interactive Template Studio (JSON Import/Export) */}
                         <button
                           onClick={() => setIsTemplateStudioOpen(true)}
@@ -1290,7 +1306,7 @@ export default function App() {
                           <span className="hidden 2xl:inline">Answer Mode</span>
                         </button>
                         <button
-                          onClick={() => setIsAnswerRevealMode(prev => !prev)}
+                          onClick={toggleAnswerReveal}
                           className={`p-2 rounded-r-xl text-xs font-extrabold transition-all border cursor-pointer ${
                             isAnswerRevealMode
                               ? 'bg-emerald-400 text-slate-950 border-emerald-400'
@@ -1307,8 +1323,14 @@ export default function App() {
                       {/* Slide Text Box Edit Mode Toggle */}
                       <button
                         onClick={() => {
-                          setIsTextBoxEditMode(prev => !prev);
-                          if (isTextBoxEditMode) setSelectedTextBoxId(null);
+                          setIsTextBoxEditMode(prev => {
+                            const next = !prev;
+                            if (next && activeTextBoxes.length === 0) {
+                              setTextBoxes(() => templateToTextBoxes(effectiveTextBoxConfig));
+                            }
+                            if (!next) setSelectedTextBoxId(null);
+                            return next;
+                          });
                         }}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                           isTextBoxEditMode
@@ -1396,10 +1418,10 @@ export default function App() {
                           )}
                         </div>
 
-                        {/* Hover Overlay Icon for Large Modal Preview */}
+                        {/* Overlay Icon for Large Modal Preview */}
                         <button
                           onClick={() => setIsLargePreviewOpen(true)}
-                          className="absolute top-4 right-4 z-30 p-3 rounded-2xl bg-slate-950/80 hover:bg-amber-500 text-amber-400 hover:text-slate-950 border border-amber-500/40 shadow-xl transition-all cursor-pointer opacity-70 group-hover:opacity-100 flex items-center gap-2 text-xs font-bold"
+                          className="absolute bottom-4 right-4 z-30 p-3 rounded-2xl bg-slate-950/85 hover:bg-amber-500 text-amber-400 hover:text-slate-950 border border-amber-500/40 shadow-2xl backdrop-blur-md transition-all cursor-pointer opacity-80 group-hover:opacity-100 flex items-center gap-2 text-xs font-bold"
                           title="Open Large Slide Review Modal"
                         >
                           <Maximize2 className="w-4 h-4" />
@@ -1442,12 +1464,17 @@ export default function App() {
                   ) : (
                     <DeckManager
                       items={items}
+                      slides={expandedSlides}
                       onUpdateItems={setItems}
                       onSelectIndex={(idx) => {
                         setSelectedIndex(questionSlideIndex(expandedSlides, idx));
                         setIsOverviewMode(false);
                       }}
-                      selectedIndex={activeQuestionIndex}
+                      onSelectPhysicalSlide={(physIdx) => {
+                        setSelectedIndex(Math.max(0, Math.min(physIdx, expandedSlides.length - 1)));
+                        setIsOverviewMode(false);
+                      }}
+                      selectedIndex={selectedIndex}
                       appTheme={appTheme}
                       onEditQuestion={(item) => setEditingQuestion(item)}
                       onAddQuestions={() => setIsAddQuestionsOpen(true)}
@@ -1659,6 +1686,15 @@ export default function App() {
           }
         }}
         totalQuestions={items.length}
+        appTheme={appTheme}
+      />
+
+      {/* Save Current Design as Preset Modal */}
+      <SavePresetModal
+        isOpen={isSavePresetOpen}
+        onClose={() => setIsSavePresetOpen(false)}
+        config={config}
+        activeSlideConfigOverride={items[selectedIndex]?.customConfig}
         appTheme={appTheme}
       />
 

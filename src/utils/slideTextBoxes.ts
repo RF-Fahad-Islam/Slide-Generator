@@ -15,6 +15,7 @@ export const SLIDE_BOX_BINDS: { bind: SlideTextBoxBind; label: string }[] = [
   { bind: 'badgeTag', label: '+ Badge Tag' },
   { bind: 'footerTag', label: '+ Footer Tag' },
   { bind: 'watermark', label: '+ Watermark' },
+  { bind: 'slideCounter', label: '+ Page Number' },
   { bind: 'free', label: '+ Free Text' },
 ];
 
@@ -73,8 +74,8 @@ export const getSlideBoxContent = (
 ): string => {
   switch (box.bind) {
     case 'stem': return item.stem;
-    case 'answer': return item.answer || '';
-    case 'explanation': return item.explanation || '';
+    case 'answer': return item.answer ? `উত্তর: ${item.answer}` : 'উত্তর: খ';
+    case 'explanation': return item.explanation || 'ব্যাখ্যা: (এখানে উত্তর ব্যাখ্যা থাকবে)';
     case 'passage': return item.passage || '';
     case 'prompt': return item.prompt || '';
     case 'roman': return (item.romanItems || []).join('\n');
@@ -85,6 +86,7 @@ export const getSlideBoxContent = (
     case 'badgeTag': return getEffectiveBadgeTag(config, item);
     case 'footerTag': return config.footerTag || 'BIOMISSION';
     case 'watermark': return config.watermarkHandle || 'Hasnat Shuvro';
+    case 'slideCounter': return `${formatSlideQNumber(currentIndex, config.questionNumberFormat)} / ${formatSlideQNumber(1, config.questionNumberFormat)}`;
     case 'free': return box.text || '';
     case 'options': return '';
     case 'icon': return '';

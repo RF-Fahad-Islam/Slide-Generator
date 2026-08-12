@@ -1,5 +1,5 @@
 import { DeckConfig, SlideTextBox } from '../types';
-import { getTemplateById } from '../templates/registry';
+import { resolveTheme } from './themeResolver';
 import { classroomTextBoxes } from './slideElements';
 
 // Builds the deck's text-box layer from the active preset template so the
@@ -34,17 +34,16 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
   // Classroom view already has its own enforced box layout.
   if (config.layoutMode === 'class_mode') return classroomTextBoxes();
 
-  const template = getTemplateById(config.templateId, config.customTheme);
-  const styles = template.styles;
-  const isLight = template.themeType === 'light';
-  const hc = styles.hexColors;
+  const theme = resolveTheme(config);
+  const isLight = theme.isLight;
+  const hc = theme.colors;
 
-  const textColor = `#${hc.textColor}`;
-  const accent = styles.accentColor;
-  const headerFont = config.headerFont || config.fontFamily || styles.fontFamily;
-  const bodyFont = config.bodyFont || config.fontFamily || styles.fontFamily;
-  const optionsFont = config.optionsFont || config.fontFamily || styles.fontFamily;
-  const footerFont = config.footerFont || config.fontFamily || styles.fontFamily;
+  const textColor = theme.colors.textColor;
+  const accent = theme.colors.accentColor;
+  const headerFont = theme.fonts.headerFont;
+  const bodyFont = theme.fonts.bodyFont;
+  const optionsFont = theme.fonts.optionsFont;
+  const footerFont = theme.fonts.footerFont;
 
   const headerSize = HEADER_SIZES[config.headerFontSize || 'md'] || 30;
   const bodySize = BODY_SIZES[config.bodyFontSize || 'lg'] || 30;
@@ -117,18 +116,33 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       boxes.push({
         id: bid('hdr_badge'),
         bind: 'badgeTag',
-        x: SLIDE_W - PAD - 640,
+        x: SLIDE_W - PAD - 130 - 440,
         y: 44,
-        w: 640,
+        w: 440,
         fontSize: 18,
-        color: `#${hc.badgeText}`,
-        align: 'center',
+        color: isLight ? '#78350f' : '#fcd34d',
+        align: 'right',
         bold: true,
         fontFamily: headerFont,
         shape: 'pill',
-        bg: hexToRgba(hc.badgeFill, isLight ? 0.9 : 0.22),
+        bg: isLight ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.22)',
       });
     }
+    boxes.push({
+      id: bid('hdr_counter'),
+      bind: 'slideCounter',
+      x: SLIDE_W - PAD - 110,
+      y: 44,
+      w: 110,
+      h: 44,
+      fontSize: 18,
+      color: '#fcd34d',
+      align: 'center',
+      bold: true,
+      fontFamily: headerFont,
+      shape: 'card',
+      bg: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(15,23,42,0.9)',
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -155,16 +169,16 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     bold: false,
     fontFamily: bodyFont,
     shape: 'card',
-    bg: hexToRgba(hc.cardBg, isLight ? 0.95 : 0.9),
+    bg: hexToRgba(hc.cardBgHex, isLight ? 0.95 : 0.9),
   });
   boxes.push({
     id: bid('mdl_qnum'),
     bind: 'questionNumber',
     x: innerX,
     y: cardY + 22,
-    w: 72,
-    h: 52,
-    fontSize: 28,
+    w: 120,
+    h: 46,
+    fontSize: 22,
     color: isLight ? '#ffffff' : '#0f172a',
     align: 'center',
     bold: true,
@@ -238,28 +252,44 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     bold: false,
     fontFamily: optionsFont,
     shape: 'card',
-    bg: hexToRgba(hc.optionBg, isLight ? 0.9 : 0.55),
+    bg: hexToRgba(hc.optionBgHex, isLight ? 0.9 : 0.55),
   });
 
   // -------------------------------------------------------------------------
-  // Explanation — shown when the deck has it enabled. Sits above the footer.
+  // Answer Pill — positionable answer badge for Answer slides (y: 35)
   // -------------------------------------------------------------------------
-  if (config.showExplanationInSlide) {
-    boxes.push({
-      id: bid('mdl_explanation'),
-      bind: 'explanation',
-      x: cardX,
-      y: 840,
-      w: cardW,
-      fontSize: 20,
-      color: textColor,
-      align: 'left',
-      bold: false,
-      fontFamily: bodyFont,
-      shape: 'card',
-      bg: 'rgba(16,185,129,0.12)',
-    });
-  }
+  boxes.push({
+    id: bid('ans_pill'),
+    bind: 'answer',
+    x: 760,
+    y: 35,
+    w: 400,
+    fontSize: 24,
+    color: isLight ? '#065f46' : '#ecfdf5',
+    align: 'center',
+    bold: true,
+    fontFamily: bodyFont,
+    shape: 'pill',
+    bg: isLight ? 'rgba(209,250,229,0.95)' : 'rgba(16,185,129,0.25)',
+  });
+
+  // -------------------------------------------------------------------------
+  // Explanation — positionable explanation card for Answer slides (y: 840)
+  // -------------------------------------------------------------------------
+  boxes.push({
+    id: bid('mdl_explanation'),
+    bind: 'explanation',
+    x: cardX,
+    y: 840,
+    w: cardW,
+    fontSize: 20,
+    color: textColor,
+    align: 'left',
+    bold: false,
+    fontFamily: bodyFont,
+    shape: 'card',
+    bg: isLight ? 'rgba(240,253,244,0.95)' : 'rgba(16,185,129,0.15)',
+  });
 
   // -------------------------------------------------------------------------
   // Footer — watermark + footer tag near bottom edge

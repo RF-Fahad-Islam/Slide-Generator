@@ -7,6 +7,8 @@ import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
 import { getSlideIcon } from './slideElements';
 import { chunkAnswerKeyPages, AnswerKeyPage } from './answerKeySlides';
+import { resolveTheme } from './themeResolver';
+import { expandDeckSlides } from './answerSlides';
 import {
   TPL_CARD_ID,
   TPL_STEM_ID,
@@ -14,6 +16,7 @@ import {
   TPL_PROMPT_ID,
   TPL_OPTIONS_ID,
   computeTemplateCardMetrics,
+  splitRomanLabel,
 } from './templateBoxLayout';
 
 export interface PptxSlideSpec {
@@ -45,11 +48,15 @@ export const exportDeckToPPTX = async (
   pptx.company = config.brandName || "NOBEL'S CLASSROOM";
   pptx.author = config.watermarkHandle || 'Instructor';
 
-  const template = getTemplateById(config.templateId);
-  const colors = template.styles.hexColors;
+  const globalTheme = resolveTheme(config);
+  const colors = globalTheme.colors;
 
-  // Physical slide list — explicit (question + answer pairs) or one per item.
-  const slideSpecs: PptxSlideSpec[] = slides ?? items.map((item, i) => ({ item, questionIndex: i, isAnswerSlide: false }));
+  // Physical slide list — explicit (question + answer pairs) or expanded from answerMode config.
+  const slideSpecs: PptxSlideSpec[] = slides ?? expandDeckSlides(items, config).map(s => ({
+    item: s.item,
+    questionIndex: s.questionIndex,
+    isAnswerSlide: s.isAnswerSlide,
+  }));
   const totalQuestions = items.length;
   const totalSlides = slideSpecs.length;
 
@@ -164,6 +171,37 @@ export const exportDeckToPPTX = async (
           h: (box.h || 180) * PX_TO_IN,
         });
       }
+      return;
+    }
+    if (box.bind === 'answer') {
+      if (!highlight) return;
+      const ansText = item.answer ? `✓  উত্তর: ${item.answer}` : '✓  উত্তর: খ';
+      const fontPt = (box.fontSize || 24) * PX_TO_PT;
+      const fontFace = getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim();
+      const radius = box.shape === 'pill' ? 0.5 : 0.16;
+
+      slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
+        x: box.x * PX_TO_IN,
+        y: box.y * PX_TO_IN,
+        w: (box.w || 400) * PX_TO_IN,
+        h: (box.h || (box.fontSize || 24) * 1.8) * PX_TO_IN,
+        fill: { color: colors.badgeFill || 'D1FAE5' },
+        line: { color: colors.optionSelectedBorder || '10B981', width: 1.5 },
+        rectRadius: radius,
+      });
+
+      slide.addText(ansText, {
+        x: box.x * PX_TO_IN,
+        y: box.y * PX_TO_IN,
+        w: (box.w || 400) * PX_TO_IN,
+        h: (box.h || (box.fontSize || 24) * 1.8) * PX_TO_IN,
+        fontSize: fontPt,
+        fontFace,
+        color: colors.badgeText || '065F46',
+        bold: true,
+        align: 'center',
+        valign: 'middle',
+      });
       return;
     }
     if (box.bind === 'explanation' && !includeExplanation) return;
@@ -343,14 +381,14 @@ export const exportDeckToPPTX = async (
   // move, resize or delete them. Uses the per-slide effective config so
   // slide-level (customConfig) background overrides are respected.
   const renderSlideBackground = (slide: any, cfg: DeckConfig, bgDataUrl?: string) => {
-    const slideTemplate = getTemplateById(cfg.templateId, cfg.customTheme);
-    const slideColors = slideTemplate.styles.hexColors;
-    const slideBgUrl = getBackgroundPresetUrl(cfg.bgPreset, cfg.bgImageUrl);
-    const slideIsLight = slideTemplate.themeType === 'light';
-    const gradientStops = slideTemplate.styles.bgGradientStops;
+    const slideTheme = resolveTheme(cfg);
+    const slideColors = slideTheme.colors;
+    const slideBgUrl = slideTheme.background.url;
+    const slideIsLight = slideTheme.isLight;
+    const gradientStops = slideTheme.background.gradientStops;
 
     slide.background = {
-      color: slideBgUrl ? '0F172A' : gradientStops ? gradientStops[1] : slideColors.bg,
+      color: slideBgUrl ? '0F172A' : gradientStops ? gradientStops[1] : slideColors.bgHex,
     };
 
     // A pre-rendered raster of the exact background stack (gradient/color,
