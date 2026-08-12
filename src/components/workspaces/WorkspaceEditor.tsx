@@ -10,9 +10,10 @@ interface WorkspaceEditorProps {
   workspaceId: string;
   onBack: () => void;
   appTheme: 'dark' | 'light';
+  onCreateDeckFromApproved: (items: MCQItem[]) => void;
 }
 
-export const WorkspaceEditor: React.FC<WorkspaceEditorProps> = ({ workspaceId, onBack, appTheme }) => {
+export const WorkspaceEditor: React.FC<WorkspaceEditorProps> = ({ workspaceId, onBack, appTheme, onCreateDeckFromApproved }) => {
   const isAppLight = appTheme === 'light';
   const { workspace, isLoaded, reload } = useWorkspaceSync(workspaceId);
   const [view, setView] = useState<'editor' | 'approved'>('editor');
@@ -137,6 +138,7 @@ export const WorkspaceEditor: React.FC<WorkspaceEditorProps> = ({ workspaceId, o
           isAppLight={isAppLight}
           onUpdateApprovedItem={handleUpdateApprovedItem}
           onUnapprove={handleUnapprove}
+          onCreateDeckFromApproved={onCreateDeckFromApproved}
         />
       )}
     </div>

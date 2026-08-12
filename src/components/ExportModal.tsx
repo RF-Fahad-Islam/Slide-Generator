@@ -99,7 +99,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // When true the PPTX bundles the deck's actual font files (PowerPoint
   // embedded fonts) so it renders correctly on machines that don't have the
   // fonts installed. Defaults ON.
-  const [embedFonts, setEmbedFonts] = useState<boolean>(true);
+  const embedFonts = true;
 
   if (!isOpen) return null;
 
@@ -486,17 +486,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
                 />
                 Exact slide images
-              </label>
-              <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
-                isAppLight ? 'text-slate-700' : 'text-slate-300'
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={embedFonts}
-                  onChange={(e) => setEmbedFonts(e.target.checked)}
-                  className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
-                />
-                Embed fonts
               </label>
               <button
                 onClick={downloadPPTX}

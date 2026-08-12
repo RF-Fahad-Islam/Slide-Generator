@@ -1674,6 +1674,7 @@ export default function App() {
               workspaceId={activeWorkspaceId}
               onBack={() => setActiveWorkspaceId(null)}
               appTheme={appTheme}
+              onCreateDeckFromApproved={(items) => handleCreateNewDeckFromSelection(items)}
             />
           ) : (
             <WorkspacesHome

@@ -37,7 +37,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
   const [doneCount, setDoneCount] = useState(0);
   const [progressMsg, setProgressMsg] = useState('');
   const [renderAsImages, setRenderAsImages] = useState<boolean>(false);
-  const [embedFonts, setEmbedFonts] = useState<boolean>(true);
+  const embedFonts = true;
   const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
   // Item/config currently rasterized offscreen for a background-only or full-slide PPTX capture.
   const [bgRenderSlide, setBgRenderSlide] = useState<{
@@ -315,17 +315,6 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
                 className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
               />
               Exact slide images
-            </label>
-            <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
-              isAppLight ? 'text-slate-700' : 'text-slate-300'
-            }`}>
-              <input
-                type="checkbox"
-                checked={embedFonts}
-                onChange={(e) => setEmbedFonts(e.target.checked)}
-                className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
-              />
-              Embed fonts
             </label>
             <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
               isAppLight ? 'text-slate-700' : 'text-slate-300'

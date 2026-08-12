@@ -1,37 +1,5 @@
 import { db } from '../db/dexie';
-import { DeckConfig, MCQItem, MCQTags, SavedDeck, Workspace } from '../types';
-import { loadGlobalDefaults } from './globalDefaults';
-import { templateToTextBoxes } from './templateToTextBoxes';
-
-// Minimal, neutral default config for a workspace's auto-created linked deck —
-// deliberately blank branding (unlike the app's sample-content default config)
-// since this deck starts empty and is meant to be customized later in Deck Settings.
-const createDefaultDeckConfig = (name: string): DeckConfig => {
-  const globalDefaults = loadGlobalDefaults();
-  const base: DeckConfig = {
-    templateId: globalDefaults.defaultTemplateId,
-    brandName: globalDefaults.brandName || "RAKIB'S CLASSROOM",
-    logoUrl: globalDefaults.logoUrl || '',
-    logoSize: globalDefaults.logoSize || 'md',
-    logoPosition: globalDefaults.logoPosition || 'top-left',
-    headerTitle: 'অধ্যায় ৮ঃ রেচন প্রক্রিয়া',
-    badgeTag: globalDefaults.badgeTag || '৯ম-১০ম শ্রেণি | জীববিজ্ঞান',
-    footerTag: 'BIOMISSION',
-    watermarkAvatar: '',
-    watermarkHandle: 'Hasnat Shuvro',
-    aspectRatio: '16:9',
-    optionsLayout: '2col',
-    showAnswerInSlide: false,
-    answerMode: 'hidden',
-    showExplanationInSlide: false,
-    questionNumberFormat: globalDefaults.defaultQuestionNumberFormat,
-    bgPreset: globalDefaults.bgPreset || 'none',
-    bgImageOpacity: globalDefaults.bgImageOpacity ?? 0.85,
-    bgOverlayDarkness: globalDefaults.bgOverlayDarkness ?? 0.4,
-    deckName: name,
-  };
-  return { ...base, slideTextBoxes: templateToTextBoxes(base) };
-};
+import { MCQItem, MCQTags, Workspace } from '../types';
 
 const dedupeById = (items: MCQItem[]): MCQItem[] => {
   const seen = new Set<string>();
@@ -48,28 +16,11 @@ export async function createWorkspace(
   defaultTags?: MCQTags
 ): Promise<Workspace> {
   const now = Date.now();
-  const deckId = `deck_${now}`;
-  const linkedDeck: SavedDeck = {
-    id: deckId,
-    name,
-    description,
-    subject: defaultTags?.subject,
-    badgeTag: defaultTags?.className && defaultTags?.subject
-      ? `${defaultTags.className} | ${defaultTags.subject}`
-      : (defaultTags?.className || defaultTags?.subject || ''),
-    items: [],
-    config: createDefaultDeckConfig(name),
-    createdAt: now,
-    updatedAt: now,
-  };
-  await db.questionDecks.put(linkedDeck);
-
   const workspace: Workspace = {
     id: `ws_${now}`,
     name,
     description,
     defaultTags,
-    linkedDeckId: deckId,
     reviewQueue: [],
     approvedItems: [],
     createdAt: now,
@@ -82,13 +33,7 @@ export async function createWorkspace(
 export async function renameWorkspace(id: string, name: string): Promise<void> {
   const trimmed = name.trim();
   if (!trimmed) return;
-  const workspace = await db.workspaces.get(id);
-  if (!workspace) return;
   await db.workspaces.update(id, { name: trimmed, updatedAt: Date.now() });
-  const linkedDeck = await db.questionDecks.get(workspace.linkedDeckId);
-  if (linkedDeck) {
-    await db.questionDecks.update(workspace.linkedDeckId, { name: trimmed, updatedAt: Date.now() });
-  }
 }
 
 export async function updateWorkspaceMeta(
@@ -98,26 +43,11 @@ export async function updateWorkspaceMeta(
   await db.workspaces.update(id, { ...patch, updatedAt: Date.now() });
 }
 
-// Intentionally does NOT delete the linked SavedDeck — approved questions stay
-// usable in the Question Bank even after their organizational workspace is gone.
+// Approved questions are stored on the workspace itself — nothing is mirrored
+// into a deck. Existing legacy linked decks (from before the decoupling) are left
+// untouched as normal decks.
 export async function deleteWorkspace(id: string): Promise<void> {
   await db.workspaces.delete(id);
-}
-
-async function saveWorkspaceAndMirrorDeck(
-  workspace: Workspace,
-  linkedDeckItems: MCQItem[]
-): Promise<Workspace> {
-  const updated: Workspace = { ...workspace, updatedAt: Date.now() };
-  await db.workspaces.put(updated);
-  const linkedDeck = await db.questionDecks.get(workspace.linkedDeckId);
-  if (linkedDeck) {
-    await db.questionDecks.update(workspace.linkedDeckId, {
-      items: linkedDeckItems,
-      updatedAt: Date.now(),
-    });
-  }
-  return updated;
 }
 
 export async function approveItems(workspace: Workspace, items: MCQItem[]): Promise<Workspace> {
@@ -125,11 +55,9 @@ export async function approveItems(workspace: Workspace, items: MCQItem[]): Prom
   const approveIds = new Set(items.map((i) => i.id));
   const nextQueue = workspace.reviewQueue.filter((q) => !approveIds.has(q.id));
   const nextApproved = dedupeById([...workspace.approvedItems, ...items]);
-  const updated: Workspace = { ...workspace, reviewQueue: nextQueue, approvedItems: nextApproved };
-
-  const linkedDeck = await db.questionDecks.get(workspace.linkedDeckId);
-  const nextDeckItems = dedupeById([...(linkedDeck?.items ?? []), ...items]);
-  return saveWorkspaceAndMirrorDeck(updated, nextDeckItems);
+  const updated: Workspace = { ...workspace, reviewQueue: nextQueue, approvedItems: nextApproved, updatedAt: Date.now() };
+  await db.workspaces.put(updated);
+  return updated;
 }
 
 export async function unapproveItem(workspace: Workspace, itemId: string): Promise<Workspace> {
@@ -137,26 +65,45 @@ export async function unapproveItem(workspace: Workspace, itemId: string): Promi
   if (!item) return workspace;
   const nextApproved = workspace.approvedItems.filter((i) => i.id !== itemId);
   const nextQueue = dedupeById([...workspace.reviewQueue, item]);
-  const updated: Workspace = { ...workspace, reviewQueue: nextQueue, approvedItems: nextApproved };
-
-  const linkedDeck = await db.questionDecks.get(workspace.linkedDeckId);
-  const nextDeckItems = (linkedDeck?.items ?? []).filter((i) => i.id !== itemId);
-  return saveWorkspaceAndMirrorDeck(updated, nextDeckItems);
+  const updated: Workspace = { ...workspace, reviewQueue: nextQueue, approvedItems: nextApproved, updatedAt: Date.now() };
+  await db.workspaces.put(updated);
+  return updated;
 }
 
 export async function updateApprovedItem(workspace: Workspace, item: MCQItem): Promise<Workspace> {
   const nextApproved = workspace.approvedItems.map((i) => (i.id === item.id ? item : i));
-  const updated: Workspace = { ...workspace, approvedItems: nextApproved };
-
-  const linkedDeck = await db.questionDecks.get(workspace.linkedDeckId);
-  const nextDeckItems = (linkedDeck?.items ?? []).map((i) => (i.id === item.id ? item : i));
-  return saveWorkspaceAndMirrorDeck(updated, nextDeckItems);
+  const updated: Workspace = { ...workspace, approvedItems: nextApproved, updatedAt: Date.now() };
+  await db.workspaces.put(updated);
+  return updated;
 }
 
 export async function saveReviewQueue(workspace: Workspace, reviewQueue: MCQItem[]): Promise<Workspace> {
   const updated: Workspace = { ...workspace, reviewQueue, updatedAt: Date.now() };
   await db.workspaces.put(updated);
   return updated;
+}
+
+export interface ApprovedPoolEntry {
+  question: MCQItem;
+  workspaceId: string;
+  workspaceName: string;
+}
+
+// Aggregates every approved question across all workspaces into one deduped pool.
+// This is the single source the Question Bank merges into its question list, so
+// approved questions appear automatically ("auto import") without any manual step.
+export async function getApprovedPool(): Promise<ApprovedPoolEntry[]> {
+  const workspaces = await db.workspaces.toArray();
+  const seen = new Set<string>();
+  const pool: ApprovedPoolEntry[] = [];
+  for (const ws of workspaces) {
+    for (const question of ws.approvedItems) {
+      if (seen.has(question.id)) continue;
+      seen.add(question.id);
+      pool.push({ question, workspaceId: ws.id, workspaceName: ws.name });
+    }
+  }
+  return pool;
 }
 
 const DEFAULT_WORKSPACE_NAME = 'Default';

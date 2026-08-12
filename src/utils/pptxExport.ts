@@ -504,17 +504,21 @@ export const exportDeckToPPTX = async (
     // - 'pill' shape options flow left-to-right in a wrapping row
     // - '2col' options layout (default) renders a 2x2 grid (A&B top, C&D bottom)
     // - '1col' options layout renders a stacked single-column list
+    // - '4col' options layout renders 4 columns in 1 horizontal row
     if (box.bind === 'options') {
       const opts = item.options || [];
       if (opts.length === 0) return;
 
-      const boxW = (box.w || 600) * PX_TO_IN;
-      const optH = Math.max(0.5, (box.fontSize * 1.8 + 16) * PX_TO_IN);
-      const radius = box.shape === 'pill' ? 0.5 : box.shape === 'card' ? 0.12 : 0;
+      const boxW = (box.w || 1200) * PX_TO_IN;
+      const optH = Math.max(0.55, (box.fontSize * 1.8 + 16) * PX_TO_IN);
+      const shapeType = box.shape || 'card';
+      const radius = shapeType === 'pill' ? 0.5 : shapeType === 'card' ? 0.12 : 0;
       const fontPt = box.fontSize * PX_TO_PT;
       const fontFace = getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim();
-      const isPills = box.shape === 'pill';
-      const is2Col = (cfg.optionsLayout || '2col') === '2col';
+      const isPills = shapeType === 'pill';
+
+      const layoutMode = cfg.optionsLayout || '2col';
+      const numCols = layoutMode === '1col' ? 1 : layoutMode === '4col' ? 4 : 2;
 
       // Estimate the rendered width of an option's text so pills wrap exactly
       // like the canvas flex-wrap row (per-character glyph widths + key badge + padding).
@@ -522,7 +526,7 @@ export const exportDeckToPPTX = async (
         const textW = [...cleanLatex(opt.text)].reduce((sum, ch) => sum + estCharW(ch) * box.fontSize, 0);
         const keyW = box.fontSize * 1.1;
         const pad = box.fontSize * 1.6;
-        return Math.min(Math.max(textW + keyW + pad, box.fontSize * 3), (box.w || 600));
+        return Math.min(Math.max(textW + keyW + pad, box.fontSize * 3), (box.w || 1200));
       };
 
       const placed = opts.map((opt, oi) => {
@@ -552,20 +556,16 @@ export const exportDeckToPPTX = async (
             rowY += pillH + gapY;
           }
           return { opt, oi, x: rowStart, y: rowY, w: pillW, h: pillH, highlighted };
-        } else if (is2Col) {
-          // 2-column grid layout (A, B on top row; C, D on bottom row)
-          const colIdx = oi % 2;
-          const rowIdx = Math.floor(oi / 2);
+        } else {
+          // Grid layout based on numCols (2col = 2x2 grid, 4col = 4x1 row, 1col = 1x4 column)
           const gapX = 16 * PX_TO_IN;
           const gapY = 12 * PX_TO_IN;
-          const colW = (boxW - gapX) / 2;
+          const colW = (boxW - gapX * (numCols - 1)) / numCols;
+          const colIdx = oi % numCols;
+          const rowIdx = Math.floor(oi / numCols);
           const x = box.x * PX_TO_IN + colIdx * (colW + gapX);
           const y = box.y * PX_TO_IN + rowIdx * (optH + gapY);
           return { opt, oi, x, y, w: colW, h: optH, highlighted };
-        } else {
-          // 1-column vertical stack
-          const y = box.y * PX_TO_IN + oi * (optH + 0.09);
-          return { opt, oi, x: box.x * PX_TO_IN, y, w: boxW, h: optH, highlighted };
         }
       });
 
@@ -576,7 +576,7 @@ export const exportDeckToPPTX = async (
 
         // Option card graphic — editable rounded-rect card or pill
         const optFillTransparency = box.bg ? cssFillTransparency(box.bg) : undefined;
-        if (box.shape && box.shape !== 'plain') {
+        if (shapeType !== 'plain') {
           slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
             x,
             y,
@@ -604,10 +604,10 @@ export const exportDeckToPPTX = async (
 
         // Dedicated Key Badge Pill (circle / rounded pill for A, B, C, D) inside the card
         const badgeSize = Math.min(Math.max(0.32, h * 0.6), 0.42);
-        const badgeX = x + (box.shape !== 'plain' ? 0.12 : 0);
+        const badgeX = x + (shapeType !== 'plain' ? 0.12 : 0);
         const badgeY = y + (h - badgeSize) / 2;
 
-        if (box.shape !== 'plain') {
+        if (shapeType !== 'plain') {
           slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
             x: badgeX,
             y: badgeY,
@@ -638,11 +638,11 @@ export const exportDeckToPPTX = async (
         }
 
         // Option Body Text
-        const textX = box.shape !== 'plain' ? badgeX + badgeSize + 0.12 : x;
-        const textW = box.shape !== 'plain' ? w - (textX - x) - (hl ? 0.48 : 0.15) : w;
+        const textX = shapeType !== 'plain' ? badgeX + badgeSize + 0.12 : x;
+        const textW = shapeType !== 'plain' ? w - (textX - x) - (hl ? 0.48 : 0.15) : w;
 
         slide.addText(
-          box.shape === 'plain'
+          shapeType === 'plain'
             ? [
                 { text: `${opt.key}) `, options: { bold: true, color: hl ? slideColors.optionSelectedText : slideColors.titleColor } },
                 { text: cleanLatex(opt.text), options: { color: hl ? slideColors.optionSelectedText : cssColorToHex(box.color || '#ffffff', slideColors.bg) } },
@@ -663,7 +663,7 @@ export const exportDeckToPPTX = async (
         );
 
         // Highlight tick pill for correct answer
-        if (hl && box.shape !== 'plain') {
+        if (hl && shapeType !== 'plain') {
           const tickSize = badgeSize;
           const tickX = x + w - tickSize - 0.12;
           const tickY = y + (h - tickSize) / 2;

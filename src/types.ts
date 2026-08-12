@@ -120,16 +120,18 @@ export interface SavedDeck {
 
 /**
  * A named container for the paste -> review -> approve flow (e.g. "SSC Questions").
- * Each workspace owns its own review queue and permanent approved history, and
- * mirrors approved items into `linkedDeckId` so they're also usable as a normal
- * SavedDeck in the Question Bank.
+ * Each workspace owns its own review queue and permanent approved history.
+ * Approved questions do NOT live in a deck — they auto-aggregate into the
+ * Question Bank's "Workspace Approved" pool (see `getApprovedPool`).
+ * `linkedDeckId` is legacy: pre-decoupling workspaces pointed at an auto-created
+ * SavedDeck; it is no longer written and kept only so old rows keep their data.
  */
 export interface Workspace {
   id: string;
   name: string;
   description?: string;
   defaultTags?: MCQTags; // Opt-in per paste batch — never applied automatically
-  linkedDeckId: string; // SavedDeck.id in questionDecks, auto-created with the workspace
+  linkedDeckId?: string; // LEGACY: no longer created/mirrored; kept for old rows only
   reviewQueue: MCQItem[]; // Pasted/parsed, not yet approved
   approvedItems: MCQItem[]; // Permanent history, editable in place
   createdAt: number;

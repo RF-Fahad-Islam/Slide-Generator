@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MCQItem, DeckConfig, SavedDeck, QuestionType, getSourceTags } from '../types';
 import { db } from '../db/dexie';
+import { getApprovedPool, ApprovedPoolEntry } from '../utils/workspaceStore';
 import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { getTemplateById } from '../templates/registry';
 import { downloadJSON } from '../utils/mcqJson';
@@ -41,6 +42,18 @@ interface QuestionBankViewProps {
   appTheme?: 'dark' | 'light';
 }
 
+// Sentinel deck filter id for the aggregated "Workspace Approved" pool — approved
+// questions from every workspace are merged into the bank automatically.
+const WORKSPACE_APPROVED_ID = 'workspace-approved';
+
+interface BankQuestionEntry {
+  question: MCQItem;
+  deckName: string;
+  deckId: string;
+  source: 'deck' | 'workspace';
+  workspaceId?: string;
+}
+
 export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   currentItems,
   currentConfig,
@@ -51,7 +64,8 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   appTheme = 'dark',
 }) => {
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([]);
-  const [selectedDeckId, setSelectedDeckId] = useState<string | 'all'>('all');
+  const [approvedPool, setApprovedPool] = useState<ApprovedPoolEntry[]>([]);
+  const [selectedDeckId, setSelectedDeckId] = useState<string | 'all' | typeof WORKSPACE_APPROVED_ID>('all');
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
   const [isSavingCurrent, setIsSavingCurrent] = useState<boolean>(false);
   const [newDeckName, setNewDeckName] = useState<string>('');
@@ -96,6 +110,14 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
       console.error('Failed to load decks from IndexedDB:', err);
     }
   };
+
+  // Load the aggregated approved-question pool from all workspaces — these are
+  // merged into the bank's question list automatically (no manual import).
+  useEffect(() => {
+    getApprovedPool()
+      .then(setApprovedPool)
+      .catch((err) => console.error('Failed to load approved questions pool:', err));
+  }, []);
 
   // Save current active presentation deck to library
   const handleSaveCurrentDeck = async (e: React.FormEvent) => {
@@ -156,15 +178,33 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
-  // Aggregate all questions across all decks in the library
-  const allBankQuestions: { question: MCQItem; deckName: string; deckId: string }[] = [];
-  savedDecks.forEach(deck => {
-    if (selectedDeckId === 'all' || selectedDeckId === deck.id) {
+  // Aggregate all questions across all decks in the library PLUS the approved
+  // pool from every workspace. Deduped by question id — an explicit deck row
+  // takes precedence over the workspace pool copy of the same question.
+  const allBankQuestions: BankQuestionEntry[] = [];
+  {
+    const seen = new Set<string>();
+    savedDecks.forEach(deck => {
+      if (selectedDeckId !== 'all' && selectedDeckId !== deck.id) return;
       deck.items.forEach(q => {
-        allBankQuestions.push({ question: q, deckName: deck.name, deckId: deck.id });
+        seen.add(q.id);
+        allBankQuestions.push({ question: q, deckName: deck.name, deckId: deck.id, source: 'deck' });
+      });
+    });
+    if (selectedDeckId === 'all' || selectedDeckId === WORKSPACE_APPROVED_ID) {
+      approvedPool.forEach(entry => {
+        if (seen.has(entry.question.id)) return;
+        seen.add(entry.question.id);
+        allBankQuestions.push({
+          question: entry.question,
+          deckName: `Approved · ${entry.workspaceName}`,
+          deckId: WORKSPACE_APPROVED_ID,
+          source: 'workspace',
+          workspaceId: entry.workspaceId,
+        });
       });
     }
-  });
+  }
 
   // Derive distinct tag values present in the bank for the filter dropdowns
   const distinctSubjectTags = Array.from(new Set(allBankQuestions.map(q => q.question.tags?.subject?.trim()).filter((v): v is string => !!v)));
@@ -432,6 +472,49 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             }`}>
               <span className="font-mono font-extrabold">{allBankQuestions.length} Total MCQs</span>
               <span className="flex items-center gap-1">Browse All →</span>
+            </div>
+          </div>
+
+          {/* Workspace Approved Pool — every approved question across all workspaces */}
+          <div
+            onClick={() => setSelectedDeckId(WORKSPACE_APPROVED_ID)}
+            className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+              isAppLight
+                ? selectedDeckId === WORKSPACE_APPROVED_ID
+                  ? 'bg-emerald-50 border-emerald-500 shadow-xl ring-2 ring-emerald-400/50'
+                  : 'bg-white border-slate-200 hover:border-emerald-300 shadow-sm'
+                : selectedDeckId === WORKSPACE_APPROVED_ID
+                  ? 'bg-emerald-500/10 border-emerald-500/50 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/40'
+                  : 'bg-slate-900 border-slate-800 hover:border-emerald-500/50'
+            }`}
+          >
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className={`px-2.5 py-0.5 rounded-md text-sm font-bold font-mono ${
+                  isAppLight
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                }`}>
+                  Approved
+                </span>
+                <span className={`p-2 rounded-xl ${
+                  isAppLight ? 'bg-emerald-100 text-emerald-600' : 'bg-emerald-500/15 text-emerald-400'
+                }`}>
+                  <CheckCircle2 className="w-5 h-5" />
+                </span>
+              </div>
+              <h4 className={`text-base font-extrabold leading-snug ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                Approved from Workspaces
+              </h4>
+              <p className={`text-sm ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                All approved questions auto-import here from your MCQ import workspaces
+              </p>
+            </div>
+            <div className={`mt-4 pt-3 border-t flex items-center justify-between text-sm font-bold ${
+              isAppLight ? 'border-slate-200 text-emerald-700' : 'border-slate-800/80 text-emerald-300'
+            }`}>
+              <span className="font-mono font-extrabold">{approvedPool.length} Approved MCQs</span>
+              <span className="flex items-center gap-1">Select &amp; Create Deck →</span>
             </div>
           </div>
 
@@ -773,7 +856,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
               </button>
             </div>
           ) : (
-            filteredQuestions.map(({ question, deckName }, idx) => {
+            filteredQuestions.map(({ question, deckName, source }, idx) => {
               const isChecked = selectedQuestionIds.has(question.id);
 
               return (
@@ -814,7 +897,18 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                       </span>
 
                       <span className={`text-sm font-medium truncate ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                        Deck: <strong className={isAppLight ? 'text-slate-900' : 'text-slate-200'}>{deckName}</strong>
+                        {source === 'workspace' ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black border ${
+                              isAppLight ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                            }`}>
+                              APPROVED
+                            </span>
+                            <span>Workspace: <strong className={isAppLight ? 'text-emerald-800' : 'text-emerald-300'}>{deckName.replace(/^Approved · /, '')}</strong></span>
+                          </span>
+                        ) : (
+                          <>Deck: <strong className={isAppLight ? 'text-slate-900' : 'text-slate-200'}>{deckName}</strong></>
+                        )}
                       </span>
                     </div>
 

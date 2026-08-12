@@ -1,13 +1,14 @@
 import React from 'react';
 import { MCQItem, Workspace } from '../../types';
 import { EditableMCQCard } from './EditableMCQCard';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Presentation } from 'lucide-react';
 
 interface ApprovedHistoryViewProps {
   workspace: Workspace;
   isAppLight: boolean;
   onUpdateApprovedItem: (item: MCQItem) => void;
   onUnapprove: (itemId: string) => void;
+  onCreateDeckFromApproved: (items: MCQItem[]) => void;
 }
 
 export const ApprovedHistoryView: React.FC<ApprovedHistoryViewProps> = ({
@@ -15,6 +16,7 @@ export const ApprovedHistoryView: React.FC<ApprovedHistoryViewProps> = ({
   isAppLight,
   onUpdateApprovedItem,
   onUnapprove,
+  onCreateDeckFromApproved,
 }) => {
   return (
     <div className="space-y-6">
@@ -25,9 +27,23 @@ export const ApprovedHistoryView: React.FC<ApprovedHistoryViewProps> = ({
             Step 3: Approved ({workspace.approvedItems.length})
           </h3>
           <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-            Permanent history for this workspace. Edit a card in place, or unapprove it to send it back to the review queue.
+            Permanent history for this workspace. Edit a card in place, or unapprove it to send it back to the review queue. Approved questions also auto-import into the Question Bank.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => onCreateDeckFromApproved(workspace.approvedItems)}
+          disabled={workspace.approvedItems.length === 0}
+          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black shadow-lg transition-all cursor-pointer ${
+            workspace.approvedItems.length === 0
+              ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed'
+              : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25'
+          }`}
+          title={workspace.approvedItems.length === 0 ? 'Approve at least one question to build a presentation' : 'Open a new Slide Studio presentation with all approved questions'}
+        >
+          <Presentation className="w-4 h-4 stroke-[2.5]" />
+          <span>Create Presentation from all approved ({workspace.approvedItems.length}) →</span>
+        </button>
       </div>
 
       {workspace.approvedItems.length === 0 ? (
