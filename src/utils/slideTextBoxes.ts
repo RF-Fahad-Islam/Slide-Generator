@@ -155,14 +155,15 @@ export const boxContentHasMath = (
   return textContainsMath(content);
 };
 
-export const ensureAnswerBox = (boxes: SlideTextBox[], config: DeckConfig): SlideTextBox[] => {
-  const hasAnswer = boxes.some(b => b.bind === 'answer');
-  if (hasAnswer || boxes.length === 0) return boxes;
+export const ensureRequiredBoxes = (boxes: SlideTextBox[], config: DeckConfig): SlideTextBox[] => {
+  if (boxes.length === 0) return boxes;
 
   const theme = resolveTheme(config);
-  return [
-    ...boxes,
-    {
+  let updated = [...boxes];
+
+  const hasAnswer = updated.some(b => b.bind === 'answer');
+  if (!hasAnswer) {
+    updated.push({
       id: 'ans_pill_injected',
       bind: 'answer',
       x: 760,
@@ -175,6 +176,28 @@ export const ensureAnswerBox = (boxes: SlideTextBox[], config: DeckConfig): Slid
       fontFamily: theme.fonts.bodyFont || 'sans-serif',
       shape: 'pill',
       bg: theme.isLight ? 'rgba(209,250,229,0.95)' : 'rgba(16,185,129,0.25)',
-    } as SlideTextBox
-  ];
+    } as SlideTextBox);
+  }
+
+  const hasExplanation = updated.some(b => b.bind === 'explanation');
+  if (!hasExplanation) {
+    updated.push({
+      id: 'exp_card_injected',
+      bind: 'explanation',
+      x: 40,
+      y: 840,
+      w: 1840,
+      fontSize: 20,
+      color: theme.isLight ? '#064e3b' : '#ecfdf5',
+      align: 'left',
+      bold: false,
+      fontFamily: theme.fonts.bodyFont || 'sans-serif',
+      shape: 'card',
+      bg: theme.isLight ? 'rgba(209,250,229,0.95)' : 'rgba(16,185,129,0.14)',
+    } as SlideTextBox);
+  }
+
+  return updated;
 };
+
+export const ensureAnswerBox = ensureRequiredBoxes;

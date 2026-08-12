@@ -103,7 +103,7 @@ export default function App() {
   const [selectedTextBoxIds, setSelectedTextBoxIds] = useState<string[]>([]);
   const selectedTextBoxId = selectedTextBoxIds[0] ?? null;
   const setSelectedTextBoxId = (id: string | null) => setSelectedTextBoxIds(id ? [id] : []);
-  const [textBoxScope, setTextBoxScope] = useState<'global' | 'slide'>('slide');
+  const [textBoxScope, setTextBoxScope] = useState<'global' | 'slide'>('global');
 
   // Question shared from the Question Bank → preselected in Social Post Generator
   const [socialTargetId, setSocialTargetId] = useState<string | null>(null);
@@ -754,7 +754,7 @@ export default function App() {
     setIsDeckSettingsOpen(false);
     setActiveTab('preview');
     setIsTextBoxEditMode(true);
-    setTextBoxScope('slide');
+    setTextBoxScope('global');
     setSelectedTextBoxId(null);
   };
 
@@ -818,7 +818,7 @@ export default function App() {
     }
     setConfig(prev => ({ ...prev, ...cc }));
     setItems(prev => prev.map(it => (it.customConfig ? { ...it, customConfig: undefined } : it)));
-    setTextBoxScope('slide');
+    setTextBoxScope('global');
     setSelectedTextBoxId(null);
   };
 
