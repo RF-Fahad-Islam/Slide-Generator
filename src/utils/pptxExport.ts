@@ -235,7 +235,7 @@ export const exportDeckToPPTX = async (
           },
           line: { color: 'FFFFFF', transparency: 92, width: 0.75 },
           rectRadius: box.shape === 'pill' ? 0.5 : box.shape === 'card' ? 0.16 : 0.16,
-          shadow: { type: 'outer', opacity: 0.2, blur: 8, angle: 90, distance: 4 },
+          shadow: { type: 'outer', opacity: 0.2, blur: 8, angle: 90, offset: 4 },
         });
       }
       const iconUrl = iconToDataUrl(box.iconName || 'GraduationCap', box.color || '#fbbf24', box.fontSize);
@@ -335,7 +335,7 @@ export const exportDeckToPPTX = async (
         fill: { color: fillColor },
         line: { color: '10B981', transparency: 60, width: 1 },
         rectRadius: 0.12,
-        shadow: { type: 'outer', opacity: 0.2, blur: 8, angle: 90, distance: 4 },
+        shadow: { type: 'outer', opacity: 0.2, blur: 8, angle: 90, offset: 4 },
       });
 
       const iconUrl = iconToDataUrl('Sparkles', '34D399', 22);
@@ -465,7 +465,7 @@ export const exportDeckToPPTX = async (
           fill: { color: '451A03', transparency: 30 },
           line: { color: 'F59E0B', transparency: 50, width: 1 },
           rectRadius: 0.5,
-          shadow: { type: 'outer', opacity: 0.15, blur: 8, angle: 90, distance: 3 },
+          shadow: { type: 'outer', opacity: 0.15, blur: 8, angle: 90, offset: 3 },
         });
         const iconUrl = iconToDataUrl('Award', '#fbbf24', iconSize);
         if (iconUrl) {
@@ -691,7 +691,7 @@ export const exportDeckToPPTX = async (
         rectRadius: isPill ? 0.5 : box.shape === 'card' ? 0.09 : 0,
         shadow:
           isPill || box.shape === 'card'
-            ? { type: 'outer', opacity: isPill ? 0.12 : 0.15, blur: 9, angle: 90, distance: 3 }
+            ? { type: 'outer', opacity: isPill ? 0.12 : 0.15, blur: 9, angle: 90, offset: 3 }
             : undefined,
       });
     }
