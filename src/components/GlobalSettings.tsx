@@ -296,79 +296,7 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
         </div>
       </div>
 
-      {/* SECTION 5: CHANNEL FOOTER TAG & INSTRUCTOR WATERMARK */}
-      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
-        isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
-      }`}>
-        <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-          <User className="w-4 h-4" /> 5. Channel Footer Tag & Instructor Watermark
-        </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs sm:text-sm">
-          <div className="space-y-1.5">
-            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-              Default Footer Tag
-            </label>
-            <input
-              type="text"
-              value={defaults.footerTag}
-              onChange={(e) => update({ footerTag: e.target.value })}
-              placeholder="e.g. BIOMISSION"
-              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-              Default Instructor Handle / Channel
-            </label>
-            <input
-              type="text"
-              value={defaults.watermarkHandle}
-              onChange={(e) => update({ watermarkHandle: e.target.value })}
-              placeholder="e.g. Hasnat Shuvro"
-              className={`w-full border-2 rounded-2xl px-4 py-3 font-bold text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
-                isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
-            />
-          </div>
-
-          <div className="sm:col-span-2 space-y-1.5">
-            <label className={`font-black block ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-              Default Instructor Avatar URL / Data URL
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={defaults.watermarkAvatar}
-                onChange={(e) => update({ watermarkAvatar: e.target.value })}
-                placeholder="https://example.com/avatar.png"
-                className={`w-full border-2 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition-all ${
-                  isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-                }`}
-              />
-              <label className="px-4 py-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-sm font-bold cursor-pointer shrink-0 flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                Upload
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      const r = new FileReader();
-                      r.onload = (evt) => evt.target?.result && update({ watermarkAvatar: evt.target.result as string });
-                      r.readAsDataURL(e.target.files[0]);
-                    }
-                  }}
-                  className="hidden"
-                />
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* SECTION 6: DEFAULT ANSWER REVEAL BEHAVIOR — opens the same Answer Mode &
           Reveal Settings modal used in Deck Settings, so both surfaces share one
