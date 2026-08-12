@@ -243,6 +243,7 @@ export interface SlideTextBox {
   align: 'left' | 'center' | 'right';
   bold: boolean;
   fontFamily?: string; // per-box font override (falls back to deck config.fontFamily)
+  isCustomFontOverride?: boolean; // true if explicitly set via box editor panel
   // Pre-designed element extras
   shape?: SlideBoxShape; // container style: pill / card / banner (default 'plain' = no container)
   bg?: string; // container fill color for pill/card/banner shapes

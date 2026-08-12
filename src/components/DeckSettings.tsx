@@ -438,16 +438,33 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
 
   const isBannerMode = config.headerType === 'banner' || config.useHeaderBanner;
 
+  const isFontField = (field: string) =>
+    field === 'fontFamily' || field === 'headerFont' || field === 'bodyFont' || field === 'optionsFont' || field === 'footerFont';
+
+  const cleanBoxesFontFamily = (boxes?: any[]) => {
+    if (!boxes) return boxes;
+    return boxes.map(b => b.isCustomFontOverride ? b : { ...b, fontFamily: undefined });
+  };
+
   const handleChange = (field: keyof DeckConfig, value: any) => {
     if (settingsScope === 'slide') {
+      const current = activeSlideConfig || {};
+      const updatedBoxes = isFontField(field as string) && current.slideTextBoxes
+        ? cleanBoxesFontFamily(current.slideTextBoxes)
+        : current.slideTextBoxes;
       onUpdateActiveSlideConfig?.({
-        ...(activeSlideConfig || {}),
+        ...current,
         [field]: value,
+        ...(updatedBoxes ? { slideTextBoxes: updatedBoxes } : {}),
       });
     } else {
+      const updatedBoxes = isFontField(field as string) && config.slideTextBoxes
+        ? cleanBoxesFontFamily(config.slideTextBoxes)
+        : config.slideTextBoxes;
       onUpdateConfig({
         ...config,
         [field]: value,
+        ...(updatedBoxes ? { slideTextBoxes: updatedBoxes } : {}),
       });
     }
   };
@@ -456,15 +473,25 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   // are dropped (two sequential handleChange calls both spread the same stale
   // config and the second would overwrite the first).
   const handlePatch = (patch: Partial<DeckConfig>) => {
+    const hasFontChange = Object.keys(patch).some(isFontField);
     if (settingsScope === 'slide') {
+      const current = activeSlideConfig || {};
+      const updatedBoxes = hasFontChange && current.slideTextBoxes
+        ? cleanBoxesFontFamily(current.slideTextBoxes)
+        : current.slideTextBoxes;
       onUpdateActiveSlideConfig?.({
-        ...(activeSlideConfig || {}),
+        ...current,
         ...patch,
+        ...(updatedBoxes ? { slideTextBoxes: updatedBoxes } : {}),
       });
     } else {
+      const updatedBoxes = hasFontChange && config.slideTextBoxes
+        ? cleanBoxesFontFamily(config.slideTextBoxes)
+        : config.slideTextBoxes;
       onUpdateConfig({
         ...config,
         ...patch,
+        ...(updatedBoxes ? { slideTextBoxes: updatedBoxes } : {}),
       });
     }
   };

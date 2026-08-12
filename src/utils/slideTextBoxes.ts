@@ -56,25 +56,35 @@ export const checkIsOptionCorrect = (opt: { key: string; isCorrect?: boolean }, 
   return false;
 };
 
-// Resolve the effective font for a text box — per-box override first, then the
-// deck's role font for that bind (set in Deck Settings), then the deck base font.
+// Resolve the effective font for a text box — checks role fonts set in Deck Settings
+// (header, body, options, footer) unless the box carries an explicit custom override.
 export const getBoxFontFamily = (box: SlideTextBox, config: DeckConfig): string => {
-  if (box.fontFamily) return box.fontFamily;
-  const def = config.fontFamily || "'Kalpurush', serif";
+  const theme = resolveTheme(config);
+  let roleFont = theme.fonts.bodyFont;
   switch (box.bind) {
     case 'headerTitle':
     case 'brand':
     case 'badgeTag':
-      return config.headerFont || def;
+    case 'slideCounter':
+      roleFont = theme.fonts.headerFont;
+      break;
     case 'options':
     case 'answer':
-      return config.optionsFont || def;
+      roleFont = theme.fonts.optionsFont;
+      break;
     case 'footerTag':
     case 'watermark':
-      return config.footerFont || def;
+      roleFont = theme.fonts.footerFont;
+      break;
     default:
-      return config.bodyFont || def;
+      roleFont = theme.fonts.bodyFont;
+      break;
   }
+
+  if (box.fontFamily && box.isCustomFontOverride) {
+    return box.fontFamily;
+  }
+  return roleFont;
 };
 
 export const defaultSlideTextBoxes = (): SlideTextBox[] => [

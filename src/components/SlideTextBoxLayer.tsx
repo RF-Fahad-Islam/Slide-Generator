@@ -258,7 +258,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     return (
                       <div
                         key={opt.key}
-                        className="flex items-center gap-4 px-5 py-4 rounded-2xl shadow-xl backdrop-blur-md"
+                        className="flex items-center gap-4 px-5 py-4 rounded-2xl shadow-xl backdrop-blur-md slide-box-option-bg"
                         style={containerStyle}
                       >
                         <div className={`w-11 h-11 rounded-2xl font-black text-xl flex items-center justify-center shrink-0 shadow-md ${
@@ -307,7 +307,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           return (
             <div
               key={box.id}
-              className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`}
+              className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'} slide-box-card-bg`}
               style={{ ...base, ...cardStyle, height: box.h || undefined }}
             >
               {(item.romanItems || []).map((stmt, i) => {
@@ -384,7 +384,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           return (
             <div
               key={box.id}
-              className="absolute p-6 rounded-3xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-100 shadow-2xl backdrop-blur-md"
+              className="absolute p-6 rounded-3xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-100 shadow-2xl backdrop-blur-md slide-box-card-bg"
               style={{
                 left: box.x,
                 top: box.y,
@@ -447,7 +447,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           return (
             <div key={box.id} className="absolute flex justify-end" style={{ left: box.x, top: box.y, width: box.w }}>
               <div
-                className="inline-flex items-center px-6 py-2.5 rounded-full whitespace-pre-wrap leading-snug border border-amber-500/40 text-amber-300 font-extrabold shadow-lg backdrop-blur-md"
+                className="inline-flex items-center px-6 py-2.5 rounded-full whitespace-pre-wrap leading-snug border border-amber-500/40 text-amber-300 font-extrabold shadow-lg backdrop-blur-md slide-box-card-bg"
                 style={{ ...textBase, textAlign: box.align || 'center', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' }}
               >
                 <MathText text={content} />
@@ -462,7 +462,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               key={box.id}
               className={`absolute px-7 py-5 whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'} ${
                 box.shape === 'card' ? 'rounded-2xl' : 'rounded-3xl'
-              }`}
+              } slide-box-card-bg`}
               style={{ ...base, ...textBase, height: boxHeight || undefined, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
             >
               <MathText text={content} />

@@ -98,7 +98,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       color: textColor,
       align: 'left',
       bold: true,
-      fontFamily: headerFont,
     });
     boxes.push({
       id: bid('hdr_title'),
@@ -110,7 +109,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       color: accent,
       align: 'left',
       bold: false,
-      fontFamily: headerFont,
     });
     if (config.badgeTag || config.chapterName) {
       boxes.push({
@@ -123,7 +121,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
         color: isLight ? '#78350f' : '#fcd34d',
         align: 'right',
         bold: true,
-        fontFamily: headerFont,
         shape: 'pill',
         bg: isLight ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.22)',
       });
@@ -139,7 +136,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       color: '#fcd34d',
       align: 'center',
       bold: true,
-      fontFamily: headerFont,
       shape: 'card',
       bg: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(15,23,42,0.9)',
     });
@@ -167,7 +163,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: textColor,
     align: 'left',
     bold: false,
-    fontFamily: bodyFont,
     shape: 'card',
     bg: hexToRgba(hc.cardBgHex, isLight ? 0.95 : 0.9),
   });
@@ -182,7 +177,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: isLight ? '#ffffff' : '#0f172a',
     align: 'center',
     bold: true,
-    fontFamily: bodyFont,
     shape: 'card',
     bg: accent,
   });
@@ -196,7 +190,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: accent,
     align: 'right',
     bold: true,
-    fontFamily: bodyFont,
   });
   boxes.push({
     id: bid('mdl_stem'),
@@ -208,7 +201,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: textColor,
     align: 'left',
     bold: true,
-    fontFamily: bodyFont,
   });
   boxes.push({
     id: bid('mdl_roman'),
@@ -220,7 +212,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: textColor,
     align: 'left',
     bold: false,
-    fontFamily: bodyFont,
     shape: 'card',
     bg: isLight ? 'rgba(15,23,42,0.06)' : 'rgba(0,0,0,0.25)',
   });
@@ -234,7 +225,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: accent,
     align: 'left',
     bold: true,
-    fontFamily: bodyFont,
   });
 
   // -------------------------------------------------------------------------
@@ -250,7 +240,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: textColor,
     align: 'left',
     bold: false,
-    fontFamily: optionsFont,
     shape: 'card',
     bg: hexToRgba(hc.optionBgHex, isLight ? 0.9 : 0.55),
   });
@@ -268,7 +257,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: isLight ? '#065f46' : '#ecfdf5',
     align: 'center',
     bold: true,
-    fontFamily: bodyFont,
     shape: 'pill',
     bg: isLight ? 'rgba(209,250,229,0.95)' : 'rgba(16,185,129,0.25)',
   });
@@ -286,7 +274,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
     color: textColor,
     align: 'left',
     bold: false,
-    fontFamily: bodyFont,
     shape: 'card',
     bg: isLight ? 'rgba(240,253,244,0.95)' : 'rgba(16,185,129,0.15)',
   });
@@ -320,7 +307,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       color: textColor,
       align: 'left',
       bold: true,
-      fontFamily: footerFont,
     });
     boxes.push({
       id: bid('ftr_tag'),
@@ -332,7 +318,6 @@ export const templateToTextBoxes = (config: DeckConfig): SlideTextBox[] => {
       color: accent,
       align: 'right',
       bold: true,
-      fontFamily: footerFont,
     });
   }
 

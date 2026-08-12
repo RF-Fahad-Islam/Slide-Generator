@@ -957,7 +957,10 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                 </label>
                 <select
                   value={selectedBox.fontFamily || ''}
-                  onChange={(e) => onUpdateBox(selectedBox.id, { fontFamily: e.target.value || undefined })}
+                  onChange={(e) => onUpdateBox(selectedBox.id, {
+                    fontFamily: e.target.value || undefined,
+                    isCustomFontOverride: !!e.target.value,
+                  })}
                   className={`w-full border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-amber-500 ${
                     isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
                   }`}

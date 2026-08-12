@@ -48,8 +48,8 @@ describe('themeResolver', () => {
     const overrideConfig: DeckConfig = { ...baseConfig, accentColorCustom: '#ff0055' };
     const theme = resolveTheme(overrideConfig);
     expect(theme.colors.accentColorHex).toBe('FF0055');
-    expect(theme.colors.accentColor).toBe('#FF0055');
-    expect(theme.cssVariables['--brand-accent']).toBe('#FF0055');
+    expect(theme.colors.accentColor).toBe('#ff0055');
+    expect(theme.cssVariables['--brand-accent']).toBe('#ff0055');
   });
 
   it('resolves customTheme object properly', () => {
@@ -74,8 +74,8 @@ describe('themeResolver', () => {
     };
     const theme = resolveTheme(customConfig);
     expect(theme.colors.bgHex).toBe('121212');
-    expect(theme.colors.titleColor).toBe('#00FFCC');
-    expect(theme.colors.accentColor).toBe('#00FFCC');
+    expect(theme.colors.titleColor).toBe('#00ffcc');
+    expect(theme.colors.accentColor).toBe('#00ffcc');
   });
 
   it('resolves background presets and custom font overrides', () => {
