@@ -3,10 +3,14 @@
 // pptxgenjs has no font-embedding API, so after the presentation is generated
 // as a Blob we post-process the OOXML package with JSZip:
 //   - add the actual TTF binaries under ppt/fonts/fntdataN.ttf
-//   - write ppt/fontTable.xml declaring each family with <p:embedRegular/> /
-//     <p:embedBold/> + relationships to the binaries
-//   - wire it up in ppt/_rels/fontTable.xml.rels, ppt/_rels/presentation.xml.rels,
-//     ppt/presentation.xml (<p:embeddedFontLst/>) and [Content_Types].xml
+//   - add one font <Relationship Id="rIdFont_N" .../> per face to
+//     ppt/_rels/presentation.xml.rels — the rIdFont_ prefix keeps them unique
+//     against pptxgenjs's own rIdN ids in the same rels part
+//   - insert <p:embeddedFontLst> into ppt/presentation.xml directly after
+//     <p:notesSz/> (before <p:defaultTextStyle/> per PresentationML XSD order),
+//     with one <p:embeddedFont> per family: <p:font typeface="..."/> plus
+//     <p:regular r:id="..."/> / <p:bold r:id="..."/> referencing those rels
+//   - declare the .ttf extension in [Content_Types].xml
 //
 // PowerPoint then renders every run with the embedded font even on machines
 // that don't have the font installed, so the editable PPTX looks exactly like

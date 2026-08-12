@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DeckConfig, MCQItem, Workspace } from '../../types';
 import { EditableMCQCard } from './EditableMCQCard';
 import { CreateDeckFromApprovedModal } from './CreateDeckFromApprovedModal';
-import { CheckCircle2, Presentation, CheckCheck, X } from 'lucide-react';
+import { CheckCircle2, Presentation, Plus, CheckCheck, X } from 'lucide-react';
 
 interface ApprovedHistoryViewProps {
   workspace: Workspace;
@@ -10,6 +10,7 @@ interface ApprovedHistoryViewProps {
   onUpdateApprovedItem: (item: MCQItem) => void;
   onUnapprove: (itemId: string) => void;
   onCreateDeckFromApproved: (items: MCQItem[], overrides: Partial<DeckConfig>) => void;
+  onAddToActiveDeck: (items: MCQItem[]) => void;
 }
 
 export const ApprovedHistoryView: React.FC<ApprovedHistoryViewProps> = ({
@@ -18,6 +19,7 @@ export const ApprovedHistoryView: React.FC<ApprovedHistoryViewProps> = ({
   onUpdateApprovedItem,
   onUnapprove,
   onCreateDeckFromApproved,
+  onAddToActiveDeck,
 }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeckModalOpen, setIsDeckModalOpen] = useState(false);
@@ -47,7 +49,7 @@ export const ApprovedHistoryView: React.FC<ApprovedHistoryViewProps> = ({
             Step 3: Approved ({approvedCount})
           </h3>
           <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-            Select the cards you want in your deck, then create a presentation. Approved questions also auto-import into the Question Bank.
+            Select the cards you want, then add them to the current active deck or create a new presentation. Approved questions also auto-import into the Question Bank.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -64,6 +66,20 @@ export const ApprovedHistoryView: React.FC<ApprovedHistoryViewProps> = ({
               <span>{selectedCount === approvedCount ? 'Clear all' : 'Select all'}</span>
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => onAddToActiveDeck(selectedItems)}
+            disabled={selectedCount === 0}
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black shadow-lg transition-all cursor-pointer ${
+              selectedCount === 0
+                ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed'
+                : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/25'
+            }`}
+            title={selectedCount === 0 ? 'Check at least one approved card to add to the active deck' : 'Append the selected approved questions to the current active deck and open Slide Studio'}
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add to Active Deck ({selectedCount})</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsDeckModalOpen(true)}
