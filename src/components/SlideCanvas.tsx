@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 import { DeckConfig, MCQItem, getSourceTags, getEffectiveBadgeTag } from '../types';
 import { hasAnswerDisplayStyle } from '../utils/answerSlides';
 import { resolveTheme } from '../utils/themeResolver';
-import { formatSlideQNumber } from '../utils/slideTextBoxes';
+import { formatSlideQNumber, checkIsOptionCorrect } from '../utils/slideTextBoxes';
 import { SlideTextBoxLayer } from './SlideTextBoxLayer';
 import { MathText } from './MathText';
 import { Check, Award, BookOpen, User, Sparkles } from 'lucide-react';
@@ -163,12 +163,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     ? isAnswerVariant
     : (isAnswerVariant || effectiveConfig.showAnswerInSlide || isAnswerRevealMode);
 
-  const showAnswerHighlight = allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'highlight_option');
-  const showAnswerPill = allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'answer_pill');
+  const showAnswerHighlight = isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'highlight_option'));
+  const showAnswerPill = isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'answer_pill'));
   const showExplanation =
     forceShowExplanation !== undefined
       ? forceShowExplanation
-      : (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'explanation_card'));
+      : (isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'explanation_card')));
   const isClassMode = effectiveConfig.layoutMode === 'class_mode';
 
   const slideTextBoxes = effectiveConfig.slideTextBoxes || [];
@@ -455,7 +455,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             )}
 
             {item.options.map((opt, oIdx) => {
-              const isCorrect = showAnswerHighlight && (opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase());
+              const isCorrect = showAnswerHighlight && checkIsOptionCorrect(opt, item.answer, oIdx);
 
               return (
                 <div

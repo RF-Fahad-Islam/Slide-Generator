@@ -42,6 +42,8 @@ import {
   RotateCcw,
   X,
   CheckSquare,
+  Undo2,
+  Redo2,
   ChevronUp,
   ChevronDown,
   Type,
@@ -111,6 +113,10 @@ interface SlideTextBoxPanelProps {
   onMoveBoxes?: (updates: { id: string; x: number; y: number }[]) => void;
   onSelectBox: (id: string | null) => void;
   onSelectIds?: (ids: string[]) => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   onReset: () => void;
   onClearAll: () => void;
   onClose: () => void;
@@ -442,6 +448,10 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   onMoveBoxes,
   onSelectBox,
   onSelectIds,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
   onReset,
   onClearAll,
   onClose,
@@ -570,16 +580,48 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
-              isAppLight ? 'bg-slate-100 text-slate-500 hover:text-slate-900 border-slate-200' : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800'
-            }`}
-            title="Close editor and return to the question list"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={onUndo}
+              disabled={!canUndo}
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                canUndo
+                  ? isAppLight
+                    ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100 shadow-sm'
+                    : 'bg-slate-950 border-slate-800 text-slate-200 hover:text-white shadow-sm'
+                  : 'opacity-35 cursor-not-allowed border-transparent text-slate-500'
+              }`}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onRedo}
+              disabled={!canRedo}
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                canRedo
+                  ? isAppLight
+                    ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100 shadow-sm'
+                    : 'bg-slate-950 border-slate-800 text-slate-200 hover:text-white shadow-sm'
+                  : 'opacity-35 cursor-not-allowed border-transparent text-slate-500'
+              }`}
+              title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+                isAppLight ? 'bg-slate-100 text-slate-500 hover:text-slate-900 border-slate-200' : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800'
+              }`}
+              title="Close editor and return to the question list"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Multi-Selection Combined Actions Banner */}

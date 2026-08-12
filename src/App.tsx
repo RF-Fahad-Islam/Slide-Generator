@@ -232,7 +232,73 @@ export default function App() {
     }
   }, [isTextBoxEditMode, activeTextBoxes.length]);
 
-  const setTextBoxes = (updater: (boxes: SlideTextBox[]) => SlideTextBox[]) => {
+  // Text box history stacks (Undo / Redo)
+  const historyRef = useRef<{ past: SlideTextBox[][]; future: SlideTextBox[][] }>({ past: [], future: [] });
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const syncHistoryState = () => {
+    setCanUndo(historyRef.current.past.length > 0);
+    setCanRedo(historyRef.current.future.length > 0);
+  };
+
+  const pushTextBoxHistory = (currentBoxes: SlideTextBox[]) => {
+    historyRef.current.past.push(JSON.parse(JSON.stringify(currentBoxes)));
+    if (historyRef.current.past.length > 50) historyRef.current.past.shift();
+    historyRef.current.future = [];
+    syncHistoryState();
+  };
+
+  const handleUndo = () => {
+    if (historyRef.current.past.length === 0) return;
+    const prev = historyRef.current.past.pop()!;
+    historyRef.current.future.push(JSON.parse(JSON.stringify(activeTextBoxes)));
+    syncHistoryState();
+
+    if (textBoxScope === 'slide' && items[activeQuestionIndex]) {
+      const slideIdx = activeQuestionIndex;
+      setItems(prevItems => {
+        const updated = [...prevItems];
+        const cur = updated[slideIdx];
+        if (!cur) return prevItems;
+        updated[slideIdx] = {
+          ...cur,
+          customConfig: { ...(cur.customConfig || {}), slideTextBoxes: prev },
+        };
+        return updated;
+      });
+    } else {
+      setConfig(prevConfig => ({ ...prevConfig, slideTextBoxes: prev }));
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyRef.current.future.length === 0) return;
+    const next = historyRef.current.future.pop()!;
+    historyRef.current.past.push(JSON.parse(JSON.stringify(activeTextBoxes)));
+    syncHistoryState();
+
+    if (textBoxScope === 'slide' && items[activeQuestionIndex]) {
+      const slideIdx = activeQuestionIndex;
+      setItems(prevItems => {
+        const updated = [...prevItems];
+        const cur = updated[slideIdx];
+        if (!cur) return prevItems;
+        updated[slideIdx] = {
+          ...cur,
+          customConfig: { ...(cur.customConfig || {}), slideTextBoxes: next },
+        };
+        return updated;
+      });
+    } else {
+      setConfig(prevConfig => ({ ...prevConfig, slideTextBoxes: next }));
+    }
+  };
+
+  const setTextBoxes = (updater: (boxes: SlideTextBox[]) => SlideTextBox[], skipHistory = false) => {
+    if (!skipHistory) {
+      pushTextBoxHistory(activeTextBoxes);
+    }
     if (textBoxScope === 'slide' && items[activeQuestionIndex]) {
       const slideIdx = activeQuestionIndex;
       setItems(prev => {
@@ -250,6 +316,30 @@ export default function App() {
       setConfig(prev => ({ ...prev, slideTextBoxes: updater(prev.slideTextBoxes || []) }));
     }
   };
+
+  useEffect(() => {
+    if (!isTextBoxEditMode) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable)) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTextBoxEditMode, activeTextBoxes, textBoxScope, activeQuestionIndex]);
 
   const changeTextBoxScope = (scope: 'global' | 'slide') => {
     // Switching to slide scope snapshots the deck-wide boxes so the active slide
@@ -1532,6 +1622,10 @@ export default function App() {
                         onMoveBoxes={moveSlideBoxes}
                         onSelectBox={setSelectedTextBoxId}
                         onSelectIds={setSelectedTextBoxIds}
+                        onUndo={handleUndo}
+                        onRedo={handleRedo}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
                         onReset={resetSlideTextBoxes}
                         onClearAll={clearSlideTextBoxes}
                         onClose={() => setIsTextBoxEditMode(false)}

@@ -26,6 +26,34 @@ export const clamp = (v: number, min: number, max: number) => Math.min(max, Math
 export const SLIDE_W = 1920;
 export const SLIDE_H = 1080;
 
+export const checkIsOptionCorrect = (opt: { key: string; isCorrect?: boolean }, answer?: string, optIndex?: number): boolean => {
+  if (opt.isCorrect) return true;
+  if (!answer) return false;
+  const cleanAns = answer.trim().toLowerCase();
+  const cleanKey = opt.key.trim().toLowerCase();
+  if (cleanKey === cleanAns) return true;
+
+  const banglaKeys = ['ক', 'খ', 'গ', 'ঘ'];
+  const englishKeys = ['a', 'b', 'c', 'd'];
+  const numericKeys = ['1', '2', '3', '4'];
+
+  const ansIdxBangla = banglaKeys.indexOf(cleanAns);
+  const ansIdxEng = englishKeys.indexOf(cleanAns);
+  const ansIdxNum = numericKeys.indexOf(cleanAns);
+  const targetIdx = ansIdxBangla >= 0 ? ansIdxBangla : ansIdxEng >= 0 ? ansIdxEng : ansIdxNum >= 0 ? ansIdxNum : -1;
+
+  if (optIndex !== undefined && targetIdx >= 0 && optIndex === targetIdx) return true;
+
+  const keyIdxBangla = banglaKeys.indexOf(cleanKey);
+  const keyIdxEng = englishKeys.indexOf(cleanKey);
+  const keyIdxNum = numericKeys.indexOf(cleanKey);
+  const currentKeyIdx = keyIdxBangla >= 0 ? keyIdxBangla : keyIdxEng >= 0 ? keyIdxEng : keyIdxNum >= 0 ? keyIdxNum : -1;
+
+  if (targetIdx >= 0 && currentKeyIdx >= 0 && targetIdx === currentKeyIdx) return true;
+
+  return false;
+};
+
 // Resolve the effective font for a text box — per-box override first, then the
 // deck's role font for that bind (set in Deck Settings), then the deck base font.
 export const getBoxFontFamily = (box: SlideTextBox, config: DeckConfig): string => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { DeckConfig, MCQItem, SlideTextBox, getSourceTags } from '../types';
-import { getSlideBoxContent, getBoxFontFamily, formatSlideQNumber } from '../utils/slideTextBoxes';
+import { getSlideBoxContent, getBoxFontFamily, formatSlideQNumber, checkIsOptionCorrect } from '../utils/slideTextBoxes';
 import { getSlideIcon } from '../utils/slideElements';
 import { resolveTheme } from '../utils/themeResolver';
 import {
@@ -48,11 +48,12 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const romanBadgeBg = theme.colors.romanBadgeBg;
   const romanBadgeBorder = theme.colors.romanBadgeBorder;
 
-  // Granular display feature evaluation
+  // Granular display feature evaluation — on dedicated Answer Slides (isAnswerVariant = true),
+  // answer highlight, answer pill, and explanation card ALWAYS show.
   const isRevealActive = isAnswerVariant || showAnswerHighlight;
-  const showOptionHighlight = isRevealActive && hasAnswerDisplayStyle(config, 'highlight_option');
-  const showAnswerPill = isRevealActive && hasAnswerDisplayStyle(config, 'answer_pill');
-  const showExplanationCard = isRevealActive && hasAnswerDisplayStyle(config, 'explanation_card');
+  const showOptionHighlight = isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'highlight_option'));
+  const showAnswerPill = isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'answer_pill'));
+  const showExplanationCard = isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'explanation_card'));
 
   const cardBox = boxes.find(b => b.bind === 'free' && (b.shape === 'card' || b.shape === 'banner')) || boxes.find(b => b.bind === 'stem');
   const stemBox = boxes.find(b => b.bind === 'stem');
@@ -199,8 +200,8 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           return (
             <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={{ ...base, top: boxTop }}>
               <div className={gridClass}>
-                {item.options.map(opt => {
-                  const isCorrectOption = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
+                {item.options.map((opt, oIdx) => {
+                  const isCorrectOption = checkIsOptionCorrect(opt, item.answer, oIdx);
                   const highlight = showOptionHighlight && isCorrectOption;
                   const containerStyle: React.CSSProperties = highlight
                     ? {
