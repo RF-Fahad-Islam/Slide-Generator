@@ -47,6 +47,12 @@
 - [x] 2026-08-05 — Hybrid PPTX export with embedded KaTeX canvas snapshots & raw LaTeX in speaker notes (Decision D4/D5)
 
 ## Phase 3 — Editor Depth & Manual Mode
+- [x] 2026-08-12 — Slide-only text box edit scope default (`textBoxScope = 'slide'`) & layout preset promotion
+- [x] 2026-08-12 — Marquee rubberband drag selection & multi-item synchronized dragging
+- [x] 2026-08-12 — Combined multi-selection batch edits (font size, alignment, distribution, batch duplicate & delete)
+- [x] 2026-08-12 — Text box editing Undo/Redo history (`Ctrl+Z`, `Ctrl+Y`) & visual panel header buttons
+- [x] 2026-08-12 — Dedicated Answer Slide option highlighting & Bengali/English key matcher (`checkIsOptionCorrect`)
+- [x] 2026-08-12 — Universal text content override for all bound text boxes (`getSlideBoxContent` override & revert button)
 - [x] 2026-08-05 — `ManualEditor.tsx`: Full per-question form (standard, bohupodi statement, passage stem)
 - [x] 2026-08-05 — `src/utils/bulkParser.ts`: Bangla-aware regex bulk parser with sample decks
 - [x] 2026-08-05 — `src/utils/csvParser.ts`: CSV import & template generator
