@@ -4,6 +4,7 @@ import { Sigma } from 'lucide-react';
 import { MathText } from '../MathText';
 import { MATH_SNIPPET_CATEGORIES } from './mathSnippets';
 import { insertSnippetAtCursor } from '../../utils/cursorInsert';
+import { extractAllEquations } from '../../utils/equationAtCursor';
 
 interface MathHelperButtonProps {
   value: string;
@@ -93,6 +94,7 @@ export const MathHelperButton: React.FC<MathHelperButtonProps> = ({
   };
 
   const panelCls = isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty';
+  const equations = extractAllEquations(value);
 
   return (
     <>
@@ -123,17 +125,25 @@ export const MathHelperButton: React.FC<MathHelperButtonProps> = ({
           {/* Live preview */}
           <div>
             <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-              Live Preview
+              Live Preview (Equations Only)
             </div>
             <div
-              className={`min-h-[2.75rem] rounded-xl border px-3 py-2 text-sm overflow-x-auto ${
+              className={`min-h-[2.75rem] max-h-36 rounded-xl border px-3 py-2 text-sm overflow-y-auto ${
                 isAppLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-950 border-slate-800 text-white'
               }`}
             >
-              {value && value.trim() ? (
-                <MathText text={value} />
+              {equations.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  {equations.map((eq, idx) => (
+                    <div key={idx} className="py-0.5 border-b border-slate-700/20 last:border-0">
+                      <MathText text={eq.isBlock ? `$$${eq.rawMath}$$` : `$${eq.rawMath}$`} />
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <span className={isAppLight ? 'text-slate-400' : 'text-slate-600'}>Nothing typed yet</span>
+                <span className={isAppLight ? 'text-slate-400' : 'text-slate-600'}>
+                  {value && value.trim() ? 'No equations found in text' : 'Nothing typed yet'}
+                </span>
               )}
             </div>
           </div>

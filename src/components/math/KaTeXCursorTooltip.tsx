@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import katex from 'katex';
-import { Sigma } from 'lucide-react';
+import { Sigma, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { getEquationAtCursor, EquationAtCursor } from '../../utils/equationAtCursor';
+import { MATH_SNIPPET_CATEGORIES } from './mathSnippets';
+import { insertSnippetAtCursor } from '../../utils/cursorInsert';
 
 interface CaretPos {
   x: number;
@@ -18,7 +20,6 @@ function getCaretScreenCoordinates(el: HTMLInputElement | HTMLTextAreaElement): 
     const isTextArea = el.tagName === 'TEXTAREA';
     const computed = window.getComputedStyle(el);
 
-    // Reuse or create hidden mirror element
     let mirror = document.getElementById('katex-caret-mirror') as HTMLDivElement | null;
     if (!mirror) {
       mirror = document.createElement('div');
@@ -106,6 +107,8 @@ export const KaTeXCursorTooltip: React.FC = () => {
   const [equation, setEquation] = useState<EquationAtCursor | null>(null);
   const [caretPos, setCaretPos] = useState<CaretPos | null>(null);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(0);
 
   useEffect(() => {
     const updateTooltip = () => {
@@ -189,8 +192,8 @@ export const KaTeXCursorTooltip: React.FC = () => {
     if (!equation || !caretPos) return;
 
     // Approximate width and height of tooltip
-    const estimatedWidth = Math.min(320, window.innerWidth - 32);
-    const estimatedHeight = equation.isBlock ? 80 : 54;
+    const estimatedWidth = showToolbar ? Math.min(384, window.innerWidth - 32) : Math.min(320, window.innerWidth - 32);
+    const estimatedHeight = showToolbar ? 320 : (equation.isBlock ? 80 : 54);
 
     let left = caretPos.x - estimatedWidth / 2;
     left = Math.max(16, Math.min(window.innerWidth - estimatedWidth - 16, left));
@@ -206,7 +209,29 @@ export const KaTeXCursorTooltip: React.FC = () => {
       top: `${top}px`,
       zIndex: 9999,
     });
-  }, [equation, caretPos]);
+  }, [equation, caretPos, showToolbar]);
+
+  const handleInsertSnippet = (snippetLatex: string) => {
+    const activeEl = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+    if (!activeEl) return;
+
+    const result = insertSnippetAtCursor(activeEl, activeEl.value, snippetLatex);
+
+    const nativeSetter =
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set ||
+      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+
+    if (nativeSetter) {
+      nativeSetter.call(activeEl, result.newValue);
+    } else {
+      activeEl.value = result.newValue;
+    }
+
+    activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+    activeEl.focus();
+    activeEl.setSelectionRange(result.selStart, result.selEnd);
+  };
 
   if (!equation || !caretPos) return null;
 
@@ -225,20 +250,77 @@ export const KaTeXCursorTooltip: React.FC = () => {
   return createPortal(
     <div
       style={tooltipStyle}
-      className="pointer-events-none animate-in fade-in zoom-in-95 duration-100 ease-out"
+      className="pointer-events-auto animate-in fade-in zoom-in-95 duration-100 ease-out"
     >
-      <div className="bg-slate-950/95 border border-amber-500/50 shadow-2xl shadow-amber-500/10 backdrop-blur-md rounded-xl p-2.5 max-w-[90vw] w-max min-w-[140px] text-amber-200">
-        <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold tracking-wider text-amber-400 uppercase border-b border-amber-500/20 pb-1 select-none">
-          <Sigma className="w-3 h-3 text-amber-400 shrink-0" />
-          <span>KaTeX Equation Preview</span>
+      <div className="bg-slate-950/95 border border-amber-500/50 shadow-2xl shadow-amber-500/10 backdrop-blur-md rounded-xl p-3 max-w-[92vw] w-max min-w-[240px] text-amber-200 space-y-2">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 text-[10px] font-bold tracking-wider text-amber-400 uppercase border-b border-amber-500/20 pb-1.5 select-none">
+          <div className="flex items-center gap-1.5">
+            <Sigma className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>KaTeX Equation Preview</span>
+          </div>
+
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setShowToolbar((v) => !v)}
+            className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950 transition-all flex items-center gap-1 cursor-pointer"
+            title="Open Math Snippets Toolbar at Cursor"
+          >
+            <Sparkles className="w-3 h-3" />
+            <span>{showToolbar ? 'Hide Toolbar' : 'Math Toolbar'}</span>
+            {showToolbar ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
         </div>
-        <div className="min-h-[1.5rem] flex items-center justify-center overflow-x-auto px-1 py-0.5 text-sm">
+
+        {/* Equation Preview */}
+        <div className="min-h-[1.5rem] max-h-24 flex items-center justify-center overflow-x-auto px-1 py-0.5 text-sm">
           {!renderError ? (
             <span dangerouslySetInnerHTML={{ __html: katexHtml }} />
           ) : (
             <span className="font-mono text-amber-400 text-xs">{equation.rawMath}</span>
           )}
         </div>
+
+        {/* Inline Math Toolbar */}
+        {showToolbar && (
+          <div className="pt-2 border-t border-slate-800 space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+            {/* Categories */}
+            <div className="flex flex-wrap gap-1">
+              {MATH_SNIPPET_CATEGORIES.map((cat, idx) => (
+                <button
+                  key={cat.name}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setActiveCategory(idx)}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
+                    activeCategory === idx
+                      ? 'bg-amber-500/30 border-amber-400 text-amber-300'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-amber-300'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Snippet Grid */}
+            <div className="grid grid-cols-3 gap-1 max-h-44 overflow-y-auto pr-0.5">
+              {MATH_SNIPPET_CATEGORIES[activeCategory].snippets.map((snip) => (
+                <button
+                  key={snip.label}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleInsertSnippet(snip.latex)}
+                  title={snip.latex}
+                  className="px-1.5 py-1 rounded text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-300 text-left truncate transition-all cursor-pointer"
+                >
+                  {snip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>,
     document.body
