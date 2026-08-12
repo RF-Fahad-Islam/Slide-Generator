@@ -1,55 +1,54 @@
-# Memory — Export fidelity: self-hosted fonts, glass badges, PPTX font embedding
+# Memory — Answer-reveal fix, PPTX glass parity, math-helper wrap-up
 
 Last updated: 2026-08-12
 
 ## What was built
 
-All committed on `main`. Latest HEAD = `089acc2` (includes `8697b6d`). Working tree has a parallel feature's uncommitted WIP (see Current state).
+All committed on `main`. Latest HEAD = `603e53c`. Working tree clean.
 
-### 1. Self-hosted fonts + deterministic font embedding in ALL raster exports (PNG/PDF/ZIP/PPTX rasters)
-- Removed every external font CDN `<link>` from `index.html` (fonts.maateen.me, Google Fonts, KaTeX CDN). `src/fonts.css` + `public/fonts/` is now the single source of truth.
-- Added self-hosted `FiraCode-Regular.ttf` (+ `@font-face` in fonts.css); replaced 0-byte Noto Sans Bengali TTFs; deleted broken files. Added real `NotoSansBengali-Regular.ttf` (463KB `[wdth,wght]` variable TTF — needed because PPTX can't embed woff2).
-- New `src/utils/fontEmbed.ts`: `getFontEmbedCSS()` — memoized CSS string declaring every self-hosted face as a base64 data URI. Passed as the explicit `fontEmbedCSS` option to EVERY `toPng` call (ExportModal PNG/ZIP/PDF + PPTX background/full-slide/math rasters, BatchExportModal, QuestionPaperPage, DeckQuestionPaperModal, QuestionBankPdfModal, SocialPostGenerator fallback). Bypasses html-to-image's stylesheet-scan path which silently dropped cross-origin fonts.
-- Verified headless-Chrome: exported PNG glyph bbox 2023px vs DOM Kalpurush 2026.6px (serif would be 2274.8px).
+### 1. Explanation card now reveals from the Answer Mode modal toggle
+- **Reveal-gating bug fixed**: `allowRevealOnCurrentSlide` in `src/components/SlideCanvas.tsx` and `resolveSlideAnswerFlags` in `src/utils/answerSlides.ts` only honored `showAnswerInSlide`, so enabling ONLY the "Explanation Card" feature in `AnswerModeModal` (saved `showAnswerInSlide:false, showExplanationInSlide:true`) left the gate closed and the explanation box never appeared. The gate now activates on `showAnswerInSlide || showExplanationInSlide` — any enabled feature reveals it.
+- `src/components/SlideTextBoxLayer.tsx` gained an optional `showExplanation?: boolean` prop (resolved value passed by `SlideCanvas` and ExportModal's math overlay) so the boxed-design explanation card matches the preview even when only the explanation toggle is on.
+- Answer pill & explanation remain plain editable text boxes (`ans_pill` / `mdl_explanation`) — draggable/positioned in the text-box edit mode. A top/bottom position feature was added then **fully reverted** per user request; no leftover references anywhere.
 
-### 2. Glass badges exact in the editable PPTX (`src/utils/pptxExport.ts`)
-- New `cssRgbHex()`: rgba fills export as RAW un-blended rgb + pptxgenjs `transparency` (fixes double-darkened pills from `cssColorToHex` pre-blend + transparency). Applied to generic pill/card path + icon containers.
-- `bind === 'source'` now exports as amber glass chips (451A03 @30% transparency, F59E0B border @50%, Award SVG icon, FCD34D text, right-aligned wrapping) instead of plain joined text.
-- Pill height = leading-snug (fontSize*1.375) + 20px; shadows opacity 0.12/0.15; option-pill widths use per-glyph `estCharW` (Bangla ~0.62em vs latin ~0.5em).
+### 2. PPTX native-export glass parity (`src/utils/pptxExport.ts`)
+- Added the mandatory-element visibility-toggle gates (`brand`/`slideCounter`/`questionNumber`/`watermark`) mirroring `SlideTextBoxLayer` — previously a glass element hidden in the preview (e.g. the page-counter card with `showPagingCounter:false`) still leaked into the export.
+- `ans_pill` answer box exports as TRUE glass (raw rgb via `cssRgbHex` + pptxgenjs `transparency`; was a solid composited `cssColorToHex` fill) + emerald border + soft shadow.
+- Highlighted correct options get an amber glow `outer` shadow (`color: optionSelectedBorder`) matching the preview's `0 10px 25px rgba(245,158,11,0.2)`.
+- Non-highlighted option cards keep their translucent `box.bg` glass.
+- Generic glass pills (badgeTag etc.) export the DOM's amber `border-amber-500/40` instead of a faint white line.
+- New shadows use `shadow.offset` (correct pptxgenjs property).
 
-### 3. Editable PPTX font embedding — PowerPoint "Embed fonts" (`src/utils/pptxFontEmbed.ts`)
-- `getUsedFontFamilies(config, items)`: scans deck role fonts (default/header/body/options/footer via `resolveTheme`) + every text box's resolved font (`getBoxFontFamily`), across deck + per-slide `customConfig`, returning only families with a self-hosted TTF.
-- `embedFontsInPptx(data, families)`: post-processes the generated .pptx with JSZip — adds TTF binaries (`ppt/fonts/fntdataN.ttf`), writes `ppt/fontTable.xml` (`<p:font typeface=...><p:embedRegular/embedBold r:id=.../>`), `ppt/_rels/fontTable.xml.rels`, wires `ppt/_rels/presentation.xml.rels` + `<p:embeddedFontLst r:id=.../>` into `ppt/presentation.xml` (after `notesSz`, schema order) + `[Content_Types].xml`. Accepts `Blob | ArrayBuffer | Uint8Array` (JSZip can't load a Node Blob).
-- `exportDeckToPPTX` gained `embedFonts = true` param — writes blob (`pptx.write({outputType:'blob'})`), embeds, `saveAs`.
-- ExportModal: "Embed fonts" checkbox (default ON) beside "Exact slide images", applied to PPTX + Google Slides. BatchExportModal embeds automatically (default).
-- Verified end-to-end in headless Chrome (captured real blob ~917KB: font binaries + fontTable.xml + embeddedFontLst + rels + content types + Bangla with `a:cs typeface="Kalpurush"`).
+### 3. Math-helper wrap-up (parallel feature, completed/committed)
+- `9355c35` (pre-session): LaTeX math helper popover feature.
+- `be8aae2`: `MathHelperButton.tsx` popover now rendered via `createPortal(... , document.body)` so it escapes clipping/overflow containers.
 
 ## Decisions made
 
-- PPTX font strategy changed from reference-only to **embedding** (user's decision): "Embed fonts" checkbox default ON, embed only deck-used families, applies to PPTX + Google Slides, batch always embeds.
-- PNG/PDF/ZIP: self-hosted fonts + explicit `fontEmbedCSS` data-URI bundle (deterministic, offline-capable).
-- Glass badges: fixed the NATIVE PPTX approximation (raw rgb + true transparency); NOT rasterized as images (keeps editability).
-- Files for export logic kept in `src/utils/` (pure browser logic), following existing layout.
+- **Reveal gate source of truth**: `resolveSlideAnswerFlags` (answerSlides.ts) is the single source used by SlideCanvas DOM, ExportModal math overlay, and pptx native layers — no drift between preview and export.
+- Answer/explanation placement is owned by the box editor (drag `ans_pill`/`mdl_explanation` boxes), NOT by the Answer Mode modal.
+- Native PPTX glass = raw rgb + true transparency (keeps shapes editable); not rasterized to images.
 
 ## Problems solved
 
-- html-to-image silently dropped cross-origin CDN fonts → removed CDNs + explicit `fontEmbedCSS` (its `fontEmbedCSS` option is used verbatim, verified in source).
-- Glass badge double-blend: `cssColorToHex` pre-blends rgba over bg AND `cssFillTransparency` added transparency → double-dark; fixed with `cssRgbHex` (raw rgb + alpha).
-- pptxgenjs has NO font-embedding API → JSZip OOXML post-processing (fontTable.xml + binaries + embeddedFontLst + rels + content types).
-- `fontEmbedCSS` base64 building: chunked `String.fromCharCode.apply` to avoid stack overflow on multi-MB fonts.
-- Headless-Chrome download capture is unreliable → verified by hooking `URL.createObjectURL` in CDP to capture the exact Blob.
+- Explanation card invisible when only the explanation toggle was enabled (gate ignored `showExplanationInSlide`).
+- Hidden glass elements (page counter, question number, brand, watermark) leaking into PPTX because the native export was missing the `SlideTextBoxLayer` visibility gates.
+- `ans_pill` exported as a solid composite instead of the preview's translucent glass.
+- **pptxgenjs reads `shadow.offset`, NOT `shadow.distance`** — older shadow code throughout `pptxExport.ts` still uses `distance` (silently ignored, renders at offset 4). New code uses `offset`.
 
 ## Current state
 
-- `main` = `089acc2`, export-fidelity work fully committed + verified (lint `tsc --noEmit` + `vite build` green).
-- **Uncommitted parallel work (NOT mine):** a Math-helper LaTeX-snippet feature is WIP on branch `feat/math-latex-helper` — modified `EditQuestionModal.tsx`, `ManualEditor.tsx`, `SlideTextBoxPanel.tsx`, `workspaces/EditableMCQCard.tsx`; new `src/components/math/` (`MathHelperButton.tsx`, `mathSnippets.ts`) + `src/utils/cursorInsert.ts`. A parallel process owns it; leave untouched. The branch HEAD is `089acc2` (same as main), so future commits apply cleanly.
-- Deleted merged branch `feat/export-font-fidelity`.
+- `main` = `603e53c`, clean working tree, `tsc --noEmit` + `vite build` green.
+- `feat/math-latex-helper` verified merged into `main` ("Already up to date").
+- `main` is **6 commits ahead of `origin/main`** (`d3e99eb`..`603e53c`) and NOT pushed.
+- Deleted/merged branches: `feat/export-font-fidelity` was deleted earlier; `feat/math-latex-helper` fully merged.
 
 ## Next session starts with
 
-- The Math-helper feature is the active in-progress work on `feat/math-latex-helper`. Check `git status` / `git branch --show-current` before touching anything; that work may need committing/merging/review.
-- If continuing export work: consider (minor) subsetting embedded fonts to shrink PPTX, and whether "Embed fonts" should be skipped in Exact-slide-images mode.
+- Decide whether to `git push` `main` (6 commits ahead of `origin/main`).
+- Verify the PPTX glass parity visually: export a deck (native editable mode) with an explanation-only reveal config + an answer slide, and compare against the preview — especially badgeTag pill, answer pill, and highlighted-option glow.
+- Minor follow-up: replace the older `shadow.distance` usages in `pptxExport.ts` with `shadow.offset` for correct offsets.
 
 ## Open questions
 
-- None blocking. Minor follow-ups: font subsetting for smaller PPTX files; verify Noto Sans Bengali variable-font embedding renders in older PowerPoint.
+- None blocking. Minor: font subsetting to shrink embedded-font PPTX size (from earlier export session); whether older shadow `distance`→`offset` migration is worth doing.

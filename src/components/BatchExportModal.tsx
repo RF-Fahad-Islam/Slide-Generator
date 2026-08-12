@@ -7,6 +7,7 @@ import { SlideCanvas } from './SlideCanvas';
 import { toPng } from 'html-to-image';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import { X, Download, Check, RefreshCw, CheckCircle2, Layers, CheckSquare } from 'lucide-react';
+import { expandDeckSlides } from '../utils/answerSlides';
 
 interface BatchExportModalProps {
   isOpen: boolean;
@@ -34,8 +35,16 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
   const [exportTotal, setExportTotal] = useState(0);
   const [doneCount, setDoneCount] = useState(0);
   const [progressMsg, setProgressMsg] = useState('');
-  // Item/config currently rasterized offscreen for a background-only PPTX capture.
-  const [bgRenderSlide, setBgRenderSlide] = useState<{ item: MCQItem; config: DeckConfig; questionIndex: number } | null>(null);
+  const [renderAsImages, setRenderAsImages] = useState<boolean>(false);
+  const [embedFonts, setEmbedFonts] = useState<boolean>(true);
+  // Item/config currently rasterized offscreen for a background-only or full-slide PPTX capture.
+  const [bgRenderSlide, setBgRenderSlide] = useState<{
+    item: MCQItem;
+    config: DeckConfig;
+    questionIndex: number;
+    isAnswerSlide: boolean;
+    mode: 'backgroundOnly' | 'full';
+  } | null>(null);
   const bgCanvasRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -100,28 +109,64 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
     setExportIndex(0);
     setProgressMsg('');
     try {
+      const fontEmbedCSS = await getFontEmbedCSS();
+
       for (let i = 0; i < selectedDecks.length; i++) {
         const deck = selectedDecks[i];
         setExportIndex(i + 1);
 
-        // Rasterize the exact background stack (gradient/image/tint/glows) for
-        // every slide so the PPTX gets a pixel-accurate picture layer instead
-        // of an approximated gradient shape — mirrors ExportModal's PPTX flow.
-        const fontEmbedCSS = await getFontEmbedCSS();
-        const backgroundDataUrls: string[] = [];
-        for (let qi = 0; qi < deck.items.length; qi++) {
-          setBgRenderSlide({ item: deck.items[qi], config: deck.config, questionIndex: qi });
-          setProgressMsg(`Rendering background ${qi + 1} of ${deck.items.length} for "${deck.name}"...`);
-          await new Promise(r => setTimeout(r, 100));
+        const physicalSlides = expandDeckSlides(deck.items, deck.config);
+        const specs = physicalSlides.map(s => ({
+          item: s.item,
+          questionIndex: s.questionIndex,
+          isAnswerSlide: s.isAnswerSlide,
+        }));
+
+        const renderedUrls: string[] = [];
+
+        for (let si = 0; si < physicalSlides.length; si++) {
+          const slideRef = physicalSlides[si];
+          setBgRenderSlide({
+            item: slideRef.item,
+            config: deck.config,
+            questionIndex: slideRef.questionIndex,
+            isAnswerSlide: slideRef.isAnswerSlide,
+            mode: renderAsImages ? 'full' : 'backgroundOnly',
+          });
+
+          const modeLabel = renderAsImages ? 'exact slide image' : 'background';
+          setProgressMsg(`Rendering ${modeLabel} ${si + 1} of ${physicalSlides.length} for "${deck.name}"...`);
+          
+          await new Promise(r => setTimeout(r, 120));
           const el = bgCanvasRef.current;
           if (el) {
-            const dataUrl = await toPng(el, { cacheBust: true, fontEmbedCSS });
-            backgroundDataUrls.push(dataUrl);
+            try {
+              const dataUrl = await toPng(el, { pixelRatio: 1.5, cacheBust: true, fontEmbedCSS });
+              renderedUrls.push(dataUrl);
+            } catch {
+              renderedUrls.push('');
+            }
+          } else {
+            renderedUrls.push('');
           }
         }
 
         setProgressMsg('');
-        await exportDeckToPPTX(deck.items, deck.config, (msg) => setProgressMsg(msg), undefined, true, backgroundDataUrls);
+        const backgroundDataUrls = renderAsImages ? [] : renderedUrls;
+        const fullSlideDataUrls = renderAsImages ? renderedUrls : undefined;
+
+        await exportDeckToPPTX(
+          deck.items,
+          deck.config,
+          (msg) => setProgressMsg(msg),
+          specs,
+          true, // includeExplanation
+          backgroundDataUrls,
+          false, // includeAnswerKeySlides (default to false in batch mode)
+          fullSlideDataUrls,
+          undefined, // mathOverlayDataUrls
+          embedFonts
+        );
         setDoneCount(i + 1);
       }
     } catch (err: any) {
@@ -254,6 +299,35 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
           )}
         </div>
 
+        {/* Options */}
+        {decks.length > 0 && !isExporting && (
+          <div className={`px-5 py-3.5 border-t flex items-center gap-6 ${isAppLight ? 'bg-slate-50/50 border-slate-200' : 'bg-slate-950/20 border-slate-800'}`}>
+            <span className={`text-[10px] font-black uppercase tracking-wider ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`}>Export Options:</span>
+            <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
+              isAppLight ? 'text-slate-700' : 'text-slate-300'
+            }`}>
+              <input
+                type="checkbox"
+                checked={renderAsImages}
+                onChange={(e) => setRenderAsImages(e.target.checked)}
+                className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
+              />
+              Exact slide images
+            </label>
+            <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
+              isAppLight ? 'text-slate-700' : 'text-slate-300'
+            }`}>
+              <input
+                type="checkbox"
+                checked={embedFonts}
+                onChange={(e) => setEmbedFonts(e.target.checked)}
+                className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
+              />
+              Embed fonts
+            </label>
+          </div>
+        )}
+
         {/* Footer */}
         <div className={`p-5 border-t flex flex-wrap items-center justify-between gap-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
           {isExporting ? (
@@ -322,8 +396,8 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
         </div>
       </div>
 
-      {/* Hidden offscreen 1920x1080 container for PPTX background-only rasters
-          (gradient/image/tint/glow stack, no text/shape layers). */}
+      {/* Hidden offscreen 1920x1080 container for PPTX rasters
+          (either backgroundOnly or full slide images). */}
       <div
         style={{
           position: 'fixed',
@@ -343,7 +417,10 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
             config={bgRenderSlide.config}
             currentIndex={bgRenderSlide.questionIndex}
             totalCount={1}
-            mode="backgroundOnly"
+            mode={bgRenderSlide.mode === 'backgroundOnly' ? 'backgroundOnly' : undefined}
+            slideVariant={bgRenderSlide.isAnswerSlide ? 'answer' : 'question'}
+            isAnswerRevealMode={bgRenderSlide.isAnswerSlide}
+            forceShowExplanation={bgRenderSlide.isAnswerSlide ? true : undefined}
           />
         )}
       </div>

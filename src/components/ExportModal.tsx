@@ -4,7 +4,7 @@ import { exportDeckToPPTX, PptxSlideSpec } from '../utils/pptxExport';
 import { SlideCanvas } from './SlideCanvas';
 import { SlideThumb } from './SlideThumb';
 import { SlideTextBoxLayer } from './SlideTextBoxLayer';
-import { boxContentHasMath } from '../utils/slideTextBoxes';
+import { boxContentHasMath, ensureAnswerBox } from '../utils/slideTextBoxes';
 import { DeckQuestionPaperModal } from './DeckQuestionPaperModal';
 import { expandDeckSlides, effectiveAnswerMode, effectiveShowAnswerInSlide, SlideRef, resolveSlideAnswerFlags } from '../utils/answerSlides';
 import { toPng } from 'html-to-image';
@@ -179,7 +179,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // detection can never drift between the two.
   const getMathBoxIds = (ref: SlideRef): string[] => {
     const effConfig: DeckConfig = { ...config, ...(ref.item.customConfig || {}) };
-    const boxes = effConfig.slideTextBoxes || [];
+    const boxes = ensureAnswerBox(effConfig.slideTextBoxes || [], effConfig);
     return boxes
       .filter(b => boxContentHasMath(b, ref.item, effConfig, ref.questionIndex))
       .map(b => b.id);
@@ -896,7 +896,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       >
         {mathOverlaySlideRef && (() => {
           const effConfig: DeckConfig = { ...config, ...(mathOverlaySlideRef.item.customConfig || {}) };
-          const boxes = effConfig.slideTextBoxes || [];
+          const boxes = ensureAnswerBox(effConfig.slideTextBoxes || [], effConfig);
           const mathBoxIds = getMathBoxIds(mathOverlaySlideRef);
           // Answer-reveal gating resolved by the SHARED resolver so the overlay
           // matches the exact slide variant and the editable native layers.

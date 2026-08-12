@@ -1,5 +1,6 @@
 import { MCQItem, SlideTextBox, SlideTextBoxBind, DeckConfig, getSourceTags, getEffectiveBadgeTag } from '../types';
 import { textContainsMath } from './latexFormatter';
+import { resolveTheme } from './themeResolver';
 
 export const SLIDE_BOX_BINDS: { bind: SlideTextBoxBind; label: string }[] = [
   { bind: 'stem', label: '+ Question' },
@@ -152,4 +153,28 @@ export const boxContentHasMath = (
   }
   const content = getSlideBoxContent(box, item, config, currentIndex, totalCount);
   return textContainsMath(content);
+};
+
+export const ensureAnswerBox = (boxes: SlideTextBox[], config: DeckConfig): SlideTextBox[] => {
+  const hasAnswer = boxes.some(b => b.bind === 'answer');
+  if (hasAnswer || boxes.length === 0) return boxes;
+
+  const theme = resolveTheme(config);
+  return [
+    ...boxes,
+    {
+      id: 'ans_pill_injected',
+      bind: 'answer',
+      x: 760,
+      y: 35,
+      w: 400,
+      fontSize: 24,
+      color: theme.isLight ? '#065f46' : '#ecfdf5',
+      align: 'center',
+      bold: true,
+      fontFamily: theme.fonts.bodyFont || 'sans-serif',
+      shape: 'pill',
+      bg: theme.isLight ? 'rgba(209,250,229,0.95)' : 'rgba(16,185,129,0.25)',
+    } as SlideTextBox
+  ];
 };

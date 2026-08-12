@@ -38,7 +38,7 @@ import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
 import { loadGlobalDefaults, createDefaultDeckConfig } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
-import { clamp, SLIDE_W, SLIDE_H } from './utils/slideTextBoxes';
+import { clamp, SLIDE_W, SLIDE_H, ensureAnswerBox } from './utils/slideTextBoxes';
 import { SlideTextBox, SlideTextBoxBind } from './types';
 import { SlidePreviewModal } from './components/SlidePreviewModal';
 import { LayoutLibraryModal } from './components/LayoutLibraryModal';
@@ -222,8 +222,9 @@ export default function App() {
   // slide-scope stored on the active MCQItem's customConfig.slideTextBoxes)
   const slideTextBoxOverride = items[activeQuestionIndex]?.customConfig?.slideTextBoxes;
   const hasTextBoxOverride = !!slideTextBoxOverride;
-  const activeTextBoxes: SlideTextBox[] = slideTextBoxOverride ?? config.slideTextBoxes ?? [];
+  const rawActiveBoxes = slideTextBoxOverride ?? config.slideTextBoxes ?? [];
   const effectiveTextBoxConfig: DeckConfig = { ...config, ...(items[activeQuestionIndex]?.customConfig || {}) };
+  const activeTextBoxes = ensureAnswerBox(rawActiveBoxes, effectiveTextBoxConfig);
 
   // When text box edit mode is enabled, ensure active text boxes are populated
   useEffect(() => {

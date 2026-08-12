@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { saveAs } from 'file-saver';
 import { DeckConfig, MCQItem, SlideTextBox, getSourceTags, getEffectiveBadgeTag } from '../types';
-import { getSlideBoxContent, getBoxFontFamily, boxContentHasMath } from './slideTextBoxes';
+import { getSlideBoxContent, getBoxFontFamily, boxContentHasMath, ensureAnswerBox } from './slideTextBoxes';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 import { getTemplateById } from '../templates/registry';
 import { getSlideIcon } from './slideElements';
@@ -843,7 +843,7 @@ export const exportDeckToPPTX = async (
 
     // Per-slide design override (mirrors SlideCanvas) + boxed-design detection
     const effectiveConfig: DeckConfig = { ...config, ...(item.customConfig || {}) };
-    const boxes: SlideTextBox[] = effectiveConfig.slideTextBoxes || [];
+    const boxes: SlideTextBox[] = ensureAnswerBox(effectiveConfig.slideTextBoxes || [], effectiveConfig);
     const isBoxedDesign = boxes.length > 0;
     // Per-slide theme (customConfig can override brand colors per question) —
     // mirrors renderSlideBackground's own resolveTheme(cfg) call below.
