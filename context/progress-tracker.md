@@ -10,6 +10,7 @@
 ---
 
 ## Planning & docs (DONE)
+- [x] 2026-08-12 — **Image Export Glass Card Blur Fix & Dynamic Answer Display Toggles** — (1) **SVG `<foreignObject>` Blur Corruption Fix**: `safeToPng` in `src/utils/cleanExport.ts` and `index.css` rule `[data-exporting="true"] * { backdrop-filter: none !important; }` temporarily strip `backdrop-filter` during image export rasterization to eliminate pitch-black smudge boxes around glass cards, badges, and active option highlights. (2) **Dynamic Answer Display Toggles**: `resolveSlideAnswerFlags` in `answerSlides.ts`, `SlideCanvas.tsx`, and `SlideTextBoxLayer.tsx` updated to respect `answerDisplayStyles` toggles (`explanation_card`, `answer_pill`, `highlight_option`) on dedicated answer slides without hardcoded overrides. (3) **Default All-Slides Scope**: `textBoxScope` in `App.tsx` defaults to `'global'` (All Slides). `npx tsc --noEmit` clean.
 - [x] 2026-08-05 — Write `plan.md` (final plan + decision log D1–D16) — root
 - [x] 2026-08-05 — Write `context/project-overview.md`
 - [x] 2026-08-05 — Write `context/architecture.md`
