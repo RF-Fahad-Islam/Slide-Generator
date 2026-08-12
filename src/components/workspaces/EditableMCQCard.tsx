@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { MCQItem, getSourceTags } from '../../types';
 import { MathText } from '../MathText';
 import { SourceTagsInput } from '../SourceTagsInput';
 import { TagChipSelect } from '../TagChipSelect';
 import { useTagMemory } from '../../hooks/useTagMemory';
+import { MathHelperButton } from '../math/MathHelperButton';
 import { CheckCircle2, Edit2, Check, Trash2, X, RotateCcw } from 'lucide-react';
 
 interface EditableMCQCardProps {
@@ -36,6 +37,8 @@ export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<MCQItem | null>(null);
   const { memory, rememberItems } = useTagMemory();
+  const stemRef = useRef<HTMLTextAreaElement>(null);
+  const optionRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const inputCls = `w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 ${
     isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
@@ -138,12 +141,23 @@ export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
             <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
               Question Stem
             </label>
-            <textarea
-              value={draft.stem}
-              onChange={(e) => patchDraft({ stem: e.target.value })}
-              rows={2}
-              className={`${inputCls} resize-none leading-relaxed`}
-            />
+            <div className="flex items-start gap-2">
+              <textarea
+                ref={stemRef}
+                value={draft.stem}
+                onChange={(e) => patchDraft({ stem: e.target.value })}
+                rows={2}
+                className={`${inputCls} resize-none leading-relaxed flex-1`}
+              />
+              <MathHelperButton
+                value={draft.stem}
+                onChange={(v) => patchDraft({ stem: v })}
+                inputRef={stemRef}
+                isAppLight={isAppLight}
+                label="question stem"
+                className="mt-1"
+              />
+            </div>
           </div>
 
           {draft.questionType === 'roman_statements' && (
@@ -194,10 +208,18 @@ export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
                 >
                   <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black flex items-center justify-center shrink-0">{opt.key}</span>
                   <input
+                    ref={(el) => { optionRefs.current[opt.key] = el; }}
                     type="text"
                     value={opt.text}
                     onChange={(e) => patchOption(opt.key, e.target.value)}
                     className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border text-sm focus:outline-none focus:border-amber-500 bg-transparent"
+                  />
+                  <MathHelperButton
+                    value={opt.text}
+                    onChange={(v) => patchOption(opt.key, v)}
+                    inputRef={{ current: optionRefs.current[opt.key] ?? null }}
+                    isAppLight={isAppLight}
+                    label={`option ${opt.key}`}
                   />
                   <button
                     type="button"

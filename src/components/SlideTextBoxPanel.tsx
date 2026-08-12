@@ -24,6 +24,7 @@ import {
   SLIDE_SHAPE_OPTIONS,
 } from '../utils/slideElements';
 import { LayoutPreviewMockup } from './LayoutPreviewMockup';
+import { MathHelperButton } from './math/MathHelperButton';
 import {
   Layers,
   Palette,
@@ -464,6 +465,7 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   const activeSelectedIds = selectedIds ?? (selectedId ? [selectedId] : []);
   const selectedBox = boxes.find(b => b.id === (activeSelectedIds[0] ?? selectedId)) || null;
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const textContentRef = useRef<HTMLTextAreaElement>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -994,15 +996,26 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                       </button>
                     )}
                   </div>
-                  <textarea
-                    value={selectedBox.text !== undefined ? selectedBox.text : getSlideBoxContent(selectedBox, item, config, currentIndex)}
-                    onChange={(e) => onUpdateBox(selectedBox.id, { text: e.target.value })}
-                    rows={selectedBox.bind === 'stem' || selectedBox.bind === 'passage' || selectedBox.bind === 'explanation' || selectedBox.bind === 'free' ? 4 : 2}
-                    placeholder={selectedBox.bind === 'free' ? 'Type custom text content here...' : 'Type to override box content...'}
-                    className={`w-full border rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500 ${
-                      isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-700 text-white'
-                    }`}
-                  />
+                  <div className="flex items-start gap-2">
+                    <textarea
+                      ref={textContentRef}
+                      value={selectedBox.text !== undefined ? selectedBox.text : getSlideBoxContent(selectedBox, item, config, currentIndex)}
+                      onChange={(e) => onUpdateBox(selectedBox.id, { text: e.target.value })}
+                      rows={selectedBox.bind === 'stem' || selectedBox.bind === 'passage' || selectedBox.bind === 'explanation' || selectedBox.bind === 'free' ? 4 : 2}
+                      placeholder={selectedBox.bind === 'free' ? 'Type custom text content here...' : 'Type to override box content...'}
+                      className={`flex-1 min-w-0 border rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500 ${
+                        isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-700 text-white'
+                      }`}
+                    />
+                    <MathHelperButton
+                      value={selectedBox.text !== undefined ? selectedBox.text : getSlideBoxContent(selectedBox, item, config, currentIndex)}
+                      onChange={(v) => onUpdateBox(selectedBox.id, { text: v })}
+                      inputRef={textContentRef}
+                      isAppLight={isAppLight}
+                      label="text box content"
+                      className="mt-1"
+                    />
+                  </div>
                   <p className={`text-[10px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     {selectedBox.bind === 'free'
                       ? 'Custom text box. Type anything to display on slide.'

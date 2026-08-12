@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MCQItem, QuestionType, getSourceTags, MCQTags } from '../types';
 import { X, Save, Edit3, Database, History } from 'lucide-react';
 import { SourceTagsInput } from './SourceTagsInput';
 import { TagChipSelect } from './TagChipSelect';
 import { useTagMemory } from '../hooks/useTagMemory';
+import { MathHelperButton } from './math/MathHelperButton';
 
 interface EditQuestionModalProps {
   isOpen: boolean;
@@ -28,6 +29,10 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 }) => {
   const isAppLight = appTheme === 'light';
   const { memory, remember, rememberItems } = useTagMemory();
+  const stemInputRef = useRef<HTMLInputElement>(null);
+  const optionInputRefs = useRef<Array<React.RefObject<HTMLInputElement | null>>>(
+    [0, 1, 2, 3].map(() => React.createRef<HTMLInputElement>())
+  );
 
   const [questionType, setQuestionType] = useState<QuestionType>('standard');
   const [stem, setStem] = useState('');
@@ -179,13 +184,23 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
             <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-400'} mb-1.5 uppercase tracking-wider`}>
               Question Stem (supports $LaTeX$):
             </label>
-            <input
-              type="text"
-              value={stem}
-              onChange={(e) => setStem(e.target.value)}
-              placeholder="e.g. মানবদেহের বৃক্কে নেফ্রনের প্রধান কাজ কোনটি?"
-              className={inputCls}
-            />
+            <div className="flex items-center gap-2">
+              <input
+                ref={stemInputRef}
+                type="text"
+                value={stem}
+                onChange={(e) => setStem(e.target.value)}
+                placeholder="e.g. মানবদেহের বৃক্কে নেফ্রনের প্রধান কাজ কোনটি?"
+                className={`${inputCls} flex-1`}
+              />
+              <MathHelperButton
+                value={stem}
+                onChange={setStem}
+                inputRef={stemInputRef}
+                isAppLight={isAppLight}
+                label="question stem"
+              />
+            </div>
           </div>
 
           {/* Bohupodi roman items */}
@@ -230,6 +245,7 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                   {keyLabel}
                 </span>
                 <input
+                  ref={optionInputRefs.current[idx]}
                   type="text"
                   value={options[idx]}
                   onChange={(e) => {
@@ -239,6 +255,17 @@ export const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
                   }}
                   placeholder={`Option ${keyLabel}`}
                   className="flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm focus:outline-none focus:border-amber-500 bg-transparent"
+                />
+                <MathHelperButton
+                  value={options[idx]}
+                  onChange={(v) => {
+                    const updated = [...options];
+                    updated[idx] = v;
+                    setOptions(updated);
+                  }}
+                  inputRef={optionInputRefs.current[idx]}
+                  isAppLight={isAppLight}
+                  label={`option ${keyLabel}`}
                 />
                 <button
                   type="button"

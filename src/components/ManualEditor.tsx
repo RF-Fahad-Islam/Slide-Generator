@@ -8,6 +8,7 @@ import { TagChipSelect } from './TagChipSelect';
 import { useTagMemory } from '../hooks/useTagMemory';
 import { applyBatchTags } from '../utils/tagMemory';
 import { EditableMCQCard } from './workspaces/EditableMCQCard';
+import { MathHelperButton } from './math/MathHelperButton';
 import {
   Plus,
   Sparkles,
@@ -218,6 +219,7 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
   // Paste-area view toggle: 'raw' = plain textarea, 'cards' = live editable MCQ cards.
   const [bulkViewMode, setBulkViewMode] = useState<'raw' | 'cards'>(draft.bulkViewMode || 'raw');
   const justPastedBulkRef = useRef(false);
+  const bulkTextRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-switch to Cards right after a paste that parsed into at least one MCQ.
   useEffect(() => {
@@ -736,17 +738,28 @@ export const ManualEditor: React.FC<ManualEditorProps> = ({
             </div>
 
             {bulkViewMode === 'raw' ? (
-              <textarea
-                value={bulkText}
-                onChange={(e) => setBulkText(e.target.value)}
-                onPaste={() => { justPastedBulkRef.current = true; }}
-                placeholder="Paste questions here... e.g. 1. Question stem? A) Opt 1 B) Opt 2 * C) Opt 3 D) Opt 4"
-                className={`w-full h-[28rem] font-['Hind_Siliguri',sans-serif] p-5 rounded-2xl border focus:outline-none focus:border-amber-500 text-base leading-relaxed resize-none shadow-inner ${
-                  isAppLight
-                    ? 'bg-slate-50 border-slate-300 text-slate-900'
-                    : 'bg-slate-950 border-slate-800 text-slate-100'
-                }`}
-              />
+              <div className="relative">
+                <textarea
+                  ref={bulkTextRef}
+                  value={bulkText}
+                  onChange={(e) => setBulkText(e.target.value)}
+                  onPaste={() => { justPastedBulkRef.current = true; }}
+                  placeholder="Paste questions here... e.g. 1. Question stem? A) Opt 1 B) Opt 2 * C) Opt 3 D) Opt 4"
+                  className={`w-full h-[28rem] font-['Hind_Siliguri',sans-serif] p-5 rounded-2xl border focus:outline-none focus:border-amber-500 text-base leading-relaxed resize-none shadow-inner ${
+                    isAppLight
+                      ? 'bg-slate-50 border-slate-300 text-slate-900'
+                      : 'bg-slate-950 border-slate-800 text-slate-100'
+                  }`}
+                />
+                <MathHelperButton
+                  value={bulkText}
+                  onChange={setBulkText}
+                  inputRef={bulkTextRef}
+                  isAppLight={isAppLight}
+                  label="pasted questions"
+                  className="absolute top-3 right-3"
+                />
+              </div>
             ) : (
               <div className={`w-full max-h-[36rem] overflow-y-auto rounded-2xl border p-3 space-y-3 shadow-inner ${
                 isAppLight ? 'bg-slate-50 border-slate-300' : 'bg-slate-950 border-slate-800'
