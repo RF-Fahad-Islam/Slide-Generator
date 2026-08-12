@@ -3,6 +3,10 @@ import { getTemplateById } from '../templates/registry';
 import { getBackgroundPresetUrl } from './backgroundPresets';
 
 export interface ResolvedColors {
+  // Theme polarity — mirrors ResolvedTheme.isLight for renderers that only
+  // receive the colors object (e.g. PPTX export).
+  isLight: boolean;
+
   // Raw 6-digit hex string without '#' (e.g. "0F172A"), useful for PPTX export & native canvas
   bgHex: string;
   cardBgHex: string;
@@ -131,6 +135,8 @@ export function resolveTheme(
   const optionSelectedTextHex = normalizeHex(rawHex.optionSelectedText, isLight ? '312E81' : 'FEF3C7');
 
   const colors: ResolvedColors = {
+    isLight,
+
     bgHex,
     cardBgHex,
     cardBorderHex,

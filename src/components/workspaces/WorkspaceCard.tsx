@@ -30,7 +30,7 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({ workspace, isAppLi
     e.stopPropagation();
     const approvedCount = workspace.approvedItems.length;
     const confirmed = window.confirm(
-      `Delete "${workspace.name}"? This permanently removes its review queue and all ${approvedCount} approved question(s) from this workspace's history. Approved questions already added to the Question Bank's pool will NOT be deleted, and any decks you built from them stay as-is.`
+      `Delete "${workspace.name}"? This permanently removes its review queue and all ${approvedCount} approved question(s) — they will also disappear from the Question Bank's approved pool. Any presentation decks you already built from them stay as-is.`
     );
     if (confirmed) onDelete();
   };
