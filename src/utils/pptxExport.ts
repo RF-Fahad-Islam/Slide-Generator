@@ -119,8 +119,13 @@ export const exportDeckToPPTX = async (
     if (rgba) {
       const [r, g, b] = [parseFloat(rgba[1]), parseFloat(rgba[2]), parseFloat(rgba[3])];
       const a = rgba[4] === undefined ? 1 : (rgba[4].endsWith('%') ? parseFloat(rgba[4]) / 100 : parseFloat(rgba[4]));
-      const base = [parseInt(baseBg.slice(0, 2), 16), parseInt(baseBg.slice(2, 4), 16), parseInt(baseBg.slice(4, 6), 16)];
-      const blend = base.map((c, i) => Math.round(([r, g, b][i] * a) + c * (1 - a)));
+      // baseBg may arrive as "#020617" (with '#') or "020617" — strip the hash
+      // so the RGB slice is aligned; otherwise the first channel parses to NaN
+      // and the blend emits an invalid hex ("NANxxxx") that PowerPoint renders
+      // as black.
+      const cleanBase = (baseBg || '').replace(/^#/, '').trim();
+      const base = [parseInt(cleanBase.slice(0, 2), 16), parseInt(cleanBase.slice(2, 4), 16), parseInt(cleanBase.slice(4, 6), 16)];
+      const blend = base.map((c, i) => Math.round(([r, g, b][i] * a) + (Number.isNaN(c) ? 0 : c) * (1 - a)));
       return blend.map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase();
     }
     return s.replace(/^#/, '').toUpperCase();

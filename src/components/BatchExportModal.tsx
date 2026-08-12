@@ -37,6 +37,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
   const [progressMsg, setProgressMsg] = useState('');
   const [renderAsImages, setRenderAsImages] = useState<boolean>(false);
   const [embedFonts, setEmbedFonts] = useState<boolean>(true);
+  const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
   // Item/config currently rasterized offscreen for a background-only or full-slide PPTX capture.
   const [bgRenderSlide, setBgRenderSlide] = useState<{
     item: MCQItem;
@@ -160,7 +161,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
           deck.config,
           (msg) => setProgressMsg(msg),
           specs,
-          true, // includeExplanation
+          includeExplanation, // includeExplanation
           backgroundDataUrls,
           false, // includeAnswerKeySlides (default to false in batch mode)
           fullSlideDataUrls,
@@ -325,6 +326,17 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
               />
               Embed fonts
             </label>
+            <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
+              isAppLight ? 'text-slate-700' : 'text-slate-300'
+            }`}>
+              <input
+                type="checkbox"
+                checked={includeExplanation}
+                onChange={(e) => setIncludeExplanation(e.target.checked)}
+                className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
+              />
+              Include explanation
+            </label>
           </div>
         )}
 
@@ -420,7 +432,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
             mode={bgRenderSlide.mode === 'backgroundOnly' ? 'backgroundOnly' : undefined}
             slideVariant={bgRenderSlide.isAnswerSlide ? 'answer' : 'question'}
             isAnswerRevealMode={bgRenderSlide.isAnswerSlide}
-            forceShowExplanation={bgRenderSlide.isAnswerSlide ? true : undefined}
+            forceShowExplanation={bgRenderSlide.isAnswerSlide ? includeExplanation : undefined}
           />
         )}
       </div>

@@ -307,14 +307,19 @@ export default function App() {
         const cur = updated[slideIdx];
         if (!cur) return prev;
         const base = cur.customConfig?.slideTextBoxes ?? config.slideTextBoxes ?? [];
+        const baseWithAnswer = ensureAnswerBox(base, { ...config, ...(cur.customConfig || {}) });
         updated[slideIdx] = {
           ...cur,
-          customConfig: { ...(cur.customConfig || {}), slideTextBoxes: updater(base) },
+          customConfig: { ...(cur.customConfig || {}), slideTextBoxes: updater(baseWithAnswer) },
         };
         return updated;
       });
     } else {
-      setConfig(prev => ({ ...prev, slideTextBoxes: updater(prev.slideTextBoxes || []) }));
+      setConfig(prev => {
+        const base = prev.slideTextBoxes || [];
+        const baseWithAnswer = ensureAnswerBox(base, prev);
+        return { ...prev, slideTextBoxes: updater(baseWithAnswer) };
+      });
     }
   };
 
