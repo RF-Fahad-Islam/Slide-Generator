@@ -39,7 +39,6 @@ export const LayoutPreviewMockup: React.FC<LayoutPreviewMockupProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
                   <div className="w-2.5 h-2.5 rounded bg-amber-400 text-slate-950 text-[6px] font-black flex items-center justify-center">৩</div>
-                  <span className="text-[7px] font-bold text-amber-300">প্রশ্ন</span>
                 </div>
                 <div className="px-1 py-0.5 rounded-full bg-amber-950/80 border border-amber-500/40 text-[5px] text-amber-300 flex items-center gap-0.5">
                   <Award className="w-1.5 h-1.5 text-amber-400" />
@@ -224,7 +223,6 @@ export const LayoutPreviewMockup: React.FC<LayoutPreviewMockupProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 rounded bg-amber-400 text-slate-950 text-[6px] font-black flex items-center justify-center">৩</div>
-            <span className="text-[7px] font-bold text-amber-300">প্রশ্ন</span>
           </div>
           <div className="px-1.5 py-0.5 rounded-full bg-amber-950/80 border border-amber-500/40 text-[5px] text-amber-300 font-extrabold flex items-center gap-0.5">
             <Award className="w-1.5 h-1.5 text-amber-400" />

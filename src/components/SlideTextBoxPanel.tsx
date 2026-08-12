@@ -359,8 +359,8 @@ const BindMockupPreview: React.FC<{ bind: SlideTextBoxBind; isAppLight: boolean 
       );
     case 'questionNumber':
       return (
-        <div className="w-full h-10 rounded-lg bg-amber-400 text-slate-950 p-1 flex items-center justify-center gap-1 font-black text-[10px] shadow-inner">
-          <span>১</span><span>প্রশ্ন</span>
+        <div className="w-full h-10 rounded-lg bg-amber-400 text-slate-950 p-1 flex items-center justify-center font-black text-xs shadow-inner">
+          <span>১</span>
         </div>
       );
     case 'brand':
@@ -740,17 +740,39 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                 </select>
               </div>
 
-              {selectedBox.bind === 'free' && (
-                <div>
-                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>Text Content:</label>
+              {selectedBox.bind !== 'options' && selectedBox.bind !== 'icon' && selectedBox.bind !== 'image' && (
+                <div className="space-y-1.5 p-3 rounded-2xl border bg-amber-500/5 border-amber-500/20">
+                  <div className="flex items-center justify-between">
+                    <label className={`text-xs font-extrabold flex items-center gap-1.5 ${isAppLight ? 'text-amber-900' : 'text-amber-300'}`}>
+                      <Type className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Text Content / Custom Text:</span>
+                    </label>
+                    {selectedBox.text !== undefined && selectedBox.text !== '' && selectedBox.bind !== 'free' && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateBox(selectedBox.id, { text: undefined })}
+                        className="text-[10px] font-bold text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
+                        title="Revert to dynamic content from deck data"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Revert to Default
+                      </button>
+                    )}
+                  </div>
                   <textarea
-                    value={selectedBox.text || ''}
+                    value={selectedBox.text !== undefined ? selectedBox.text : (selectedBox.bind === 'free' ? '' : selectedBox.text || '')}
                     onChange={(e) => onUpdateBox(selectedBox.id, { text: e.target.value })}
-                    rows={3}
-                    className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500 ${
-                      isAppLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900 border-slate-700 text-white'
+                    rows={selectedBox.bind === 'stem' || selectedBox.bind === 'passage' || selectedBox.bind === 'explanation' || selectedBox.bind === 'free' ? 4 : 2}
+                    placeholder={selectedBox.bind === 'free' ? 'Type custom text content here...' : 'Type to override box content...'}
+                    className={`w-full border rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500 ${
+                      isAppLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-700 text-white'
                     }`}
                   />
+                  <p className={`text-[10px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {selectedBox.bind === 'free'
+                      ? 'Custom text box. Type anything to display on slide.'
+                      : `Edit to customize text for this ${selectedBox.bind} text box.`}
+                  </p>
                 </div>
               )}
 

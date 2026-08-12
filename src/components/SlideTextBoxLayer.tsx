@@ -181,10 +181,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               style={{ left: box.x, top: box.y }}
             >
               <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30">
-                {formatSlideQNumber(currentIndex, config.questionNumberFormat)}
-              </span>
-              <span className="text-3xl font-extrabold text-amber-400">
-                প্রশ্ন
+                {box.text || formatSlideQNumber(currentIndex, config.questionNumberFormat)}
               </span>
             </div>
           );

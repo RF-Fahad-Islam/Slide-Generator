@@ -649,8 +649,8 @@ export const exportDeckToPPTX = async (
         rectRadius: 0.15,
       });
 
-      // Question Badge Number Pill + Title
-      slide.addText(` [${qNum}]  প্রশ্ন`, {
+      // Question Badge Number Pill
+      slide.addText(` [${qNum}]`, {
         x: 0.7,
         y: 1.55,
         w: 4.0,

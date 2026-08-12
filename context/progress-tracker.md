@@ -54,6 +54,7 @@
 - [x] 2026-08-05 — `DeckManager.tsx`: Reorderable question deck list with search, delete, duplicate controls
 - [x] 2026-08-06 — `@dnd-kit/core` + `@dnd-kit/sortable` drag-and-drop sortable question reordering (`SortableQuestionCard.tsx`): grip-handle drag, PointerSensor (5px) + KeyboardSensor (`sortableKeyboardCoordinates`), drag disabled while search filter active, MoveUp/MoveDown buttons removed, dragged card gets `opacity-50 shadow-2xl`
 
+- [x] 2026-08-12 — Removed "প্রশ্ন" ("prosno") text from `questionNumber` text box layer (`SlideTextBoxLayer.tsx`), text box drawer mocks (`SlideTextBoxPanel.tsx`), mockup thumbnails (`LayoutPreviewMockup.tsx`), and PPTX exports (`pptxExport.ts`). Enabled universal text content editing across ALL text box types in `SlideTextBoxPanel.tsx` with one-click "Revert to Default" controls.
 - [x] 2026-08-12 — Removed question numbering badges from social post cards (`ClassicQuizCard.tsx`, `QuizTimeCard.tsx`), removed "প্রশ্ন" ("prosno") label, and aligned question stem text immediately after the number badge in `SlideCanvas.tsx`
 - [x] 2026-08-12 — Mandate Question Numbering, Instructor Info, Logo/Brand, and Paging Counter across all slide layouts (Standard, Classroom, Banners, SLIDE_LAYOUTS presets) and Social Post templates (`ClassicQuizCard`, `QuizTimeCard`) with deck-level visibility toggles
 - [x] 2026-08-05 — `ExportModal.tsx`: PPTX presentation export, multi-slide PNG image download, and PDF export (`jspdf`)
