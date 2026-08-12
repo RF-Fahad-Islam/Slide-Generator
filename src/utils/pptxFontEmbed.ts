@@ -42,6 +42,28 @@ const FONT_FILES: Record<string, { regular: string; bold?: string }> = {
 
 const familyNameOf = (css: string): string => css.replace(/'/g, '').split(',')[0].trim();
 
+// PowerPoint's embedded-font feature only accepts STATIC TrueType binaries —
+// it cannot embed variable fonts (they carry an `fvar` table) and will raise a
+// "repair" prompt if one lands in <p:embeddedFontLst>. Several of the families
+// below ship as variable fonts (Noto Sans Bengali, Anek Bangla, Plus Jakarta
+// Sans, Playfair Display — the "-Regular" files are byte-identical to the
+// "-Variable" ones), so we scan the sfnt table directory of every fetched TTF
+// and refuse to embed any face that has `fvar`/`gvar`. Static faces (Kalpurush,
+// Hind Siliguri, Poppins, Tiro Bangla, Atma, Mina, Fira Code) embed normally.
+const isVariableFont = (buffer: ArrayBuffer): boolean => {
+  const view = new DataView(buffer);
+  const numTables = view.getUint16(4);
+  for (let i = 0; i < numTables; i++) {
+    const offset = 12 + 16 * i;
+    const tag = String.fromCharCode(
+      view.getUint8(offset), view.getUint8(offset + 1),
+      view.getUint8(offset + 2), view.getUint8(offset + 3)
+    );
+    if (tag === 'fvar' || tag === 'gvar') return true;
+  }
+  return false;
+};
+
 // The exact font families the deck will reference when exported — deck-level
 // role fonts (header/body/options/footer + default, with theme defaults) and
 // every text box's resolved font (per-box override -> role font -> default),
@@ -107,6 +129,7 @@ export const embedFontsInPptx = async (
         const res = await fetch(face.file, { cache: 'force-cache' });
         if (!res.ok) continue;
         const buffer = await res.arrayBuffer();
+        if (isVariableFont(buffer)) continue; // PowerPoint cannot embed variable fonts (repair prompt)
         const fileName = `fntdata${rIdCounter}.ttf`;
         zip.file(`ppt/fonts/${fileName}`, buffer);
         entries.push({ family, kind: face.kind, rId: `rIdFont_${rIdCounter}`, fileName });

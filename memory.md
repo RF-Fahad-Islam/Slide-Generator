@@ -22,6 +22,10 @@ All on `main`, pushed to origin.
 ### 2. `pptxFontEmbed.ts` header-comment fix
 - The header comment described the removed `fontTable.xml` / `fontTable.xml.rels` approach (with a wrong element name `<p:embedRegular/>`); the implementation (since `30ba5dc`) uses `<p:embeddedFontLst>` in `presentation.xml` after `</p:notesSz>` with `rIdFont_N` rels in `presentation.xml.rels` + ttf default in `[Content_Types].xml`. Comment rewritten to match. Verified end-to-end in a node harness: real pptxgenjs output + real TTFs → embeddedFontLst placed correctly, `rIdFont_1..3` unique, content-types ok; all `public/fonts/*.ttf` are valid TrueType (sig `00 01 00 00`).
 
+### 3. PowerPoint repair-prompt fix: skip variable fonts when embedding
+- **Root cause:** PowerPoint's embedded-font feature only accepts STATIC TrueType. Several `public/fonts/*-Regular.ttf` files are actually **variable fonts** (`NotoSansBengali-Regular.ttf`, `AnekBangla-Regular.ttf`, `PlusJakartaSans-Regular.ttf`, `PlayfairDisplay-Regular.ttf` — each byte-identical to its `-Variable.ttf` twin, carrying `fvar`/`gvar` tables). Embedding one of these into `<p:embeddedFontLst>` made PowerPoint raise the "repair" prompt on open.
+- **Fix:** `isVariableFont(buffer)` in `pptxFontEmbed.ts` parses the sfnt table directory of every fetched TTF and skips any face with `fvar`/`gvar`. Static faces (Kalpurush, Hind Siliguri, Poppins, Tiro Bangla, Atma, Mina, Fira Code) embed normally. Verified in a Node harness: requesting `['Kalpurush','Hind Siliguri','Noto Sans Bengali','Anek Bangla','Plus Jakarta Sans']` embeds only Kalpurush + Hind Siliguri (3 faces) and omits the variable families from `embeddedFontLst`.
+
 ## Decisions made
 
 - Approved-tab deck creation is now **selection-driven + prompted**: cards start unselected, "Select all" provided, modal collects name/subject/class/chapter/branding, auto-filled from workspace bind data.
@@ -35,7 +39,7 @@ All on `main`, pushed to origin.
 
 ## Current state
 
-- `main` = `a1f60c8`, pushed to origin. This session adds: approved-card → current-active-deck append + committed `pptxFontEmbed.ts` comment fix.
+- `main` pushed to origin. This session adds: approved-card → current-active-deck append + committed `pptxFontEmbed.ts` comment fix + variable-font skip for PowerPoint repair-prompt.
 - Branch `feat/approved-deck-builder` merged into main (fast-forward); left in place.
 - `npx tsc --noEmit` + `vite build` green (only pre-existing chunk-size warning).
 
