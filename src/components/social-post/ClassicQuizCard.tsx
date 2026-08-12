@@ -121,17 +121,6 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
 
         {/* Question Stem Box */}
         <div className="my-auto py-4 space-y-4 z-10">
-          {showQuestionNumber && (
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shadow">
-                {questionNumber}
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                প্রশ্নঃ
-              </span>
-            </div>
-          )}
-
           <h2 className="text-lg sm:text-xl font-extrabold leading-relaxed text-white drop-shadow">
             <MathText text={stemText} />
           </h2>

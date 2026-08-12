@@ -511,20 +511,9 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
             style={{ fontFamily: bodyFont }}
             className={`p-7 rounded-3xl ${styles.cardBg} backdrop-blur-md transition-all shadow-xl`}
           >
-            {/* Header: Number, Source */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                {showQuestionNumber && (
-                  <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30" style={accentBgStyle}>
-                    {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
-                  </span>
-                )}
-                <span className={`text-3xl font-extrabold ${styles.titleColor}`}>
-                  প্রশ্ন
-                </span>
-              </div>
-
-              {getSourceTags(item).length > 0 && (
+            {/* Source Tag Badge */}
+            {getSourceTags(item).length > 0 && (
+              <div className="flex items-center justify-end mb-3">
                 <div className="flex items-center flex-wrap gap-2">
                   {getSourceTags(item).map((tag) => (
                     <div key={tag} className={`flex items-center gap-2.5 px-5 py-1.5 rounded-full font-extrabold text-lg shadow-md border backdrop-blur-md ${
@@ -537,14 +526,21 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Stem Text */}
-            <div className={`${bodySizeClass} ${bodyWeightClass} ${questionAlignClass} leading-relaxed tracking-wide drop-shadow-sm ${
+            {/* Stem Text with Inline Question Number Badge */}
+            <div className={`flex items-start gap-3.5 ${bodySizeClass} ${bodyWeightClass} ${questionAlignClass} leading-relaxed tracking-wide drop-shadow-sm ${
               isLight ? 'text-slate-950' : 'text-white'
             }`}>
-              <MathText text={item.stem} />
+              {showQuestionNumber && (
+                <span className="px-3.5 py-1 rounded-2xl bg-amber-500 text-slate-950 font-black text-2xl shrink-0 shadow-lg shadow-amber-500/30 mt-0.5" style={accentBgStyle}>
+                  {formatSlideQNumber(currentIndex, effectiveConfig.questionNumberFormat)}
+                </span>
+              )}
+              <div className="flex-1">
+                <MathText text={item.stem} />
+              </div>
             </div>
 
             {/* Stem Image (if present) */}

@@ -143,11 +143,6 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
           <div className={`border rounded-2xl px-5 py-4 text-center ${
             isLightBg ? 'bg-white/80 border-slate-300/80 shadow-sm' : 'bg-slate-900/60 border-white/10'
           }`}>
-            {showQuestionNumber && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 font-black text-xs mb-2">
-                Q{questionNumber}
-              </div>
-            )}
             <p className={`text-sm sm:text-base font-semibold leading-relaxed ${
               isLightBg ? 'text-slate-900' : 'text-white'
             }`}>
