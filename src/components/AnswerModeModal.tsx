@@ -30,6 +30,11 @@ interface AnswerModeModalProps {
   onAppendAnswerSlidesToDeck?: () => void;
   totalQuestions: number;
   appTheme: 'dark' | 'light';
+  // Global App Defaults context: no per-slide scope, custom copy/button label.
+  hideScope?: boolean;
+  title?: string;
+  description?: string;
+  applyButtonLabel?: string;
 }
 
 export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
@@ -42,6 +47,10 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
   onAppendAnswerSlidesToDeck,
   totalQuestions,
   appTheme,
+  hideScope = false,
+  title = 'Answer Mode & Reveal Settings',
+  description = 'Configure answer highlights, badge pills, explanation cards, and dedicated answer slides.',
+  applyButtonLabel = 'Apply Answer Settings',
 }) => {
   const isLight = appTheme === 'light';
 
@@ -117,9 +126,9 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
               <Eye className="w-6 h-6 stroke-[2.5]" />
             </div>
             <div>
-              <h2 className="text-xl font-black tracking-tight">Answer Mode & Reveal Settings</h2>
+              <h2 className="text-xl font-black tracking-tight">{title}</h2>
               <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Configure answer highlights, badge pills, explanation cards, and dedicated answer slides.
+                {description}
               </p>
             </div>
           </div>
@@ -137,7 +146,8 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
 
         {/* BODY */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* SCOPE SELECTOR SWITCH */}
+          {/* SCOPE SELECTOR SWITCH — hidden in Global App Defaults context */}
+          {!hideScope && (
           <div className={`p-1.5 rounded-2xl border flex items-center gap-1 ${
             isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800'
           }`}>
@@ -162,6 +172,7 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
               📄 Apply to Active Slide Only
             </button>
           </div>
+          )}
 
           {/* MULTI-SELECT ANSWER DISPLAY ELEMENTS */}
           <div className="space-y-3">
@@ -393,7 +404,7 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
           isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950'
         }`}>
           <div className="text-xs text-slate-400 font-mono">
-            {scope === 'global' ? 'Scope: Global (All Slides)' : 'Scope: Active Slide Only'}
+            {hideScope ? 'Scope: Global App Defaults' : scope === 'global' ? 'Scope: Global (All Slides)' : 'Scope: Active Slide Only'}
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -408,7 +419,7 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
               onClick={handleSave}
               className="px-5 py-2 rounded-xl text-xs font-black bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-400 transition-all cursor-pointer"
             >
-              Apply Answer Settings
+              {applyButtonLabel}
             </button>
           </div>
         </div>

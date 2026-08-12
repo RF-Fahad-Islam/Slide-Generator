@@ -22,6 +22,8 @@ import {
 import { TEMPLATES } from '../templates/registry';
 import { FONT_PRESETS } from '../utils/fontPresets';
 import { BackgroundPicker } from './BackgroundPicker';
+import { AnswerModeModal } from './AnswerModeModal';
+import { DeckConfig } from '../types';
 import {
   GlobalDefaults,
   DEFAULT_GLOBAL_DEFAULTS,
@@ -42,6 +44,7 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
 
   const [defaults, setDefaults] = useState<GlobalDefaults>(() => loadGlobalDefaults());
   const [savedNotice, setSavedNotice] = useState(false);
+  const [isAnswerModeModalOpen, setIsAnswerModeModalOpen] = useState(false);
 
   const update = (patch: Partial<GlobalDefaults>) => {
     const next = { ...defaults, ...patch };
@@ -555,58 +558,33 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
         </div>
       </div>
 
-      {/* SECTION 6: DEFAULT ANSWER REVEAL BEHAVIOR */}
-      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-6 shadow-2xl ${
+      {/* SECTION 6: DEFAULT ANSWER REVEAL BEHAVIOR — opens the same Answer Mode &
+          Reveal Settings modal used in Deck Settings, so both surfaces share one
+          implementation instead of two independent card UIs drifting apart. */}
+      <div className={`p-6 sm:p-8 rounded-3xl border-2 space-y-4 shadow-2xl ${
         isAppLight ? 'glass-card-fatty-light border-slate-200' : 'glass-card-fatty border-slate-800'
       }`}>
         <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
           <Eye className="w-4 h-4" /> 6. Default Answer Reveal Behavior
         </h3>
-
-        <div className="space-y-2">
-          <label className={`text-xs font-bold block uppercase tracking-wider ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-            Default Answer Display Mode
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {([
-              { id: 'hidden', label: 'Hidden', desc: 'Question only, no answer shown' },
-              { id: 'highlight', label: 'Highlight In-Place', desc: 'Correct option highlighted on the same slide' },
-              { id: 'separate_slide', label: 'Separate Answer Slide', desc: 'Extra slide right after each question' },
-            ] as const).map((opt) => {
-              const isSelected = (defaults.answerMode || 'hidden') === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => update({ answerMode: opt.id, showAnswerInSlide: opt.id === 'highlight' })}
-                  className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-1 ${
-                    isSelected
-                      ? 'bg-amber-500/10 border-amber-400 text-amber-300 shadow-lg shadow-amber-500/10 ring-1 ring-amber-400/50'
-                      : isAppLight
-                      ? 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
-                      : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-sm font-bold ${isSelected ? 'text-amber-300' : isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>{opt.label}</span>
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />}
-                  </div>
-                  <p className={`text-xs ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>{opt.desc}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <label className={`flex items-center gap-2 cursor-pointer text-sm font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-200'}`}>
-          <input
-            type="checkbox"
-            checked={!!defaults.showExplanationInSlide}
-            onChange={(e) => update({ showExplanationInSlide: e.target.checked })}
-            className="w-4 h-4 accent-amber-500 rounded"
-          />
-          Show explanation box by default
-        </label>
+        <button
+          type="button"
+          onClick={() => setIsAnswerModeModalOpen(true)}
+          className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 ${
+            isAppLight ? 'bg-white border-slate-200 hover:border-amber-400' : 'bg-slate-900 border-slate-800 hover:border-amber-500/60'
+          }`}
+        >
+          <span>
+            <span className={`block text-sm font-bold ${isAppLight ? 'text-slate-900' : 'text-slate-100'}`}>
+              Configure Default Answer Mode & Reveal Settings
+            </span>
+            <span className={`block text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+              Current: {defaults.answerMode === 'separate_slide' ? 'Separate Answer Slide' : defaults.answerMode === 'highlight' ? 'Highlight In-Place' : 'Hidden'}
+              {defaults.showExplanationInSlide ? ' · Explanation box on' : ''}
+            </span>
+          </span>
+          <Eye className="w-4 h-4 text-amber-400 shrink-0" />
+        </button>
       </div>
 
       {/* SECTION 7: DEFAULT FONT FAMILY & DECK NAMING */}
@@ -768,6 +746,24 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({
           </button>
         </div>
       </div>
+
+      <AnswerModeModal
+        isOpen={isAnswerModeModalOpen}
+        onClose={() => setIsAnswerModeModalOpen(false)}
+        config={defaults as unknown as DeckConfig}
+        onApplyConfig={(updated) => update({
+          answerMode: updated.answerMode,
+          answerDisplayStyles: updated.answerDisplayStyles,
+          showAnswerInSlide: updated.showAnswerInSlide,
+          showExplanationInSlide: updated.showExplanationInSlide,
+        })}
+        totalQuestions={0}
+        appTheme={appTheme}
+        hideScope
+        title="Default Answer Mode & Reveal Settings"
+        description="Configure the default answer highlights, badge pills, explanation cards, and dedicated answer slides used by every newly created deck."
+        applyButtonLabel="Set as Default"
+      />
     </div>
   );
 };

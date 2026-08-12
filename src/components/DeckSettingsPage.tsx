@@ -195,6 +195,7 @@ export const DeckSettingsPage: React.FC<DeckSettingsPageProps> = ({
             }}
             appTheme={appTheme}
             onEnforceClassroomView={handleClassroomEnforce}
+            totalQuestions={items.length}
           />
         </div>
       </div>

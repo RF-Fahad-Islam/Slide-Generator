@@ -5,6 +5,7 @@ import { getBackgroundPresetUrl } from '../utils/backgroundPresets';
 import { FONT_PRESETS, getFontPresetByFamily } from '../utils/fontPresets';
 import { saveGlobalDefaults } from '../utils/globalDefaults';
 import { BackgroundPicker } from './BackgroundPicker';
+import { AnswerModeModal } from './AnswerModeModal';
 import {
   getTemplatePresets,
   saveTemplatePreset,
@@ -13,7 +14,7 @@ import {
   DeckTemplatePreset,
 } from '../utils/templatePresets';
 import { Sliders, Upload, Palette, User, Award, BookOpen, Image as ImageIcon, SlidersHorizontal, CheckCircle2, Eye, Type, Sun, Moon, Sparkles, Layers, RefreshCw, Layers3, Target, Globe, LayoutTemplate, Save, Trash2 } from 'lucide-react';
-import { AnswerMode, effectiveAnswerMode, effectiveShowAnswerInSlide } from '../utils/answerSlides';
+import { effectiveShowAnswerInSlide } from '../utils/answerSlides';
 import { templateToTextBoxes } from '../utils/templateToTextBoxes';
 
 interface DeckSettingsProps {
@@ -27,6 +28,7 @@ interface DeckSettingsProps {
   // Classroom View quick action — enforces class_mode + classroom text boxes on
   // the whole deck and hands off to the box editor (wired by Slide Studio).
   onEnforceClassroomView?: () => void;
+  totalQuestions?: number;
 }
 
 const CUSTOM_THEME_PALETTES: { name: string; colors: CustomThemeColors }[] = [
@@ -320,8 +322,10 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   onResetActiveSlideConfig,
   appTheme = 'dark',
   onEnforceClassroomView,
+  totalQuestions = 0,
 }) => {
   const isAppLight = appTheme === 'light';
+  const [isAnswerModeModalOpen, setIsAnswerModeModalOpen] = useState(false);
   const [themeFilter, setThemeFilter] = useState<'all' | 'light' | 'dark' | 'custom'>('all');
   const [fontCategoryFilter, setFontCategoryFilter] = useState<string>('all');
 
@@ -468,18 +472,6 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
   };
 
   // Answer display mode — 3-state (hidden / highlight / separate_slide). The
-  // legacy `showAnswerInSlide` boolean is kept in sync so saved decks without
-  // `answerMode` still behave correctly (only 'highlight' highlights in-place).
-  // ALWAYS deck-wide: slide expansion (question + answer pairs) is a deck-level
-  // property, so a per-slide answerMode override would silently do nothing.
-  const handleAnswerModeChange = (mode: AnswerMode) => {
-    onUpdateConfig({
-      ...config,
-      answerMode: mode,
-      showAnswerInSlide: mode === 'highlight',
-    });
-  };
-
   // Theme field change — respects the Global/Slide scope toggle.
   const handleThemeFieldChange = (field: keyof DeckConfig, value: any) => {
     if (settingsScope === 'slide') {
@@ -2030,44 +2022,31 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
             Slide Interactive Display Settings
           </label>
 
-          {/* Answer Display Mode — 3-state segmented control */}
+          {/* Answer Display Mode — opens the shared Answer Mode & Reveal Settings modal */}
           <div className="pt-1">
             <span className={`block text-sm mb-2 font-semibold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
               Answer Display Mode:
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {([
-                { value: 'hidden', title: 'No Answer', desc: 'Question only' },
-                { value: 'highlight', title: 'Highlight on Slide', desc: 'Answer highlighted in place' },
-                { value: 'separate_slide', title: 'Separate Answer Slide', desc: '+1 slide per question' },
-              ] as { value: AnswerMode; title: string; desc: string }[]).map(opt => {
-                const active = effectiveAnswerMode(config) === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => handleAnswerModeChange(opt.value)}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      active
-                        ? isAppLight
-                          ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/50'
-                          : 'bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/40'
-                        : isAppLight
-                        ? 'bg-white border-slate-200 hover:border-slate-300'
-                        : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <span className={`block text-sm font-black ${active ? (isAppLight ? 'text-amber-700' : 'text-amber-300') : isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                      {opt.title}
-                    </span>
-                    <span className={`block text-xs mt-0.5 font-semibold ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-                      {opt.desc}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className={`text-xs font-semibold flex items-center gap-1.5 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+            <button
+              type="button"
+              onClick={() => setIsAnswerModeModalOpen(true)}
+              className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                isAppLight
+                  ? 'bg-white border-slate-200 hover:border-amber-400'
+                  : 'bg-slate-900 border-slate-800 hover:border-amber-500/60'
+              }`}
+            >
+              <span>
+                <span className={`block text-sm font-black ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                  Configure Answer Mode & Reveal Settings
+                </span>
+                <span className={`block text-xs mt-0.5 font-semibold ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                  Highlights, answer pills, explanation cards & dedicated answer slides
+                </span>
+              </span>
+              <Eye className="w-4 h-4 text-amber-400 shrink-0" />
+            </button>
+            <p className={`text-xs font-semibold flex items-center gap-1.5 mt-2 ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
               <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               Applies to the whole deck (answer slides change the total slide count).
             </p>
@@ -2263,6 +2242,17 @@ export const DeckSettings: React.FC<DeckSettingsProps> = ({
         )}
       </div>
       )}
+
+      <AnswerModeModal
+        isOpen={isAnswerModeModalOpen}
+        onClose={() => setIsAnswerModeModalOpen(false)}
+        config={config}
+        activeSlideConfig={activeSlideConfig}
+        onApplyConfig={onUpdateConfig}
+        onApplyActiveSlideConfig={onUpdateActiveSlideConfig}
+        totalQuestions={totalQuestions}
+        appTheme={appTheme}
+      />
     </div>
 );
 };
