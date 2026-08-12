@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MCQItem } from '../../types';
+import { DeckConfig, MCQItem } from '../../types';
 import { useWorkspaceSync } from '../../hooks/useWorkspaceSync';
 import { approveItems, saveReviewQueue, unapproveItem, updateApprovedItem } from '../../utils/workspaceStore';
 import { ManualEditor } from '../ManualEditor';
@@ -10,7 +10,7 @@ interface WorkspaceEditorProps {
   workspaceId: string;
   onBack: () => void;
   appTheme: 'dark' | 'light';
-  onCreateDeckFromApproved: (items: MCQItem[]) => void;
+  onCreateDeckFromApproved: (items: MCQItem[], overrides: Partial<DeckConfig>) => void;
 }
 
 export const WorkspaceEditor: React.FC<WorkspaceEditorProps> = ({ workspaceId, onBack, appTheme, onCreateDeckFromApproved }) => {

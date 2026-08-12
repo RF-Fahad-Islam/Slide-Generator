@@ -12,8 +12,9 @@ interface EditableMCQCardProps {
   index: number;
   isAppLight: boolean;
   mode: 'select' | 'approved';
-  selected?: boolean; // mode === 'select' only
-  onToggleSelect?: () => void; // mode === 'select' only
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  selectable?: boolean; // approved mode: opt-in card selection (checkbox + click-to-toggle)
   onSave: (item: MCQItem) => void;
   onRemove?: () => void; // mode === 'select' only
   onUnapprove?: () => void; // mode === 'approved' only
@@ -21,8 +22,8 @@ interface EditableMCQCardProps {
 
 // Shared view/edit card for a single MCQ — used by both the Review Queue
 // (click-to-select + bulk approve) and the Approved history view (edit +
-// unapprove). Edit state is local to the card so multiple cards never fight
-// over a single "which one is being edited" id.
+// unapprove; opt-in selection via `selectable`). Edit state is local to the
+// card so multiple cards never fight over a single "which one is being edited" id.
 export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
   item,
   index,
@@ -30,6 +31,7 @@ export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
   mode,
   selected = false,
   onToggleSelect,
+  selectable = false,
   onSave,
   onRemove,
   onUnapprove,
@@ -85,11 +87,13 @@ export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
     );
   };
 
+  const isSelectable = mode === 'select' || selectable;
+
   const cardStateClass = isEditing
     ? isAppLight
       ? 'border-2 border-amber-400 ring-2 ring-amber-400/40 bg-amber-50/40'
       : 'border-2 border-amber-500/50 ring-1 ring-amber-500/30 bg-slate-950'
-    : mode === 'select' && selected
+    : isSelectable && selected
     ? isAppLight
       ? 'bg-emerald-50 border-2 border-emerald-400 ring-2 ring-emerald-400/30 text-slate-950'
       : 'bg-emerald-500/10 border-2 border-emerald-500/60 ring-2 ring-emerald-400/40 text-slate-100'
@@ -99,9 +103,9 @@ export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
 
   return (
     <div
-      onClick={mode === 'select' && !isEditing ? onToggleSelect : undefined}
+      onClick={isSelectable && !isEditing ? onToggleSelect : undefined}
       className={`p-5 rounded-3xl space-y-3.5 transition-all ${cardStateClass} ${
-        mode === 'select' && !isEditing ? 'cursor-pointer' : ''
+        isSelectable && !isEditing ? 'cursor-pointer' : ''
       }`}
     >
       {isEditing && draft ? (
@@ -297,7 +301,7 @@ export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
         <>
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              {mode === 'select' && (
+              {isSelectable ? (
                 <span
                   className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-all ${
                     selected ? 'bg-emerald-500 text-white' : isAppLight ? 'bg-slate-200 text-slate-500' : 'bg-slate-800 text-slate-400'
@@ -305,12 +309,11 @@ export const EditableMCQCard: React.FC<EditableMCQCardProps> = ({
                 >
                   {selected ? <Check className="w-4 h-4 stroke-[3]" /> : index + 1}
                 </span>
-              )}
-              {mode === 'approved' && (
+              ) : mode === 'approved' ? (
                 <span className="w-8 h-8 rounded-xl bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">
                   {index + 1}
                 </span>
-              )}
+              ) : null}
               <div className="space-y-1">
                 <h4 className={`text-base lg:text-lg font-black leading-relaxed ${isAppLight ? 'text-slate-950' : 'text-white'}`}>
                   <MathText text={item.stem} />

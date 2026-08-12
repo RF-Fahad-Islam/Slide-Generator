@@ -705,6 +705,20 @@ export default function App() {
     alert(`Created new presentation deck with ${selectedItems.length} selected questions!`);
   };
 
+  // Deck creation from a workspace's selected approved cards — the modal in
+  // ApprovedHistoryView collects name/subject/chapter/branding and passes the
+  // overrides here so the new deck opens in Slide Studio already themed.
+  const handleCreateDeckFromApproved = (selectedItems: MCQItem[], overrides?: Partial<DeckConfig>) => {
+    setEditingSavedDeckId(null);
+    setItems(ensureUniqueIds(selectedItems));
+    setSelectedIndex(0);
+    setActiveTab('preview');
+    setConfig((prev) => {
+      const merged = createDefaultDeckConfig({ ...prev, ...(overrides || {}) });
+      return { ...merged, slideTextBoxes: templateToTextBoxes(merged) };
+    });
+  };
+
   const handleLoadSample = (sampleIndex: number) => {
     const sample = SAMPLE_DECKS[sampleIndex] || SAMPLE_DECKS[0];
     setEditingSavedDeckId(null);
@@ -1674,7 +1688,7 @@ export default function App() {
               workspaceId={activeWorkspaceId}
               onBack={() => setActiveWorkspaceId(null)}
               appTheme={appTheme}
-              onCreateDeckFromApproved={(items) => handleCreateNewDeckFromSelection(items)}
+              onCreateDeckFromApproved={(items, overrides) => handleCreateDeckFromApproved(items, overrides)}
             />
           ) : (
             <WorkspacesHome
