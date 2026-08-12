@@ -21,6 +21,8 @@ interface BatchExportModalProps {
 // saved decks (db.questionDecks) with a checkbox each; selecting one or many and
 // hitting Download exports each selected deck as its own PPTX file (single deck
 // works too). Reuses exportDeckToPPTX which triggers its own file download.
+import { useExportQueue } from '../context/ExportQueueContext';
+
 export const BatchExportModal: React.FC<BatchExportModalProps> = ({
   isOpen,
   onClose,
@@ -28,35 +30,17 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
   appTheme = 'dark',
 }) => {
   const isAppLight = appTheme === 'light';
+  const { enqueueExport } = useExportQueue();
   const [decks, setDecks] = useState<SavedDeck[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportIndex, setExportIndex] = useState(0);
-  const [exportTotal, setExportTotal] = useState(0);
-  const [doneCount, setDoneCount] = useState(0);
-  const [progressMsg, setProgressMsg] = useState('');
   const [renderAsImages, setRenderAsImages] = useState<boolean>(false);
   const embedFonts = true;
   const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
-  // Item/config currently rasterized offscreen for a background-only or full-slide PPTX capture.
-  const [bgRenderSlide, setBgRenderSlide] = useState<{
-    item: MCQItem;
-    config: DeckConfig;
-    questionIndex: number;
-    isAnswerSlide: boolean;
-    mode: 'backgroundOnly' | 'full';
-  } | null>(null);
-  const bgCanvasRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     setSelectedIds([]);
-    setIsExporting(false);
-    setDoneCount(0);
-    setExportIndex(0);
-    setExportTotal(0);
-    setProgressMsg('');
     loadDecks();
   }, [isOpen]);
 
@@ -90,102 +74,38 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
   if (!isOpen) return null;
 
   const toggle = (id: string) => {
-    if (isExporting) return;
     setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
   };
 
   const allSelected = decks.length > 0 && selectedIds.length === decks.length;
   const toggleAll = () => {
-    if (isExporting) return;
     setSelectedIds(allSelected ? [] : decks.map(d => d.id));
   };
 
   const selectedDecks = decks.filter(d => selectedIds.includes(d.id));
   const totalQuestions = selectedDecks.reduce((sum, d) => sum + d.items.length, 0);
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     if (selectedDecks.length === 0) return;
-    setIsExporting(true);
-    setExportTotal(selectedDecks.length);
-    setDoneCount(0);
-    setExportIndex(0);
-    setProgressMsg('');
-    try {
-      const fontEmbedCSS = await getFontEmbedCSS();
-
-      for (let i = 0; i < selectedDecks.length; i++) {
-        const deck = selectedDecks[i];
-        setExportIndex(i + 1);
-
-        const physicalSlides = expandDeckSlides(deck.items, deck.config);
-        const specs = physicalSlides.map(s => ({
-          item: s.item,
-          questionIndex: s.questionIndex,
-          isAnswerSlide: s.isAnswerSlide,
-        }));
-
-        const renderedUrls: string[] = [];
-
-        for (let si = 0; si < physicalSlides.length; si++) {
-          const slideRef = physicalSlides[si];
-          setBgRenderSlide({
-            item: slideRef.item,
-            config: deck.config,
-            questionIndex: slideRef.questionIndex,
-            isAnswerSlide: slideRef.isAnswerSlide,
-            mode: renderAsImages ? 'full' : 'backgroundOnly',
-          });
-
-          const modeLabel = renderAsImages ? 'exact slide image' : 'background';
-          setProgressMsg(`Rendering ${modeLabel} ${si + 1} of ${physicalSlides.length} for "${deck.name}"...`);
-          
-          await new Promise(r => setTimeout(r, 120));
-          const el = bgCanvasRef.current;
-          if (el) {
-            try {
-              const dataUrl = await safeToPng(el, { fontEmbedCSS });
-              renderedUrls.push(dataUrl);
-            } catch {
-              renderedUrls.push('');
-            }
-          } else {
-            renderedUrls.push('');
-          }
-        }
-
-        setProgressMsg('');
-        const backgroundDataUrls = renderAsImages ? [] : renderedUrls;
-        const fullSlideDataUrls = renderAsImages ? renderedUrls : undefined;
-
-        await exportDeckToPPTX(
-          deck.items,
-          deck.config,
-          (msg) => setProgressMsg(msg),
-          specs,
-          includeExplanation, // includeExplanation
-          backgroundDataUrls,
-          false, // includeAnswerKeySlides (default to false in batch mode)
-          fullSlideDataUrls,
-          undefined, // mathOverlayDataUrls
-          embedFonts
-        );
-        setDoneCount(i + 1);
+    enqueueExport(
+      'batch_pptx',
+      `Batch Export (${selectedDecks.length} Deck${selectedDecks.length === 1 ? '' : 's'})`,
+      `${totalQuestions} total questions`,
+      {
+        items: [],
+        config: seedConfig,
+        selectedDecks,
+        renderAsImages,
+        includeExplanation,
+        embedFonts,
       }
-    } catch (err: any) {
-      console.error('Batch PPTX Export Error:', err);
-      alert('Failed to generate PowerPoint for one of the decks: ' + err.message);
-    } finally {
-      setIsExporting(false);
-      setProgressMsg('');
-      setBgRenderSlide(null);
-    }
+    );
+    onClose();
   };
-
-  const progressPct = exportTotal > 0 ? Math.round((doneCount / exportTotal) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className={`absolute inset-0 ${isAppLight ? 'bg-black/40' : 'bg-black/80'} backdrop-blur-sm animate-modal-backdrop`} onClick={isExporting ? undefined : onClose} />
+      <div className={`absolute inset-0 ${isAppLight ? 'bg-black/40' : 'bg-black/80'} backdrop-blur-sm animate-modal-backdrop`} onClick={onClose} />
       <div className={`${isAppLight ? 'glass-card-fatty-light' : 'glass-card-fatty'} relative w-full max-w-3xl border flex flex-col max-h-[92vh] overflow-hidden animate-modal-card ${
         isAppLight ? 'border-slate-200' : 'bg-slate-900/90 border-slate-800'
       }`}>
@@ -204,8 +124,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            disabled={isExporting}
-            className={`p-2 rounded-xl cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`p-2 rounded-xl cursor-pointer transition-colors ${
               isAppLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
             title="Close"
@@ -233,8 +152,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
               <div className="flex items-center justify-between">
                 <button
                   onClick={toggleAll}
-                  disabled={isExporting}
-                  className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
                     isAppLight ? 'text-amber-700 hover:text-amber-900' : 'text-amber-400 hover:text-amber-300'
                   }`}
                 >
@@ -263,7 +181,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
                         : isAppLight
                         ? 'bg-white hover:border-amber-300 border-slate-200'
                         : 'bg-slate-950 hover:border-slate-700 border-slate-800'
-                    } ${isExporting ? 'opacity-60 pointer-events-none' : ''}`}
+                    }`}
                   >
                     {/* Checkbox */}
                     <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
@@ -302,7 +220,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
         </div>
 
         {/* Options */}
-        {decks.length > 0 && !isExporting && (
+        {decks.length > 0 && (
           <div className={`px-5 py-3.5 border-t flex items-center gap-6 ${isAppLight ? 'bg-slate-50/50 border-slate-200' : 'bg-slate-950/20 border-slate-800'}`}>
             <span className={`text-[10px] font-black uppercase tracking-wider ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`}>Export Options:</span>
             <label className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer select-none ${
@@ -332,56 +250,28 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
 
         {/* Footer */}
         <div className={`p-5 border-t flex flex-wrap items-center justify-between gap-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
-          {isExporting ? (
-            <div className="flex items-center gap-3 flex-1 min-w-[240px]">
-              <RefreshCw className="w-4 h-4 text-amber-500 animate-spin shrink-0" />
-              <div className="flex-1">
-                <p className="text-xs font-bold text-amber-500">
-                  Exporting deck {exportIndex} of {exportTotal}...
-                </p>
-                <div className="h-1.5 mt-1.5 rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className="h-full bg-amber-500 rounded-full transition-all duration-300"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-                {progressMsg && (
-                  <p className={`text-[11px] mt-1 truncate font-medium ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {progressMsg}
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : doneCount > 0 ? (
-            <div className="flex items-center gap-2 text-sm font-bold text-emerald-500">
-              <CheckCircle2 className="w-4 h-4" />
-              {doneCount} deck{doneCount === 1 ? '' : 's'} exported
-            </div>
-          ) : (
-            <span className={`text-[11px] font-mono font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
-              {selectedIds.length === 0
-                ? 'Select at least one deck to export'
-                : `${selectedDecks.length} deck${selectedDecks.length === 1 ? '' : 's'} · ${totalQuestions} total questions`}
-            </span>
-          )}
+          <span className={`text-[11px] font-mono font-bold ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+            {selectedIds.length === 0
+              ? 'Select at least one deck to export'
+              : `${selectedDecks.length} deck${selectedDecks.length === 1 ? '' : 's'} · ${totalQuestions} total questions`}
+          </span>
 
           <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={onClose}
-              disabled={isExporting}
-              className={`px-4 py-2.5 rounded-xl border text-xs font-extrabold cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`px-4 py-2.5 rounded-xl border text-xs font-extrabold cursor-pointer transition-all ${
                 isAppLight
                   ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
                   : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
               }`}
             >
-              {doneCount > 0 ? 'Done' : 'Cancel'}
+              Cancel
             </button>
             <button
               onClick={handleDownload}
-              disabled={selectedIds.length === 0 || isExporting}
+              disabled={selectedIds.length === 0}
               className={`px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 shadow cursor-pointer transition-all ${
-                selectedIds.length === 0 || isExporting
+                selectedIds.length === 0
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
                   : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
               }`}
@@ -392,39 +282,10 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
               }
             >
               <Download className="w-4 h-4 stroke-[2.5]" />
-              <span>{isExporting ? 'Exporting...' : `Download PPTX (${selectedIds.length})`}</span>
+              <span>Download PPTX ({selectedIds.length})</span>
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Hidden offscreen 1920x1080 container for PPTX rasters
-          (either backgroundOnly or full slide images). */}
-      <div
-        style={{
-          position: 'fixed',
-          left: '-9999px',
-          top: '-9999px',
-          width: '1920px',
-          height: '1080px',
-          overflow: 'hidden',
-          pointerEvents: 'none',
-          zIndex: -100,
-        }}
-      >
-        {bgRenderSlide && (
-          <SlideCanvas
-            ref={bgCanvasRef}
-            item={bgRenderSlide.item}
-            config={bgRenderSlide.config}
-            currentIndex={bgRenderSlide.questionIndex}
-            totalCount={1}
-            mode={bgRenderSlide.mode === 'backgroundOnly' ? 'backgroundOnly' : undefined}
-            slideVariant={bgRenderSlide.isAnswerSlide ? 'answer' : 'question'}
-            isAnswerRevealMode={bgRenderSlide.isAnswerSlide}
-            forceShowExplanation={bgRenderSlide.isAnswerSlide ? includeExplanation : undefined}
-          />
-        )}
       </div>
     </div>
   );

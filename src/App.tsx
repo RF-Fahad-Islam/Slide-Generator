@@ -36,6 +36,8 @@ import { OnboardingTour, defaultTourSteps, TourTab } from './components/Onboardi
 import { getTemplateById, resolveTheme } from './templates/registry';
 import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
+import { ExportQueueProvider } from './context/ExportQueueContext';
+import { ExportQueueWidget } from './components/ExportQueueWidget';
 import { loadGlobalDefaults, createDefaultDeckConfig } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { clamp, SLIDE_W, SLIDE_H, ensureAnswerBox } from './utils/slideTextBoxes';
@@ -915,29 +917,33 @@ export default function App() {
   const isActiveSlideLight = activeSlideResolvedTheme.isLight;
 
   return (
-    <IngestionProvider>
-    <div
-      className={`min-h-screen transition-colors duration-300 ${
-        isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
-      } flex flex-col lg:flex-row font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}
-    >
-      {/* Sidebar Navigation (Desktop) + Mobile Drawer */}
-      <SidebarNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        questionCount={items.length}
-        onOpenExportModal={() => {
-          setIsBatchExportModalOpen(true);
-        }}
-        isSyncing={isSyncing}
-        lastSavedTime={lastSavedTime}
-        appTheme={appTheme}
-        onToggleAppTheme={() => setAppTheme(t => t === 'dark' ? 'light' : 'dark')}
-        onStartTour={() => setIsTourOpen(true)}
-        isMobileDrawerOpen={isMobileDrawerOpen}
-        onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
-        onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
-      />
+    <ExportQueueProvider>
+      <IngestionProvider>
+        <div
+          className={`min-h-screen transition-colors duration-300 ${
+            isAppLight ? 'bg-slate-50 text-slate-900 bg-mesh-gradient-light' : 'bg-slate-950 text-slate-100 bg-mesh-gradient'
+          } flex flex-col lg:flex-row font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif]`}
+        >
+          {/* Top-Right Interactive Export Queue Widget */}
+          <ExportQueueWidget appTheme={appTheme} />
+
+          {/* Sidebar Navigation (Desktop) + Mobile Drawer */}
+          <SidebarNav
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            questionCount={items.length}
+            onOpenExportModal={() => {
+              setIsBatchExportModalOpen(true);
+            }}
+            isSyncing={isSyncing}
+            lastSavedTime={lastSavedTime}
+            appTheme={appTheme}
+            onToggleAppTheme={() => setAppTheme(t => t === 'dark' ? 'light' : 'dark')}
+            onStartTour={() => setIsTourOpen(true)}
+            isMobileDrawerOpen={isMobileDrawerOpen}
+            onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
+            onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
+          />
 
       {/* Main Content View Container */}
       <main className="flex-1 min-w-0 max-w-[1600px] w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-10">
@@ -1915,7 +1921,8 @@ export default function App() {
 
       {/* AI Ingestion progress toast — bottom-right, survives tab changes */}
       <IngestionToast appTheme={appTheme} />
-    </div>
-    </IngestionProvider>
+      </div>
+      </IngestionProvider>
+    </ExportQueueProvider>
   );
 }

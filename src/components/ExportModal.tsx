@@ -31,6 +31,8 @@ interface ExportModalProps {
   scope?: 'all' | 'current';
 }
 
+import { useExportQueue } from '../context/ExportQueueContext';
+
 export const ExportModal: React.FC<ExportModalProps> = ({
   isOpen,
   onClose,
@@ -43,18 +45,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   scope = 'all',
 }) => {
   const isAppLight = appTheme === 'light';
-  const [isExporting, setIsExporting] = useState(false);
-  const [progressMsg, setProgressMsg] = useState('');
+  const { enqueueExport } = useExportQueue();
   const [showGoogleSlidesGuide, setShowGoogleSlidesGuide] = useState(false);
   const [isDeckPaperOpen, setIsDeckPaperOpen] = useState(false);
-  const exportCanvasRef = useRef<HTMLDivElement | null>(null);
 
-  // Expanded physical slide lists. `fullSlides` mirrors what the user sees in the
-  // preview (deck's answer mode); `answerSlides` FORCES 'separate_slide' expansion
-  // so the "Include Answer Slides" checkbox adds question + answer pairs even when
-  // the deck itself is in 'hidden' or 'highlight' mode; `questionSlides` is clean
-  // question-only. The checkbox defaults to following the deck mode but can be
-  // flipped per export.
+  // Expanded physical slide lists.
   const fullSlides = useMemo(() => expandDeckSlides(items, config), [items, config]);
   const answerSlides = useMemo(
     () => expandDeckSlides(items, { ...config, answerMode: 'separate_slide' }),
@@ -69,9 +64,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     currentSlideRef ?? fullSlides[Math.min(currentIndex, Math.max(0, fullSlides.length - 1))] ?? null;
 
   const [includeAnswerSlides, setIncludeAnswerSlides] = useState<boolean>(() => effectiveAnswerMode(config) === 'separate_slide');
-  // Sync the per-export default to the deck's answer mode each time the modal
-  // OPENS (not on every config change while it's open, which would clobber the
-  // user's manual toggle mid-export).
+
   const prevOpenRef = useRef(false);
   useEffect(() => {
     if (isOpen && !prevOpenRef.current) {
@@ -79,26 +72,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
     prevOpenRef.current = isOpen;
   }, [isOpen, config]);
-  // The slide ref currently being rasterized in the offscreen canvas.
-  const [renderSlideRef, setRenderSlideRef] = useState<SlideRef | null>(null);
-  // The slide ref currently being rasterized for a background-only PPTX capture.
-  const [bgRenderSlideRef, setBgRenderSlideRef] = useState<SlideRef | null>(null);
-  const bgExportCanvasRef = useRef<HTMLDivElement | null>(null);
-  // The slide currently being rasterized for its transparent LaTeX/math box
-  // overlay (only math boxes render; everything else is transparent).
-  const [mathOverlaySlideRef, setMathOverlaySlideRef] = useState<SlideRef | null>(null);
-  const mathOverlayCanvasRef = useRef<HTMLDivElement | null>(null);
-  // Whether answer slides include the explanation box (defaults to ON — answer
-  // slides always showed it before; the toggle lets exports drop it).
+
   const [includeExplanation, setIncludeExplanation] = useState<boolean>(true);
   const [includeAnswerKeySlides, setIncludeAnswerKeySlides] = useState<boolean>(false);
-  // When true the PPTX embeds each slide as an exact full-bleed image of the
-  // live preview (pixel-identical, non-editable layers) instead of native
-  // editable text/shape layers.
   const [renderAsImages, setRenderAsImages] = useState<boolean>(false);
-  // When true the PPTX bundles the deck's actual font files (PowerPoint
-  // embedded fonts) so it renders correctly on machines that don't have the
-  // fonts installed. Defaults ON.
   const embedFonts = true;
 
   if (!isOpen) return null;
@@ -116,295 +93,95 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   // Question Paper gets the raw items (scoped).
   const paperItems = isCurrentScope ? (currentSlide ? [currentSlide.item] : []) : items;
 
-  // Renders the exact background stack (gradient/color, bg image, tint,
-  // ambient glows — no header/content/footer/text boxes) for each slide in
-  // scope, so the PPTX export can embed it as one pixel-accurate picture
-  // layer instead of approximating gradients with shapes.
-  const renderBackgroundDataUrls = async (): Promise<string[]> => {
-    // D14 invariant — must await webfonts before ANY rasterization, otherwise
-    // a fresh page load can rasterize blank/fallback glyphs (esp. Bangla) into
-    // the exported background picture layer.
-    await document.fonts.ready;
-    const fontEmbedCSS = await getFontEmbedCSS();
-    const backgroundDataUrls: string[] = [];
-    for (let i = 0; i < scopeSlides.length; i++) {
-      const ref = scopeSlides[i];
-      setBgRenderSlideRef(ref);
-      await new Promise((r) => setTimeout(r, 120));
-      const el = bgExportCanvasRef.current;
-      if (el) {
-        try {
-          const url = await safeToPng(el, { fontEmbedCSS });
-          backgroundDataUrls.push(url);
-        } catch {
-          backgroundDataUrls.push('');
-        }
-      } else {
-        backgroundDataUrls.push('');
-      }
-    }
-    return backgroundDataUrls;
-  };
-
-  // Renders the EXACT full slide (background + text + shapes + icons — the
-  // whole DOM renderer output) for each slide in scope, so the PPTX can embed
-  // pixel-identical pictures instead of native layers.
-  const renderFullSlideDataUrls = async (): Promise<string[]> => {
-    // D14 invariant — must await webfonts before ANY rasterization.
-    await document.fonts.ready;
-    const fontEmbedCSS = await getFontEmbedCSS();
-    const fullSlideDataUrls: string[] = [];
-    for (let i = 0; i < scopeSlides.length; i++) {
-      const ref = scopeSlides[i];
-      setRenderSlideRef(ref);
-      setProgressMsg(`Rendering exact slide image ${i + 1} of ${scopeSlides.length}...`);
-      await new Promise((r) => setTimeout(r, 150));
-      const el = exportCanvasRef.current;
-      if (el) {
-        try {
-          const url = await safeToPng(el, { fontEmbedCSS });
-          fullSlideDataUrls.push(url);
-        } catch {
-          fullSlideDataUrls.push('');
-        }
-      } else {
-        fullSlideDataUrls.push('');
-      }
-    }
-    return fullSlideDataUrls;
-  };
-
-  // Boxes whose rendered content contains LaTeX/math that PPTX native text
-  // cannot reproduce (it would strip math to plain text). Used both when
-  // rasterizing the math overlay and when rendering it offscreen, so the
-  // detection can never drift between the two.
-  const getMathBoxIds = (ref: SlideRef): string[] => {
-    const effConfig: DeckConfig = { ...config, ...(ref.item.customConfig || {}) };
-    const boxes = ensureAnswerBox(effConfig.slideTextBoxes || [], effConfig);
-    return boxes
-      .filter(b => boxContentHasMath(b, ref.item, effConfig, ref.questionIndex))
-      .map(b => b.id);
-  };
-
-  // Renders a transparent overlay containing ONLY the boxes whose content has
-  // LaTeX/math (which PPTX native text can't reproduce — it would strip math
-  // to plain text). The overlay is captured from the DOM renderer so KaTeX
-  // typesets math exactly like the preview; native layers are drawn beneath.
-  // Slides with no math boxes yield '' (no overlay) for that position.
-  const renderMathOverlayDataUrls = async (): Promise<string[]> => {
-    await document.fonts.ready;
-    const fontEmbedCSS = await getFontEmbedCSS();
-    const mathOverlayDataUrls: string[] = [];
-    for (let i = 0; i < scopeSlides.length; i++) {
-      const ref = scopeSlides[i];
-      const mathBoxIds = getMathBoxIds(ref);
-      if (mathBoxIds.length === 0) {
-        mathOverlayDataUrls.push('');
-        continue;
-      }
-      setMathOverlaySlideRef(ref);
-      setProgressMsg(`Rendering math overlay ${i + 1} of ${scopeSlides.length}...`);
-      await new Promise((r) => setTimeout(r, 150));
-      const el = mathOverlayCanvasRef.current;
-      if (el) {
-        try {
-          const url = await safeToPng(el, { fontEmbedCSS });
-          mathOverlayDataUrls.push(url);
-        } catch {
-          mathOverlayDataUrls.push('');
-        }
-      } else {
-        mathOverlayDataUrls.push('');
-      }
-    }
-    return mathOverlayDataUrls;
-  };
-
-  const toPptxSpecs = (): PptxSlideSpec[] =>
-    scopeSlides.map(s => ({ item: s.item, questionIndex: s.questionIndex, isAnswerSlide: s.isAnswerSlide }));
-
-  // Export to PowerPoint PPTX (16:9 Widescreen) — native editable text/shape
-  // layers on top of a pixel-accurate rasterized background picture layer.
-  const downloadPPTX = async () => {
+  // Export to PowerPoint PPTX (16:9 Widescreen)
+  const downloadPPTX = () => {
     if (scopeSlides.length === 0) return;
-    setIsExporting(true);
-    try {
-      const specs = toPptxSpecs();
-      const backgroundDataUrls = renderAsImages ? [] : await renderBackgroundDataUrls();
-      const fullSlideDataUrls = renderAsImages ? await renderFullSlideDataUrls() : undefined;
-      const mathOverlayDataUrls = renderAsImages ? undefined : await renderMathOverlayDataUrls();
-      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, includeAnswerKeySlides, fullSlideDataUrls, mathOverlayDataUrls, embedFonts);
-    } catch (err: any) {
-      console.error('PPTX Export Error:', err);
-      alert('Failed to generate PowerPoint presentation: ' + err.message);
-    } finally {
-      setIsExporting(false);
-      setProgressMsg('');
-      setBgRenderSlideRef(null);
-      setRenderSlideRef(null);
-      setMathOverlaySlideRef(null);
-    }
+    const deckTitle = config.deckName || config.brandName || 'Presentation Deck';
+    enqueueExport('pptx', `${deckTitle} (PPTX)`, `${scopeSlides.length} slide(s)`, {
+      items,
+      config,
+      scopeSlides,
+      renderAsImages,
+      includeExplanation,
+      includeAnswerKeySlides,
+      embedFonts,
+    });
+    onClose();
   };
 
-  // Export for Google Slides: Downloads the same PPTX & opens Google Drive upload prompt
-  const handleExportGoogleSlides = async () => {
+  // Export for Google Slides
+  const handleExportGoogleSlides = () => {
     if (scopeSlides.length === 0) return;
-    setIsExporting(true);
-    try {
-      const specs = toPptxSpecs();
-      const backgroundDataUrls = renderAsImages ? [] : await renderBackgroundDataUrls();
-      const fullSlideDataUrls = renderAsImages ? await renderFullSlideDataUrls() : undefined;
-      const mathOverlayDataUrls = renderAsImages ? undefined : await renderMathOverlayDataUrls();
-      await exportDeckToPPTX(items, config, (msg) => setProgressMsg(msg), specs, includeExplanation, backgroundDataUrls, undefined, fullSlideDataUrls, mathOverlayDataUrls, embedFonts);
-      setShowGoogleSlidesGuide(true);
-    } catch (err: any) {
-      console.error('Google Slides PPTX Export Error:', err);
-      alert('Failed to generate presentation file: ' + err.message);
-    } finally {
-      setIsExporting(false);
-      setProgressMsg('');
-      setBgRenderSlideRef(null);
-      setRenderSlideRef(null);
-      setMathOverlaySlideRef(null);
-    }
+    const deckTitle = config.deckName || config.brandName || 'Presentation Deck';
+    enqueueExport('google_slides', `${deckTitle} (Google Slides)`, `${scopeSlides.length} slide(s)`, {
+      items,
+      config,
+      scopeSlides,
+      renderAsImages,
+      includeExplanation,
+      includeAnswerKeySlides: false,
+      embedFonts,
+    });
+    onClose();
   };
 
   // Download Current Active Slide PNG
-  const downloadSingleSlide = async () => {
+  const downloadSingleSlide = () => {
     if (!currentSlide) return;
-    setIsExporting(true);
-    setProgressMsg('Rendering active slide PNG (1920x1080)...');
-    setRenderSlideRef(currentSlide);
-
-    try {
-      await document.fonts.ready;
-      await new Promise(r => setTimeout(r, 100));
-      const targetEl = exportCanvasRef.current || slideRef.current;
-      if (!targetEl) throw new Error('Slide element not ready');
-
-      const fontEmbedCSS = await getFontEmbedCSS();
-      const dataUrl = await safeToPng(targetEl, {
-        pixelRatio: 2,
-        fontEmbedCSS,
-      });
-
-      const deckPrefix = (config.deckName || config.brandName || 'Slide').replace(/\s+/g, '_');
-      const fileName = `${deckPrefix}_q${currentSlide.questionIndex + 1}${currentSlide.isAnswerSlide ? '_ans' : ''}.png`;
-      saveAs(dataUrl, fileName);
-    } catch (err: any) {
-      console.error('Single Slide Export Error:', err);
-      alert('Failed to render slide image: ' + err.message);
-    } finally {
-      setIsExporting(false);
-      setProgressMsg('');
-      setRenderSlideRef(null);
-    }
+    const deckTitle = config.deckName || config.brandName || 'Slide';
+    enqueueExport('png', `${deckTitle} - Slide #${currentSlide.questionIndex + 1} PNG`, '1920x1080 Image', {
+      items,
+      config,
+      currentSlide,
+    });
+    onClose();
   };
 
-  // Bulk Export All Slides to ZIP with exact template applied to every slide
-  const downloadBulkZip = async () => {
+  // Bulk Export All Slides to ZIP
+  const downloadBulkZip = () => {
     if (scopeSlides.length === 0) return;
-    setIsExporting(true);
-    const zip = new JSZip();
-
-    try {
-      await document.fonts.ready;
-      const deckPrefix = (config.deckName || config.brandName || 'Slides').replace(/\s+/g, '_');
-      const folder = zip.folder(`${deckPrefix}_MCQs`);
-      const fontEmbedCSS = await getFontEmbedCSS();
-
-      for (let i = 0; i < scopeSlides.length; i++) {
-        const ref = scopeSlides[i];
-        setRenderSlideRef(ref);
-        const padIndex = (ref.questionIndex + 1).toString().padStart(2, '0');
-        setProgressMsg(`Rendering slide ${i + 1} of ${scopeSlides.length}...`);
-        await new Promise(r => setTimeout(r, 150));
-
-        const targetEl = exportCanvasRef.current || slideRef.current;
-        if (targetEl) {
-          const dataUrl = await safeToPng(targetEl, {
-            pixelRatio: 2,
-            fontEmbedCSS,
-          });
-          const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
-          folder?.file(`${padIndex}_${ref.isAnswerSlide ? 'ans' : 'q'}.png`, base64, { base64: true });
-        }
-      }
-
-      setProgressMsg('Packaging ZIP file...');
-      const blob = await zip.generateAsync({ type: 'blob' });
-      saveAs(
-        blob,
-        isCurrentScope
-          ? `${deckPrefix}_Slide_${(currentSlide?.questionIndex ?? 0) + 1}.zip`
-          : `${deckPrefix}_MCQ_Slides.zip`
-      );
-    } catch (err: any) {
-      console.error('Bulk ZIP Export Error:', err);
-      alert('Failed to generate ZIP export: ' + err.message);
-    } finally {
-      setIsExporting(false);
-      setProgressMsg('');
-      setRenderSlideRef(null);
-    }
+    const deckTitle = config.deckName || config.brandName || 'Slides';
+    enqueueExport('zip', `${deckTitle} (ZIP Images)`, `${scopeSlides.length} slide(s)`, {
+      items,
+      config,
+      scopeSlides,
+      isCurrentScope,
+      currentSlide,
+    });
+    onClose();
   };
 
   // Download PDF Presentation Document
-  const downloadPDF = async () => {
+  const downloadPDF = () => {
     if (scopeSlides.length === 0) return;
-    setIsExporting(true);
-    try {
-      await document.fonts.ready;
-      const fontEmbedCSS = await getFontEmbedCSS();
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'px',
-        format: [1920, 1080],
-      });
-
-      for (let i = 0; i < scopeSlides.length; i++) {
-        const ref = scopeSlides[i];
-        setRenderSlideRef(ref);
-        setProgressMsg(`Rendering PDF slide ${i + 1} of ${scopeSlides.length}...`);
-        await new Promise(r => setTimeout(r, 150));
-
-        const targetEl = exportCanvasRef.current || slideRef.current;
-        if (!targetEl) continue;
-
-        const dataUrl = await safeToPng(targetEl, {
-          fontEmbedCSS,
-        });
-
-        if (i > 0) pdf.addPage([1920, 1080], 'landscape');
-        pdf.addImage(dataUrl, 'PNG', 0, 0, 1920, 1080);
-      }
-
-      setProgressMsg('Saving PDF presentation document...');
-      const deckPrefix = (config.deckName || config.brandName || 'MCQ_Deck').replace(/\s+/g, '_');
-      pdf.save(`${deckPrefix}_Slides.pdf`);
-    } catch (err: any) {
-      console.error('PDF Export Error:', err);
-      alert('Failed to generate PDF: ' + err.message);
-    } finally {
-      setIsExporting(false);
-      setProgressMsg('');
-      setRenderSlideRef(null);
-    }
+    const deckTitle = config.deckName || config.brandName || 'Deck PDF';
+    enqueueExport('pdf', `${deckTitle} (PDF)`, `${scopeSlides.length} slide(s)`, {
+      items,
+      config,
+      scopeSlides,
+    });
+    onClose();
   };
 
   // Export Deck JSON Backup
   const downloadDeckJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({ config, items }, null, 2));
-    const deckPrefix = (config.deckName || config.brandName || 'Deck').replace(/\s+/g, '_');
-    saveAs(dataStr, `${deckPrefix}_mcq_backup.json`);
+    const deckTitle = config.deckName || config.brandName || 'Deck';
+    enqueueExport('json_deck', `${deckTitle} Backup JSON`, 'Deck Configuration & Items', {
+      items,
+      config,
+    });
+    onClose();
   };
 
-  // Extract MCQs only (clean question array — no config/slide overrides) as re-importable JSON
+  // Extract MCQs JSON
   const downloadMCQsJSON = () => {
     if (items.length === 0) return;
-    const cleanItems = items.map(({ customConfig, ...q }) => q);
-    const deckPrefix = (config.deckName || config.brandName || 'MCQ').replace(/\s+/g, '_');
-    downloadJSON(cleanItems, `${deckPrefix}_mcqs.json`);
+    const deckTitle = config.deckName || config.brandName || 'MCQs';
+    enqueueExport('json_mcqs', `${deckTitle} MCQs JSON`, `${items.length} Question(s)`, {
+      items,
+      config,
+    });
+    onClose();
   };
 
   const scopeSlideCount = isCurrentScope ? 1 : scopeSlides.length;
@@ -418,7 +195,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       }`}>
         <button
           onClick={onClose}
-          disabled={isExporting}
           className={`absolute top-5 right-5 p-2.5 rounded-xl cursor-pointer transition-colors ${
             isAppLight ? 'bg-slate-100 text-slate-500 hover:text-slate-900 border border-slate-200' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
           }`}
@@ -489,8 +265,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </label>
               <button
                 onClick={downloadPPTX}
-              disabled={isExporting}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 hover:brightness-110 shrink-0 cursor-pointer disabled:opacity-50 transition-all"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 hover:brightness-110 shrink-0 cursor-pointer transition-all"
             >
               Export PPTX
             </button>
@@ -515,8 +290,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <button
               onClick={handleExportGoogleSlides}
-              disabled={isExporting}
-              className="px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-black text-xs shadow-lg shadow-blue-500/20 shrink-0 cursor-pointer disabled:opacity-50 transition-all"
+              className="px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-black text-xs shadow-lg shadow-blue-500/20 shrink-0 cursor-pointer transition-all"
             >
               Google Slides
             </button>
@@ -603,8 +377,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <button
               onClick={downloadPDF}
-              disabled={isExporting}
-              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer transition-colors ${
                 isAppLight ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border-slate-700'
               }`}
             >
@@ -628,8 +401,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <button
               onClick={downloadBulkZip}
-              disabled={isExporting}
-              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer transition-colors ${
                 isAppLight ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100' : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
               }`}
             >
@@ -649,7 +421,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
               <button
                 onClick={downloadSingleSlide}
-                disabled={isExporting || !currentSlide}
+                disabled={!currentSlide}
                 className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
                   isAppLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                 }`}
@@ -770,7 +542,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <button
               onClick={downloadMCQsJSON}
-              disabled={isExporting || items.length === 0}
+              disabled={items.length === 0}
               className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer disabled:opacity-50 transition-colors ${
                 isAppLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
               }`}
@@ -790,7 +562,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <button
               onClick={downloadDeckJSON}
-              disabled={isExporting}
               className={`px-5 py-2.5 rounded-xl font-bold text-xs border shrink-0 cursor-pointer transition-colors ${
                 isAppLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
               }`}
@@ -799,110 +570,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </button>
           </div>
         </div>
-
-        {isExporting && (
-          <div className={`p-4 rounded-2xl border text-xs flex items-center gap-3 ${
-            isAppLight ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-          }`}>
-            <Loader2 className="w-5 h-5 animate-spin shrink-0" />
-            <span className="font-semibold">{progressMsg}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Hidden Offscreen 1920x1080 Container for HD PNG Snapshot Export */}
-      <div
-        style={{
-          position: 'fixed',
-          left: '-9999px',
-          top: '-9999px',
-          width: '1920px',
-          height: '1080px',
-          overflow: 'hidden',
-          pointerEvents: 'none',
-          zIndex: -100,
-        }}
-      >
-        {renderSlideRef && (
-          <SlideCanvas
-            ref={exportCanvasRef}
-            item={renderSlideRef.item}
-            config={config}
-            currentIndex={renderSlideRef.questionIndex}
-            totalCount={items.length}
-            isAnswerRevealMode={false}
-            slideVariant={renderSlideRef.isAnswerSlide ? 'answer' : 'question'}
-            forceShowExplanation={renderSlideRef.isAnswerSlide ? includeExplanation : undefined}
-          />
-        )}
-      </div>
-
-      {/* Hidden Offscreen 1920x1080 Container for PPTX background-only rasters —
-          exact gradient/image/tint/glow stack, no text/shape layers (those are
-          added as native editable PPTX layers on top of this picture). */}
-      <div
-        style={{
-          position: 'fixed',
-          left: '-9999px',
-          top: '-9999px',
-          width: '1920px',
-          height: '1080px',
-          overflow: 'hidden',
-          pointerEvents: 'none',
-          zIndex: -100,
-        }}
-      >
-        {bgRenderSlideRef && (
-          <SlideCanvas
-            ref={bgExportCanvasRef}
-            item={bgRenderSlideRef.item}
-            config={config}
-            currentIndex={bgRenderSlideRef.questionIndex}
-            totalCount={items.length}
-            mode="backgroundOnly"
-          />
-        )}
-      </div>
-
-      {/* Hidden Offscreen 1920x1080 Transparent Container for PPTX LaTeX/math
-          box overlays — renders ONLY the boxes whose content contains math
-          (KaTeX typesets it exactly like the preview); everything else stays
-          transparent so the native editable layers beneath show through. */}
-      <div
-        style={{
-          position: 'fixed',
-          left: '-9999px',
-          top: '-9999px',
-          width: '1920px',
-          height: '1080px',
-          overflow: 'hidden',
-          pointerEvents: 'none',
-          zIndex: -100,
-        }}
-      >
-        {mathOverlaySlideRef && (() => {
-          const effConfig: DeckConfig = { ...config, ...(mathOverlaySlideRef.item.customConfig || {}) };
-          const boxes = ensureAnswerBox(effConfig.slideTextBoxes || [], effConfig);
-          const mathBoxIds = getMathBoxIds(mathOverlaySlideRef);
-          // Answer-reveal gating resolved by the SHARED resolver so the overlay
-          // matches the exact slide variant and the editable native layers.
-          const revealFlags = resolveSlideAnswerFlags(effConfig, mathOverlaySlideRef.isAnswerSlide);
-          return (
-            <div ref={mathOverlayCanvasRef} style={{ width: '1920px', height: '1080px', position: 'relative' }}>
-              <SlideTextBoxLayer
-                boxes={boxes}
-                item={mathOverlaySlideRef.item}
-                config={effConfig}
-                currentIndex={mathOverlaySlideRef.questionIndex}
-                totalCount={items.length}
-                showAnswerHighlight={revealFlags.showOptionHighlight}
-                isAnswerVariant={mathOverlaySlideRef.isAnswerSlide}
-                showExplanation={revealFlags.showExplanationCard}
-                renderBoxIds={mathBoxIds}
-              />
-            </div>
-          );
-        })()}
       </div>
 
       {/* Question Paper modal — opens separately with file name, template, MCQs per page & answer key */}
