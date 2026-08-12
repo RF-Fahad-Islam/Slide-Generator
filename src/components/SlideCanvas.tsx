@@ -161,7 +161,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   // If separate_slide mode is off, reveal settings apply in-place on the question slide when reveal is active.
   const allowRevealOnCurrentSlide = isSeparateSlideMode
     ? isAnswerVariant
-    : (isAnswerVariant || effectiveConfig.showAnswerInSlide || isAnswerRevealMode);
+    : (isAnswerVariant || effectiveConfig.showAnswerInSlide || effectiveConfig.showExplanationInSlide || isAnswerRevealMode);
 
   const showAnswerHighlight = isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'highlight_option'));
   const showAnswerPill = isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'answer_pill'));
@@ -169,6 +169,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     forceShowExplanation !== undefined
       ? forceShowExplanation
       : (isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'explanation_card')));
+
   const isClassMode = effectiveConfig.layoutMode === 'class_mode';
 
   const slideTextBoxes = effectiveConfig.slideTextBoxes || [];
@@ -766,6 +767,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
         totalCount={totalCount}
         showAnswerHighlight={showAnswerHighlight}
         isAnswerVariant={isAnswerVariant}
+        showExplanation={showExplanation}
       />
       </>
       )}

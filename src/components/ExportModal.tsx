@@ -911,6 +911,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 totalCount={items.length}
                 showAnswerHighlight={revealFlags.showOptionHighlight}
                 isAnswerVariant={mathOverlaySlideRef.isAnswerSlide}
+                showExplanation={revealFlags.showExplanationCard}
                 renderBoxIds={mathBoxIds}
               />
             </div>

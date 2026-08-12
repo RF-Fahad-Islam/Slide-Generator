@@ -26,6 +26,11 @@ interface SlideTextBoxLayerProps {
   // 'answer' renders a dedicated answer slide — adds the "উত্তর" strip above
   // the boxes, matching SlideCanvas's answer variant.
   isAnswerVariant?: boolean;
+  // Resolved explanation-card visibility from the renderer (SlideCanvas).
+  // When provided it wins over the config-derived gate so the boxed-design
+  // explanation card matches the preview even when ONLY the explanation toggle
+  // is enabled (reveal gate must not require the answer highlight).
+  showExplanation?: boolean;
   // Optional: only render boxes with these ids. Used to rasterize just the
   // boxes PPTX can't reproduce natively (LaTeX/math content) as images.
   renderBoxIds?: string[];
@@ -43,6 +48,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   totalCount = 1,
   showAnswerHighlight,
   isAnswerVariant = false,
+  showExplanation,
   renderBoxIds,
 }) => {
   if (boxes.length === 0) return null;
@@ -62,7 +68,10 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const isRevealActive = isAnswerVariant || showAnswerHighlight;
   const showOptionHighlight = isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'highlight_option'));
   const showAnswerPill = isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'answer_pill'));
-  const showExplanationCard = isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'explanation_card'));
+  const showExplanationCard =
+    showExplanation !== undefined
+      ? showExplanation
+      : (isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'explanation_card')));
 
   const cardBox = boxes.find(b => b.bind === 'free' && (b.shape === 'card' || b.shape === 'banner')) || boxes.find(b => b.bind === 'stem');
   const stemBox = boxes.find(b => b.bind === 'stem');

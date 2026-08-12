@@ -273,8 +273,15 @@ export const exportDeckToPPTX = async (
       const fontFace = getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim();
       const radius = box.shape === 'pill' ? 0.5 : 0.16;
       // Uses the box's OWN configured bg/color (same as preview) — falls back
-      // to the badge tokens only when the box has none set.
-      const fillColor = box.bg ? cssColorToHex(box.bg, slideColors.bg) : (slideColors.badgeFill || 'D1FAE5');
+      // to the badge tokens only when the box has none set. True glass fill:
+      // keep rgba() translucency (raw rgb + pptxgenjs transparency, exactly
+      // like the DOM's `bg-emerald-500/20` pill) instead of a solid composite.
+      const fillTransparency = box.bg ? cssFillTransparency(box.bg) : undefined;
+      const fillColor = box.bg
+        ? (fillTransparency !== undefined
+          ? (cssRgbHex(box.bg) || cssColorToHex(box.bg, slideColors.bg))
+          : cssColorToHex(box.bg, slideColors.bg))
+        : (slideColors.badgeFill || 'D1FAE5');
       const textColor = box.color ? cssColorToHex(box.color, slideColors.bg) : (slideColors.badgeText || '065F46');
 
       slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
@@ -282,9 +289,13 @@ export const exportDeckToPPTX = async (
         y: box.y * PX_TO_IN,
         w: (box.w || 400) * PX_TO_IN,
         h: (box.h || (box.fontSize || 24) * 1.8) * PX_TO_IN,
-        fill: { color: fillColor },
-        line: { color: '10B981', width: 1.5 },
+        fill: {
+          color: fillColor,
+          ...(fillTransparency !== undefined ? { transparency: fillTransparency } : {}),
+        },
+        line: { color: '34D399', transparency: 40, width: 1.5 },
         rectRadius: radius,
+        shadow: { type: 'outer', opacity: 0.12, blur: 9, angle: 90, offset: 3 },
       });
 
       slide.addText(`✓  ${ansText}`, {
@@ -548,7 +559,12 @@ export const exportDeckToPPTX = async (
         const isCorrect = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
         const hl = flags.showOptionHighlight && isCorrect;
 
-        // Option graphic — an editable rounded-rect pill/card (or no shape for plain)
+        // Option graphic — an editable rounded-rect pill/card (or no shape for plain).
+        // Non-highlighted cards keep their true glass fill (raw rgb + pptxgenjs
+        // transparency) like the DOM's translucent `box.bg`; the highlighted
+        // correct option gets the amber glow shadow mirroring the preview's
+        // `boxShadow: 0 10px 25px rgba(245,158,11,0.2)` + 2px selected border.
+        const optFillTransparency = box.bg ? cssFillTransparency(box.bg) : undefined;
         if (box.shape && box.shape !== 'plain') {
           slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
             x,
@@ -558,12 +574,20 @@ export const exportDeckToPPTX = async (
             fill: {
               color: hl
                 ? slideColors.optionSelectedBg
-                : (box.bg ? cssColorToHex(box.bg, slideColors.bg) : slideColors.optionBg),
+                : (box.bg
+                    ? (optFillTransparency !== undefined
+                        ? (cssRgbHex(box.bg) || cssColorToHex(box.bg, slideColors.bg))
+                        : cssColorToHex(box.bg, slideColors.bg))
+                    : slideColors.optionBg),
+              ...(!hl && optFillTransparency !== undefined ? { transparency: optFillTransparency } : {}),
             },
             line: hl
               ? { color: slideColors.optionSelectedBorder, width: 2 }
               : { color: 'FFFFFF', transparency: 92, width: 0.75 },
             rectRadius: radius,
+            ...(hl
+              ? { shadow: { type: 'outer', color: slideColors.optionSelectedBorder, opacity: 0.3, blur: 12, angle: 90, offset: 2 } }
+              : {}),
           });
         }
 
@@ -649,7 +673,8 @@ export const exportDeckToPPTX = async (
 
     // Container shape (pill / card / banner) behind the text — an editable layer.
     // Mirrors SlideTextBoxLayer: pill = content-hugging translucent rounded pill
-    // with a soft glass shadow + faint light border; card/banner = rounded box.
+    // with a soft glass shadow + faint amber border (the DOM pill hardcodes
+    // `border-amber-500/40`); card/banner = rounded box with a faint light border.
     if (box.shape && box.shape !== 'plain' && fill) {
       slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
         x: shapeX,
@@ -660,7 +685,9 @@ export const exportDeckToPPTX = async (
           color: fill,
           ...(fillTransparency !== undefined ? { transparency: fillTransparency } : {}),
         },
-        line: { color: 'FFFFFF', transparency: 88, width: 0.75 },
+        line: isPill
+          ? { color: 'F59E0B', transparency: 60, width: 0.75 }
+          : { color: 'FFFFFF', transparency: 88, width: 0.75 },
         rectRadius: isPill ? 0.5 : box.shape === 'card' ? 0.09 : 0,
         shadow:
           isPill || box.shape === 'card'
@@ -882,6 +909,14 @@ export const exportDeckToPPTX = async (
           if (box.bind === 'roman' && !(item.romanItems || []).length) continue;
           if (box.bind === 'prompt' && !item.prompt) continue;
           if (box.bind === 'source' && getSourceTags(item).length === 0) continue;
+
+          // Mandatory-element visibility toggles — mirrors SlideTextBoxLayer so
+          // a hidden element (glass badge/counter, question number, watermark)
+          // never leaks into the export when it is off in the preview.
+          if (box.bind === 'brand' && effectiveConfig.showBrandLogo === false) continue;
+          if (box.bind === 'slideCounter' && effectiveConfig.showPagingCounter === false) continue;
+          if (box.bind === 'questionNumber' && effectiveConfig.showQuestionNumber === false) continue;
+          if (box.bind === 'watermark' && effectiveConfig.showInstructorInfo === false) continue;
 
           // LaTeX/math content is rasterized as a transparent image overlay
           // (see mathOverlayDataUrls) because PPTX native text would strip the

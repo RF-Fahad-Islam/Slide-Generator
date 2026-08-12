@@ -62,10 +62,12 @@ export const resolveSlideAnswerFlags = (
   const isSeparateSlideMode = effectiveAnswerMode(config) === 'separate_slide';
   // Mirrors SlideCanvas exactly (the DOM reference): on dedicated answer slides
   // the reveal is always active; on question slides it activates when the deck
-  // is not separate_slide and in-place reveal is on.
+  // is not separate_slide and any in-place reveal feature is on. Explanation is
+  // its own toggle (`showExplanationInSlide`) — enabling ONLY the explanation
+  // card must still reveal it, so the gate checks both flags.
   const allowRevealOnCurrentSlide = isSeparateSlideMode
     ? isAnswerSlide
-    : (isAnswerSlide || !!config.showAnswerInSlide);
+    : (isAnswerSlide || !!config.showAnswerInSlide || !!config.showExplanationInSlide);
   return {
     showOptionHighlight: isAnswerSlide || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(config, 'highlight_option')),
     showAnswerPill: isAnswerSlide || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(config, 'answer_pill')),
