@@ -79,8 +79,8 @@ export function computeTemplateCardMetrics(
   }
 
   const defaultMinH = cardBox.h || BASE_CARD_H;
-  const cardH = (!hasRoman && !hasPrompt && stemLines <= 2)
-    ? Math.min(COMPACT_CARD_H, defaultMinH)
+  const cardH = (!hasRoman && !hasPrompt)
+    ? Math.max(140, Math.min(COMPACT_CARD_H, currentY - cardBox.y + 28))
     : Math.max(defaultMinH, currentY - cardBox.y + CARD_BOTTOM_PAD);
 
   const optionsY = is2Column

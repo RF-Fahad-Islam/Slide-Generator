@@ -105,7 +105,7 @@ export const embedFontsInPptx = async (
         const buffer = await res.arrayBuffer();
         const fileName = `fntdata${rIdCounter}.ttf`;
         zip.file(`ppt/fonts/${fileName}`, buffer);
-        entries.push({ family, kind: face.kind, rId: `rId${rIdCounter}`, fileName });
+        entries.push({ family, kind: face.kind, rId: `rIdFont_${rIdCounter}`, fileName });
         rIdCounter++;
       } catch {
         // Font fetch failed (offline first run) — skip this face gracefully.
@@ -139,7 +139,7 @@ export const embedFontsInPptx = async (
     );
 
     // presentation.xml — <p:embeddedFontLst> contains <p:embeddedFont> elements
-    // for each family, placed after <p:notesSz/> (or before </p:presentation>).
+    // for each family, placed before <p:defaultTextStyle> (or after <p:notesSz/>) per PresentationML XSD.
     const presPath = 'ppt/presentation.xml';
     const presXml = await zip.file(presPath)?.async('string');
     if (presXml) {
@@ -158,10 +158,16 @@ export const embedFontsInPptx = async (
         }).join('') +
         '</p:embeddedFontLst>';
 
-      const notesMarker = '</p:notesSz>';
-      const updated = presXml.includes(notesMarker)
-        ? presXml.replace(notesMarker, notesMarker + embeddedFontLstXml)
-        : presXml.replace('</p:presentation>', embeddedFontLstXml + '</p:presentation>');
+      let updated = presXml;
+      if (presXml.includes('<p:defaultTextStyle>')) {
+        updated = presXml.replace('<p:defaultTextStyle>', embeddedFontLstXml + '<p:defaultTextStyle>');
+      } else if (presXml.includes('</p:notesSz>')) {
+        updated = presXml.replace('</p:notesSz>', '</p:notesSz>' + embeddedFontLstXml);
+      } else if (presXml.includes('</p:sldSz>')) {
+        updated = presXml.replace('</p:sldSz>', '</p:sldSz>' + embeddedFontLstXml);
+      } else {
+        updated = presXml.replace('</p:presentation>', embeddedFontLstXml + '</p:presentation>');
+      }
       zip.file(presPath, updated);
     }
   }
