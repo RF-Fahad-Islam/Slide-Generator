@@ -38,6 +38,7 @@ import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
 import { loadGlobalDefaults, createDefaultDeckConfig } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
+import { clamp, SLIDE_W, SLIDE_H } from './utils/slideTextBoxes';
 import { SlideTextBox, SlideTextBoxBind } from './types';
 import { SlidePreviewModal } from './components/SlidePreviewModal';
 import { LayoutLibraryModal } from './components/LayoutLibraryModal';
@@ -99,8 +100,10 @@ export default function App() {
 
   // Slide text box edit mode (overlay layer) + edit scope (deck-wide vs active slide only)
   const [isTextBoxEditMode, setIsTextBoxEditMode] = useState<boolean>(false);
-  const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
-  const [textBoxScope, setTextBoxScope] = useState<'global' | 'slide'>('global');
+  const [selectedTextBoxIds, setSelectedTextBoxIds] = useState<string[]>([]);
+  const selectedTextBoxId = selectedTextBoxIds[0] ?? null;
+  const setSelectedTextBoxId = (id: string | null) => setSelectedTextBoxIds(id ? [id] : []);
+  const [textBoxScope, setTextBoxScope] = useState<'global' | 'slide'>('slide');
 
   // Question shared from the Question Bank → preselected in Social Post Generator
   const [socialTargetId, setSocialTargetId] = useState<string | null>(null);
@@ -291,6 +294,38 @@ export default function App() {
     setTextBoxes(boxes => boxes.map(b => (b.id === id ? { ...b, ...patch } : b)));
   };
 
+  const updateSlideBoxes = (ids: string[], patch: Partial<SlideTextBox>) => {
+    setTextBoxes(boxes => boxes.map(b => (ids.includes(b.id) ? { ...b, ...patch } : b)));
+  };
+
+  const moveSlideBoxes = (updates: { id: string; x: number; y: number }[]) => {
+    const map = new Map(updates.map(u => [u.id, u]));
+    setTextBoxes(boxes =>
+      boxes.map(b => {
+        const u = map.get(b.id);
+        return u ? { ...b, x: u.x, y: u.y } : b;
+      })
+    );
+  };
+
+  const deleteSlideBoxes = (ids: string[]) => {
+    setTextBoxes(boxes => boxes.filter(b => !ids.includes(b.id)));
+    setSelectedTextBoxIds(prev => prev.filter(id => !ids.includes(id)));
+  };
+
+  const duplicateSlideBoxes = (ids: string[]) => {
+    setTextBoxes(boxes => {
+      const targets = boxes.filter(b => ids.includes(b.id));
+      const duplicates = targets.map(b => ({
+        ...b,
+        id: `b_${b.bind}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        x: clamp(b.x + 20, 0, SLIDE_W - b.w),
+        y: clamp(b.y + 20, 0, SLIDE_H - 40),
+      }));
+      return [...boxes, ...duplicates];
+    });
+  };
+
   const addSlideBox = (bind: SlideTextBoxBind) => {
     const id = `b_${bind}_${Date.now()}`;
     const newBox: SlideTextBox = {
@@ -329,7 +364,7 @@ export default function App() {
 
   const deleteSlideBox = (id: string) => {
     setTextBoxes(boxes => boxes.filter(b => b.id !== id));
-    setSelectedTextBoxId(prev => (prev === id ? null : prev));
+    setSelectedTextBoxIds(prev => prev.filter(x => x !== id));
   };
 
   const duplicateSlideBox = (id: string) => {
@@ -623,7 +658,7 @@ export default function App() {
     setIsDeckSettingsOpen(false);
     setActiveTab('preview');
     setIsTextBoxEditMode(true);
-    setTextBoxScope('global');
+    setTextBoxScope('slide');
     setSelectedTextBoxId(null);
   };
 
@@ -687,7 +722,7 @@ export default function App() {
     }
     setConfig(prev => ({ ...prev, ...cc }));
     setItems(prev => prev.map(it => (it.customConfig ? { ...it, customConfig: undefined } : it)));
-    setTextBoxScope('global');
+    setTextBoxScope('slide');
     setSelectedTextBoxId(null);
   };
 
@@ -1432,12 +1467,22 @@ export default function App() {
                             <SlideTextBoxOverlay
                               boxes={activeTextBoxes}
                               selectedId={selectedTextBoxId}
+                              selectedIds={selectedTextBoxIds}
                               item={currentItem}
                               config={config}
                               currentIndex={activeQuestionIndex}
                               scale={slideScale}
-                              onSelect={setSelectedTextBoxId}
+                              onSelect={(id, isMulti) => {
+                                if (!id) setSelectedTextBoxIds([]);
+                                else if (isMulti) {
+                                  setSelectedTextBoxIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+                                } else {
+                                  setSelectedTextBoxIds([id]);
+                                }
+                              }}
+                              onSelectIds={setSelectedTextBoxIds}
                               onMove={(id, x, y) => updateSlideBox(id, { x, y })}
+                              onMoveBoxes={moveSlideBoxes}
                               onResize={(id, patch) => updateSlideBox(id, patch)}
                             />
                           )}
@@ -1466,6 +1511,7 @@ export default function App() {
                       <SlideTextBoxPanel
                         boxes={activeTextBoxes}
                         selectedId={selectedTextBoxId}
+                        selectedIds={selectedTextBoxIds}
                         appTheme={appTheme}
                         config={effectiveTextBoxConfig}
                         textBoxScope={textBoxScope}
@@ -1477,10 +1523,15 @@ export default function App() {
                         onAddElement={addElementBox}
                         onAddLayout={addLayoutToDeck}
                         onUpdateBox={updateSlideBox}
+                        onUpdateBoxes={updateSlideBoxes}
                         onDeleteBox={deleteSlideBox}
+                        onDeleteBoxes={deleteSlideBoxes}
                         onDuplicateBox={duplicateSlideBox}
+                        onDuplicateBoxes={duplicateSlideBoxes}
                         onReorderBox={reorderSlideBox}
+                        onMoveBoxes={moveSlideBoxes}
                         onSelectBox={setSelectedTextBoxId}
+                        onSelectIds={setSelectedTextBoxIds}
                         onReset={resetSlideTextBoxes}
                         onClearAll={clearSlideTextBoxes}
                         onClose={() => setIsTextBoxEditMode(false)}

@@ -41,6 +41,7 @@ import {
   Download,
   RotateCcw,
   X,
+  CheckSquare,
   ChevronUp,
   ChevronDown,
   Type,
@@ -88,6 +89,7 @@ type PanelTab = 'style' | 'text' | 'elements' | 'photos' | 'layouts';
 interface SlideTextBoxPanelProps {
   boxes: SlideTextBox[];
   selectedId: string | null;
+  selectedIds?: string[];
   appTheme: 'dark' | 'light';
   config: DeckConfig; // effective config (global + active-slide overrides)
   textBoxScope: 'global' | 'slide';
@@ -99,11 +101,16 @@ interface SlideTextBoxPanelProps {
   onAddElement: (elementId: string, extra?: { imageUrl?: string; iconName?: string }) => void;
   onAddLayout: (layoutId: string) => void;
   onUpdateBox: (id: string, patch: Partial<SlideTextBox>) => void;
+  onUpdateBoxes?: (ids: string[], patch: Partial<SlideTextBox>) => void;
   onDeleteBox: (id: string) => void;
+  onDeleteBoxes?: (ids: string[]) => void;
   onDuplicateBox: (id: string) => void;
+  onDuplicateBoxes?: (ids: string[]) => void;
   onReorderBox: (id: string, dir: 'up' | 'down') => void;
   onMoveBox?: (dragId: string, overId: string) => void;
+  onMoveBoxes?: (updates: { id: string; x: number; y: number }[]) => void;
   onSelectBox: (id: string | null) => void;
+  onSelectIds?: (ids: string[]) => void;
   onReset: () => void;
   onClearAll: () => void;
   onClose: () => void;
@@ -413,6 +420,7 @@ const BindMockupPreview: React.FC<{ bind: SlideTextBoxBind; isAppLight: boolean 
 export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   boxes,
   selectedId,
+  selectedIds,
   appTheme,
   config,
   textBoxScope,
@@ -424,17 +432,23 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   onAddElement,
   onAddLayout,
   onUpdateBox,
+  onUpdateBoxes,
   onDeleteBox,
+  onDeleteBoxes,
   onDuplicateBox,
+  onDuplicateBoxes,
   onReorderBox,
   onMoveBox,
+  onMoveBoxes,
   onSelectBox,
+  onSelectIds,
   onReset,
   onClearAll,
   onClose,
 }) => {
   const isAppLight = appTheme === 'light';
-  const selectedBox = boxes.find(b => b.id === selectedId) || null;
+  const activeSelectedIds = selectedIds ?? (selectedId ? [selectedId] : []);
+  const selectedBox = boxes.find(b => b.id === (activeSelectedIds[0] ?? selectedId)) || null;
   const imageInputRef = useRef<HTMLInputElement>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -445,9 +459,10 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
   const prevSelected = useRef<string | null>(null);
   const [activeTab, setActiveTab] = useState<PanelTab>('text');
   useEffect(() => {
-    if (selectedId && prevSelected.current !== selectedId) setActiveTab('style');
-    prevSelected.current = selectedId;
-  }, [selectedId]);
+    const curFirst = activeSelectedIds[0] ?? selectedId;
+    if (curFirst && prevSelected.current !== curFirst) setActiveTab('style');
+    prevSelected.current = curFirst ?? null;
+  }, [selectedId, activeSelectedIds]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -463,6 +478,51 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+  };
+
+  const handleBatchFontSizeDelta = (delta: number) => {
+    if (activeSelectedIds.length === 0) return;
+    activeSelectedIds.forEach(id => {
+      const b = boxes.find(x => x.id === id);
+      if (b) {
+        const curSize = b.fontSize || 16;
+        onUpdateBox(id, { fontSize: Math.max(10, curSize + delta) });
+      }
+    });
+  };
+
+  const handleBatchFontSizeExact = (sz: number) => {
+    if (!sz || activeSelectedIds.length === 0) return;
+    if (onUpdateBoxes) {
+      onUpdateBoxes(activeSelectedIds, { fontSize: sz });
+    } else {
+      activeSelectedIds.forEach(id => onUpdateBox(id, { fontSize: sz }));
+    }
+  };
+
+  const handleAlignSelected = (type: 'left' | 'center' | 'right' | 'top' | 'distributeV') => {
+    const selBoxes = boxes.filter(b => activeSelectedIds.includes(b.id));
+    if (selBoxes.length < 2) return;
+
+    if (type === 'left') {
+      const minX = Math.min(...selBoxes.map(b => b.x));
+      selBoxes.forEach(b => onUpdateBox(b.id, { x: minX }));
+    } else if (type === 'center') {
+      const avgCenterX = Math.round(selBoxes.reduce((acc, b) => acc + (b.x + b.w / 2), 0) / selBoxes.length);
+      selBoxes.forEach(b => onUpdateBox(b.id, { x: Math.max(0, avgCenterX - Math.round(b.w / 2)) }));
+    } else if (type === 'right') {
+      const maxRight = Math.max(...selBoxes.map(b => b.x + b.w));
+      selBoxes.forEach(b => onUpdateBox(b.id, { x: maxRight - b.w }));
+    } else if (type === 'top') {
+      const minY = Math.min(...selBoxes.map(b => b.y));
+      selBoxes.forEach(b => onUpdateBox(b.id, { y: minY }));
+    } else if (type === 'distributeV') {
+      const sorted = [...selBoxes].sort((a, b) => a.y - b.y);
+      const minY = sorted[0].y;
+      const maxY = sorted[sorted.length - 1].y;
+      const step = (maxY - minY) / (sorted.length - 1 || 1);
+      sorted.forEach((b, idx) => onUpdateBox(b.id, { y: Math.round(minY + idx * step) }));
+    }
   };
 
   const tabBtn = (tab: PanelTab, Icon: typeof Layers, label: string, extra?: React.ReactNode) => (
@@ -502,7 +562,11 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                 Text Box Editor
               </h3>
               <p className={`text-[10px] font-semibold ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                {selectedBox ? `Editing: ${selectedBox.bind}` : `${boxes.length} box${boxes.length === 1 ? '' : 'es'} on the slide`}
+                {activeSelectedIds.length > 1
+                  ? `${activeSelectedIds.length} items selected (Combined Mode)`
+                  : selectedBox
+                  ? `Editing: ${selectedBox.bind}`
+                  : `${boxes.length} box${boxes.length === 1 ? '' : 'es'} on the slide`}
               </p>
             </div>
           </div>
@@ -518,27 +582,137 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
           </button>
         </div>
 
-        {/* Compact scope segmented control */}
+        {/* Multi-Selection Combined Actions Banner */}
+        {activeSelectedIds.length > 1 && (
+          <div className={`p-4 rounded-2xl border flex flex-col gap-3 ${
+            isAppLight ? 'bg-amber-50/90 border-amber-200 text-slate-800' : 'bg-amber-500/10 border-amber-500/30 text-amber-100'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="text-xs font-black uppercase tracking-wider">{activeSelectedIds.length} Items Selected</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSelectIds) onSelectIds([]);
+                  else onSelectBox(null);
+                }}
+                className="text-[11px] font-bold text-amber-400 hover:underline cursor-pointer"
+              >
+                Deselect All
+              </button>
+            </div>
+
+            {/* Batch Font Size Controls */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold opacity-80">Batch Font Size</label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleBatchFontSizeDelta(-2)}
+                  className="px-3 py-1.5 rounded-lg border text-xs font-bold bg-slate-800 text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  -2px
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBatchFontSizeDelta(+2)}
+                  className="px-3 py-1.5 rounded-lg border text-xs font-bold bg-slate-800 text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  +2px
+                </button>
+                <select
+                  onChange={(e) => handleBatchFontSizeExact(Number(e.target.value))}
+                  className="px-2.5 py-1.5 rounded-lg border text-xs bg-slate-900 text-white border-slate-700 cursor-pointer"
+                >
+                  <option value="">Set Exact Size...</option>
+                  {[14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64].map(sz => (
+                    <option key={sz} value={sz}>{sz}px</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Batch Alignment Tools */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold opacity-80">Batch Alignment & Distribution</label>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleAlignSelected('left')}
+                  title="Align Left Edges"
+                  className="px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-slate-800 text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  Align Left
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAlignSelected('center')}
+                  title="Align Horizontal Center"
+                  className="px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-slate-800 text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  Align Center
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAlignSelected('right')}
+                  title="Align Right Edges"
+                  className="px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-slate-800 text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  Align Right
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAlignSelected('top')}
+                  title="Align Top Edges"
+                  className="px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-slate-800 text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  Align Top
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAlignSelected('distributeV')}
+                  title="Distribute Vertically"
+                  className="px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-slate-800 text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  Distribute Vertically
+                </button>
+              </div>
+            </div>
+
+            {/* Batch Duplicate & Delete */}
+            <div className="flex items-center gap-2 pt-2 border-t border-amber-500/20">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDuplicateBoxes) onDuplicateBoxes(activeSelectedIds);
+                  else activeSelectedIds.forEach(id => onDuplicateBox(id));
+                }}
+                className="flex-1 px-3 py-1.5 rounded-xl border text-xs font-black bg-amber-500 text-slate-950 hover:bg-amber-400 cursor-pointer shadow"
+              >
+                Duplicate Selected ({activeSelectedIds.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeleteBoxes) onDeleteBoxes(activeSelectedIds);
+                  else activeSelectedIds.forEach(id => onDeleteBox(id));
+                }}
+                className="flex-1 px-3 py-1.5 rounded-xl border text-xs font-black bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30 cursor-pointer shadow"
+              >
+                Delete Selected ({activeSelectedIds.length})
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Compact scope segmented control — "This Slide" is default/first */}
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => onChangeTextBoxScope('global')}
-            title="Apply changes to every slide"
-            className={`flex-1 px-3 py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
-              textBoxScope === 'global'
-                ? 'bg-amber-500 text-slate-950 border-amber-400 ring-2 ring-amber-400/50'
-                : isAppLight
-                ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
-                : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            All Slides
-          </button>
-          <button
-            type="button"
             onClick={() => onChangeTextBoxScope('slide')}
-            title="Apply changes to the current slide only"
+            title="Apply changes to the current slide only (default)"
             className={`flex-1 px-3 py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
               textBoxScope === 'slide'
                 ? 'bg-indigo-600 text-white border-indigo-400 ring-2 ring-indigo-400/50'
@@ -549,6 +723,21 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
           >
             <Target className="w-3.5 h-3.5" />
             This Slide
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeTextBoxScope('global')}
+            title="Apply changes to every slide in the deck"
+            className={`flex-1 px-3 py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+              textBoxScope === 'global'
+                ? 'bg-amber-500 text-slate-950 border-amber-400 ring-2 ring-amber-400/50'
+                : isAppLight
+                ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
+                : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            All Slides
           </button>
           {hasTextBoxOverride && (
             <button
