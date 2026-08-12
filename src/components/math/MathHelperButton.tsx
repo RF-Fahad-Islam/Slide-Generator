@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Sigma } from 'lucide-react';
 import { MathText } from '../MathText';
 import { MATH_SNIPPET_CATEGORIES } from './mathSnippets';
@@ -111,7 +112,7 @@ export const MathHelperButton: React.FC<MathHelperButtonProps> = ({
         <Sigma className="w-3.5 h-3.5" />
       </button>
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
           ref={popoverRef}
           style={{ position: 'fixed', top: popoverPos.top, left: popoverPos.left, zIndex: 100 }}
@@ -175,7 +176,8 @@ export const MathHelperButton: React.FC<MathHelperButtonProps> = ({
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
