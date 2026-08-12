@@ -163,12 +163,12 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
     ? isAnswerVariant
     : (isAnswerVariant || effectiveConfig.showAnswerInSlide || effectiveConfig.showExplanationInSlide || isAnswerRevealMode);
 
-  const showAnswerHighlight = isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'highlight_option'));
-  const showAnswerPill = isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'answer_pill'));
+  const showAnswerHighlight = allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'highlight_option');
+  const showAnswerPill = allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'answer_pill');
   const showExplanation =
     forceShowExplanation !== undefined
       ? forceShowExplanation
-      : (isAnswerVariant || (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'explanation_card')));
+      : (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'explanation_card'));
 
   const isClassMode = effectiveConfig.layoutMode === 'class_mode';
 

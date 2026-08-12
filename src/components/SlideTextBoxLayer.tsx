@@ -12,7 +12,7 @@ import {
   computeTemplateCardMetrics,
   splitRomanLabel,
 } from '../utils/templateBoxLayout';
-import { hasAnswerDisplayStyle } from '../utils/answerSlides';
+import { hasAnswerDisplayStyle, resolveSlideAnswerFlags } from '../utils/answerSlides';
 import { MathText } from './MathText';
 import { Check, User, Sparkles, BookOpen, Award } from 'lucide-react';
 
@@ -63,15 +63,13 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const romanBadgeBg = theme.colors.romanBadgeBg;
   const romanBadgeBorder = theme.colors.romanBadgeBorder;
 
-  // Granular display feature evaluation — on dedicated Answer Slides (isAnswerVariant = true),
-  // answer highlight, answer pill, and explanation card ALWAYS show.
-  const isRevealActive = isAnswerVariant || showAnswerHighlight;
-  const showOptionHighlight = isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'highlight_option'));
-  const showAnswerPill = isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'answer_pill'));
+  const resolvedFlags = resolveSlideAnswerFlags(config, isAnswerVariant);
+  const showOptionHighlight = showAnswerHighlight !== undefined ? showAnswerHighlight : resolvedFlags.showOptionHighlight;
+  const showAnswerPill = resolvedFlags.showAnswerPill;
   const showExplanationCard =
     showExplanation !== undefined
       ? showExplanation
-      : (isAnswerVariant || (isRevealActive && hasAnswerDisplayStyle(config, 'explanation_card')));
+      : resolvedFlags.showExplanationCard;
 
   const cardBox = boxes.find(b => b.bind === 'free' && (b.shape === 'card' || b.shape === 'banner')) || boxes.find(b => b.bind === 'stem');
   const stemBox = boxes.find(b => b.bind === 'stem');
@@ -102,8 +100,8 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         // Skip optional structural boxes that have no content on this slide
         if (box.bind === 'roman' && !(item.romanItems || []).length) return null;
         if (box.bind === 'prompt' && !item.prompt) return null;
-        if (box.bind === 'explanation' && !isAnswerVariant && !showExplanationCard && !item.explanation) return null;
-        if (box.bind === 'answer' && !showAnswerPill && !isAnswerVariant) return null;
+        if (box.bind === 'explanation' && !showExplanationCard) return null;
+        if (box.bind === 'answer' && !showAnswerPill) return null;
         if (box.bind === 'brand' && config.showBrandLogo === false) return null;
         if (box.bind === 'slideCounter' && config.showPagingCounter === false) return null;
         if (box.bind === 'questionNumber' && config.showQuestionNumber === false) return null;
@@ -381,7 +379,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         }
 
         if (box.bind === 'explanation') {
-          if (!showExplanationCard && !isAnswerVariant) return null;
+          if (!showExplanationCard) return null;
 
           return (
             <div
