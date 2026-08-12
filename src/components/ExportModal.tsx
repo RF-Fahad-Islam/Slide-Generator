@@ -8,6 +8,7 @@ import { boxContentHasMath, ensureAnswerBox } from '../utils/slideTextBoxes';
 import { DeckQuestionPaperModal } from './DeckQuestionPaperModal';
 import { expandDeckSlides, effectiveAnswerMode, effectiveShowAnswerInSlide, SlideRef, resolveSlideAnswerFlags } from '../utils/answerSlides';
 import { toPng } from 'html-to-image';
+import { safeToPng } from '../utils/cleanExport';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -133,7 +134,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const el = bgExportCanvasRef.current;
       if (el) {
         try {
-          const url = await toPng(el, { pixelRatio: 1.5, cacheBust: true, fontEmbedCSS });
+          const url = await safeToPng(el, { fontEmbedCSS });
           backgroundDataUrls.push(url);
         } catch {
           backgroundDataUrls.push('');
@@ -161,7 +162,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const el = exportCanvasRef.current;
       if (el) {
         try {
-          const url = await toPng(el, { pixelRatio: 1.5, cacheBust: true, fontEmbedCSS });
+          const url = await safeToPng(el, { fontEmbedCSS });
           fullSlideDataUrls.push(url);
         } catch {
           fullSlideDataUrls.push('');
@@ -207,7 +208,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const el = mathOverlayCanvasRef.current;
       if (el) {
         try {
-          const url = await toPng(el, { pixelRatio: 1.5, cacheBust: true, fontEmbedCSS });
+          const url = await safeToPng(el, { fontEmbedCSS });
           mathOverlayDataUrls.push(url);
         } catch {
           mathOverlayDataUrls.push('');
@@ -282,9 +283,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       if (!targetEl) throw new Error('Slide element not ready');
 
       const fontEmbedCSS = await getFontEmbedCSS();
-      const dataUrl = await toPng(targetEl, {
+      const dataUrl = await safeToPng(targetEl, {
         pixelRatio: 2,
-        cacheBust: true,
         fontEmbedCSS,
       });
 
@@ -322,9 +322,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
         const targetEl = exportCanvasRef.current || slideRef.current;
         if (targetEl) {
-          const dataUrl = await toPng(targetEl, {
+          const dataUrl = await safeToPng(targetEl, {
             pixelRatio: 2,
-            cacheBust: true,
             fontEmbedCSS,
           });
           const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
@@ -372,9 +371,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         const targetEl = exportCanvasRef.current || slideRef.current;
         if (!targetEl) continue;
 
-        const dataUrl = await toPng(targetEl, {
-          pixelRatio: 1.5,
-          cacheBust: true,
+        const dataUrl = await safeToPng(targetEl, {
           fontEmbedCSS,
         });
 

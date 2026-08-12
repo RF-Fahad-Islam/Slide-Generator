@@ -5,6 +5,7 @@ import { SAMPLE_DECKS } from '../utils/bulkParser';
 import { exportDeckToPPTX } from '../utils/pptxExport';
 import { SlideCanvas } from './SlideCanvas';
 import { toPng } from 'html-to-image';
+import { safeToPng } from '../utils/cleanExport';
 import { getFontEmbedCSS } from '../utils/fontEmbed';
 import { X, Download, Check, RefreshCw, CheckCircle2, Layers, CheckSquare } from 'lucide-react';
 import { expandDeckSlides } from '../utils/answerSlides';
@@ -142,7 +143,7 @@ export const BatchExportModal: React.FC<BatchExportModalProps> = ({
           const el = bgCanvasRef.current;
           if (el) {
             try {
-              const dataUrl = await toPng(el, { pixelRatio: 1.5, cacheBust: true, fontEmbedCSS });
+              const dataUrl = await safeToPng(el, { fontEmbedCSS });
               renderedUrls.push(dataUrl);
             } catch {
               renderedUrls.push('');
