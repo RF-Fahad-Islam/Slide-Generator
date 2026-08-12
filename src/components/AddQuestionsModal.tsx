@@ -1,5 +1,7 @@
-import React from 'react';
-import { X, Database, PenTool, Edit3, ArrowUpRight, Plus, CheckCircle2 } from 'lucide-react';
+import React, { useRef } from 'react';
+import { X, Database, PenTool, Edit3, ArrowUpRight, Plus, CheckCircle2, FileCode, Upload } from 'lucide-react';
+import { MCQItem, DeckConfig } from '../types';
+import { parseFullDeckPackage } from '../utils/mcqJson';
 
 interface AddQuestionsModalProps {
   isOpen: boolean;
@@ -7,22 +9,49 @@ interface AddQuestionsModalProps {
   onFromQuestionBank: () => void;
   onFromManualEditor: () => void;
   onFromQuestionForm: () => void;
+  onImportJsonDeck?: (parsed: { items: MCQItem[]; config?: DeckConfig; name?: string }) => void;
+  currentConfig?: DeckConfig;
   appTheme?: 'dark' | 'light';
 }
 
-// Beautiful "Add Questions" chooser opened from the wide button in Slide Studio.
-// Three source cards with mini mockups: Question Bank / Manual Editor /
-// Question Creator Form — each navigates to its tool or opens the form.
+// Beautiful "Add Questions & Import Decks" chooser opened from the wide button in Slide Studio.
+// Four source cards with mini mockups: Question Bank / Manual Editor / Question Creator Form / Import Full Deck (.json).
 export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
   isOpen,
   onClose,
   onFromQuestionBank,
   onFromManualEditor,
   onFromQuestionForm,
+  onImportJsonDeck,
+  currentConfig,
   appTheme = 'dark',
 }) => {
   if (!isOpen) return null;
   const isAppLight = appTheme === 'light';
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleJsonUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const raw = JSON.parse(text);
+      const parsed = parseFullDeckPackage(raw, currentConfig || ({} as any));
+      if (!parsed || parsed.items.length === 0) {
+        alert('Invalid deck JSON file. No valid questions or slides found.');
+        return;
+      }
+      if (onImportJsonDeck) {
+        onImportJsonDeck(parsed);
+      }
+      onClose();
+    } catch (err) {
+      console.error('Failed to import JSON deck package:', err);
+      alert('Error reading or parsing JSON file.');
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const cardClass = () =>
     `group relative text-left p-5 rounded-3xl border transition-all cursor-pointer flex flex-col gap-4 ${
@@ -41,7 +70,7 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className={`relative w-full max-w-4xl border rounded-3xl overflow-hidden shadow-2xl animate-modal-card ${
+        className={`relative w-full max-w-5xl border rounded-3xl overflow-hidden shadow-2xl animate-modal-card ${
           isAppLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -56,10 +85,10 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
             </div>
             <div>
               <h3 className={`text-lg font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                Add Questions
+                Add Questions &amp; Import Decks
               </h3>
               <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Choose how you want to bring MCQs into your deck
+                Choose how you want to bring MCQs or full slide decks into your workspace
               </p>
             </div>
           </div>
@@ -76,12 +105,20 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
           </button>
         </div>
 
-        {/* 3 source cards with mockups */}
-        <div className="p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+        {/* Hidden File Input for JSON Deck Package */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept=".json"
+          onChange={handleJsonUpload}
+          className="hidden"
+        />
+
+        {/* 4 source cards with mini mockups */}
+        <div className="p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
 
           {/* CARD 1 — Question Bank */}
           <button type="button" onClick={onFromQuestionBank} className={cardClass()}>
-            {/* Mockup: mini question-bank list */}
             <div className={`rounded-2xl border p-3 space-y-1.5 ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-lg bg-amber-500 flex items-center justify-center">
@@ -114,7 +151,6 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
 
           {/* CARD 2 — Manual Editor */}
           <button type="button" onClick={onFromManualEditor} className={cardClass()}>
-            {/* Mockup: bulk paste textarea with lines */}
             <div className={`rounded-2xl border p-3 font-mono space-y-1.5 text-[9px] ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
               <div className="flex items-center gap-1">
                 <span className="text-amber-500">১.</span>
@@ -153,7 +189,6 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
 
           {/* CARD 3 — Question Creator Form */}
           <button type="button" onClick={onFromQuestionForm} className={cardClass()}>
-            {/* Mockup: single-question form */}
             <div className={`rounded-2xl border p-3 space-y-2 ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
               <div className={`h-2 rounded-full w-full ${isAppLight ? 'bg-slate-300' : 'bg-slate-700'}`} />
               <div className="grid grid-cols-2 gap-1.5">
@@ -180,6 +215,53 @@ export const AddQuestionsModal: React.FC<AddQuestionsModalProps> = ({
               Open Question Form <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </span>
           </button>
+
+          {/* CARD 4 — Import Full Deck (.json) */}
+          <button type="button" onClick={() => fileInputRef.current?.click()} className={cardClass()}>
+            <div className={`rounded-2xl border p-3 font-mono space-y-1.5 text-[9px] ${isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
+              <div className="flex items-center justify-between text-amber-500 font-bold">
+                <span className="flex items-center gap-1">
+                  <FileCode className="w-3 h-3 text-amber-400" />
+                  <span>full_deck.json</span>
+                </span>
+                <span className="text-[8px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">v2.0</span>
+              </div>
+              <div className="flex items-center gap-1 pl-1">
+                <span className="text-slate-400 font-bold">&#123;</span>
+                <span className="text-amber-400">"version"</span>
+                <span className="text-slate-400">:</span>
+                <span className="text-emerald-400">"2.0"</span>
+              </div>
+              <div className="flex items-center gap-1 pl-3">
+                <span className="text-amber-400">"config"</span>
+                <span className="text-slate-400">:</span>
+                <span className={`h-1.5 flex-1 rounded-full ${isAppLight ? 'bg-slate-300' : 'bg-slate-700'}`} />
+              </div>
+              <div className="flex items-center gap-1 pl-3">
+                <span className="text-amber-400">"items"</span>
+                <span className="text-slate-400">: [</span>
+                <span className="text-emerald-400">{`...slides`}</span>
+                <span className="text-slate-400">] &#125;</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className={iconTileClass}>
+                <Upload className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <div className="min-w-0">
+                <h4 className={`text-sm font-black ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
+                  Import Full Deck (.json)
+                </h4>
+                <p className={`text-xs mt-0.5 ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Load an exact slide deck with theme, layouts &amp; items
+                </p>
+              </div>
+            </div>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-black mt-auto ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
+              Upload JSON Deck <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </span>
+          </button>
+
         </div>
       </div>
     </div>

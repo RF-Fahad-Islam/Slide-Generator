@@ -1830,13 +1830,25 @@ export default function App() {
         appTheme={appTheme}
       />
 
-      {/* Add Questions chooser modal — 3 source cards (Bank / Manual / Form) */}
+      {/* Add Questions chooser modal — 4 source cards (Bank / Manual / Form / Import JSON Deck) */}
       <AddQuestionsModal
         isOpen={isAddQuestionsOpen}
         onClose={() => setIsAddQuestionsOpen(false)}
         onFromQuestionBank={handleFromQuestionBank}
         onFromManualEditor={handleFromManualEditor}
         onFromQuestionForm={handleFromQuestionForm}
+        onImportJsonDeck={(parsed) => {
+          if (parsed.items && parsed.items.length > 0) {
+            setItems(parsed.items);
+            if (parsed.config) {
+              setConfig(parsed.config);
+            }
+            setActiveTab('preview');
+            setSelectedIndex(0);
+            setIsAddQuestionsOpen(false);
+          }
+        }}
+        currentConfig={config}
         appTheme={appTheme}
       />
 
