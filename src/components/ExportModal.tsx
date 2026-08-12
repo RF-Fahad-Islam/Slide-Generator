@@ -130,7 +130,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     for (let i = 0; i < scopeSlides.length; i++) {
       const ref = scopeSlides[i];
       setBgRenderSlideRef(ref);
-      await new Promise((r) => setTimeout(r, 60));
+      await new Promise((r) => setTimeout(r, 120));
       const el = bgExportCanvasRef.current;
       if (el) {
         try {

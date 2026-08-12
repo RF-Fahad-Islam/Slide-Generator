@@ -500,8 +500,10 @@ export const exportDeckToPPTX = async (
 
     // OPTIONS — render each option as its own editable pill/card graphic, and
     // on answer slides give the correct option a highlighted card box + ✓ tick.
-    // Mirrors SlideCanvas: 'pill' options flow left-to-right in a wrapping row,
-    // 'card'/'plain' options stack vertically.
+    // Mirrors SlideCanvas / SlideTextBoxLayer:
+    // - 'pill' shape options flow left-to-right in a wrapping row
+    // - '2col' options layout (default) renders a 2x2 grid (A&B top, C&D bottom)
+    // - '1col' options layout renders a stacked single-column list
     if (box.bind === 'options') {
       const opts = item.options || [];
       if (opts.length === 0) return;
@@ -512,20 +514,19 @@ export const exportDeckToPPTX = async (
       const fontPt = box.fontSize * PX_TO_PT;
       const fontFace = getBoxFontFamily(box, cfg).replace(/'/g, '').split(',')[0].trim();
       const isPills = box.shape === 'pill';
+      const is2Col = (cfg.optionsLayout || '2col') === '2col';
 
       // Estimate the rendered width of an option's text so pills wrap exactly
-      // like the canvas flex-wrap row (per-character glyph widths + key badge +
-      // padding).
+      // like the canvas flex-wrap row (per-character glyph widths + key badge + padding).
       const estimateOptWidth = (opt: MCQItem['options'][number]): number => {
         const textW = [...cleanLatex(opt.text)].reduce((sum, ch) => sum + estCharW(ch) * box.fontSize, 0);
         const keyW = box.fontSize * 1.1;
         const pad = box.fontSize * 1.6;
-        const tickW = 0;
-        return Math.min(Math.max(textW + keyW + pad + tickW, box.fontSize * 3), (box.w || 600));
+        return Math.min(Math.max(textW + keyW + pad, box.fontSize * 3), (box.w || 600));
       };
 
       const placed = opts.map((opt, oi) => {
-        if (oi >= 4) return { opt, oi, x: 0, y: 0, w: 0, h: 0 };
+        if (oi >= 4) return { opt, oi, x: 0, y: 0, w: 0, h: 0, highlighted: false };
         const isCorrect = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
         const highlighted = flags.showOptionHighlight && isCorrect;
 
@@ -536,7 +537,6 @@ export const exportDeckToPPTX = async (
           const gapX = 12 * PX_TO_IN;
           const gapY = 10 * PX_TO_IN;
           const boxX = box.x * PX_TO_IN;
-          // Walk the current row to find where this pill lands
           let rowStart = boxX;
           let rowY = box.y * PX_TO_IN;
           for (let pi = 0; pi < oi; pi++) {
@@ -552,11 +552,21 @@ export const exportDeckToPPTX = async (
             rowY += pillH + gapY;
           }
           return { opt, oi, x: rowStart, y: rowY, w: pillW, h: pillH, highlighted };
+        } else if (is2Col) {
+          // 2-column grid layout (A, B on top row; C, D on bottom row)
+          const colIdx = oi % 2;
+          const rowIdx = Math.floor(oi / 2);
+          const gapX = 16 * PX_TO_IN;
+          const gapY = 12 * PX_TO_IN;
+          const colW = (boxW - gapX) / 2;
+          const x = box.x * PX_TO_IN + colIdx * (colW + gapX);
+          const y = box.y * PX_TO_IN + rowIdx * (optH + gapY);
+          return { opt, oi, x, y, w: colW, h: optH, highlighted };
+        } else {
+          // 1-column vertical stack
+          const y = box.y * PX_TO_IN + oi * (optH + 0.09);
+          return { opt, oi, x: box.x * PX_TO_IN, y, w: boxW, h: optH, highlighted };
         }
-
-        // Vertical stack (card / plain) — full box width rows
-        const y = box.y * PX_TO_IN + oi * (optH + 0.09);
-        return { opt, oi, x: box.x * PX_TO_IN, y, w: boxW, h: optH, highlighted };
       });
 
       placed.forEach(({ opt, oi, x, y, w, h, highlighted }) => {
@@ -564,11 +574,7 @@ export const exportDeckToPPTX = async (
         const isCorrect = opt.isCorrect || opt.key.toLowerCase() === item.answer?.toLowerCase();
         const hl = flags.showOptionHighlight && isCorrect;
 
-        // Option graphic — an editable rounded-rect pill/card (or no shape for plain).
-        // Non-highlighted cards keep their true glass fill (raw rgb + pptxgenjs
-        // transparency) like the DOM's translucent `box.bg`; the highlighted
-        // correct option gets the amber glow shadow mirroring the preview's
-        // `boxShadow: 0 10px 25px rgba(245,158,11,0.2)` + 2px selected border.
+        // Option card graphic — editable rounded-rect card or pill
         const optFillTransparency = box.bg ? cssFillTransparency(box.bg) : undefined;
         if (box.shape && box.shape !== 'plain') {
           slide.addShape(pptx.ShapeType?.roundRect || 'roundRect', {
@@ -588,49 +594,95 @@ export const exportDeckToPPTX = async (
             },
             line: hl
               ? { color: slideColors.optionSelectedBorder, width: 2 }
-              : { color: 'FFFFFF', transparency: 92, width: 0.75 },
+              : { color: slideColors.isLight ? 'E2E8F0' : 'FFFFFF', transparency: slideColors.isLight ? 0 : 85, width: slideColors.isLight ? 1.5 : 0.75 },
             rectRadius: radius,
             ...(hl
               ? { shadow: { type: 'outer', color: slideColors.optionSelectedBorder, opacity: 0.3, blur: 12, angle: 90, offset: 2 } }
-              : {}),
+              : { shadow: { type: 'outer', opacity: 0.1, blur: 6, angle: 90, offset: 2 } }),
           });
         }
 
-        slide.addText(
-          [
-            {
-              text: `${opt.key}) `,
-              options: { bold: true, color: hl ? slideColors.optionSelectedText : slideColors.titleColor },
-            },
-            {
-              text: cleanLatex(opt.text),
-              options: { color: hl ? slideColors.optionSelectedText : cssColorToHex(box.color || '#ffffff', slideColors.bg) },
-            },
-          ],
-            {
-              x: x + (box.shape !== 'plain' ? 0.18 : 0),
-              y,
-              w: w - (hl ? 0.7 : 0.3),
-              h,
-              fontSize: fontPt,
-              // DOM renders every option at min font-bold (700) — never regular.
-              bold: true,
-              align: box.align,
-              fontFace,
-              valign: 'middle',
-          }
-        );
+        // Dedicated Key Badge Pill (circle / rounded pill for A, B, C, D) inside the card
+        const badgeSize = Math.min(Math.max(0.32, h * 0.6), 0.42);
+        const badgeX = x + (box.shape !== 'plain' ? 0.12 : 0);
+        const badgeY = y + (h - badgeSize) / 2;
 
-        // Answer tick for the highlighted correct option
-        if (hl) {
-          slide.addText('✓', {
-            x: x + w - 0.5,
+        if (box.shape !== 'plain') {
+          slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
+            x: badgeX,
+            y: badgeY,
+            w: badgeSize,
+            h: badgeSize,
+            fill: {
+              color: hl
+                ? 'F59E0B'
+                : slideColors.isLight
+                ? '0F172A'
+                : 'FFFFFF',
+              transparency: hl ? 0 : slideColors.isLight ? 0 : 90,
+            },
+            line: { type: 'none' },
+          });
+
+          slide.addText(opt.key, {
+            x: badgeX,
+            y: badgeY,
+            w: badgeSize,
+            h: badgeSize,
+            fontSize: Math.max(10, fontPt * 0.85),
+            bold: true,
+            color: hl ? '0F172A' : 'FFFFFF',
+            align: 'center',
+            valign: 'middle',
+          });
+        }
+
+        // Option Body Text
+        const textX = box.shape !== 'plain' ? badgeX + badgeSize + 0.12 : x;
+        const textW = box.shape !== 'plain' ? w - (textX - x) - (hl ? 0.48 : 0.15) : w;
+
+        slide.addText(
+          box.shape === 'plain'
+            ? [
+                { text: `${opt.key}) `, options: { bold: true, color: hl ? slideColors.optionSelectedText : slideColors.titleColor } },
+                { text: cleanLatex(opt.text), options: { color: hl ? slideColors.optionSelectedText : cssColorToHex(box.color || '#ffffff', slideColors.bg) } },
+              ]
+            : cleanLatex(opt.text),
+          {
+            x: textX,
             y,
-            w: 0.38,
+            w: textW,
             h,
             fontSize: fontPt,
             bold: true,
-            color: slideColors.optionSelectedText,
+            color: hl ? slideColors.optionSelectedText : cssColorToHex(box.color || '#ffffff', slideColors.bg),
+            align: box.align || 'left',
+            fontFace,
+            valign: 'middle',
+          }
+        );
+
+        // Highlight tick pill for correct answer
+        if (hl && box.shape !== 'plain') {
+          const tickSize = badgeSize;
+          const tickX = x + w - tickSize - 0.12;
+          const tickY = y + (h - tickSize) / 2;
+          slide.addShape(pptx.ShapeType?.ellipse || 'ellipse', {
+            x: tickX,
+            y: tickY,
+            w: tickSize,
+            h: tickSize,
+            fill: { color: 'F59E0B' },
+            line: { type: 'none' },
+          });
+          slide.addText('✓', {
+            x: tickX,
+            y: tickY,
+            w: tickSize,
+            h: tickSize,
+            fontSize: Math.max(10, fontPt * 0.85),
+            bold: true,
+            color: '0F172A',
             align: 'center',
             valign: 'middle',
           });
@@ -903,8 +955,9 @@ export const exportDeckToPPTX = async (
         const stemBox = boxes.find(b => b.id.startsWith(TPL_STEM_ID));
         const romanBox = boxes.find(b => b.id.startsWith(TPL_ROMAN_ID));
         const optionsBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_OPTIONS_ID));
+        const is2ColMode = (effectiveConfig.optionsLayout || '2col') === '2col';
         const cardMetrics = cardBox
-          ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y)
+          ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y, is2ColMode)
           : undefined;
 
         for (const box of boxes) {

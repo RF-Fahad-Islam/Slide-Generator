@@ -117,7 +117,7 @@ export const embedFontsInPptx = async (
     return data instanceof Blob ? data : new Blob([data]);
   }
 
-  // Group entries per family for fontTable.xml (one <p:font> per family).
+  // Group entries per family for presentation.xml <p:embeddedFontLst>.
   const groups: { family: string; entries: EmbeddedFontEntry[] }[] = [];
   entries.forEach(entry => {
     const group = groups.find(g => g.family === entry.family);
@@ -125,70 +125,54 @@ export const embedFontsInPptx = async (
     else groups.push({ family: entry.family, entries: [entry] });
   });
 
-  const fontTableXml =
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<p:fontTable xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
-    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
-    'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">' +
-    groups.map(g =>
-      `<p:font typeface="${g.family}" pitchFamily="34" charset="0">` +
-      g.entries.map(e =>
-        e.kind === 'bold'
-          ? `<p:embedBold r:id="${e.rId}"/>`
-          : `<p:embedRegular r:id="${e.rId}"/>`
-      ).join('') +
-      `</p:font>`
-    ).join('') +
-    '</p:fontTable>';
-  zip.file('ppt/fontTable.xml', fontTableXml);
-
-  zip.file(
-    'ppt/_rels/fontTable.xml.rels',
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      entries.map(e =>
-        `<Relationship Id="${e.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/font" Target="../fonts/${e.fileName}"/>`
-      ).join('') +
-      '</Relationships>'
-  );
-
-  // presentation.xml.rels — point the presentation at the fontTable part.
+  // presentation.xml.rels — add font relationships pointing to ppt/fonts/fntdataN.ttf
   const presRelsPath = 'ppt/_rels/presentation.xml.rels';
   const presRels = await zip.file(presRelsPath)?.async('string');
   if (presRels) {
-    const fontTableRid = 'rIdFontTable';
+    const fontRelTags = entries.map(e =>
+      `<Relationship Id="${e.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/font" Target="fonts/${e.fileName}"/>`
+    ).join('');
+
     zip.file(
       presRelsPath,
-      presRels.replace(
-        '</Relationships>',
-        `<Relationship Id="${fontTableRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/></Relationships>`
-      )
+      presRels.replace('</Relationships>', `${fontRelTags}</Relationships>`)
     );
 
-    // presentation.xml — <p:embeddedFontLst/> must appear after <p:notesSz/>
-    // and before <p:defaultTextStyle/> (schema order).
+    // presentation.xml — <p:embeddedFontLst> contains <p:embeddedFont> elements
+    // for each family, placed after <p:notesSz/> (or before </p:presentation>).
     const presPath = 'ppt/presentation.xml';
     const presXml = await zip.file(presPath)?.async('string');
     if (presXml) {
-      const marker = '</p:notesSz>';
-      const embeddedLst = `<p:embeddedFontLst r:id="${fontTableRid}"/>`;
-      const updated = presXml.includes(marker)
-        ? presXml.replace(marker, marker + embeddedLst)
-        : presXml.replace('</p:presentation>', embeddedLst + '</p:presentation>');
+      const embeddedFontLstXml =
+        '<p:embeddedFontLst>' +
+        groups.map(g => {
+          const regEntry = g.entries.find(e => e.kind === 'regular');
+          const boldEntry = g.entries.find(e => e.kind === 'bold');
+          return (
+            `<p:embeddedFont>` +
+            `<p:font typeface="${g.family}" pitchFamily="34" charset="0"/>` +
+            (regEntry ? `<p:regular r:id="${regEntry.rId}"/>` : '') +
+            (boldEntry ? `<p:bold r:id="${boldEntry.rId}"/>` : '') +
+            `</p:embeddedFont>`
+          );
+        }).join('') +
+        '</p:embeddedFontLst>';
+
+      const notesMarker = '</p:notesSz>';
+      const updated = presXml.includes(notesMarker)
+        ? presXml.replace(notesMarker, notesMarker + embeddedFontLstXml)
+        : presXml.replace('</p:presentation>', embeddedFontLstXml + '</p:presentation>');
       zip.file(presPath, updated);
     }
   }
 
-  // [Content_Types].xml — declare the ttf extension + fontTable override.
+  // [Content_Types].xml — declare the ttf extension default.
   const ctPath = '[Content_Types].xml';
   const ctXml = await zip.file(ctPath)?.async('string');
   if (ctXml) {
     let updated = ctXml;
     if (!updated.includes('Extension="ttf"')) {
       updated = updated.replace('</Types>', '<Default Extension="ttf" ContentType="application/x-font-ttf"/></Types>');
-    }
-    if (!updated.includes('fontTable.xml')) {
-      updated = updated.replace('</Types>', '<Override PartName="/ppt/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.fontTable+xml"/></Types>');
     }
     zip.file(ctPath, updated);
   }
