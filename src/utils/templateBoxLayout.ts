@@ -83,9 +83,10 @@ export function computeTemplateCardMetrics(
     ? Math.max(140, Math.min(COMPACT_CARD_H, currentY - cardBox.y + 28))
     : Math.max(defaultMinH, currentY - cardBox.y + CARD_BOTTOM_PAD);
 
-  const optionsY = is2Column
-    ? baseOptionsY
-    : Math.max(baseOptionsY, cardBox.y + cardH + COMPACT_CARD_GAP);
+  const dynamicOptionsY = cardBox.y + cardH + COMPACT_CARD_GAP;
+  const optionsY = (hasRoman || hasPrompt)
+    ? Math.max(baseOptionsY, dynamicOptionsY)
+    : dynamicOptionsY;
 
   return { cardH, romanY: romanTop, promptY, optionsY };
 }

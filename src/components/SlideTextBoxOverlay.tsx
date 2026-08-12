@@ -214,8 +214,9 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
   const stemBox = boxes.find(b => b.id.startsWith(TPL_STEM_ID));
   const romanBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_ROMAN_ID));
   const optionsBoxForMetrics = boxes.find(b => b.id.startsWith(TPL_OPTIONS_ID));
+  const is2ColMode = (config.optionsLayout || '2col') === '2col';
   const cardMetrics = cardBox
-    ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBoxForMetrics, optionsBoxForMetrics?.y ?? cardBox.y)
+    ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBoxForMetrics, optionsBoxForMetrics?.y ?? cardBox.y, is2ColMode)
     : undefined;
 
   return (

@@ -76,7 +76,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
   const romanBox = boxes.find(b => b.bind === 'roman');
   const promptBox = boxes.find(b => b.bind === 'prompt');
   const optionsBoxForMetrics = boxes.find(b => b.bind === 'options');
-  const is2Column = !!(cardBox && optionsBoxForMetrics && optionsBoxForMetrics.x > cardBox.x + 300);
+  const is2Column = (config.optionsLayout || '2col') === '2col';
 
   const cardMetrics = cardBox
     ? computeTemplateCardMetrics(item, cardBox, stemBox, romanBox, optionsBoxForMetrics?.y ?? cardBox.y, is2Column)
@@ -208,10 +208,10 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         if (box.bind === 'options') {
           const is2Col = (config.optionsLayout || '2col') === '2col';
           const gridClass = box.shape === 'pill'
-            ? 'flex flex-wrap gap-3'
+            ? 'flex flex-wrap gap-3.5'
             : is2Col
-            ? 'grid grid-cols-2 gap-4'
-            : 'space-y-2.5';
+            ? 'grid grid-cols-2 gap-5'
+            : 'space-y-3';
 
           return (
             <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={{ ...base, top: boxTop }}>
@@ -237,10 +237,10 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     return (
                       <span
                         key={opt.key}
-                        className="inline-flex items-center gap-3 px-6 py-3 rounded-full shadow-lg"
+                        className="inline-flex items-center gap-3 px-6 py-3.5 rounded-full shadow-lg"
                         style={containerStyle}
                       >
-                        <span className={`w-8 h-8 rounded-full font-black text-lg flex items-center justify-center shrink-0 ${
+                        <span className={`w-9 h-9 rounded-full font-black text-xl flex items-center justify-center shrink-0 ${
                           highlight ? 'bg-amber-400 text-slate-950' : isLight ? 'bg-slate-900 text-white' : 'bg-white/10 text-white'
                         }`}>
                           {opt.key}
@@ -258,10 +258,10 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     return (
                       <div
                         key={opt.key}
-                        className="flex items-center gap-4 px-5 py-4 rounded-2xl shadow-xl backdrop-blur-md slide-box-option-bg"
+                        className="flex items-center gap-4 px-6 py-5 min-h-[82px] rounded-2xl shadow-xl backdrop-blur-md slide-box-option-bg"
                         style={containerStyle}
                       >
-                        <div className={`w-11 h-11 rounded-2xl font-black text-xl flex items-center justify-center shrink-0 shadow-md ${
+                        <div className={`w-12 h-12 rounded-2xl font-black text-2xl flex items-center justify-center shrink-0 shadow-md ${
                           highlight
                             ? 'bg-amber-400 text-slate-950'
                             : isLight
