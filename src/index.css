@@ -137,6 +137,27 @@
 }
 
 /* Fatty Glassmorphism Card (Dark Mode) */
+/* Glass Card Stacking Context Isolation (Fixes Production Compositing Distortion & Box Shadow Bleed) */
+.glass-card-fatty,
+.glass-card-fatty-light,
+.slide-box-card-bg,
+.slide-box-option-bg {
+  isolation: isolate;
+  background-clip: padding-box;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.slide-box-option-bg {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4);
+}
+
+.slide-box-card-bg {
+  box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.5);
+}
+
+/* Fatty Glassmorphism Card (Dark Mode) */
 .glass-card-fatty {
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(24px);
