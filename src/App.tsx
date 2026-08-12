@@ -1490,6 +1490,8 @@ export default function App() {
                     <DeckManager
                       items={items}
                       slides={expandedSlides}
+                      config={config}
+                      onUpdateConfig={setConfig}
                       onUpdateItems={setItems}
                       onSelectIndex={(idx) => {
                         setSelectedIndex(questionSlideIndex(expandedSlides, idx));

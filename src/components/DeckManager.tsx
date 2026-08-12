@@ -13,12 +13,13 @@ import {
   verticalListSortingStrategy,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
-import { MCQItem, getSourceTags } from '../types';
+import { MCQItem, DeckConfig, getSourceTags } from '../types';
 import { SlideRef } from '../utils/answerSlides';
 import { ValidationPanel } from './ValidationPanel';
 import { AddQuestionsBanner } from './AddQuestionsBanner';
-import { Search, CheckCircle2, Layers } from 'lucide-react';
+import { Search, CheckCircle2, Layers, Sliders } from 'lucide-react';
 import { SortableQuestionCard } from './SortableQuestionCard';
+import { QuestionNumberChanger, QuestionNumberFormat } from './QuestionNumberChanger';
 
 interface DeckManagerProps {
   items: MCQItem[];
@@ -30,6 +31,10 @@ interface DeckManagerProps {
   appTheme?: 'dark' | 'light';
   onEditQuestion?: (item: MCQItem) => void;
   onAddQuestions?: () => void;
+  config?: DeckConfig;
+  onUpdateConfig?: (updated: DeckConfig) => void;
+  questionNumberFormat?: QuestionNumberFormat;
+  onUpdateQuestionNumberFormat?: (format: QuestionNumberFormat) => void;
 }
 
 export const DeckManager: React.FC<DeckManagerProps> = ({
@@ -42,6 +47,10 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   appTheme = 'dark',
   onEditQuestion,
   onAddQuestions,
+  config,
+  onUpdateConfig,
+  questionNumberFormat,
+  onUpdateQuestionNumberFormat,
 }) => {
   const isAppLight = appTheme === 'light';
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,28 +194,51 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             : 'bg-slate-950 border-slate-800 text-slate-300'
         }`}
       >
-        <span className="font-semibold">Bulk Tools:</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-bold flex items-center gap-1.5 text-amber-500">
+            <Sliders className="w-4 h-4" /> Bulk Tools:
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => convertKeyingStyle('bangla')}
+              className={`px-3 py-1.5 rounded-xl border transition-colors text-xs font-bold ${
+                isAppLight
+                  ? 'bg-white border-slate-300 text-amber-700 hover:bg-slate-100'
+                  : 'bg-slate-900 border-slate-800 text-amber-300 hover:bg-slate-800'
+              }`}
+              title="Transform option keys to Bangla (ক, খ, গ, ঘ)"
+            >
+              Keying → ক, খ, গ, ঘ
+            </button>
+            <button
+              onClick={() => convertKeyingStyle('english')}
+              className={`px-3 py-1.5 rounded-xl border transition-colors text-xs font-bold ${
+                isAppLight
+                  ? 'bg-white border-slate-300 text-amber-700 hover:bg-slate-100'
+                  : 'bg-slate-900 border-slate-800 text-amber-300 hover:bg-slate-800'
+              }`}
+              title="Transform option keys to English (A, B, C, D)"
+            >
+              Keying → A, B, C, D
+            </button>
+          </div>
+        </div>
+
+        {/* Question Number Format Changer — located right after option keying under Bulk Tools */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => convertKeyingStyle('bangla')}
-            className={`px-4 py-2 rounded-xl border transition-colors text-xs font-bold ${
-              isAppLight
-                ? 'bg-white border-slate-300 text-amber-700 hover:bg-slate-100'
-                : 'bg-slate-900 border-slate-800 text-amber-300 hover:bg-slate-800'
-            }`}
-          >
-            Keying → ক, খ, গ, ঘ
-          </button>
-          <button
-            onClick={() => convertKeyingStyle('english')}
-            className={`px-4 py-2 rounded-xl border transition-colors text-xs font-bold ${
-              isAppLight
-                ? 'bg-white border-slate-300 text-amber-700 hover:bg-slate-100'
-                : 'bg-slate-900 border-slate-800 text-amber-300 hover:bg-slate-800'
-            }`}
-          >
-            Keying → A, B, C, D
-          </button>
+          <QuestionNumberChanger
+            value={questionNumberFormat || config?.questionNumberFormat || 'bangla'}
+            onChange={(fmt) => {
+              if (onUpdateQuestionNumberFormat) {
+                onUpdateQuestionNumberFormat(fmt);
+              } else if (config && onUpdateConfig) {
+                onUpdateConfig({ ...config, questionNumberFormat: fmt });
+              }
+            }}
+            appTheme={appTheme}
+            label=""
+          />
         </div>
       </div>
 
