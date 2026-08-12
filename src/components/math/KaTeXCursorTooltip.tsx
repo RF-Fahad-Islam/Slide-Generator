@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import katex from 'katex';
-import { Sigma, X } from 'lucide-react';
-import { extractAllEquations } from '../../utils/equationAtCursor';
+import { Sigma, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { getEquationAtCursor, EquationAtCursor } from '../../utils/equationAtCursor';
 import { MATH_SNIPPET_CATEGORIES } from './mathSnippets';
 import { insertSnippetAtCursor } from '../../utils/cursorInsert';
-import { MathText } from '../MathText';
 
 interface CaretPos {
   x: number;
@@ -105,28 +104,34 @@ function getCaretScreenCoordinates(el: HTMLInputElement | HTMLTextAreaElement): 
 }
 
 export const KaTeXCursorTooltip: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeEl, setActiveEl] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const [equation, setEquation] = useState<EquationAtCursor | null>(null);
   const [caretPos, setCaretPos] = useState<CaretPos | null>(null);
-  const [activeCategory, setActiveCategory] = useState(0);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(0);
 
-  // Global right-click event listener to trigger the KaTeX toolbar card at cursor
+  const lastActiveInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
   useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
+    const updateTooltip = () => {
+      const activeEl = document.activeElement;
+      if (
+        !activeEl ||
+        (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA')
+      ) {
+        // Keep equation if user is clicking inside the toolbar, otherwise hide
+        const isClickingInsideTooltip = document.querySelector('.katex-cursor-tooltip-container')?.contains(activeEl);
+        if (!isClickingInsideTooltip && !lastActiveInputRef.current) {
+          setEquation(null);
+          setCaretPos(null);
+        }
+        return;
+      }
 
-      const isInput = target.tagName === 'INPUT';
-      const isTextArea = target.tagName === 'TEXTAREA';
-
-      if (!isInput && !isTextArea) return;
-
-      const inputEl = target as HTMLInputElement | HTMLTextAreaElement;
+      const inputEl = activeEl as HTMLInputElement | HTMLTextAreaElement;
 
       // Ignore non-text inputs
-      if (isInput) {
+      if (activeEl.tagName === 'INPUT') {
         const type = (inputEl as HTMLInputElement).type?.toLowerCase();
         if (
           [
@@ -142,80 +147,65 @@ export const KaTeXCursorTooltip: React.FC = () => {
             'submit',
           ].includes(type)
         ) {
+          setEquation(null);
+          setCaretPos(null);
           return;
         }
       }
 
-      // Prevent default browser context menu
-      e.preventDefault();
+      lastActiveInputRef.current = inputEl;
 
-      inputEl.focus();
+      const val = inputEl.value;
+      const selStart = inputEl.selectionStart ?? 0;
+
+      const foundEq = getEquationAtCursor(val, selStart);
+
+      if (!foundEq) {
+        setEquation(null);
+        setCaretPos(null);
+        return;
+      }
+
       const pos = getCaretScreenCoordinates(inputEl);
-      setActiveEl(inputEl);
+      setEquation(foundEq);
       setCaretPos(pos);
-      setIsOpen(true);
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
+    const handleEvents = () => {
+      requestAnimationFrame(updateTooltip);
     };
 
-    const handlePointerDown = (e: MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('selectionchange', handleEvents);
+    document.addEventListener('focusin', handleEvents);
+    document.addEventListener('focusout', handleEvents);
+    document.addEventListener('input', handleEvents);
+    document.addEventListener('keyup', handleEvents);
+    document.addEventListener('click', handleEvents);
+    window.addEventListener('scroll', handleEvents, true);
+    window.addEventListener('resize', handleEvents);
 
     return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('selectionchange', handleEvents);
+      document.removeEventListener('focusin', handleEvents);
+      document.removeEventListener('focusout', handleEvents);
+      document.removeEventListener('input', handleEvents);
+      document.removeEventListener('keyup', handleEvents);
+      document.removeEventListener('click', handleEvents);
+      window.removeEventListener('scroll', handleEvents, true);
+      window.removeEventListener('resize', handleEvents);
     };
   }, []);
 
-  // Sync cursor position and handle selection changes while active
   useEffect(() => {
-    if (!isOpen || !activeEl) return;
+    if (!equation || !caretPos) return;
 
-    const updatePos = () => {
-      if (document.activeElement !== activeEl) {
-        setIsOpen(false);
-        return;
-      }
-      const pos = getCaretScreenCoordinates(activeEl);
-      setCaretPos(pos);
-    };
+    const estimatedWidth = showToolbar ? Math.min(384, window.innerWidth - 32) : Math.min(320, window.innerWidth - 32);
+    const estimatedHeight = showToolbar ? 320 : (equation.isBlock ? 80 : 54);
 
-    document.addEventListener('selectionchange', updatePos);
-    document.addEventListener('input', updatePos);
-    window.addEventListener('scroll', updatePos, true);
-    window.addEventListener('resize', updatePos);
+    let left = caretPos.x - estimatedWidth / 2;
+    left = Math.max(16, Math.min(window.innerWidth - estimatedWidth - 16, left));
 
-    return () => {
-      document.removeEventListener('selectionchange', updatePos);
-      document.removeEventListener('input', updatePos);
-      window.removeEventListener('scroll', updatePos, true);
-      window.removeEventListener('resize', updatePos);
-    };
-  }, [isOpen, activeEl]);
-
-  // Position card above the cursor
-  useEffect(() => {
-    if (!isOpen || !caretPos) return;
-
-    const popoverWidth = 384; // w-96
-    const popoverHeight = 360;
-
-    let left = caretPos.x - popoverWidth / 2;
-    left = Math.max(16, Math.min(window.innerWidth - popoverWidth - 16, left));
-
-    let top = caretPos.y - popoverHeight - 12;
+    let top = caretPos.y - estimatedHeight - 12;
     if (top < 12) {
       top = caretPos.y + caretPos.height + 10;
     }
@@ -226,113 +216,132 @@ export const KaTeXCursorTooltip: React.FC = () => {
       top: `${top}px`,
       zIndex: 9999,
     });
-  }, [isOpen, caretPos]);
+  }, [equation, caretPos, showToolbar]);
 
   const handleInsertSnippet = (snippetLatex: string) => {
-    if (!activeEl) return;
+    const activeEl = document.activeElement;
+    const targetEl = (
+      activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')
+        ? activeEl
+        : lastActiveInputRef.current
+    ) as HTMLInputElement | HTMLTextAreaElement | null;
 
-    const result = insertSnippetAtCursor(activeEl, activeEl.value, snippetLatex);
+    if (!targetEl) return;
 
-    const nativeSetter =
-      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set ||
-      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    const result = insertSnippetAtCursor(targetEl, targetEl.value, snippetLatex);
 
-    if (nativeSetter) {
-      nativeSetter.call(activeEl, result.newValue);
+    const isTextArea = targetEl.tagName === 'TEXTAREA';
+    const proto = isTextArea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const valueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+
+    if (valueSetter) {
+      valueSetter.call(targetEl, result.newValue);
     } else {
-      activeEl.value = result.newValue;
+      targetEl.value = result.newValue;
     }
 
-    activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+    // Reset React 16+ value tracker
+    // @ts-ignore
+    const tracker = targetEl._valueTracker;
+    if (tracker) {
+      tracker.setValue('');
+    }
 
-    activeEl.focus();
-    activeEl.setSelectionRange(result.selStart, result.selEnd);
+    targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+    targetEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+    targetEl.focus();
+    targetEl.setSelectionRange(result.selStart, result.selEnd);
   };
 
-  if (!isOpen || !activeEl || !caretPos) return null;
+  if (!equation || !caretPos) return null;
 
-  const equations = extractAllEquations(activeEl.value);
+  let katexHtml = '';
+  let renderError = false;
+  try {
+    katexHtml = katex.renderToString(equation.rawMath, {
+      displayMode: equation.isBlock,
+      throwOnError: false,
+      output: 'html',
+    });
+  } catch {
+    renderError = true;
+  }
 
   return createPortal(
     <div
-      ref={cardRef}
       style={tooltipStyle}
-      className="pointer-events-auto animate-in fade-in zoom-in-95 duration-100 ease-out"
+      className="katex-cursor-tooltip-container pointer-events-auto animate-in fade-in zoom-in-95 duration-100 ease-out"
     >
-      <div className="bg-slate-950/95 border border-amber-500/50 shadow-2xl shadow-amber-500/10 backdrop-blur-md rounded-2xl p-3 w-96 max-w-[92vw] text-amber-200 space-y-3">
+      <div className="bg-slate-950/95 border border-amber-500/50 shadow-2xl shadow-amber-500/10 backdrop-blur-md rounded-xl p-3 max-w-[92vw] w-max min-w-[240px] text-amber-200 space-y-2">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2 select-none">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
-            <Sigma className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>KaTeX Math Toolbar</span>
+        <div className="flex items-center justify-between gap-3 text-[10px] font-bold tracking-wider text-amber-400 uppercase border-b border-amber-500/20 pb-1.5 select-none">
+          <div className="flex items-center gap-1.5">
+            <Sigma className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>KaTeX Equation Preview</span>
           </div>
+
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setIsOpen(false)}
-            className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
-            title="Close Toolbar (Esc)"
+            onClick={() => setShowToolbar((v) => !v)}
+            className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950 transition-all flex items-center gap-1 cursor-pointer"
+            title="Open Math Snippets Toolbar at Cursor"
           >
-            <X className="w-3.5 h-3.5" />
+            <Sparkles className="w-3 h-3" />
+            <span>{showToolbar ? 'Hide Toolbar' : 'Math Toolbar'}</span>
+            {showToolbar ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         </div>
 
-        {/* Live Preview (Equations Only) */}
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-400 select-none">
-            Live Preview (Equations Only)
-          </div>
-          <div className="min-h-[2.75rem] max-h-32 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm overflow-y-auto">
-            {equations.length > 0 ? (
-              <div className="flex flex-col gap-1.5">
-                {equations.map((eq, idx) => (
-                  <div key={idx} className="py-0.5 border-b border-slate-800/50 last:border-0">
-                    <MathText text={eq.isBlock ? `$$${eq.rawMath}$$` : `$${eq.rawMath}$`} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <span className="text-slate-600">
-                {activeEl.value && activeEl.value.trim() ? 'No equations found in text' : 'Nothing typed yet'}
-              </span>
-            )}
-          </div>
+        {/* Equation Preview */}
+        <div className="min-h-[1.5rem] max-h-24 flex items-center justify-center overflow-x-auto px-1 py-0.5 text-sm">
+          {!renderError ? (
+            <span dangerouslySetInnerHTML={{ __html: katexHtml }} />
+          ) : (
+            <span className="font-mono text-amber-400 text-xs">{equation.rawMath}</span>
+          )}
         </div>
 
-        {/* Category Pills */}
-        <div className="flex flex-wrap gap-1.5">
-          {MATH_SNIPPET_CATEGORIES.map((cat, idx) => (
-            <button
-              key={cat.name}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setActiveCategory(idx)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
-                activeCategory === idx
-                  ? 'bg-amber-500/20 border-amber-500 text-amber-400'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-amber-300'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+        {/* Inline Math Toolbar */}
+        {showToolbar && (
+          <div className="pt-2 border-t border-slate-800 space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+            {/* Categories */}
+            <div className="flex flex-wrap gap-1">
+              {MATH_SNIPPET_CATEGORIES.map((cat, idx) => (
+                <button
+                  key={cat.name}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setActiveCategory(idx)}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
+                    activeCategory === idx
+                      ? 'bg-amber-500/30 border-amber-400 text-amber-300'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-amber-300'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
 
-        {/* Snippet Grid */}
-        <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
-          {MATH_SNIPPET_CATEGORIES[activeCategory].snippets.map((snip) => (
-            <button
-              key={snip.label}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleInsertSnippet(snip.latex)}
-              title={snip.latex}
-              className="px-2 py-1.5 rounded-lg text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-300 text-left truncate transition-all cursor-pointer"
-            >
-              {snip.label}
-            </button>
-          ))}
-        </div>
+            {/* Snippet Grid */}
+            <div className="grid grid-cols-3 gap-1 max-h-44 overflow-y-auto pr-0.5">
+              {MATH_SNIPPET_CATEGORIES[activeCategory].snippets.map((snip) => (
+                <button
+                  key={snip.label}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleInsertSnippet(snip.latex)}
+                  title={snip.latex}
+                  className="px-1.5 py-1 rounded text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-300 text-left truncate transition-all cursor-pointer"
+                >
+                  {snip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>,
     document.body
