@@ -118,7 +118,7 @@ export const embedFontsInPptx = async (
   }
 
   if (entries.length === 0) {
-    return data instanceof Blob ? data : new Blob([data]);
+    return data instanceof Blob ? data : new Blob([data as unknown as BlobPart]);
   }
 
   // Group entries per family for presentation.xml <p:embeddedFontLst>.
