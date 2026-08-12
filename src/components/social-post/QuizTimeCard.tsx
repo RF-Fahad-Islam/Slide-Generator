@@ -128,11 +128,6 @@ export const QuizTimeCard = React.forwardRef<HTMLDivElement, QuizTimeCardProps>(
                 </div>
               )
             )}
-            {showPagingCounter && (
-              <span className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-slate-900/80 border border-white/20 text-amber-300">
-                {questionNumber} / {totalCount}
-              </span>
-            )}
           </div>
         </div>
 

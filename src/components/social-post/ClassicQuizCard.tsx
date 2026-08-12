@@ -111,11 +111,6 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
                 {getEffectiveBadgeTag(config, item)}
               </span>
             )}
-            {showPagingCounter && (
-              <span className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-slate-900/80 border border-white/20 text-amber-300 shrink-0">
-                {questionNumber} / {totalCount}
-              </span>
-            )}
           </div>
         </div>
 
