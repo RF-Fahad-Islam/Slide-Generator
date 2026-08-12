@@ -36,6 +36,8 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 
 > **2026-08-12 — Mandatory Layout Elements & Controls.** Added `showQuestionNumber`, `showInstructorInfo`, `showBrandLogo`, `showPagingCounter` visibility toggles to `DeckConfig` and `GlobalDefaults`. Enforced all 4 elements across slide canvas layouts (Standard, Classroom, Banner modes), all preset definitions in `SLIDE_LAYOUTS` and `templateToTextBoxes.ts`, and social post cards (`ClassicQuizCard.tsx`, `QuizTimeCard.tsx`). Added translucent floating overlay badges for custom Header/Footer banners and visibility checkboxes in `LayoutBannerControls.tsx`.
 
+> **2026-08-12 — Global KaTeX Cursor Tooltip.** Added `KaTeXCursorTooltip.tsx` and `equationAtCursor.ts`. Automatically tracks text cursor (`selectionStart`) in inputs & textareas across the full application. Displays a floating dark glassmorphism tooltip near the cursor previewing ONLY KaTeX math equations (stripping out surrounding plain Bengali/English text).
+
 > **2026-08-07 — App accent is gold (`amber-*`).** An experimental app-chrome-wide
 > `amber → orange` sweep was applied and then fully reverted to amber. Slide-content
 > rendering stays amber too (`SlideCanvas.tsx`, `templates/registry.ts`,

@@ -38,6 +38,7 @@ import { templateToTextBoxes } from './utils/templateToTextBoxes';
 import { classroomTextBoxes } from './utils/slideElements';
 import { ExportQueueProvider } from './context/ExportQueueContext';
 import { ExportQueueWidget } from './components/ExportQueueWidget';
+import { KaTeXCursorTooltip } from './components/math/KaTeXCursorTooltip';
 import { loadGlobalDefaults, createDefaultDeckConfig } from './utils/globalDefaults';
 import { SLIDE_ELEMENT_DEFS, SLIDE_LAYOUTS } from './utils/slideElements';
 import { clamp, SLIDE_W, SLIDE_H, ensureAnswerBox } from './utils/slideTextBoxes';
@@ -1921,6 +1922,7 @@ export default function App() {
 
       {/* AI Ingestion progress toast — bottom-right, survives tab changes */}
       <IngestionToast appTheme={appTheme} />
+      <KaTeXCursorTooltip />
       </div>
       </IngestionProvider>
     </ExportQueueProvider>
