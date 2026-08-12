@@ -176,10 +176,29 @@ export const AnswerModeModal: React.FC<AnswerModeModalProps> = ({
 
           {/* MULTI-SELECT ANSWER DISPLAY ELEMENTS */}
           <div className="space-y-3">
-            <label className="text-xs font-black uppercase tracking-wider text-amber-500 flex items-center justify-between">
-              <span>Answer Display Features (Select Multiple)</span>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black uppercase tracking-wider text-amber-500 flex items-center justify-between">
+                <span>Answer Display Features (Select Multiple)</span>
+              </label>
               <span className="text-[10px] font-normal text-slate-400">Combine any visual elements</span>
-            </label>
+            </div>
+
+            {/* DYNAMIC TARGETING MODE BANNER */}
+            <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all ${
+              useSeparateSlides
+                ? isLight ? 'bg-purple-50 border-purple-200 text-purple-900' : 'bg-purple-500/10 border-purple-500/30 text-purple-300'
+                : isLight ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-base">{useSeparateSlides ? '🎬' : '📄'}</span>
+                <span>
+                  Targeting Mode: <strong className="font-black">{useSeparateSlides ? 'Dedicated Answer Slides Only' : 'Question Slide (In-Place Reveal)'}</strong>
+                </span>
+              </div>
+              <span className="text-[11px] font-medium opacity-80">
+                {useSeparateSlides ? 'Question slides stay clean' : 'Reveals on question slide'}
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 gap-3">
               {/* FEATURE 1: OPTION COLORING */}

@@ -1307,12 +1307,12 @@ export default function App() {
                         <span className="hidden 2xl:inline">Templates</span>
                       </button>
 
-                      {/* Answer Mode Button Group (Open Modal + Quick Eye Toggle) */}
+                      {/* Answer Mode Button Group (Open Modal + Quick Dedicated Answer Slide Toggle) */}
                       <div className="flex items-center">
                         <button
                           onClick={() => setIsAnswerModeModalOpen(true)}
                           className={`flex items-center gap-1.5 px-3 py-2 rounded-l-xl text-xs font-extrabold transition-all border border-r-0 cursor-pointer ${
-                            isAnswerRevealMode
+                            config.answerMode === 'separate_slide' || isAnswerRevealMode
                               ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
                               : isAppLight
                               ? 'bg-slate-100 text-slate-700 border-slate-300 hover:text-slate-900'
@@ -1326,15 +1326,15 @@ export default function App() {
                         <button
                           onClick={toggleAnswerReveal}
                           className={`p-2 rounded-r-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                            isAnswerRevealMode
+                            config.answerMode === 'separate_slide' || isAnswerRevealMode
                               ? 'bg-emerald-400 text-slate-950 border-emerald-400'
                               : isAppLight
                               ? 'bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300'
                               : 'bg-slate-700 text-slate-200 border-slate-700 hover:bg-slate-600'
                           }`}
-                          title="Quick toggle answer reveal"
+                          title={config.answerMode === 'separate_slide' || isAnswerRevealMode ? 'Turn OFF dedicated answer slides' : 'Turn ON dedicated answer slides'}
                         >
-                          {isAnswerRevealMode ? <CheckCircle2 className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                          {config.answerMode === 'separate_slide' || isAnswerRevealMode ? <CheckCircle2 className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                         </button>
                       </div>
 

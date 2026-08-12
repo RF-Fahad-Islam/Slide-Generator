@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import { DeckConfig, MCQItem, getSourceTags, getEffectiveBadgeTag } from '../types';
+import { hasAnswerDisplayStyle } from '../utils/answerSlides';
 import { resolveTheme } from '../utils/themeResolver';
 import { formatSlideQNumber } from '../utils/slideTextBoxes';
 import { SlideTextBoxLayer } from './SlideTextBoxLayer';
@@ -153,11 +154,21 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
   }[effectiveConfig.logoSize || 'md'];
 
   const isAnswerVariant = slideVariant === 'answer';
-  const showAnswerHighlight = effectiveConfig.showAnswerInSlide || isAnswerRevealMode || isAnswerVariant;
+  const isSeparateSlideMode = effectiveConfig.answerMode === 'separate_slide';
+
+  // If separate_slide mode is active, question slides (isAnswerVariant = false) stay clean.
+  // Dedicated answer slides (isAnswerVariant = true) get all configured answer settings.
+  // If separate_slide mode is off, reveal settings apply in-place on the question slide when reveal is active.
+  const allowRevealOnCurrentSlide = isSeparateSlideMode
+    ? isAnswerVariant
+    : (isAnswerVariant || effectiveConfig.showAnswerInSlide || isAnswerRevealMode);
+
+  const showAnswerHighlight = allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'highlight_option');
+  const showAnswerPill = allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'answer_pill');
   const showExplanation =
     forceShowExplanation !== undefined
       ? forceShowExplanation
-      : effectiveConfig.showExplanationInSlide || isAnswerRevealMode || isAnswerVariant;
+      : (allowRevealOnCurrentSlide && hasAnswerDisplayStyle(effectiveConfig, 'explanation_card'));
   const isClassMode = effectiveConfig.layoutMode === 'class_mode';
 
   const slideTextBoxes = effectiveConfig.slideTextBoxes || [];
@@ -384,7 +395,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
           {/* RIGHT 5 COLUMNS: Options */}
           <div className="col-span-5 flex flex-col justify-center gap-4 py-2" style={{ fontFamily: optionsFont }}>
             {/* Answer slide indicator strip */}
-            {isAnswerVariant && item.answer && (
+            {showAnswerPill && item.answer && (
               <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl border-2 shadow-lg ${
                 isLight
                   ? 'bg-emerald-100 border-emerald-500 text-emerald-900'
@@ -527,7 +538,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(({
           </div>
 
           {/* OPTIONS GRID (CONFIGURABLE 1-COL, 2-COL, 4-COL GRID) */}
-          {isAnswerVariant && item.answer && (
+          {showAnswerPill && item.answer && (
             <div className="flex justify-center">
               <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl border-2 shadow-lg ${
                 isLight
