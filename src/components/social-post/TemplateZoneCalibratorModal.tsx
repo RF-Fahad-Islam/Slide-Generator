@@ -46,6 +46,7 @@ import {
   FolderOpen,
   Paintbrush,
   CheckSquare,
+  ExternalLink,
 } from 'lucide-react';
 
 interface TemplateZoneCalibratorModalProps {
@@ -1869,23 +1870,68 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
                         </label>
                       </div>
 
-                      {/* Google Font Quick Loader */}
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={googleFontInput}
-                          onChange={(e) => setGoogleFontInput(e.target.value)}
-                          placeholder="Or Google Font name (e.g. Baloo Da 2)"
-                          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddGoogleFont}
-                          disabled={!googleFontInput.trim()}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 hover:brightness-110 disabled:opacity-40 cursor-pointer"
-                        >
-                          Load
-                        </button>
+                      {/* Google Font Quick Loader with Instructions & Suggestions */}
+                      <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            <span>Import Google Font</span>
+                          </span>
+                          <a
+                            href="https://fonts.google.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-amber-400 hover:underline flex items-center gap-1"
+                          >
+                            <span>fonts.google.com</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
+
+                        {/* Instructions snippet */}
+                        <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] text-slate-300 leading-relaxed">
+                          <span className="font-bold text-amber-400">How to use:</span> Browse <a href="https://fonts.google.com" target="_blank" rel="noopener noreferrer" className="underline font-bold text-white">fonts.google.com</a>, type the exact font name below, and click <span className="font-bold text-white">Load</span> to apply it instantly to your template!
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={googleFontInput}
+                            onChange={(e) => setGoogleFontInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddGoogleFont();
+                            }}
+                            placeholder="e.g. Baloo Da 2, Cinzel, Outfit..."
+                            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddGoogleFont}
+                            disabled={!googleFontInput.trim()}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 hover:brightness-110 disabled:opacity-40 cursor-pointer shrink-0"
+                          >
+                            Load
+                          </button>
+                        </div>
+
+                        {/* Quick suggestions */}
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                          <span className="text-[9px] uppercase tracking-wider text-slate-500 mr-1">Suggestions:</span>
+                          {['Baloo Da 2', 'Galada', 'Outfit', 'Cinzel', 'Space Grotesk'].map((fName) => (
+                            <button
+                              key={fName}
+                              type="button"
+                              onClick={() => {
+                                setGoogleFontInput(fName);
+                                const family = injectGoogleFont(fName);
+                                handleSetZoneFont(family);
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-400 text-[10px] text-slate-300 hover:text-amber-300 transition-all cursor-pointer"
+                            >
+                              +{fName}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>

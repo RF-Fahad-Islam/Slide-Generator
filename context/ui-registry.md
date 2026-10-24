@@ -34,6 +34,13 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
 | Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
 
+> **2026-10-24 — Google Font Engine & Step-by-Step Instructions.**
+> 1. `SocialPostGenerator` features a dedicated drawer tab `Fonts & Google` (Tab 2.5) with live font catalog filtering (`All`, `Bangla`, `English`, `Imported`), live search, and custom font file uploader (`.ttf`, `.otf`, `.woff`, `.woff2`).
+> 2. Step-by-step Google Font instructions callout box with direct outbound link to `fonts.google.com` explaining how to search, copy font family names, and import with zero reload.
+> 3. One-click popular suggestion chips (`Baloo Da 2`, `Galada`, `Outfit`, `Cinzel`, `Space Grotesk`, `Montserrat`) that inject Google Font stylesheet links and apply to the canvas with an animated emerald success banner.
+> 4. `TemplateZoneCalibratorModal` Style & Fonts tab incorporates the same step-by-step Google Fonts callout and 1-click popular suggestion pills.
+> 5. `ClassicQuizCard` and `QuizTimeCard` canvas renderers bind `fontFamily={postFontFamily}`.
+
 > **2026-10-24 — Transparent Question Option & All-Transparent Presets.**
 > 1. `SlideTextBoxLayer` supports transparent rendering for `box.bind === 'stem'` when `box.shape === 'plain'`, applying `backgroundColor: 'transparent'` and zero card padding/shadows so question stems render seamlessly over pre-printed template artwork.
 > 2. `TemplateZoneCalibratorModal` and `SocialPostGenerator` Content tab provide 1-click `Make Question Transparent` toggles and `All Transparent (Q + Opts)` actions.

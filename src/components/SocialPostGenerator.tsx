@@ -35,6 +35,14 @@ import { PostTemplateSelector } from './social-post/PostTemplateSelector';
 import { ClassicQuizCard } from './social-post/ClassicQuizCard';
 import { QuizTimeCard } from './social-post/QuizTimeCard';
 import { PostModeSelector, SocialPostMode } from './social-post/PostModeSelector';
+import {
+  getAllAvailableFonts,
+  importCustomFontFromFile,
+  injectGoogleFont,
+  maybeInjectExternalFont,
+  CustomFontItem,
+} from '../utils/customFontManager';
+import { ExternalLink, FileText } from 'lucide-react';
 import { PostTemplateId, ReactionEmojiSet, DEFAULT_REACTION_EMOJIS, REACTION_ORDER, SocialAspectRatio, SavedCustomTemplate } from './social-post/types';
 import { CustomTemplateManager } from './social-post/CustomTemplateManager';
 import { TemplateZoneCalibratorModal } from './social-post/TemplateZoneCalibratorModal';
@@ -115,7 +123,7 @@ const loadSavedDesign = (w: number, h: number): CustomPostDesign => {
   return { bgImageUrl: '', bgImageFit: 'cover', boxes: defaultCustomBoxes(w, h) };
 };
 
-export type StudioDrawerTab = 'templates' | 'content' | 'deck' | 'branding' | 'reactions' | 'theme' | 'layers';
+export type StudioDrawerTab = 'templates' | 'content' | 'fonts' | 'deck' | 'branding' | 'reactions' | 'theme' | 'layers';
 
 export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   items,
@@ -211,6 +219,100 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const [customStem, setCustomStem] = useState<string>('');
   const [customOptions, setCustomOptions] = useState<{ key: string; text: string; isCorrect?: boolean }[]>([]);
   const [customAnswerKey, setCustomAnswerKey] = useState<string>('');
+
+  // Typography & Google Font Engine State
+  const [postFontFamily, setPostFontFamily] = useState<string>(config.fontFamily || "'Kalpurush', serif");
+  const [availableFonts, setAvailableFonts] = useState<CustomFontItem[]>([]);
+  const [fontFilter, setFontFilter] = useState<'all' | 'bangla' | 'english' | 'imported'>('all');
+  const [fontSearchQuery, setFontSearchQuery] = useState<string>('');
+  const [googleFontInput, setGoogleFontInput] = useState<string>('');
+  const [isFontLoading, setIsFontLoading] = useState<boolean>(false);
+  const [fontSuccessMsg, setFontSuccessMsg] = useState<string | null>(null);
+  const fontFileInputRef = useRef<HTMLInputElement>(null);
+
+  const refreshFonts = () => {
+    setAvailableFonts(getAllAvailableFonts());
+  };
+
+  useEffect(() => {
+    refreshFonts();
+  }, []);
+
+  useEffect(() => {
+    if (config.fontFamily) {
+      setPostFontFamily(config.fontFamily);
+    }
+  }, [config.fontFamily]);
+
+  const handleApplyFont = (family: string, displayName?: string) => {
+    maybeInjectExternalFont(family);
+    setPostFontFamily(family);
+    setCustomDesign((prev) => ({
+      ...prev,
+      boxes: prev.boxes.map((b) => ({
+        ...b,
+        fontFamily: family,
+        isCustomFontOverride: true,
+      })),
+    }));
+    const name = displayName || family.replace(/['"]/g, '').split(',')[0].trim();
+    setFontSuccessMsg(`Font "${name}" applied to social post!`);
+    setTimeout(() => setFontSuccessMsg(null), 3500);
+  };
+
+  const handleImportGoogleFont = (fontName: string) => {
+    if (!fontName.trim()) return;
+    const cleanName = fontName.trim();
+    const family = injectGoogleFont(cleanName);
+    const customItem: CustomFontItem = {
+      id: `gfont-${Date.now()}-${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+      name: cleanName,
+      family,
+      category: 'custom_imported',
+      description: `Google Font: ${cleanName}`,
+      sampleBangla: '১. রুই মাছের হৃদপিণ্ডে কয়টি প্রকোষ্ঠ থাকে?',
+      sampleEnglish: 'Normal Blood pH Level: 7.35 - 7.45',
+      isCustom: true,
+    };
+    try {
+      const existing = JSON.parse(localStorage.getItem('social_post_custom_fonts_v1') || '[]');
+      localStorage.setItem('social_post_custom_fonts_v1', JSON.stringify([customItem, ...existing.filter((f: any) => f.name !== cleanName)]));
+    } catch {
+      // ignore
+    }
+    refreshFonts();
+    handleApplyFont(family, cleanName);
+    setGoogleFontInput('');
+  };
+
+  const handleCustomFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsFontLoading(true);
+    try {
+      const imported = await importCustomFontFromFile(file);
+      refreshFonts();
+      handleApplyFont(imported.family, imported.name);
+    } catch (err: any) {
+      alert(`Font import failed: ${err?.message || 'Unsupported format'}`);
+    } finally {
+      setIsFontLoading(false);
+      if (fontFileInputRef.current) fontFileInputRef.current.value = '';
+    }
+  };
+
+  const filteredFonts = availableFonts.filter((f) => {
+    if (fontSearchQuery.trim()) {
+      const q = fontSearchQuery.toLowerCase();
+      if (!f.name.toLowerCase().includes(q) && !f.category.toLowerCase().includes(q)) {
+        return false;
+      }
+    }
+    if (fontFilter === 'bangla') return f.category.startsWith('bangla');
+    if (fontFilter === 'english') return f.category.startsWith('english');
+    if (fontFilter === 'imported') return f.isCustom || f.category === 'custom_imported';
+    return true;
+  });
 
   useEffect(() => {
     const item = items[selectedQuestionIndex] || currentItem;
@@ -723,7 +825,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   // Dynamic drawer tabs based on active mode
   const drawerTabs: { id: StudioDrawerTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'templates', label: 'Preset', icon: LayoutTemplate },
-    { id: 'content', label: 'Question', icon: Type },
+    { id: 'content', label: 'Question', icon: FileText },
+    { id: 'fonts', label: 'Fonts & Google', icon: Type },
     { id: 'deck', label: 'Deck MCQs', icon: BookOpen },
     { id: 'branding', label: 'Brand', icon: User },
     ...(postTemplate === 'quiz_time' && !isCustomMode
@@ -901,7 +1004,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   currentAspectRatio={aspectRatio}
                   currentDesignW={postDesignW}
                   currentDesignH={postDesignH}
-                  defaultFontFamily={config.fontFamily || "'Kalpurush', serif"}
+                  defaultFontFamily={postFontFamily || config.fontFamily || "'Kalpurush', serif"}
                   isAppLight={isAppLight}
                   sampleQuestion={effectiveItem}
                   allQuestions={items}
@@ -1189,6 +1292,236 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             )}
 
             {/* --------------------------------------------------------------------- */}
+            {/* TAB 2.5: FONTS & GOOGLE FONT IMPORTER                                 */}
+            {/* --------------------------------------------------------------------- */}
+            {activeTab === 'fonts' && (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
+                      <Type className="w-4 h-4" />
+                      Typography & Google Font Engine
+                    </h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Active: {postFontFamily.replace(/['",]/g, '').split(' ')[0]}
+                    </span>
+                  </div>
+                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Choose from curated Bengali/English slide fonts or import any font from Google Fonts.
+                  </p>
+                </div>
+
+                {/* Success Banner */}
+                {fontSuccessMsg && (
+                  <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                    <span>{fontSuccessMsg}</span>
+                  </div>
+                )}
+
+                {/* GOOGLE FONT IMPORTER WITH STEP-BY-STEP INSTRUCTIONS */}
+                <div className={`p-4 rounded-2xl border space-y-3.5 ${
+                  isAppLight ? 'bg-amber-50/70 border-amber-200' : 'bg-slate-950/80 border-amber-500/30'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Import Google Font</span>
+                    </span>
+                    <a
+                      href="https://fonts.google.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-bold text-amber-400 hover:underline flex items-center gap-1"
+                    >
+                      <span>fonts.google.com</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {/* Step-by-Step Instructions */}
+                  <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2 text-xs">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-300 block">
+                      📋 Instructions: How to Import from Google Fonts
+                    </span>
+                    <ol className="space-y-1.5 text-[11px] text-slate-300 list-decimal list-inside leading-relaxed font-medium">
+                      <li>
+                        Open <a href="https://fonts.google.com" target="_blank" rel="noopener noreferrer" className="text-amber-400 underline font-bold">Google Fonts</a> in your browser.
+                      </li>
+                      <li>
+                        Search for any font (e.g., <span className="font-bold text-white">Baloo Da 2</span>, <span className="font-bold text-white">Galada</span>, <span className="font-bold text-white">Outfit</span>, <span className="font-bold text-white">Cinzel</span>, <span className="font-bold text-white">Space Grotesk</span>).
+                      </li>
+                      <li>
+                        Copy the exact font family name and paste or type it in the input below.
+                      </li>
+                      <li>
+                        Click <span className="font-bold text-amber-400">"Import & Apply Font"</span>. The font loads immediately without refreshing!
+                      </li>
+                    </ol>
+                  </div>
+
+                  {/* Google Font Input Form */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={googleFontInput}
+                      onChange={(e) => setGoogleFontInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleImportGoogleFont(googleFontInput);
+                      }}
+                      placeholder="e.g. Baloo Da 2, Cinzel, Outfit, Galada..."
+                      className={`flex-1 border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-400 font-bold ${
+                        isAppLight
+                          ? 'bg-white border-slate-300 text-slate-900'
+                          : 'bg-slate-900 border-slate-800 text-white placeholder-slate-500'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleImportGoogleFont(googleFontInput)}
+                      disabled={!googleFontInput.trim()}
+                      className="px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 shadow-md shadow-amber-500/20 disabled:opacity-40 cursor-pointer transition-all shrink-0"
+                    >
+                      Import & Apply
+                    </button>
+                  </div>
+
+                  {/* 1-Click Popular Suggestions */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Quick Suggestions (Click to load):
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { name: 'Baloo Da 2', label: 'Baloo Da 2 (Bangla)' },
+                        { name: 'Galada', label: 'Galada (Bangla Script)' },
+                        { name: 'Outfit', label: 'Outfit (Modern)' },
+                        { name: 'Cinzel', label: 'Cinzel (Serif)' },
+                        { name: 'Space Grotesk', label: 'Space Grotesk (Tech)' },
+                        { name: 'Montserrat', label: 'Montserrat (Bold)' },
+                      ].map((item) => (
+                        <button
+                          key={item.name}
+                          type="button"
+                          onClick={() => handleImportGoogleFont(item.name)}
+                          className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-400/50 text-[10px] font-bold text-slate-300 hover:text-amber-300 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <span>+</span>
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* CUSTOM FONT FILE UPLOADER */}
+                <div className="space-y-2 pt-1">
+                  <label className="w-full py-2.5 px-4 rounded-xl text-xs font-black bg-slate-800/80 hover:bg-slate-800 text-amber-300 border border-slate-700 hover:border-amber-400/40 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm">
+                    <Upload className="w-4 h-4" />
+                    <span>{isFontLoading ? 'Loading Font File...' : 'Upload Font File (.ttf / .otf / .woff2)'}</span>
+                    <input
+                      ref={fontFileInputRef}
+                      type="file"
+                      accept=".ttf,.otf,.woff,.woff2"
+                      onChange={handleCustomFontUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-[11px] text-slate-500 text-center">
+                    Saved to browser storage and available for offline canvas export.
+                  </p>
+                </div>
+
+                {/* FONT CATALOG & SWITCHER */}
+                <div className="space-y-3 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <label className={`text-xs font-black uppercase tracking-wider ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      All Available Fonts ({availableFonts.length})
+                    </label>
+                  </div>
+
+                  {/* Category filters */}
+                  <div className="flex rounded-xl bg-slate-950 border border-slate-800 p-0.5 gap-1">
+                    {[
+                      { id: 'all' as const, label: 'All' },
+                      { id: 'bangla' as const, label: 'Bangla' },
+                      { id: 'english' as const, label: 'English' },
+                      { id: 'imported' as const, label: 'Imported' },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setFontFilter(f.id)}
+                        className={`flex-1 py-1 rounded-lg text-[10px] font-bold capitalize transition-all cursor-pointer ${
+                          fontFilter === f.id
+                            ? 'bg-amber-500 text-slate-950 font-black'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Search query */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={fontSearchQuery}
+                      onChange={(e) => setFontSearchQuery(e.target.value)}
+                      placeholder="Filter fonts..."
+                      className={`w-full border rounded-xl pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 ${
+                        isAppLight
+                          ? 'bg-white border-slate-300 text-slate-900'
+                          : 'bg-slate-950 border-slate-800 text-white placeholder-slate-500'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Font List */}
+                  <div className="max-h-60 overflow-y-auto space-y-1.5 rounded-xl bg-slate-950 border border-slate-800 p-2">
+                    {filteredFonts.map((f) => {
+                      const isCurrent = postFontFamily === f.family;
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => handleApplyFont(f.family, f.name)}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs flex flex-col gap-1 transition-all cursor-pointer ${
+                            isCurrent
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-sm'
+                              : 'text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span style={{ fontFamily: f.family }} className="truncate font-bold text-xs text-white">
+                                {f.name}
+                              </span>
+                              {isCurrent && (
+                                <span className="text-[9px] font-black bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded-full flex items-center gap-0.5 shrink-0">
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                  <span>Active</span>
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[9px] uppercase tracking-wider text-slate-500 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 shrink-0 ml-1">
+                              {f.category.replace('bangla_', '').replace('english_', '')}
+                            </span>
+                          </div>
+                          <div style={{ fontFamily: f.family }} className="text-[11px] text-slate-400 line-clamp-1">
+                            {f.sampleBangla || '১. মানবদেহের রক্তের স্বাভাবিক pH কত? (A) 7.4'}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+                        {/* --------------------------------------------------------------------- */}
             {/* TAB 3: CHOOSE FROM DECK                                               */}
             {/* --------------------------------------------------------------------- */}
             {activeTab === 'deck' && (
@@ -1704,7 +2037,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   subCtaText={quizSubCtaText}
                   showAnswerKey={showAnswerKey}
                   reactionEmojis={reactionEmojis}
-                  fontFamily={config.fontFamily}
+                  fontFamily={postFontFamily}
                   customStem={customStem}
                   customOptions={customOptions}
                   questionNumber={selectedQuestionIndex + 1}
@@ -1733,6 +2066,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   logoUrl={customLogoUrl}
                   customStem={customStem}
                   customOptions={customOptions}
+                  fontFamily={postFontFamily}
                 />
               )
             ) : (
@@ -1741,7 +2075,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   <div
                     style={{
                       aspectRatio: `${postDesignW} / ${postDesignH}`,
-                      fontFamily: config.fontFamily || "'Kalpurush', serif",
+                      fontFamily: postFontFamily || config.fontFamily || "'Kalpurush', serif",
                       ...(customDesign.bgImageUrl
                         ? {
                             backgroundImage: `url("${customDesign.bgImageUrl}")`,
@@ -1801,7 +2135,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       {/* Upload & Interactive Bounded Zone Calibrator Modal */}
       <TemplateZoneCalibratorModal
         open={isStudioCalibratorOpen}
-        defaultFontFamily={config.fontFamily || "'Kalpurush', serif"}
+        defaultFontFamily={postFontFamily || config.fontFamily || "'Kalpurush', serif"}
         initialImageUrl={calibratorUploadImage || customDesign.bgImageUrl || ''}
         initialBoxes={customDesign.boxes}
         sampleQuestion={effectiveItem}

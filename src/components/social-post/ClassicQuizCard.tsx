@@ -20,6 +20,7 @@ interface ClassicQuizCardProps {
   logoUrl?: string;
   customStem?: string;
   customOptions?: { key: string; text: string; isCorrect?: boolean }[];
+  fontFamily?: string;
 }
 
 // The original branded quiz card layout — brand header, stem, stacked option
@@ -43,6 +44,7 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
       logoUrl,
       customStem,
       customOptions,
+      fontFamily,
     },
     ref
   ) => {
@@ -61,7 +63,7 @@ export const ClassicQuizCard = React.forwardRef<HTMLDivElement, ClassicQuizCardP
       <div
         ref={ref}
         style={{
-          fontFamily: theme.fonts.defaultFont,
+          fontFamily: fontFamily || theme.fonts.defaultFont,
           ...(customBgImageUrl
             ? {
                 backgroundImage: `url("${customBgImageUrl}")`,
