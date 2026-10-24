@@ -47,4 +47,46 @@ const sampleOptions = [
 const fittedOptions = calculateFittedOptionsLayout(sampleOptions, optionsBox.w, optionsBox.h!, optionsBox.fontSize, optionsBox.optionsLayout === '2col', 12);
 console.log(`✅ PASS: Options inside comic box (${optionsBox.w}x${optionsBox.h}) fitted: font=${fittedOptions.fontSize}px, rowH=${fittedOptions.rowHeight}px`);
 
+// 6. Test 4 Separate Option Zones with Transparent Text (No Numbering)
+import { getSlideBoxContent } from '../slideTextBoxes';
+import { SlideTextBox } from '../../types';
+
+const separateOptABox: SlideTextBox = {
+  id: 'b_opt_a',
+  bind: 'opt_a',
+  x: 95,
+  y: 690,
+  w: 320,
+  h: 120,
+  fontSize: 28,
+  color: '#0f172a',
+  align: 'left',
+  bold: false,
+  shape: 'plain',
+  bg: 'transparent',
+  hideOptionBadges: true,
+  autoFit: true,
+  isBoundedZone: true,
+};
+
+const dummyItem = {
+  id: 'q1',
+  questionType: 'standard' as const,
+  stem: sampleBengaliStem,
+  options: sampleOptions,
+  answer: 'খ',
+};
+
+const renderedOptA = getSlideBoxContent(separateOptABox, dummyItem);
+if (renderedOptA !== 'হরমোন ও জৈব অনুঘটক') {
+  throw new Error(`Expected option A text without key prefix, got: "${renderedOptA}"`);
+}
+console.log('✅ PASS: Separate Option A content is transparent text with NO numbering:', renderedOptA);
+
+const fittedOptASize = calculateFittedFontSize(renderedOptA, separateOptABox.w, separateOptABox.h!, separateOptABox.fontSize, 12, 0, 0);
+if (fittedOptASize <= 0) {
+  throw new Error('Fitted font size for separate option A failed');
+}
+console.log(`✅ PASS: Separate Option A fitted font size inside bounded box (${separateOptABox.w}x${separateOptABox.h}): ${fittedOptASize}px`);
+
 console.log('All Custom Template & Bounded Zone tests passed successfully!');

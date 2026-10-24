@@ -38,7 +38,7 @@ import { PostModeSelector, SocialPostMode } from './social-post/PostModeSelector
 import { PostTemplateId, ReactionEmojiSet, DEFAULT_REACTION_EMOJIS, REACTION_ORDER, SocialAspectRatio, SavedCustomTemplate } from './social-post/types';
 import { CustomTemplateManager } from './social-post/CustomTemplateManager';
 import { TemplateZoneCalibratorModal } from './social-post/TemplateZoneCalibratorModal';
-import { Maximize2, Crop } from 'lucide-react';
+import { Maximize2, Crop, Split, Grid } from 'lucide-react';
 
 interface SocialPostGeneratorProps {
   items: MCQItem[];
@@ -354,6 +354,144 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       [boxes[idx], boxes[target]] = [boxes[target], boxes[idx]];
       return { ...prev, boxes };
     });
+  };
+
+  const splitOptionsTo4Boxes = () => {
+    const optionsBox = customDesign.boxes.find(b => b.bind === 'options');
+    if (!optionsBox) return;
+
+    const is2Col = (optionsBox.optionsLayout || '2col') === '2col';
+    const gap = 16;
+    const colW = is2Col ? Math.round((optionsBox.w - gap) / 2) : optionsBox.w;
+    const rowH = is2Col ? Math.round(((optionsBox.h || 280) - gap) / 2) : Math.round(((optionsBox.h || 320) - gap * 3) / 4);
+
+    const newBoxes: SlideTextBox[] = [
+      {
+        id: `b_opt_a_${Date.now()}`,
+        bind: 'opt_a',
+        x: optionsBox.x,
+        y: optionsBox.y,
+        w: colW,
+        h: rowH,
+        fontSize: optionsBox.fontSize,
+        color: optionsBox.color,
+        align: optionsBox.align,
+        bold: optionsBox.bold,
+        shape: 'plain',
+        bg: 'transparent',
+        hideOptionBadges: true,
+        autoFit: true,
+        isBoundedZone: true,
+      },
+      {
+        id: `b_opt_b_${Date.now() + 1}`,
+        bind: 'opt_b',
+        x: is2Col ? optionsBox.x + colW + gap : optionsBox.x,
+        y: is2Col ? optionsBox.y : optionsBox.y + (rowH + gap),
+        w: colW,
+        h: rowH,
+        fontSize: optionsBox.fontSize,
+        color: optionsBox.color,
+        align: optionsBox.align,
+        bold: optionsBox.bold,
+        shape: 'plain',
+        bg: 'transparent',
+        hideOptionBadges: true,
+        autoFit: true,
+        isBoundedZone: true,
+      },
+      {
+        id: `b_opt_c_${Date.now() + 2}`,
+        bind: 'opt_c',
+        x: optionsBox.x,
+        y: is2Col ? optionsBox.y + rowH + gap : optionsBox.y + (rowH + gap) * 2,
+        w: colW,
+        h: rowH,
+        fontSize: optionsBox.fontSize,
+        color: optionsBox.color,
+        align: optionsBox.align,
+        bold: optionsBox.bold,
+        shape: 'plain',
+        bg: 'transparent',
+        hideOptionBadges: true,
+        autoFit: true,
+        isBoundedZone: true,
+      },
+      {
+        id: `b_opt_d_${Date.now() + 3}`,
+        bind: 'opt_d',
+        x: is2Col ? optionsBox.x + colW + gap : optionsBox.x,
+        y: is2Col ? optionsBox.y + rowH + gap : optionsBox.y + (rowH + gap) * 3,
+        w: colW,
+        h: rowH,
+        fontSize: optionsBox.fontSize,
+        color: optionsBox.color,
+        align: optionsBox.align,
+        bold: optionsBox.bold,
+        shape: 'plain',
+        bg: 'transparent',
+        hideOptionBadges: true,
+        autoFit: true,
+        isBoundedZone: true,
+      },
+    ];
+
+    setCustomDesign(prev => ({
+      ...prev,
+      boxes: [...prev.boxes.filter(b => b.bind !== 'options'), ...newBoxes],
+    }));
+  };
+
+  const combineOptionsToSingleGrid = () => {
+    const optBoxes = customDesign.boxes.filter(b => ['opt_a', 'opt_b', 'opt_c', 'opt_d'].includes(b.bind));
+    if (optBoxes.length === 0) return;
+
+    const minX = Math.min(...optBoxes.map(b => b.x));
+    const minY = Math.min(...optBoxes.map(b => b.y));
+    const maxX = Math.max(...optBoxes.map(b => b.x + b.w));
+    const maxY = Math.max(...optBoxes.map(b => b.y + (b.h || 60)));
+    const refBox = optBoxes[0];
+
+    const singleOptionsBox: SlideTextBox = {
+      id: `b_options_${Date.now()}`,
+      bind: 'options',
+      x: minX,
+      y: minY,
+      w: maxX - minX,
+      h: maxY - minY,
+      fontSize: refBox.fontSize,
+      color: refBox.color,
+      align: refBox.align,
+      bold: refBox.bold,
+      shape: refBox.shape || 'plain',
+      bg: refBox.bg,
+      hideOptionBadges: refBox.hideOptionBadges,
+      optionsLayout: '2col',
+      autoFit: true,
+      isBoundedZone: true,
+    };
+
+    setCustomDesign(prev => ({
+      ...prev,
+      boxes: [...prev.boxes.filter(b => !['opt_a', 'opt_b', 'opt_c', 'opt_d'].includes(b.bind)), singleOptionsBox],
+    }));
+  };
+
+  const makeOptionsTransparentText = () => {
+    setCustomDesign(prev => ({
+      ...prev,
+      boxes: prev.boxes.map(b => {
+        if (['options', 'opt_a', 'opt_b', 'opt_c', 'opt_d'].includes(b.bind)) {
+          return {
+            ...b,
+            shape: 'plain',
+            bg: 'transparent',
+            hideOptionBadges: true,
+          };
+        }
+        return b;
+      }),
+    }));
   };
 
   const handleCustomBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -828,9 +966,49 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
                 {/* Options A, B, C, D */}
                 <div className="space-y-3">
-                  <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Options A / B / C / D Text & Correct Answer Mark:
-                  </label>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      Options A / B / C / D Text & Correct Answer Mark:
+                    </label>
+
+                    {isCustomMode && (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {customDesign.boxes.some(b => b.bind === 'options') && (
+                          <button
+                            type="button"
+                            onClick={splitOptionsTo4Boxes}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
+                            title="Split combined options grid into 4 separate draggable boxes on canvas"
+                          >
+                            <Split className="w-3 h-3 text-amber-400" />
+                            <span>Position Separately (4 Boxes)</span>
+                          </button>
+                        )}
+                        {customDesign.boxes.some(b => ['opt_a', 'opt_b', 'opt_c', 'opt_d'].includes(b.bind)) && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={combineOptionsToSingleGrid}
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
+                              title="Combine 4 separate boxes back into 1 options grid"
+                            >
+                              <Grid className="w-3 h-3 text-sky-400" />
+                              <span>Combine Grid</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={makeOptionsTransparentText}
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-1 transition-all cursor-pointer"
+                              title="Make all option boxes transparent plain text without numbering"
+                            >
+                              <Sparkles className="w-3 h-3 text-amber-400" />
+                              <span>Transparent (No Numbers)</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {customOptions.map((opt, idx) => {
                     const isCorr = opt.isCorrect || customAnswerKey.toLowerCase() === opt.key.toLowerCase();
                     return (
@@ -1481,6 +1659,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 <div className="relative" ref={postFrameRef}>
                   <div
                     style={{
+                      aspectRatio: `${postDesignW} / ${postDesignH}`,
                       fontFamily: config.fontFamily || "'Kalpurush', serif",
                       ...(customDesign.bgImageUrl
                         ? {

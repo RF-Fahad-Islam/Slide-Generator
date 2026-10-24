@@ -34,6 +34,12 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
 | Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
 
+> **2026-10-24 — Separate Option Zones (opt_a–opt_d) & Transparent Text (No Numbering) Presets.**
+> 1. `SlideTextBoxLayer` supports dedicated rendering for `box.bind === 'opt_a' | 'opt_b' | 'opt_c' | 'opt_d'`. Respects `hideOptionBadges: boolean` (omits `A.`, `B.`, `ক.`, `খ.` badges) and `shape: 'plain'`, `bg: 'transparent'`, rendering pure text over graphic artwork with KaTeX math and Bengali auto-fitting.
+> 2. `TemplateZoneCalibratorModal` features an `optionsMode` switch (`Combined Grid` vs `4 Separate Boxes`), visual 4-box dragging and resizing, quick alignment toolbar (`2×2 Grid`, `1-Col Stack`, `Match Sizes`, `Center Options`, `Center Stem`), and a 1-click `✨ Transparent Text (No Numbers)` header preset.
+> 3. `SocialPostGenerator` Content tab provides 1-click tools: `Split to 4 Separate Boxes`, `Combine to Single Grid`, and `Transparent Text Only (No Numbers)`.
+> 4. `SlideTextBoxPanel` Style tab provides Option Numbering toggle (`Shown` vs `Hidden`) and 1-click `Transparent Text Only (No Numbering)` preset button for any option box.
+
 > **2026-10-24 — Template Zone Calibrator Modal Screen Spanning & Custom Templates Cleaner UI.**
 > 1. `TemplateZoneCalibratorModal` uses `createPortal(..., document.body)` with `z-[99999]` and `w-[98vw] max-w-[1680px] h-[94vh] max-h-[96vh]`, escaping drawer containing blocks (e.g. `backdrop-blur-xl`) to center over the entire screen.
 > 2. Calibrator modal visual stage adopts an 8-column layout (`lg:col-span-7 xl:col-span-8`) with dual-axis responsive containment (`maxHeight: calc(94vh - 200px)`, `width: min(100%, 860px)` for wide images, `height: min(calc(94vh - 200px), 740px)` for tall images) paired with a 4-column zone control drawer.

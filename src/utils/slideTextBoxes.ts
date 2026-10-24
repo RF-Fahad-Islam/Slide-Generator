@@ -4,7 +4,11 @@ import { resolveTheme } from './themeResolver';
 
 export const SLIDE_BOX_BINDS: { bind: SlideTextBoxBind; label: string }[] = [
   { bind: 'stem', label: '+ Question' },
-  { bind: 'options', label: '+ Options' },
+  { bind: 'options', label: '+ Options Grid' },
+  { bind: 'opt_a', label: '+ Option A (ক)' },
+  { bind: 'opt_b', label: '+ Option B (খ)' },
+  { bind: 'opt_c', label: '+ Option C (গ)' },
+  { bind: 'opt_d', label: '+ Option D (ঘ)' },
   { bind: 'answer', label: '+ Answer' },
   { bind: 'explanation', label: '+ Explanation' },
   { bind: 'passage', label: '+ Passage' },
@@ -69,6 +73,10 @@ export const getBoxFontFamily = (box: SlideTextBox, config: DeckConfig): string 
       roleFont = theme.fonts.headerFont;
       break;
     case 'options':
+    case 'opt_a':
+    case 'opt_b':
+    case 'opt_c':
+    case 'opt_d':
     case 'answer':
       roleFont = theme.fonts.optionsFont;
       break;
@@ -137,6 +145,15 @@ export const getSlideBoxContent = (
     case 'slideCounter': return `${formatSlideQNumber(currentIndex, fmt)} / ${formatSlideQNumber(Math.max(1, totalCount), fmt)}`;
     case 'free': return box.text || '';
     case 'options': return '';
+    case 'opt_a':
+    case 'opt_b':
+    case 'opt_c':
+    case 'opt_d': {
+      const idx = box.bind === 'opt_a' ? 0 : box.bind === 'opt_b' ? 1 : box.bind === 'opt_c' ? 2 : 3;
+      const opt = targetItem.options?.[idx];
+      if (!opt) return '';
+      return box.hideOptionBadges ? opt.text : `${opt.key || String.fromCharCode(65 + idx)}. ${opt.text}`;
+    }
     case 'icon': return '';
     case 'image': return '';
     default: return box.text || '';
@@ -154,6 +171,11 @@ export const boxContentHasMath = (
   currentIndex: number = 0,
   totalCount: number = 1
 ): boolean => {
+  if (box.bind === 'opt_a' || box.bind === 'opt_b' || box.bind === 'opt_c' || box.bind === 'opt_d') {
+    const idx = box.bind === 'opt_a' ? 0 : box.bind === 'opt_b' ? 1 : box.bind === 'opt_c' ? 2 : 3;
+    const opt = item?.options?.[idx];
+    return opt ? textContainsMath(opt.text) : false;
+  }
   if (box.bind === 'options') {
     const opts = item?.options || [];
     return opts.some(o => textContainsMath(o.text));

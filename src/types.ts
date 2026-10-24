@@ -210,6 +210,10 @@ export interface DeckConfig {
 export type SlideTextBoxBind =
   | 'stem'
   | 'options'
+  | 'opt_a'
+  | 'opt_b'
+  | 'opt_c'
+  | 'opt_d'
   | 'answer'
   | 'explanation'
   | 'passage'

@@ -60,6 +60,10 @@ import {
 const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
   stem: Layers,
   options: Shapes,
+  opt_a: Shapes,
+  opt_b: Shapes,
+  opt_c: Shapes,
+  opt_d: Shapes,
   answer: Layers,
   explanation: Layers,
   passage: Layers,
@@ -1120,6 +1124,43 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {['options', 'opt_a', 'opt_b', 'opt_c', 'opt_d'].includes(selectedBox.bind) && (
+                <div className="space-y-2 pt-2 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <label className={`text-xs font-bold ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                      Option Numbering:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateBox(selectedBox.id, { hideOptionBadges: !selectedBox.hideOptionBadges })}
+                      className={`px-3 py-1 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                        selectedBox.hideOptionBadges
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          : isAppLight
+                          ? 'bg-white border-slate-300 text-slate-700'
+                          : 'bg-slate-900 border-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {selectedBox.hideOptionBadges ? 'Hidden (Text Only)' : 'Shown (A/B/C/D)'}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateBox(selectedBox.id, { shape: 'plain', bg: 'transparent', hideOptionBadges: true })}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      (selectedBox.shape === 'plain' || !selectedBox.shape) && selectedBox.hideOptionBadges
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                        : isAppLight
+                        ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                        : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Transparent Text Only (No Numbering)</span>
+                  </button>
                 </div>
               )}
 

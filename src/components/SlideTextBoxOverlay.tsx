@@ -327,7 +327,11 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
       case 'icon': return 'ICON';
       case 'brand': return 'BRAND';
       case 'headerTitle': return 'HEADER';
-      case 'options': return 'OPTIONS';
+      case 'options': return 'OPTIONS GRID';
+      case 'opt_a': return 'OPTION A';
+      case 'opt_b': return 'OPTION B';
+      case 'opt_c': return 'OPTION C';
+      case 'opt_d': return 'OPTION D';
       case 'answer': return 'ANSWER';
       case 'explanation': return 'EXPLANATION';
       case 'watermark': return 'WATERMARK';
@@ -344,6 +348,12 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
   };
 
   const renderInvisible = (box: SlideTextBox, boxH: number) => {
+    if (box.bind === 'opt_a' || box.bind === 'opt_b' || box.bind === 'opt_c' || box.bind === 'opt_d') {
+      const idx = box.bind === 'opt_a' ? 0 : box.bind === 'opt_b' ? 1 : box.bind === 'opt_c' ? 2 : 3;
+      const opt = item.options[idx];
+      if (!opt) return '';
+      return box.hideOptionBadges ? opt.text : `${opt.key}. ${opt.text}`;
+    }
     if (box.bind === 'options') {
       return (
         <div className="space-y-2.5">

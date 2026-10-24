@@ -371,6 +371,127 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           );
         }
 
+        // INDIVIDUAL SEPARATE OPTIONS (Option A, B, C, D)
+        if (box.bind === 'opt_a' || box.bind === 'opt_b' || box.bind === 'opt_c' || box.bind === 'opt_d') {
+          const optIndex =
+            box.bind === 'opt_a' ? 0 :
+            box.bind === 'opt_b' ? 1 :
+            box.bind === 'opt_c' ? 2 : 3;
+
+          const opt = item.options[optIndex];
+          const rawText = (box.text !== undefined && box.text !== null && box.text !== '') ? box.text : (opt ? opt.text : '');
+          if (!opt && !rawText) return null;
+
+          const isCorrectOption = opt ? checkIsOptionCorrect(opt, item.answer, optIndex) : false;
+          const highlight = showOptionHighlight && isCorrectOption;
+          const isBounded = typeof box.h === 'number' && box.h > 0;
+          const padX = box.shape === 'card' ? 28 : box.shape === 'pill' ? 36 : 8;
+          const padY = box.shape === 'card' ? 20 : box.shape === 'pill' ? 16 : 6;
+          const badgeWidth = box.hideOptionBadges ? 0 : 36;
+
+          const effectiveFontSize = (box.autoFit !== false && isBounded)
+            ? calculateFittedFontSize(
+                rawText,
+                Math.max(40, box.w - badgeWidth),
+                box.h!,
+                box.fontSize,
+                box.minFontSize || 12,
+                padX,
+                padY
+              )
+            : box.fontSize;
+
+          const optKey = opt ? opt.key : String.fromCharCode(65 + optIndex);
+
+          if (box.shape === 'pill') {
+            return (
+              <div
+                key={box.id}
+                className={`absolute flex items-center justify-between px-6 py-2.5 rounded-full shadow-lg ${box.bold ? 'font-black' : 'font-bold'}`}
+                style={{
+                  ...base,
+                  height: box.h || undefined,
+                  maxHeight: box.h || undefined,
+                  overflow: isBounded ? 'hidden' : undefined,
+                  backgroundColor: highlight ? theme.colors.optionSelectedBg : (box.bg || 'rgba(15,23,42,0.85)'),
+                  border: highlight ? `2px solid ${theme.colors.optionSelectedBorder}` : '1px solid rgba(255,255,255,0.15)',
+                  color: highlight ? theme.colors.optionSelectedText : (box.color || (isLight ? '#0f172a' : '#f8fafc')),
+                  fontSize: `${effectiveFontSize}px`,
+                }}
+              >
+                {!box.hideOptionBadges && (
+                  <span
+                    className={`rounded-full font-black flex items-center justify-center shrink-0 mr-2.5 ${
+                      highlight ? 'bg-amber-400 text-slate-950' : isLight ? 'bg-slate-900 text-white' : 'bg-white/10 text-white'
+                    }`}
+                    style={{ width: Math.max(20, effectiveFontSize * 1.2), height: Math.max(20, effectiveFontSize * 1.2) }}
+                  >
+                    {optKey}
+                  </span>
+                )}
+                <span className="flex-1 min-w-0 leading-snug"><MathText text={rawText} /></span>
+                {highlight && <Check className="w-5 h-5 stroke-[3.5] shrink-0 ml-2 text-amber-400" />}
+              </div>
+            );
+          }
+
+          if (box.shape === 'card') {
+            return (
+              <div
+                key={box.id}
+                className={`absolute flex items-center justify-between px-6 py-4 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden ${box.bold ? 'font-black' : 'font-bold'}`}
+                style={{
+                  ...base,
+                  height: box.h || undefined,
+                  maxHeight: box.h || undefined,
+                  overflow: isBounded ? 'hidden' : undefined,
+                  backgroundColor: highlight ? theme.colors.optionSelectedBg : (box.bg || 'rgba(15,23,42,0.85)'),
+                  border: highlight ? `2px solid ${theme.colors.optionSelectedBorder}` : '1px solid rgba(255,255,255,0.15)',
+                  color: highlight ? theme.colors.optionSelectedText : (box.color || (isLight ? '#0f172a' : '#f8fafc')),
+                  fontSize: `${effectiveFontSize}px`,
+                }}
+              >
+                {!box.hideOptionBadges && (
+                  <div
+                    className={`rounded-xl font-black flex items-center justify-center shrink-0 shadow-md mr-3 ${
+                      highlight ? 'bg-amber-400 text-slate-950' : isLight ? 'bg-slate-900 text-white' : 'bg-white/10 text-white border border-white/15'
+                    }`}
+                    style={{ width: Math.max(24, effectiveFontSize * 1.3), height: Math.max(24, effectiveFontSize * 1.3) }}
+                  >
+                    {optKey}
+                  </div>
+                )}
+                <span className="flex-1 min-w-0 leading-snug"><MathText text={rawText} /></span>
+                {highlight && <Check className="w-5 h-5 stroke-[3.5] shrink-0 ml-2 text-amber-400" />}
+              </div>
+            );
+          }
+
+          // Plain Transparent Text Only
+          const alignJustify = box.align === 'center' ? 'justify-center text-center' : box.align === 'right' ? 'justify-end text-right' : 'justify-start text-left';
+          return (
+            <div
+              key={box.id}
+              className={`absolute flex items-center ${alignJustify} ${box.bold ? 'font-black' : 'font-bold'}`}
+              style={{
+                ...base,
+                height: box.h || undefined,
+                maxHeight: box.h || undefined,
+                overflow: isBounded ? 'hidden' : undefined,
+                backgroundColor: box.bg && box.bg !== 'transparent' ? box.bg : 'transparent',
+                color: highlight ? theme.colors.optionSelectedText : (box.color || (isLight ? '#0f172a' : '#f8fafc')),
+                fontSize: `${effectiveFontSize}px`,
+              }}
+            >
+              {!box.hideOptionBadges && (
+                <span className="font-black shrink-0 mr-2">{optKey}.</span>
+              )}
+              <span className="min-w-0 leading-snug"><MathText text={rawText} /></span>
+              {highlight && <Check className="w-5 h-5 stroke-[3.5] shrink-0 ml-2 text-amber-400" />}
+            </div>
+          );
+        }
+
         // ROMAN STATEMENTS
         if (box.bind === 'roman') {
           const cardStyle: React.CSSProperties =
