@@ -681,13 +681,26 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     setStemZone((p) => ({ ...p, x: Math.round((designW - p.w) / 2) }));
   };
 
-  // 1-Click Transparent Text (No Numbers) Preset
+  // Toggle Question Stem transparency (Transparent plain text vs Glass card)
+  const handleToggleStemTransparency = () => {
+    setStemZone((p) => {
+      const willBePlain = p.shape !== 'plain';
+      return {
+        ...p,
+        shape: willBePlain ? 'plain' : 'card',
+        bg: willBePlain ? 'transparent' : 'rgba(15,23,42,0.7)',
+      };
+    });
+  };
+
+  // 1-Click All Transparent Text (Question + Options without cards or numbers) Preset
   const handleMakeTransparentTextOnly = () => {
     const transparentProps = {
       shape: 'plain' as SlideBoxShape,
       bg: 'transparent',
       hideOptionBadges: true,
     };
+    setStemZone((p) => ({ ...p, shape: 'plain', bg: 'transparent' }));
     setOptionsZone((p) => ({ ...p, ...transparentProps }));
     setOptAZone((p) => ({ ...p, ...transparentProps }));
     setOptBZone((p) => ({ ...p, ...transparentProps }));
@@ -973,12 +986,27 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
               <>
                 <button
                   type="button"
+                  onClick={handleToggleStemTransparency}
+                  className={`px-3 py-2 rounded-xl text-xs font-black border flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
+                    stemZone.shape === 'plain'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  }`}
+                  title="Toggle transparent plain text vs card for the question stem"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">
+                    {stemZone.shape === 'plain' ? 'Question: Transparent' : 'Make Question Transparent'}
+                  </span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleMakeTransparentTextOnly}
                   className="px-3 py-2 rounded-xl text-xs font-black bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                  title="Make all options transparent plain text without numbers"
+                  title="Make Question and all options transparent plain text without cards or numbers"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="hidden sm:inline">Transparent Text (No Numbers)</span>
+                  <span className="hidden sm:inline">All Transparent (Q + Opts)</span>
                 </button>
                 <button
                   type="button"
@@ -1583,13 +1611,25 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
                   {/* Question Stem Textarea */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <label className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
                         <span>Question Stem</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-500 font-normal">Supports Bengali & Math</span>
-                    </label>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleToggleStemTransparency}
+                        className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
+                          stemZone.shape === 'plain'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
+                        }`}
+                        title="Toggle transparent plain text vs glass card background for question"
+                      >
+                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                        <span>{stemZone.shape === 'plain' ? 'Transparent Question (Active)' : 'Make Question Transparent'}</span>
+                      </button>
+                    </div>
                     <textarea
                       value={currentQuestion.stem}
                       onChange={(e) => handleStemChange(e.target.value)}
@@ -1902,6 +1942,25 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
                         );
                       })}
                     </div>
+
+                    {/* Question Background Toggle */}
+                    {activeZoneTab === 'stem' && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800">
+                        <span className="text-xs font-bold text-slate-300">Question Card Background:</span>
+                        <button
+                          type="button"
+                          onClick={handleToggleStemTransparency}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                            stemZone.shape === 'plain'
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : 'bg-slate-800 text-slate-300 border-slate-700'
+                          }`}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{stemZone.shape === 'plain' ? 'Transparent (No Card)' : 'Glass Card Background'}</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Option Numbering Toggle (Shown vs Hidden) */}
                     {activeZoneTab !== 'stem' && (

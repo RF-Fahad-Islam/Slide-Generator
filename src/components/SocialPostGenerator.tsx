@@ -477,6 +477,40 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     }));
   };
 
+  const makeQuestionTransparent = () => {
+    setCustomDesign(prev => ({
+      ...prev,
+      boxes: prev.boxes.map(b => {
+        if (b.bind === 'stem') {
+          const willBePlain = b.shape !== 'plain';
+          return {
+            ...b,
+            shape: willBePlain ? 'plain' : 'card',
+            bg: willBePlain ? 'transparent' : 'rgba(15,23,42,0.7)',
+          };
+        }
+        return b;
+      }),
+    }));
+  };
+
+  const makeAllTransparent = () => {
+    setCustomDesign(prev => ({
+      ...prev,
+      boxes: prev.boxes.map(b => {
+        if (['stem', 'options', 'opt_a', 'opt_b', 'opt_c', 'opt_d'].includes(b.bind)) {
+          return {
+            ...b,
+            shape: 'plain',
+            bg: 'transparent',
+            hideOptionBadges: true,
+          };
+        }
+        return b;
+      }),
+    }));
+  };
+
   const makeOptionsTransparentText = () => {
     setCustomDesign(prev => ({
       ...prev,
@@ -963,9 +997,41 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
                 {/* Question Stem */}
                 <div>
-                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Question Stem Text (LaTeX & Bangla aware):
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                    <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      Question Stem Text (LaTeX & Bangla aware):
+                    </label>
+                    {isCustomMode && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={makeQuestionTransparent}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-black border flex items-center gap-1 transition-all cursor-pointer ${
+                            customDesign.boxes.find(b => b.bind === 'stem')?.shape === 'plain'
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                          }`}
+                          title="Toggle transparent plain text vs glass card background for the question stem"
+                        >
+                          <Sparkles className="w-3 h-3 text-emerald-400" />
+                          <span>
+                            {customDesign.boxes.find(b => b.bind === 'stem')?.shape === 'plain'
+                              ? 'Question: Transparent (Active)'
+                              : 'Make Question Transparent'}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={makeAllTransparent}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-1 transition-all cursor-pointer"
+                          title="Make Question and all Options transparent without cards or numbers"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <span>All Transparent</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <textarea
                     value={customStem}
                     onChange={(e) => setCustomStem(e.target.value)}

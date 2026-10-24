@@ -34,6 +34,11 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
 | Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
 
+> **2026-10-24 — Transparent Question Option & All-Transparent Presets.**
+> 1. `SlideTextBoxLayer` supports transparent rendering for `box.bind === 'stem'` when `box.shape === 'plain'`, applying `backgroundColor: 'transparent'` and zero card padding/shadows so question stems render seamlessly over pre-printed template artwork.
+> 2. `TemplateZoneCalibratorModal` and `SocialPostGenerator` Content tab provide 1-click `Make Question Transparent` toggles and `All Transparent (Q + Opts)` actions.
+> 3. `SlideTextBoxPanel` Style tab provides a 1-click `Transparent Question (No Card)` preset button when a stem box is selected.
+
 > **2026-10-24 — Full-Fledged Social Post Studio Popup Editor & Dropzone First Workflow.**
 > 1. `TemplateZoneCalibratorModal` provides a dedicated initial Dropzone landing state with drag-over glow, file browse input, and starter graphics. Visual canvas stage continuously supports drag-and-drop file swapping.
 > 2. Right-side control panel uses 3 primary tabs:

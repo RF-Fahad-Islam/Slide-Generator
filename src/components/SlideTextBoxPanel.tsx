@@ -1164,6 +1164,35 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                 </div>
               )}
 
+              {selectedBox.bind === 'stem' && (
+                <div className="pt-2 border-t border-slate-700/50 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const willBePlain = selectedBox.shape !== 'plain';
+                      onUpdateBox(selectedBox.id, {
+                        shape: willBePlain ? 'plain' : 'card',
+                        bg: willBePlain ? 'transparent' : 'rgba(15,23,42,0.7)',
+                      });
+                    }}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      (selectedBox.shape === 'plain' || !selectedBox.shape) && (!selectedBox.bg || selectedBox.bg === 'transparent')
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : isAppLight
+                        ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                        : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>
+                      {(selectedBox.shape === 'plain' || !selectedBox.shape) && (!selectedBox.bg || selectedBox.bg === 'transparent')
+                        ? 'Transparent Question (Active)'
+                        : 'Transparent Question (No Card)'}
+                    </span>
+                  </button>
+                </div>
+              )}
+
               {(selectedBox.shape && selectedBox.shape !== 'plain' || selectedBox.bind === 'image') && (
                 <div>
                   <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>

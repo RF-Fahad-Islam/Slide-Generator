@@ -709,6 +709,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               height: box.h || undefined,
               maxHeight: box.h || undefined,
               overflow: isBounded ? 'hidden' : undefined,
+              backgroundColor: (box.shape === 'plain' || box.bg === 'transparent') ? 'transparent' : (box.bg || undefined),
             }}
           >
             <MathText text={content} />
