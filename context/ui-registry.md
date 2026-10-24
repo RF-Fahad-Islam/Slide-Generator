@@ -34,6 +34,14 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
 | Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
 
+> **2026-10-24 — Full-Fledged Social Post Studio Popup Editor & Dropzone First Workflow.**
+> 1. `TemplateZoneCalibratorModal` provides a dedicated initial Dropzone landing state with drag-over glow, file browse input, and starter graphics. Visual canvas stage continuously supports drag-and-drop file swapping.
+> 2. Right-side control panel uses 3 primary tabs:
+>    - `Content`: Deck question switcher (`Prev`/`Next` and dropdown), multiline stem textarea, and live Option A–D inputs with interactive correct answer radio buttons.
+>    - `Style & Fonts`: Comprehensive font picker with live font face samples, search filter, custom font file importer (`.ttf`, `.otf`, `.woff`, `.woff2`) with `FontFace` and `document.fonts.add()`, dynamic Google Font loader, 8-swatch color palette + native picker, container styling (`plain` transparent, `card` glass, `pill`), option numbering toggle, 1-click `✨ Transparent Text (No Numbers)`, and `Apply to All` bulk formatters.
+>    - `Zones`: Options mode switcher (`4 Separate Boxes` vs `Combined Grid`), active zone selector, 2×2 grid / 1-col stack / match sizes / center options alignment toolbar, and precision coordinate inputs.
+> 3. Direct high-res PNG export button in modal header via `safeToPng` and browser download.
+
 > **2026-10-24 — Separate Option Zones (opt_a–opt_d) & Transparent Text (No Numbering) Presets.**
 > 1. `SlideTextBoxLayer` supports dedicated rendering for `box.bind === 'opt_a' | 'opt_b' | 'opt_c' | 'opt_d'`. Respects `hideOptionBadges: boolean` (omits `A.`, `B.`, `ক.`, `খ.` badges) and `shape: 'plain'`, `bg: 'transparent'`, rendering pure text over graphic artwork with KaTeX math and Bengali auto-fitting.
 > 2. `TemplateZoneCalibratorModal` features an `optionsMode` switch (`Combined Grid` vs `4 Separate Boxes`), visual 4-box dragging and resizing, quick alignment toolbar (`2×2 Grid`, `1-Col Stack`, `Match Sizes`, `Center Options`, `Center Stem`), and a 1-click `✨ Transparent Text (No Numbers)` header preset.

@@ -31,6 +31,10 @@ interface CustomTemplateManagerProps {
   currentDesignH: number;
   isAppLight: boolean;
   sampleQuestion?: MCQItem;
+  allQuestions?: MCQItem[];
+  currentQuestionIndex?: number;
+  onSelectQuestionIndex?: (idx: number) => void;
+  onUpdateQuestion?: (item: MCQItem) => void;
   onApplyTemplate: (template: SavedCustomTemplate) => void;
   onOpenCalibrator?: (image?: string, boxes?: SlideTextBox[]) => void;
 }
@@ -290,6 +294,10 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
   currentDesignH,
   isAppLight,
   sampleQuestion,
+  allQuestions,
+  currentQuestionIndex,
+  onSelectQuestionIndex,
+  onUpdateQuestion,
   onApplyTemplate,
   onOpenCalibrator,
 }) => {
@@ -632,6 +640,10 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
         initialImageUrl={calibratorImage || currentBgImageUrl || ''}
         initialBoxes={calibratorBoxes || currentBoxes}
         sampleQuestion={sampleQuestion}
+        allQuestions={allQuestions}
+        currentQuestionIndex={currentQuestionIndex}
+        onSelectQuestionIndex={onSelectQuestionIndex}
+        onUpdateQuestion={onUpdateQuestion}
         isAppLight={isAppLight}
         onClose={() => setIsCalibratorOpen(false)}
         onSaveAndApply={(newTpl) => {

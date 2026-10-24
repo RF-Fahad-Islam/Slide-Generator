@@ -869,6 +869,20 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   currentDesignH={postDesignH}
                   isAppLight={isAppLight}
                   sampleQuestion={effectiveItem}
+                  allQuestions={items}
+                  currentQuestionIndex={selectedQuestionIndex}
+                  onSelectQuestionIndex={setSelectedQuestionIndex}
+                  onUpdateQuestion={(updated) => {
+                    setCustomStem(updated.stem);
+                    setCustomOptions(
+                      (updated.options || []).map((o, idx) => ({
+                        key: o.key || String.fromCharCode(65 + idx),
+                        text: o.text || '',
+                        isCorrect: !!o.isCorrect || (updated.answer && o.key.toLowerCase() === updated.answer.toLowerCase()),
+                      }))
+                    );
+                    setCustomAnswerKey(updated.answer || 'ক');
+                  }}
                   onApplyTemplate={handleApplyCustomTemplate}
                   onOpenCalibrator={(image, boxes) => {
                     setCalibratorUploadImage(image || customDesign.bgImageUrl || '');
@@ -1723,6 +1737,20 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         initialImageUrl={calibratorUploadImage || customDesign.bgImageUrl || ''}
         initialBoxes={customDesign.boxes}
         sampleQuestion={effectiveItem}
+        allQuestions={items}
+        currentQuestionIndex={selectedQuestionIndex}
+        onSelectQuestionIndex={setSelectedQuestionIndex}
+        onUpdateQuestion={(updated) => {
+          setCustomStem(updated.stem);
+          setCustomOptions(
+            (updated.options || []).map((o, idx) => ({
+              key: o.key || String.fromCharCode(65 + idx),
+              text: o.text || '',
+              isCorrect: !!o.isCorrect || (updated.answer && o.key.toLowerCase() === updated.answer.toLowerCase()),
+            }))
+          );
+          setCustomAnswerKey(updated.answer || 'ক');
+        }}
         isAppLight={isAppLight}
         onClose={() => {
           setIsStudioCalibratorOpen(false);

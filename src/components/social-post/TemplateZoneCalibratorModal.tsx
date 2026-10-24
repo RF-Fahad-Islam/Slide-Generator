@@ -3,6 +3,14 @@ import { createPortal } from 'react-dom';
 import { SlideTextBox, MCQItem, SlideBoxShape, SlideTextBoxBind } from '../../types';
 import { SavedCustomTemplate, SocialAspectRatio } from './types';
 import { calculateFittedFontSize, calculateFittedOptionsLayout } from '../../utils/textHeightEstimate';
+import { MathText } from '../MathText';
+import { safeToPng } from '../../utils/cleanExport';
+import {
+  getAllAvailableFonts,
+  importCustomFontFromFile,
+  injectGoogleFont,
+  CustomFontItem,
+} from '../../utils/customFontManager';
 import {
   X,
   Upload,
@@ -26,6 +34,17 @@ import {
   Split,
   Grid,
   Columns,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search,
+  FileText,
+  CheckCircle2,
+  Image as ImageIcon,
+  FolderOpen,
+  Paintbrush,
+  CheckSquare,
 } from 'lucide-react';
 
 interface TemplateZoneCalibratorModalProps {
@@ -33,6 +52,10 @@ interface TemplateZoneCalibratorModalProps {
   initialImageUrl?: string;
   initialBoxes?: SlideTextBox[];
   sampleQuestion?: MCQItem;
+  allQuestions?: MCQItem[];
+  currentQuestionIndex?: number;
+  onSelectQuestionIndex?: (idx: number) => void;
+  onUpdateQuestion?: (item: MCQItem) => void;
   isAppLight: boolean;
   onClose: () => void;
   onSaveAndApply: (template: SavedCustomTemplate) => void;
@@ -41,6 +64,8 @@ interface TemplateZoneCalibratorModalProps {
 type ActiveHandle = 'nw' | 'ne' | 'se' | 'sw' | 'n' | 's' | 'e' | 'w' | 'move' | null;
 type ZoneTarget = 'stem' | 'options' | 'opt_a' | 'opt_b' | 'opt_c' | 'opt_d';
 type OptionsMode = 'combined' | 'separate';
+type ModalTab = 'content' | 'style' | 'layout';
+type FontCategoryFilter = 'all' | 'bangla' | 'english' | 'imported';
 
 interface EditableZone {
   x: number;
@@ -53,6 +78,7 @@ interface EditableZone {
   bold: boolean;
   shape: SlideBoxShape;
   bg?: string;
+  fontFamily?: string;
   hideOptionBadges?: boolean;
   optionsLayout?: '1col' | '2col';
 }
@@ -62,23 +88,39 @@ const DEFAULT_SAMPLE_ITEM: MCQItem = {
   questionType: 'standard',
   stem: 'যে সকল রাসায়নিক পদার্থ স্নায়ুতন্ত্রের মাধ্যমে সংকেত আদান-প্রদান করে তাদের কী বলে?',
   options: [
-    { key: 'ক', text: 'হরমোন' },
+    { key: 'ক', text: 'হরমোন ও জৈব অনুঘটক' },
     { key: 'খ', text: 'নিউরোট্রান্সমিটার' },
-    { key: 'গ', text: 'এনজাইম' },
+    { key: 'গ', text: 'এনজাইম ও প্রোটিন' },
     { key: 'ঘ', text: 'অ্যান্টিবডি' },
   ],
   answer: 'খ',
 };
+
+const COLOR_PALETTE = [
+  { label: 'Dark Slate', val: '#0f172a', bg: 'bg-slate-900 border-white/20' },
+  { label: 'Pure White', val: '#ffffff', bg: 'bg-white border-slate-300' },
+  { label: 'Amber Gold', val: '#f59e0b', bg: 'bg-amber-500 border-amber-600' },
+  { label: 'Cyber Yellow', val: '#facc15', bg: 'bg-yellow-400 border-yellow-500' },
+  { label: 'Emerald Green', val: '#10b981', bg: 'bg-emerald-500 border-emerald-600' },
+  { label: 'Electric Cyan', val: '#06b6d4', bg: 'bg-cyan-500 border-cyan-600' },
+  { label: 'Rose Pink', val: '#f43f5e', bg: 'bg-rose-500 border-rose-600' },
+  { label: 'Violet', val: '#8b5cf6', bg: 'bg-violet-500 border-violet-600' },
+];
 
 export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalProps> = ({
   open,
   initialImageUrl,
   initialBoxes,
   sampleQuestion = DEFAULT_SAMPLE_ITEM,
+  allQuestions,
+  currentQuestionIndex = 0,
+  onSelectQuestionIndex,
+  onUpdateQuestion,
   isAppLight,
   onClose,
   onSaveAndApply,
 }) => {
+  // Image & canvas dimensions state
   const [imageUrl, setImageUrl] = useState<string>(initialImageUrl || '');
   const [imageNatW, setImageNatW] = useState<number>(864);
   const [imageNatH, setImageNatH] = useState<number>(1080);
@@ -86,10 +128,25 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
   const [designH, setDesignH] = useState<number>(1080);
   const [aspectRatio, setAspectRatio] = useState<SocialAspectRatio>('custom');
   const [templateName, setTemplateName] = useState<string>('Custom Graphic Quiz Template');
+  const [isDraggingFileOverStage, setIsDraggingFileOverStage] = useState<boolean>(false);
+  const [isExportingPng, setIsExportingPng] = useState<boolean>(false);
+
+  // Active Editor Navigation Tab: 'content' | 'style' | 'layout'
+  const [activeTab, setActiveTab] = useState<ModalTab>('content');
 
   // Options Mode: 'combined' (1 single zone) or 'separate' (4 distinct zones)
-  const [optionsMode, setOptionsMode] = useState<OptionsMode>('combined');
+  const [optionsMode, setOptionsMode] = useState<OptionsMode>('separate');
   const [activeZoneTab, setActiveZoneTab] = useState<ZoneTarget>('stem');
+
+  // Question & options editing state
+  const [currentQuestion, setCurrentQuestion] = useState<MCQItem>(sampleQuestion);
+
+  // Sync current question when sampleQuestion or active question index changes
+  useEffect(() => {
+    if (sampleQuestion) {
+      setCurrentQuestion(sampleQuestion);
+    }
+  }, [sampleQuestion, currentQuestionIndex]);
 
   // Question Stem Zone
   const [stemZone, setStemZone] = useState<EditableZone>({
@@ -103,6 +160,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: true,
     shape: 'plain',
     bg: 'transparent',
+    fontFamily: "'Hind Siliguri', sans-serif",
   });
 
   // Combined Options Zone (Grid)
@@ -117,6 +175,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
+    fontFamily: "'Hind Siliguri', sans-serif",
     hideOptionBadges: true,
     optionsLayout: '2col',
   });
@@ -133,6 +192,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
+    fontFamily: "'Hind Siliguri', sans-serif",
     hideOptionBadges: true,
   });
 
@@ -147,6 +207,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
+    fontFamily: "'Hind Siliguri', sans-serif",
     hideOptionBadges: true,
   });
 
@@ -161,6 +222,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
+    fontFamily: "'Hind Siliguri', sans-serif",
     hideOptionBadges: true,
   });
 
@@ -175,8 +237,17 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
+    fontFamily: "'Hind Siliguri', sans-serif",
     hideOptionBadges: true,
   });
+
+  // Fonts state & management
+  const [availableFonts, setAvailableFonts] = useState<CustomFontItem[]>([]);
+  const [fontFilter, setFontFilter] = useState<FontCategoryFilter>('all');
+  const [fontSearchQuery, setFontSearchQuery] = useState<string>('');
+  const [googleFontInput, setGoogleFontInput] = useState<string>('');
+  const [isFontLoading, setIsFontLoading] = useState<boolean>(false);
+  const fontFileInputRef = useRef<HTMLInputElement>(null);
 
   // Interaction dragging / resizing state
   const [dragTarget, setDragTarget] = useState<ZoneTarget | null>(null);
@@ -185,6 +256,15 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
   const previewViewportRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState<number>(440);
+
+  // Load available fonts
+  const refreshFonts = useCallback(() => {
+    setAvailableFonts(getAllAvailableFonts());
+  }, []);
+
+  useEffect(() => {
+    refreshFonts();
+  }, [refreshFonts, open]);
 
   // Helper to access zone by target identifier
   const getZoneByTarget = useCallback((t: ZoneTarget): EditableZone => {
@@ -207,6 +287,18 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
       case 'opt_c': setOptCZone(update); break;
       case 'opt_d': setOptDZone(update); break;
     }
+  }, []);
+
+  // Update image and calculate dimensions
+  const handleLoadImageFile = useCallback((file: File) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (evt.target?.result) {
+        setImageUrl(evt.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
   }, []);
 
   // Load natural dimensions whenever imageUrl changes
@@ -254,10 +346,10 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
             bold: foundStem.bold !== undefined ? foundStem.bold : prev.bold,
             shape: foundStem.shape || prev.shape,
             bg: foundStem.bg || prev.bg,
+            fontFamily: foundStem.fontFamily || prev.fontFamily,
           }));
         }
 
-        // Check for separate option boxes (opt_a, opt_b, opt_c, opt_d)
         const bA = initialBoxes.find((b) => b.bind === 'opt_a');
         const bB = initialBoxes.find((b) => b.bind === 'opt_b');
         const bC = initialBoxes.find((b) => b.bind === 'opt_c');
@@ -265,10 +357,10 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
         if (bA || bB || bC || bD) {
           setOptionsMode('separate');
-          if (bA) setOptAZone((p) => ({ ...p, ...bA, h: bA.h || p.h, shape: bA.shape || 'plain', hideOptionBadges: bA.hideOptionBadges ?? true }));
-          if (bB) setOptBZone((p) => ({ ...p, ...bB, h: bB.h || p.h, shape: bB.shape || 'plain', hideOptionBadges: bB.hideOptionBadges ?? true }));
-          if (bC) setOptCZone((p) => ({ ...p, ...bC, h: bC.h || p.h, shape: bC.shape || 'plain', hideOptionBadges: bC.hideOptionBadges ?? true }));
-          if (bD) setOptDZone((p) => ({ ...p, ...bD, h: bD.h || p.h, shape: bD.shape || 'plain', hideOptionBadges: bD.hideOptionBadges ?? true }));
+          if (bA) setOptAZone((p) => ({ ...p, ...bA, h: bA.h || p.h, shape: bA.shape || 'plain', hideOptionBadges: bA.hideOptionBadges ?? true, fontFamily: bA.fontFamily || p.fontFamily }));
+          if (bB) setOptBZone((p) => ({ ...p, ...bB, h: bB.h || p.h, shape: bB.shape || 'plain', hideOptionBadges: bB.hideOptionBadges ?? true, fontFamily: bB.fontFamily || p.fontFamily }));
+          if (bC) setOptCZone((p) => ({ ...p, ...bC, h: bC.h || p.h, shape: bC.shape || 'plain', hideOptionBadges: bC.hideOptionBadges ?? true, fontFamily: bC.fontFamily || p.fontFamily }));
+          if (bD) setOptDZone((p) => ({ ...p, ...bD, h: bD.h || p.h, shape: bD.shape || 'plain', hideOptionBadges: bD.hideOptionBadges ?? true, fontFamily: bD.fontFamily || p.fontFamily }));
         } else {
           const foundOptions = initialBoxes.find((b) => b.bind === 'options');
           if (foundOptions) {
@@ -285,6 +377,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
               bold: foundOptions.bold !== undefined ? foundOptions.bold : prev.bold,
               shape: foundOptions.shape || prev.shape,
               bg: foundOptions.bg || prev.bg,
+              fontFamily: foundOptions.fontFamily || prev.fontFamily,
               hideOptionBadges: foundOptions.hideOptionBadges ?? true,
               optionsLayout: foundOptions.optionsLayout || prev.optionsLayout,
             }));
@@ -310,7 +403,6 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
           hideOptionBadges: true,
         }));
 
-        // Default 4 separate option zones
         const halfW = Math.round((zoneW - 16) / 2);
         const halfH = Math.round((targetH * 0.26 - 16) / 2);
         const startY = Math.round(targetH * 0.64);
@@ -339,18 +431,59 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
   // Scale factor between DOM preview px and design coordinate px
   const scale = viewportWidth > 0 && designW > 0 ? viewportWidth / designW : 1;
 
-  // Handle local file upload
+  // Handle local file input change
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.result) {
-        setImageUrl(evt.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    if (file) handleLoadImageFile(file);
     e.target.value = '';
+  };
+
+  // Drag and drop image handlers
+  const handleStageDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFileOverStage(true);
+  };
+
+  const handleStageDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFileOverStage(false);
+  };
+
+  const handleStageDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFileOverStage(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleLoadImageFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  // Font Import Handlers
+  const handleFontFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setIsFontLoading(true);
+    try {
+      const imported = await importCustomFontFromFile(file);
+      refreshFonts();
+      // Apply immediately to the active zone
+      handleSetZoneFont(imported.family);
+    } catch (err: any) {
+      alert(`Font import failed: ${err?.message || 'Unsupported format'}`);
+    } finally {
+      setIsFontLoading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAddGoogleFont = () => {
+    if (!googleFontInput.trim()) return;
+    const family = injectGoogleFont(googleFontInput.trim());
+    handleSetZoneFont(family);
+    setGoogleFontInput('');
+    refreshFonts();
   };
 
   // Pointer interaction: Start Drag / Resize
@@ -379,52 +512,53 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
       const deltaScreenX = e.clientX - dragStartPos.mouseX;
       const deltaScreenY = e.clientY - dragStartPos.mouseY;
-      const deltaX = Math.round(deltaScreenX / scale);
-      const deltaY = Math.round(deltaScreenY / scale);
 
-      const start = dragStartPos.box;
-      let newX = start.x;
-      let newY = start.y;
-      let newW = start.w;
-      let newH = start.h;
+      // Convert screen delta px to design coordinate px
+      const deltaDesignX = Math.round(deltaScreenX / scale);
+      const deltaDesignY = Math.round(deltaScreenY / scale);
 
-      const MIN_W = 100;
-      const MIN_H = 40;
+      const orig = dragStartPos.box;
+      const minW = 60;
+      const minH = 40;
 
-      if (activeHandle === 'move') {
-        newX = Math.max(0, Math.min(designW - start.w, start.x + deltaX));
-        newY = Math.max(0, Math.min(designH - start.h, start.y + deltaY));
-      } else {
-        // Horizontal resizing
-        if (activeHandle.includes('e')) {
-          newW = Math.max(MIN_W, Math.min(designW - start.x, start.w + deltaX));
+      setZoneByTarget(dragTarget, (prev) => {
+        let { x, y, w, h } = orig;
+
+        if (activeHandle === 'move') {
+          x = Math.max(0, Math.min(designW - w, orig.x + deltaDesignX));
+          y = Math.max(0, Math.min(designH - h, orig.y + deltaDesignY));
+        } else {
+          // Handle 8 directional resize anchors
+          if (activeHandle.includes('e')) {
+            w = Math.max(minW, Math.min(designW - orig.x, orig.w + deltaDesignX));
+          }
+          if (activeHandle.includes('s')) {
+            h = Math.max(minH, Math.min(designH - orig.y, orig.h + deltaDesignY));
+          }
+          if (activeHandle.includes('w')) {
+            const proposedW = orig.w - deltaDesignX;
+            if (proposedW >= minW) {
+              const proposedX = orig.x + deltaDesignX;
+              if (proposedX >= 0) {
+                x = proposedX;
+                w = proposedW;
+              }
+            }
+          }
+          if (activeHandle.includes('n')) {
+            const proposedH = orig.h - deltaDesignY;
+            if (proposedH >= minH) {
+              const proposedY = orig.y + deltaDesignY;
+              if (proposedY >= 0) {
+                y = proposedY;
+                h = proposedH;
+              }
+            }
+          }
         }
-        if (activeHandle.includes('w')) {
-          const maxLeftShift = start.w - MIN_W;
-          const shiftX = Math.max(-start.x, Math.min(maxLeftShift, deltaX));
-          newX = start.x + shiftX;
-          newW = start.w - shiftX;
-        }
 
-        // Vertical resizing
-        if (activeHandle.includes('s')) {
-          newH = Math.max(MIN_H, Math.min(designH - start.y, start.h + deltaY));
-        }
-        if (activeHandle.includes('n')) {
-          const maxTopShift = start.h - MIN_H;
-          const shiftY = Math.max(-start.y, Math.min(maxTopShift, deltaY));
-          newY = start.y + shiftY;
-          newH = start.h - shiftY;
-        }
-      }
-
-      setZoneByTarget(dragTarget, (prev) => ({
-        ...prev,
-        x: newX,
-        y: newY,
-        w: newW,
-        h: newH,
-      }));
+        return { ...prev, x, y, w, h };
+      });
     },
     [dragTarget, activeHandle, dragStartPos, scale, designW, designH, setZoneByTarget]
   );
@@ -446,263 +580,256 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     }
   }, [dragTarget, handlePointerMove, handlePointerUp]);
 
-  // Switch between Combined Grid and 4 Separate Option Zones
+  // Mode switchers
   const handleSwitchToSeparate = () => {
-    const is2Col = optionsZone.optionsLayout !== '1col';
-    const gap = 16;
-    if (is2Col) {
-      const w = Math.round((optionsZone.w - gap) / 2);
-      const h = Math.round((optionsZone.h - gap) / 2);
-      setOptAZone((prev) => ({ ...prev, x: optionsZone.x, y: optionsZone.y, w, h, color: optionsZone.color, align: optionsZone.align, shape: optionsZone.shape, bg: optionsZone.bg, hideOptionBadges: true }));
-      setOptBZone((prev) => ({ ...prev, x: optionsZone.x + w + gap, y: optionsZone.y, w, h, color: optionsZone.color, align: optionsZone.align, shape: optionsZone.shape, bg: optionsZone.bg, hideOptionBadges: true }));
-      setOptCZone((prev) => ({ ...prev, x: optionsZone.x, y: optionsZone.y + h + gap, w, h, color: optionsZone.color, align: optionsZone.align, shape: optionsZone.shape, bg: optionsZone.bg, hideOptionBadges: true }));
-      setOptDZone((prev) => ({ ...prev, x: optionsZone.x + w + gap, y: optionsZone.y + h + gap, w, h, color: optionsZone.color, align: optionsZone.align, shape: optionsZone.shape, bg: optionsZone.bg, hideOptionBadges: true }));
-    } else {
-      const h = Math.round((optionsZone.h - gap * 3) / 4);
-      setOptAZone((prev) => ({ ...prev, x: optionsZone.x, y: optionsZone.y, w: optionsZone.w, h, color: optionsZone.color, align: optionsZone.align, shape: optionsZone.shape, bg: optionsZone.bg, hideOptionBadges: true }));
-      setOptBZone((prev) => ({ ...prev, x: optionsZone.x, y: optionsZone.y + (h + gap), w: optionsZone.w, h, color: optionsZone.color, align: optionsZone.align, shape: optionsZone.shape, bg: optionsZone.bg, hideOptionBadges: true }));
-      setOptCZone((prev) => ({ ...prev, x: optionsZone.x, y: optionsZone.y + (h + gap) * 2, w: optionsZone.w, h, color: optionsZone.color, align: optionsZone.align, shape: optionsZone.shape, bg: optionsZone.bg, hideOptionBadges: true }));
-      setOptDZone((prev) => ({ ...prev, x: optionsZone.x, y: optionsZone.y + (h + gap) * 3, w: optionsZone.w, h, color: optionsZone.color, align: optionsZone.align, shape: optionsZone.shape, bg: optionsZone.bg, hideOptionBadges: true }));
-    }
     setOptionsMode('separate');
+    const halfW = Math.round((optionsZone.w - 16) / 2);
+    const halfH = Math.round((optionsZone.h - 16) / 2);
+    const startX = optionsZone.x;
+    const startY = optionsZone.y;
+    const baseStyle = {
+      fontSize: optionsZone.fontSize,
+      color: optionsZone.color,
+      shape: optionsZone.shape,
+      bg: optionsZone.bg,
+      hideOptionBadges: optionsZone.hideOptionBadges ?? true,
+      fontFamily: optionsZone.fontFamily,
+    };
+
+    setOptAZone((p) => ({ ...p, ...baseStyle, x: startX, y: startY, w: halfW, h: halfH }));
+    setOptBZone((p) => ({ ...p, ...baseStyle, x: startX + halfW + 16, y: startY, w: halfW, h: halfH }));
+    setOptCZone((p) => ({ ...p, ...baseStyle, x: startX, y: startY + halfH + 16, w: halfW, h: halfH }));
+    setOptDZone((p) => ({ ...p, ...baseStyle, x: startX + halfW + 16, y: startY + halfH + 16, w: halfW, h: halfH }));
     setActiveZoneTab('opt_a');
   };
 
   const handleSwitchToCombined = () => {
+    setOptionsMode('combined');
     const minX = Math.min(optAZone.x, optBZone.x, optCZone.x, optDZone.x);
     const minY = Math.min(optAZone.y, optBZone.y, optCZone.y, optDZone.y);
-    const maxX = Math.max(optAZone.x + optAZone.w, optBZone.x + optBZone.w, optCZone.x + optCZone.w, optDZone.x + optDZone.w);
-    const maxY = Math.max(optAZone.y + optAZone.h, optBZone.y + optBZone.h, optCZone.y + optCZone.h, optDZone.y + optDZone.h);
+    const maxR = Math.max(optAZone.x + optAZone.w, optBZone.x + optBZone.w, optCZone.x + optCZone.w, optDZone.x + optDZone.w);
+    const maxB = Math.max(optAZone.y + optAZone.h, optBZone.y + optBZone.h, optCZone.y + optCZone.h, optDZone.y + optDZone.h);
+
     setOptionsZone((prev) => ({
       ...prev,
       x: minX,
       y: minY,
-      w: Math.max(160, maxX - minX),
-      h: Math.max(80, maxY - minY),
+      w: Math.max(200, maxR - minX),
+      h: Math.max(100, maxB - minY),
+      fontSize: optAZone.fontSize,
       color: optAZone.color,
       shape: optAZone.shape,
-      bg: optAZone.bg,
-      hideOptionBadges: optAZone.hideOptionBadges,
+      fontFamily: optAZone.fontFamily,
+      hideOptionBadges: optAZone.hideOptionBadges ?? true,
     }));
-    setOptionsMode('combined');
     setActiveZoneTab('options');
   };
 
-  // 1-Click Transparent Text Only Preset (Strip shapes, transparent bg, hide badges)
-  const handleMakeTransparentTextOnly = () => {
-    const applyTrans = (prev: EditableZone) => ({
-      ...prev,
-      shape: 'plain' as SlideBoxShape,
-      bg: 'transparent',
-      hideOptionBadges: true,
-    });
-    setOptionsZone(applyTrans);
-    setOptAZone(applyTrans);
-    setOptBZone(applyTrans);
-    setOptCZone(applyTrans);
-    setOptDZone(applyTrans);
+  // Quick Alignments
+  const handleAlign2x2 = () => {
+    const minX = Math.min(optAZone.x, optBZone.x, optCZone.x, optDZone.x);
+    const minY = Math.min(optAZone.y, optBZone.y, optCZone.y, optDZone.y);
+    const totalW = Math.max(optAZone.w * 2 + 16, 400);
+    const halfW = Math.round((totalW - 16) / 2);
+    const avgH = Math.round((optAZone.h + optBZone.h + optCZone.h + optDZone.h) / 4);
+
+    setOptAZone((p) => ({ ...p, x: minX, y: minY, w: halfW, h: avgH }));
+    setOptBZone((p) => ({ ...p, x: minX + halfW + 16, y: minY, w: halfW, h: avgH }));
+    setOptCZone((p) => ({ ...p, x: minX, y: minY + avgH + 16, w: halfW, h: avgH }));
+    setOptDZone((p) => ({ ...p, x: minX + halfW + 16, y: minY + avgH + 16, w: halfW, h: avgH }));
   };
 
-  // Center alignment helpers
-  const handleCenterStem = () => {
-    setStemZone((prev) => ({
-      ...prev,
-      x: Math.max(0, Math.round((designW - prev.w) / 2)),
-    }));
+  const handleAlign1Col = () => {
+    const minX = Math.min(optAZone.x, optBZone.x, optCZone.x, optDZone.x);
+    const minY = Math.min(optAZone.y, optBZone.y, optCZone.y, optDZone.y);
+    const maxW = Math.max(optAZone.w, optBZone.w, optCZone.w, optDZone.w);
+    const h = Math.round(optAZone.h * 0.85);
+    const gap = 12;
+
+    setOptAZone((p) => ({ ...p, x: minX, y: minY, w: maxW, h }));
+    setOptBZone((p) => ({ ...p, x: minX, y: minY + (h + gap), w: maxW, h }));
+    setOptCZone((p) => ({ ...p, x: minX, y: minY + (h + gap) * 2, w: maxW, h }));
+    setOptDZone((p) => ({ ...p, x: minX, y: minY + (h + gap) * 3, w: maxW, h }));
+  };
+
+  const handleMatchOptionSizes = () => {
+    const refW = optAZone.w;
+    const refH = optAZone.h;
+    setOptBZone((p) => ({ ...p, w: refW, h: refH }));
+    setOptCZone((p) => ({ ...p, w: refW, h: refH }));
+    setOptDZone((p) => ({ ...p, w: refW, h: refH }));
   };
 
   const handleCenterOptions = () => {
-    if (optionsMode === 'combined') {
-      setOptionsZone((prev) => ({
-        ...prev,
-        x: Math.max(0, Math.round((designW - prev.w) / 2)),
-      }));
-    } else {
+    if (optionsMode === 'separate') {
       const minX = Math.min(optAZone.x, optBZone.x, optCZone.x, optDZone.x);
       const maxX = Math.max(optAZone.x + optAZone.w, optBZone.x + optBZone.w, optCZone.x + optCZone.w, optDZone.x + optDZone.w);
-      const totalW = maxX - minX;
-      const targetStartX = Math.max(0, Math.round((designW - totalW) / 2));
-      const shiftX = targetStartX - minX;
+      const groupW = maxX - minX;
+      const newStartX = Math.round((designW - groupW) / 2);
+      const shiftX = newStartX - minX;
+
       setOptAZone((p) => ({ ...p, x: p.x + shiftX }));
       setOptBZone((p) => ({ ...p, x: p.x + shiftX }));
       setOptCZone((p) => ({ ...p, x: p.x + shiftX }));
       setOptDZone((p) => ({ ...p, x: p.x + shiftX }));
+    } else {
+      setOptionsZone((p) => ({ ...p, x: Math.round((designW - p.w) / 2) }));
     }
   };
 
-  // Layout distribution helpers for 4 separate options
-  const handleDistribute2x2 = () => {
-    const minX = Math.min(optAZone.x, optCZone.x);
-    const minY = Math.min(optAZone.y, optBZone.y);
-    const w = optAZone.w;
-    const h = optAZone.h;
-    const gap = 16;
-    setOptAZone((prev) => ({ ...prev, x: minX, y: minY, w, h }));
-    setOptBZone((prev) => ({ ...prev, x: minX + w + gap, y: minY, w, h }));
-    setOptCZone((prev) => ({ ...prev, x: minX, y: minY + h + gap, w, h }));
-    setOptDZone((prev) => ({ ...prev, x: minX + w + gap, y: minY + h + gap, w, h }));
+  const handleCenterStem = () => {
+    setStemZone((p) => ({ ...p, x: Math.round((designW - p.w) / 2) }));
   };
 
-  const handleDistribute1Col = () => {
-    const minX = Math.min(optAZone.x, optBZone.x, optCZone.x, optDZone.x);
-    const minY = Math.min(optAZone.y, optBZone.y, optCZone.y, optDZone.y);
-    const w = Math.max(optAZone.w, optBZone.w);
-    const h = optAZone.h;
-    const gap = 12;
-    setOptAZone((prev) => ({ ...prev, x: minX, y: minY, w, h }));
-    setOptBZone((prev) => ({ ...prev, x: minX, y: minY + (h + gap), w, h }));
-    setOptCZone((prev) => ({ ...prev, x: minX, y: minY + (h + gap) * 2, w, h }));
-    setOptDZone((prev) => ({ ...prev, x: minX, y: minY + (h + gap) * 3, w, h }));
+  // 1-Click Transparent Text (No Numbers) Preset
+  const handleMakeTransparentTextOnly = () => {
+    const transparentProps = {
+      shape: 'plain' as SlideBoxShape,
+      bg: 'transparent',
+      hideOptionBadges: true,
+    };
+    setOptionsZone((p) => ({ ...p, ...transparentProps }));
+    setOptAZone((p) => ({ ...p, ...transparentProps }));
+    setOptBZone((p) => ({ ...p, ...transparentProps }));
+    setOptCZone((p) => ({ ...p, ...transparentProps }));
+    setOptDZone((p) => ({ ...p, ...transparentProps }));
   };
 
-  const handleMatchAllOptionSizes = () => {
-    const activeZone = getZoneByTarget(activeZoneTab);
-    const w = activeZone.w;
-    const h = activeZone.h;
-    setOptAZone((prev) => ({ ...prev, w, h }));
-    setOptBZone((prev) => ({ ...prev, w, h }));
-    setOptCZone((prev) => ({ ...prev, w, h }));
-    setOptDZone((prev) => ({ ...prev, w, h }));
+  // Font application
+  const handleSetZoneFont = (family: string) => {
+    if (activeZoneTab === 'stem') {
+      setStemZone((p) => ({ ...p, fontFamily: family }));
+    } else if (optionsMode === 'separate') {
+      setZoneByTarget(activeZoneTab, (p) => ({ ...p, fontFamily: family }));
+    } else {
+      setOptionsZone((p) => ({ ...p, fontFamily: family }));
+    }
   };
 
-  const handleApplyStyleToAllOptions = (source: EditableZone) => {
-    const patch = (prev: EditableZone) => ({
-      ...prev,
-      fontSize: source.fontSize,
+  const handleApplyFontToAll = (family: string) => {
+    setStemZone((p) => ({ ...p, fontFamily: family }));
+    setOptionsZone((p) => ({ ...p, fontFamily: family }));
+    setOptAZone((p) => ({ ...p, fontFamily: family }));
+    setOptBZone((p) => ({ ...p, fontFamily: family }));
+    setOptCZone((p) => ({ ...p, fontFamily: family }));
+    setOptDZone((p) => ({ ...p, fontFamily: family }));
+  };
+
+  // Apply style to all zones (font, color, shape)
+  const handleApplyStyleToAllZones = (source: EditableZone) => {
+    const copy = {
       color: source.color,
-      align: source.align,
-      bold: source.bold,
       shape: source.shape,
       bg: source.bg,
+      fontFamily: source.fontFamily,
       hideOptionBadges: source.hideOptionBadges,
-    });
-    setOptAZone(patch);
-    setOptBZone(patch);
-    setOptCZone(patch);
-    setOptDZone(patch);
+    };
+    setStemZone((p) => ({ ...p, ...copy }));
+    setOptionsZone((p) => ({ ...p, ...copy }));
+    setOptAZone((p) => ({ ...p, ...copy }));
+    setOptBZone((p) => ({ ...p, ...copy }));
+    setOptCZone((p) => ({ ...p, ...copy }));
+    setOptDZone((p) => ({ ...p, ...copy }));
   };
 
-  // Reset to auto-detected card locations
-  const handleResetZones = () => {
-    const marginX = Math.round(designW * 0.09);
-    const zoneW = designW - marginX * 2;
-    setStemZone((prev) => ({
-      ...prev,
-      x: marginX,
-      y: Math.round(designH * 0.42),
-      w: zoneW,
-      h: Math.round(designH * 0.22),
-    }));
-    setOptionsZone((prev) => ({
-      ...prev,
-      x: marginX,
-      y: Math.round(designH * 0.66),
-      w: zoneW,
-      h: Math.round(designH * 0.26),
-    }));
-    const halfW = Math.round((zoneW - 16) / 2);
-    const halfH = Math.round((designH * 0.26 - 16) / 2);
-    const startY = Math.round(designH * 0.66);
-    setOptAZone((p) => ({ ...p, x: marginX, y: startY, w: halfW, h: halfH }));
-    setOptBZone((p) => ({ ...p, x: marginX + halfW + 16, y: startY, w: halfW, h: halfH }));
-    setOptCZone((p) => ({ ...p, x: marginX, y: startY + halfH + 16, w: halfW, h: halfH }));
-    setOptDZone((p) => ({ ...p, x: marginX + halfW + 16, y: startY + halfH + 16, w: halfW, h: halfH }));
+  // Question editing handlers
+  const handleStemChange = (val: string) => {
+    const updated = { ...currentQuestion, stem: val };
+    setCurrentQuestion(updated);
+    onUpdateQuestion?.(updated);
   };
 
-  // Save and apply template
+  const handleOptionTextChange = (index: number, val: string) => {
+    const newOptions = [...currentQuestion.options];
+    if (newOptions[index]) {
+      newOptions[index] = { ...newOptions[index], text: val };
+      const updated = { ...currentQuestion, options: newOptions };
+      setCurrentQuestion(updated);
+      onUpdateQuestion?.(updated);
+    }
+  };
+
+  const handleSetCorrectAnswer = (key: string) => {
+    const updated = { ...currentQuestion, answer: key };
+    setCurrentQuestion(updated);
+    onUpdateQuestion?.(updated);
+  };
+
+  // Direct PNG Export from the popup
+  const handleDownloadPng = async () => {
+    if (!previewViewportRef.current) return;
+    setIsExportingPng(true);
+    try {
+      const dataUrl = await safeToPng(previewViewportRef.current, { pixelRatio: 2 });
+      const safeName = templateName.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'social_post_calibrated';
+      const link = document.createElement('a');
+      link.download = `${safeName}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      alert(`Export failed: ${err?.message || 'Could not rasterize canvas'}`);
+    } finally {
+      setIsExportingPng(false);
+    }
+  };
+
+  // Save Template & Apply
   const handleSaveAndApply = () => {
-    const templateId = `custom_tpl_${Date.now()}`;
+    const templateId = `tpl_${Date.now()}`;
+    const boxes: SlideTextBox[] = [];
 
-    const boxes: SlideTextBox[] = [
-      {
-        id: 'b_stem',
-        bind: 'stem',
-        x: stemZone.x,
-        y: stemZone.y,
-        w: stemZone.w,
-        h: stemZone.h,
-        fontSize: stemZone.fontSize,
-        color: stemZone.color,
-        align: stemZone.align,
-        bold: stemZone.bold,
-        shape: stemZone.shape,
-        bg: stemZone.bg,
+    // 1. Stem Box
+    boxes.push({
+      id: 'b_stem',
+      bind: 'stem',
+      x: stemZone.x,
+      y: stemZone.y,
+      w: stemZone.w,
+      h: stemZone.h,
+      fontSize: stemZone.fontSize,
+      minFontSize: 16,
+      maxFontSize: stemZone.fontSize,
+      color: stemZone.color,
+      align: stemZone.align,
+      bold: stemZone.bold,
+      shape: stemZone.shape,
+      bg: stemZone.bg || (stemZone.shape === 'card' ? 'rgba(15,23,42,0.7)' : 'transparent'),
+      fontFamily: stemZone.fontFamily,
+      isCustomFontOverride: !!stemZone.fontFamily,
+      autoFit: true,
+      isBoundedZone: true,
+    });
+
+    // 2. Options
+    if (optionsMode === 'separate') {
+      const mapZoneToBox = (z: EditableZone, bind: SlideTextBoxBind, id: string) => ({
+        id,
+        bind,
+        x: z.x,
+        y: z.y,
+        w: z.w,
+        h: z.h,
+        fontSize: z.fontSize,
+        minFontSize: 14,
+        maxFontSize: z.fontSize,
+        color: z.color,
+        align: z.align,
+        bold: z.bold,
+        shape: z.shape,
+        bg: z.bg || (z.shape === 'card' ? 'rgba(15,23,42,0.7)' : 'transparent'),
+        fontFamily: z.fontFamily,
+        isCustomFontOverride: !!z.fontFamily,
+        hideOptionBadges: z.hideOptionBadges,
         autoFit: true,
         isBoundedZone: true,
-      },
-    ];
+      });
 
-    if (optionsMode === 'separate') {
-      boxes.push(
-        {
-          id: 'b_opt_a',
-          bind: 'opt_a',
-          x: optAZone.x,
-          y: optAZone.y,
-          w: optAZone.w,
-          h: optAZone.h,
-          fontSize: optAZone.fontSize,
-          color: optAZone.color,
-          align: optAZone.align,
-          bold: optAZone.bold,
-          shape: optAZone.shape,
-          bg: optAZone.bg,
-          hideOptionBadges: optAZone.hideOptionBadges,
-          autoFit: true,
-          isBoundedZone: true,
-        },
-        {
-          id: 'b_opt_b',
-          bind: 'opt_b',
-          x: optBZone.x,
-          y: optBZone.y,
-          w: optBZone.w,
-          h: optBZone.h,
-          fontSize: optBZone.fontSize,
-          color: optBZone.color,
-          align: optBZone.align,
-          bold: optBZone.bold,
-          shape: optBZone.shape,
-          bg: optBZone.bg,
-          hideOptionBadges: optBZone.hideOptionBadges,
-          autoFit: true,
-          isBoundedZone: true,
-        },
-        {
-          id: 'b_opt_c',
-          bind: 'opt_c',
-          x: optCZone.x,
-          y: optCZone.y,
-          w: optCZone.w,
-          h: optCZone.h,
-          fontSize: optCZone.fontSize,
-          color: optCZone.color,
-          align: optCZone.align,
-          bold: optCZone.bold,
-          shape: optCZone.shape,
-          bg: optCZone.bg,
-          hideOptionBadges: optCZone.hideOptionBadges,
-          autoFit: true,
-          isBoundedZone: true,
-        },
-        {
-          id: 'b_opt_d',
-          bind: 'opt_d',
-          x: optDZone.x,
-          y: optDZone.y,
-          w: optDZone.w,
-          h: optDZone.h,
-          fontSize: optDZone.fontSize,
-          color: optDZone.color,
-          align: optDZone.align,
-          bold: optDZone.bold,
-          shape: optDZone.shape,
-          bg: optDZone.bg,
-          hideOptionBadges: optDZone.hideOptionBadges,
-          autoFit: true,
-          isBoundedZone: true,
-        }
-      );
+      boxes.push(mapZoneToBox(optAZone, 'opt_a', 'b_opt_a'));
+      boxes.push(mapZoneToBox(optBZone, 'opt_b', 'b_opt_b'));
+      boxes.push(mapZoneToBox(optCZone, 'opt_c', 'b_opt_c'));
+      boxes.push(mapZoneToBox(optDZone, 'opt_d', 'b_opt_d'));
     } else {
       boxes.push({
         id: 'b_options',
@@ -712,11 +839,15 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
         w: optionsZone.w,
         h: optionsZone.h,
         fontSize: optionsZone.fontSize,
+        minFontSize: 14,
+        maxFontSize: optionsZone.fontSize,
         color: optionsZone.color,
         align: optionsZone.align,
         bold: optionsZone.bold,
         shape: optionsZone.shape,
-        bg: optionsZone.bg,
+        bg: optionsZone.bg || (optionsZone.shape === 'card' ? 'rgba(15,23,42,0.7)' : 'transparent'),
+        fontFamily: optionsZone.fontFamily,
+        isCustomFontOverride: !!optionsZone.fontFamily,
         hideOptionBadges: optionsZone.hideOptionBadges,
         optionsLayout: optionsZone.optionsLayout,
         autoFit: true,
@@ -737,7 +868,6 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
       boxes,
     };
 
-    // Save to localStorage
     try {
       const STORAGE_KEY = 'social_post_custom_templates_v2';
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -756,7 +886,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
   // Live Auto-fit calculation for question stem
   const liveStemFontSize = calculateFittedFontSize(
-    sampleQuestion.stem,
+    currentQuestion.stem,
     stemZone.w,
     stemZone.h,
     stemZone.fontSize,
@@ -766,7 +896,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
   );
 
   const liveOptionsMetrics = calculateFittedOptionsLayout(
-    sampleQuestion.options,
+    currentQuestion.options,
     optionsZone.w,
     optionsZone.h,
     optionsZone.fontSize,
@@ -780,6 +910,20 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     activeZoneTab === 'opt_c' ? optCZone :
     activeZoneTab === 'opt_d' ? optDZone : optionsZone;
 
+  // Filter fonts for font picker
+  const filteredFonts = availableFonts.filter((f) => {
+    if (fontSearchQuery.trim()) {
+      const q = fontSearchQuery.toLowerCase();
+      if (!f.name.toLowerCase().includes(q) && !f.category.toLowerCase().includes(q)) {
+        return false;
+      }
+    }
+    if (fontFilter === 'bangla') return f.category.startsWith('bangla');
+    if (fontFilter === 'english') return f.category.startsWith('english');
+    if (fontFilter === 'imported') return f.isCustom || f.category === 'custom_imported';
+    return true;
+  });
+
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-md animate-fadeIn select-none">
       <div
@@ -790,7 +934,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
         }`}
       >
         {/* HEADER BAR */}
-        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0 gap-4 bg-slate-950/30">
+        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0 gap-4 bg-slate-950/40">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2.5 rounded-2xl bg-amber-500 text-slate-950 shadow-md">
               <Crop className="w-5 h-5 stroke-[2.5]" />
@@ -798,47 +942,65 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base sm:text-lg font-black truncate">
-                  Import Custom Template & Bound Zones
+                  Social Post Studio & Template Calibrator
                 </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                  {imageNatW} × {imageNatH} px
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Ratio { (imageNatW / imageNatH).toFixed(2) } ({aspectRatio})
-                </span>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
-                  optionsMode === 'separate'
-                    ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
-                    : 'bg-slate-800 text-slate-300 border-slate-700'
-                }`}>
-                  {optionsMode === 'separate' ? '4 Separate Option Zones' : 'Combined Options Grid'}
-                </span>
+                {imageUrl && (
+                  <>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      {imageNatW} × {imageNatH} px
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      {aspectRatio} ({(imageNatW / imageNatH).toFixed(2)})
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                      optionsMode === 'separate'
+                        ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
+                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}>
+                      {optionsMode === 'separate' ? '4 Separate Options' : 'Combined Grid'}
+                    </span>
+                  </>
+                )}
               </div>
               <p className="text-xs text-slate-400 truncate mt-0.5">
-                The studio window automatically catches this size. Position options together or separately with transparent text.
+                Drop your graphic, edit question & options live, customize fonts & colors, and download or save as template.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleMakeTransparentTextOnly}
-              className="px-3 py-2 rounded-xl text-xs font-black bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-              title="Make all options transparent plain text without numbers"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Transparent Text (No Numbers)</span>
-            </button>
-            <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all">
-              <Upload className="w-3.5 h-3.5" />
-              <span>Change Image</span>
-              <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-            </label>
+            {imageUrl && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleMakeTransparentTextOnly}
+                  className="px-3 py-2 rounded-xl text-xs font-black bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  title="Make all options transparent plain text without numbers"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Transparent Text (No Numbers)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadPng}
+                  disabled={isExportingPng}
+                  className="px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-500 hover:brightness-110 text-slate-950 shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  title="Download calibrated graphic as high-resolution PNG"
+                >
+                  <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>{isExportingPng ? 'Exporting...' : 'Download PNG'}</span>
+                </button>
+                <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 border border-slate-700 bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition-all">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Replace Graphic</span>
+                  <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                </label>
+              </>
+            )}
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
               title="Close Calibrator"
             >
               <X className="w-5 h-5" />
@@ -848,328 +1010,155 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
         {/* MAIN BODY: 2-COLUMN LAYOUT */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0">
-          {/* LEFT: VISUAL INTERACTIVE STAGE (8 COLS on xl, 7 on lg) */}
-          <div className="lg:col-span-7 xl:col-span-8 p-4 sm:p-6 flex flex-col items-center justify-between bg-slate-950/70 overflow-hidden relative min-h-0">
-            <div className="w-full flex items-center justify-between mb-2 text-xs text-slate-400 px-2 shrink-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setActiveZoneTab('stem')}
-                  className={`flex items-center gap-1.5 font-bold px-2 py-0.5 rounded-lg border transition-all ${
-                    activeZoneTab === 'stem'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400'
-                      : 'text-emerald-400/80 border-transparent hover:text-emerald-300'
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block shadow-sm shadow-emerald-400/50" />
-                  <span>Question Stem</span>
-                </button>
-
-                {optionsMode === 'combined' ? (
+          {/* LEFT: VISUAL STAGE & DROPZONE (8 COLS on xl, 7 on lg) */}
+          <div
+            onDragOver={handleStageDragOver}
+            onDragLeave={handleStageDragLeave}
+            onDrop={handleStageDrop}
+            className={`lg:col-span-7 xl:col-span-8 p-4 sm:p-6 flex flex-col items-center justify-between overflow-hidden relative min-h-0 transition-colors ${
+              isDraggingFileOverStage
+                ? 'bg-amber-500/10 border-2 border-dashed border-amber-400'
+                : 'bg-slate-950/70'
+            }`}
+          >
+            {/* Visual Stage Controls Toolbar */}
+            {imageUrl ? (
+              <div className="w-full flex items-center justify-between mb-2 text-xs text-slate-400 px-2 shrink-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setActiveZoneTab('options')}
-                    className={`flex items-center gap-1.5 font-bold px-2 py-0.5 rounded-lg border transition-all ${
-                      activeZoneTab === 'options'
-                        ? 'bg-sky-500/20 text-sky-300 border-sky-400'
-                        : 'text-sky-400/80 border-transparent hover:text-sky-300'
+                    onClick={() => setActiveZoneTab('stem')}
+                    className={`flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      activeZoneTab === 'stem'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400 shadow-sm'
+                        : 'text-emerald-400/80 border-transparent hover:text-emerald-300'
                     }`}
                   >
-                    <span className="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block shadow-sm shadow-sky-400/50" />
-                    <span>Options Grid</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block shadow-sm shadow-emerald-400/50" />
+                    <span>Question Stem</span>
                   </button>
-                ) : (
-                  (['opt_a', 'opt_b', 'opt_c', 'opt_d'] as const).map((optKey, idx) => {
-                    const letters = ['A (ক)', 'B (খ)', 'C (গ)', 'D (ঘ)'];
-                    const isActive = activeZoneTab === optKey;
-                    return (
-                      <button
-                        key={optKey}
-                        type="button"
-                        onClick={() => setActiveZoneTab(optKey)}
-                        className={`flex items-center gap-1.5 font-bold px-2 py-0.5 rounded-lg border transition-all ${
-                          isActive
-                            ? 'bg-sky-500/20 text-sky-300 border-sky-400 shadow-sm'
-                            : 'text-sky-400/80 border-transparent hover:text-sky-300'
-                        }`}
-                      >
-                        <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />
-                        <span>Opt {letters[idx]}</span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={optionsMode === 'combined' ? handleSwitchToSeparate : handleSwitchToCombined}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all bg-slate-900 border-slate-700 hover:border-amber-400 text-amber-300 flex items-center gap-1.5"
-                  title="Toggle between single combined options grid and 4 separate option zones"
-                >
-                  <Split className="w-3 h-3 text-amber-400" />
-                  <span>{optionsMode === 'combined' ? 'Split into 4 Separate Boxes' : 'Combine into 1 Box'}</span>
-                </button>
-                <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
-                  {designW} × {designH} px
+                  {optionsMode === 'combined' ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveZoneTab('options')}
+                      className={`flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                        activeZoneTab === 'options'
+                          ? 'bg-sky-500/20 text-sky-300 border-sky-400 shadow-sm'
+                          : 'text-sky-400/80 border-transparent hover:text-sky-300'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block shadow-sm shadow-sky-400/50" />
+                      <span>Options Grid</span>
+                    </button>
+                  ) : (
+                    (['opt_a', 'opt_b', 'opt_c', 'opt_d'] as const).map((optKey, idx) => {
+                      const letters = ['A (ক)', 'B (খ)', 'C (গ)', 'D (ঘ)'];
+                      const isActive = activeZoneTab === optKey;
+                      return (
+                        <button
+                          key={optKey}
+                          type="button"
+                          onClick={() => setActiveZoneTab(optKey)}
+                          className={`flex items-center gap-1 font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-sky-500/20 text-sky-300 border-sky-400 shadow-sm'
+                              : 'text-sky-400/80 border-transparent hover:text-sky-300'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />
+                          <span>{letters[idx]}</span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={optionsMode === 'combined' ? handleSwitchToSeparate : handleSwitchToCombined}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all bg-slate-900 border-slate-700 hover:border-amber-400 text-amber-300 flex items-center gap-1.5 cursor-pointer"
+                    title="Toggle between single combined options grid and 4 separate option zones"
+                  >
+                    <Split className="w-3 h-3 text-amber-400" />
+                    <span>{optionsMode === 'combined' ? 'Split 4 Boxes' : 'Combine 1 Box'}</span>
+                  </button>
+                  <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
+                    {designW} × {designH} px
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full text-center py-1">
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
+                  Step 1: Import or Drop Your Custom Template Graphic
                 </span>
               </div>
-            </div>
+            )}
 
             {/* Stage Center Area */}
-            <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0 overflow-hidden">
-              <div
-                ref={previewViewportRef}
-                className="shadow-2xl rounded-2xl border border-slate-700/80 relative overflow-hidden select-none bg-slate-900 mx-auto"
-                style={{
-                  aspectRatio: `${designW} / ${designH}`,
-                  maxHeight: 'calc(94vh - 200px)',
-                  maxWidth: '100%',
-                  width: designW > designH ? 'min(100%, 860px)' : 'auto',
-                  height: designH >= designW ? 'min(calc(94vh - 200px), 740px)' : 'auto',
-                }}
-              >
-                {/* Template Graphic Background */}
-                {imageUrl ? (
+            <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0 overflow-hidden relative">
+              {imageUrl ? (
+                <div
+                  ref={previewViewportRef}
+                  className="shadow-2xl rounded-2xl border border-slate-700/80 relative overflow-hidden select-none bg-slate-900 mx-auto"
+                  style={{
+                    aspectRatio: `${designW} / ${designH}`,
+                    maxHeight: 'calc(94vh - 200px)',
+                    maxWidth: '100%',
+                    width: designW > designH ? 'min(100%, 860px)' : 'auto',
+                    height: designH >= designW ? 'min(calc(94vh - 200px), 740px)' : 'auto',
+                  }}
+                >
+                  {/* Template Graphic Background */}
                   <img
                     src={imageUrl}
                     alt="Template Graphic"
                     className="w-full h-full object-cover pointer-events-none absolute inset-0"
                   />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-slate-400">
-                    <Upload className="w-10 h-10 text-amber-400 mb-2 animate-bounce" />
-                    <p className="font-bold text-sm">Upload or Drop a Template Graphic</p>
-                    <p className="text-xs text-slate-400 mt-1">Supports JPG, PNG, WEBP of any dimension</p>
-                  </div>
-                )}
 
-                {/* OVERLAY: QUESTION STEM ZONE */}
-                <div
-                  className={`absolute rounded-xl transition-shadow cursor-move ${
-                    activeZoneTab === 'stem'
-                      ? 'ring-2 ring-emerald-400 shadow-xl shadow-emerald-500/20 bg-emerald-500/10'
-                      : 'border-2 border-emerald-500/60 bg-emerald-500/5 hover:border-emerald-400'
-                  }`}
-                  style={{
-                    left: `${(stemZone.x / designW) * 100}%`,
-                    top: `${(stemZone.y / designH) * 100}%`,
-                    width: `${(stemZone.w / designW) * 100}%`,
-                    height: `${(stemZone.h / designH) * 100}%`,
-                  }}
-                  onPointerDown={(e) => handlePointerDown(e, 'stem', 'move')}
-                >
-                  {/* Zone Top Pill Badge */}
-                  <div className="absolute -top-6 left-1 px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 font-black text-[10px] tracking-wider uppercase flex items-center gap-1 shadow-md pointer-events-none">
-                    <span>🟢 Question Stem</span>
-                    <span className="font-mono opacity-80">({stemZone.w}×{stemZone.h})</span>
-                  </div>
-
-                  {/* Auto-fit Preview Content */}
-                  <div
-                    className={`w-full h-full flex items-center justify-center p-2.5 overflow-hidden leading-snug ${
-                      stemZone.align === 'center' ? 'text-center' : stemZone.align === 'right' ? 'text-right' : 'text-left'
-                    } ${stemZone.shape === 'card' ? 'rounded-lg backdrop-blur-sm' : ''}`}
-                    style={{
-                      color: stemZone.color,
-                      backgroundColor: stemZone.shape === 'card' ? 'rgba(15,23,42,0.65)' : 'transparent',
-                      fontSize: `${liveStemFontSize * scale}px`,
-                      fontWeight: stemZone.bold ? 800 : 600,
-                    }}
-                  >
-                    <span className="w-full line-clamp-4 pointer-events-none">
-                      {sampleQuestion.stem}
-                    </span>
-                  </div>
-
-                  {/* 8 Resize Handles */}
-                  {activeZoneTab === 'stem' && (
-                    <>
-                      {(['nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w'] as const).map((h) => {
-                        const posClass =
-                          h === 'nw' ? '-top-1.5 -left-1.5 cursor-nwse-resize' :
-                          h === 'ne' ? '-top-1.5 -right-1.5 cursor-nesw-resize' :
-                          h === 'se' ? '-bottom-1.5 -right-1.5 cursor-nwse-resize' :
-                          h === 'sw' ? '-bottom-1.5 -left-1.5 cursor-nesw-resize' :
-                          h === 'n' ? '-top-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize' :
-                          h === 's' ? '-bottom-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize' :
-                          h === 'e' ? 'top-1/2 -right-1.5 -translate-y-1/2 cursor-ew-resize' :
-                          'top-1/2 -left-1.5 -translate-y-1/2 cursor-ew-resize';
-                        return (
-                          <div
-                            key={h}
-                            onPointerDown={(e) => handlePointerDown(e, 'stem', h)}
-                            className={`absolute w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-950 shadow-md ${posClass}`}
-                          />
-                        );
-                      })}
-                    </>
-                  )}
-                </div>
-
-                {/* OVERLAY: OPTIONS ZONES (Combined OR 4 Separate) */}
-                {optionsMode === 'separate' ? (
-                  <>
-                    {[
-                      { key: 'opt_a' as const, label: 'Opt A (ক)', zone: optAZone, optItem: sampleQuestion.options[0] || { key: 'ক', text: 'হরমোন' } },
-                      { key: 'opt_b' as const, label: 'Opt B (খ)', zone: optBZone, optItem: sampleQuestion.options[1] || { key: 'খ', text: 'নিউরোট্রান্সমিটার' } },
-                      { key: 'opt_c' as const, label: 'Opt C (গ)', zone: optCZone, optItem: sampleQuestion.options[2] || { key: 'গ', text: 'এনজাইম' } },
-                      { key: 'opt_d' as const, label: 'Opt D (ঘ)', zone: optDZone, optItem: sampleQuestion.options[3] || { key: 'ঘ', text: 'অ্যান্টিবডি' } },
-                    ].map(({ key, label, zone, optItem }) => {
-                      const isSelected = activeZoneTab === key;
-                      const effectiveSize = calculateFittedFontSize(
-                        optItem.text,
-                        Math.max(40, zone.w - (zone.hideOptionBadges ? 0 : 36)),
-                        zone.h,
-                        zone.fontSize,
-                        12,
-                        zone.shape === 'card' ? 24 : 8,
-                        zone.shape === 'card' ? 16 : 4
-                      );
-
-                      return (
-                        <div
-                          key={key}
-                          className={`absolute rounded-xl transition-shadow cursor-move ${
-                            isSelected
-                              ? 'ring-2 ring-sky-400 shadow-xl shadow-sky-500/30 bg-sky-500/10 z-20'
-                              : 'border-2 border-sky-500/60 bg-sky-500/5 hover:border-sky-400 z-10'
-                          }`}
-                          style={{
-                            left: `${(zone.x / designW) * 100}%`,
-                            top: `${(zone.y / designH) * 100}%`,
-                            width: `${(zone.w / designW) * 100}%`,
-                            height: `${(zone.h / designH) * 100}%`,
-                          }}
-                          onPointerDown={(e) => handlePointerDown(e, key, 'move')}
-                        >
-                          {/* Zone Top Pill Badge */}
-                          <div className="absolute -top-6 left-1 px-2 py-0.5 rounded-md bg-sky-500 text-slate-950 font-black text-[10px] tracking-wider uppercase flex items-center gap-1 shadow-md pointer-events-none">
-                            <span>🔵 {label}</span>
-                            <span className="font-mono opacity-80">({zone.w}×{zone.h})</span>
-                          </div>
-
-                          {/* Content */}
-                          <div
-                            className={`w-full h-full flex items-center p-2.5 overflow-hidden ${
-                              zone.align === 'center' ? 'justify-center text-center' :
-                              zone.align === 'right' ? 'justify-end text-right' : 'justify-start text-left'
-                            } ${
-                              zone.shape === 'card' ? 'bg-slate-950/70 rounded-lg border border-white/10' :
-                              zone.shape === 'pill' ? 'bg-slate-950/70 rounded-full border border-white/10' : ''
-                            }`}
-                            style={{
-                              color: zone.color,
-                              fontSize: `${effectiveSize * scale}px`,
-                              fontWeight: zone.bold ? 800 : 600,
-                            }}
-                          >
-                            {!zone.hideOptionBadges && (
-                              <span className="font-black shrink-0 mr-1.5">{optItem.key}.</span>
-                            )}
-                            <span className="truncate min-w-0 font-bold">{optItem.text}</span>
-                          </div>
-
-                          {/* 8 Handles */}
-                          {isSelected && (
-                            <>
-                              {(['nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w'] as const).map((h) => {
-                                const posClass =
-                                  h === 'nw' ? '-top-1.5 -left-1.5 cursor-nwse-resize' :
-                                  h === 'ne' ? '-top-1.5 -right-1.5 cursor-nesw-resize' :
-                                  h === 'se' ? '-bottom-1.5 -right-1.5 cursor-nwse-resize' :
-                                  h === 'sw' ? '-bottom-1.5 -left-1.5 cursor-nesw-resize' :
-                                  h === 'n' ? '-top-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize' :
-                                  h === 's' ? '-bottom-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize' :
-                                  h === 'e' ? 'top-1/2 -right-1.5 -translate-y-1/2 cursor-ew-resize' :
-                                  'top-1/2 -left-1.5 -translate-y-1/2 cursor-ew-resize';
-                                return (
-                                  <div
-                                    key={h}
-                                    onPointerDown={(e) => handlePointerDown(e, key, h)}
-                                    className={`absolute w-3 h-3 rounded-full bg-sky-400 border-2 border-slate-950 shadow-md ${posClass}`}
-                                  />
-                                );
-                              })}
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </>
-                ) : (
+                  {/* OVERLAY: QUESTION STEM ZONE */}
                   <div
                     className={`absolute rounded-xl transition-shadow cursor-move ${
-                      activeZoneTab === 'options'
-                        ? 'ring-2 ring-sky-400 shadow-xl shadow-sky-500/20 bg-sky-500/10'
-                        : 'border-2 border-sky-500/60 bg-sky-500/5 hover:border-sky-400'
+                      activeZoneTab === 'stem'
+                        ? 'ring-2 ring-emerald-400 shadow-xl shadow-emerald-500/20 bg-emerald-500/10'
+                        : 'border-2 border-emerald-500/60 bg-emerald-500/5 hover:border-emerald-400'
                     }`}
                     style={{
-                      left: `${(optionsZone.x / designW) * 100}%`,
-                      top: `${(optionsZone.y / designH) * 100}%`,
-                      width: `${(optionsZone.w / designW) * 100}%`,
-                      height: `${(optionsZone.h / designH) * 100}%`,
+                      left: `${(stemZone.x / designW) * 100}%`,
+                      top: `${(stemZone.y / designH) * 100}%`,
+                      width: `${(stemZone.w / designW) * 100}%`,
+                      height: `${(stemZone.h / designH) * 100}%`,
                     }}
-                    onPointerDown={(e) => handlePointerDown(e, 'options', 'move')}
+                    onPointerDown={(e) => handlePointerDown(e, 'stem', 'move')}
                   >
                     {/* Zone Top Pill Badge */}
-                    <div className="absolute -top-6 left-1 px-2 py-0.5 rounded-md bg-sky-500 text-slate-950 font-black text-[10px] tracking-wider uppercase flex items-center gap-1 shadow-md pointer-events-none">
-                      <span>🔵 Options Grid</span>
-                      <span className="font-mono opacity-80">({optionsZone.w}×{optionsZone.h})</span>
+                    <div className="absolute -top-6 left-1 px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 font-black text-[10px] tracking-wider uppercase flex items-center gap-1 shadow-md pointer-events-none">
+                      <span>🟢 Question Stem</span>
+                      <span className="font-mono opacity-80">({stemZone.w}×{stemZone.h})</span>
                     </div>
 
-                    {/* Auto-fit Options Content */}
+                    {/* Auto-fit Preview Content */}
                     <div
-                      className={`w-full h-full p-2 overflow-hidden ${
-                        optionsZone.optionsLayout === '1col'
-                          ? 'flex flex-col justify-between'
-                          : 'grid grid-cols-2 gap-2 content-between'
-                      }`}
+                      className={`w-full h-full flex items-center justify-center p-2.5 overflow-hidden leading-snug ${
+                        stemZone.align === 'center' ? 'text-center' : stemZone.align === 'right' ? 'text-right' : 'text-left'
+                      } ${stemZone.shape === 'card' ? 'rounded-lg backdrop-blur-sm' : ''}`}
                       style={{
-                        color: optionsZone.color,
-                        fontSize: `${liveOptionsMetrics.fontSize * scale}px`,
+                        color: stemZone.color,
+                        fontFamily: stemZone.fontFamily || "'Hind Siliguri', sans-serif",
+                        backgroundColor: stemZone.shape === 'card' ? 'rgba(15,23,42,0.65)' : 'transparent',
+                        fontSize: `${liveStemFontSize * scale}px`,
+                        fontWeight: stemZone.bold ? 800 : 600,
                       }}
                     >
-                      {sampleQuestion.options.map((opt) => (
-                        <div
-                          key={opt.key}
-                          className={`flex items-center gap-2 overflow-hidden px-2 rounded-lg pointer-events-none ${
-                            optionsZone.shape === 'card'
-                              ? 'bg-slate-950/60 border border-white/10 shadow-sm'
-                              : optionsZone.shape === 'pill'
-                              ? 'bg-slate-950/60 border border-white/10 rounded-full'
-                              : ''
-                          }`}
-                          style={{
-                            height: `${liveOptionsMetrics.rowHeight * scale}px`,
-                          }}
-                        >
-                          {!optionsZone.hideOptionBadges && (
-                            <span
-                              className={`rounded-full font-black flex items-center justify-center shrink-0 ${
-                                optionsZone.shape === 'card'
-                                  ? 'bg-slate-800 text-white'
-                                  : 'bg-amber-400 text-slate-950'
-                              }`}
-                              style={{
-                                width: `${Math.max(16, liveOptionsMetrics.badgeSize * scale)}px`,
-                                height: `${Math.max(16, liveOptionsMetrics.badgeSize * scale)}px`,
-                                fontSize: `${Math.max(9, liveOptionsMetrics.fontSize * scale * 0.85)}px`,
-                              }}
-                            >
-                              {opt.key}
-                            </span>
-                          )}
-                          <span className="flex-1 truncate font-bold">
-                            {opt.text}
-                          </span>
-                        </div>
-                      ))}
+                      <span className="w-full line-clamp-4 pointer-events-none">
+                        <MathText text={currentQuestion.stem} />
+                      </span>
                     </div>
 
                     {/* 8 Resize Handles */}
-                    {activeZoneTab === 'options' && (
+                    {activeZoneTab === 'stem' && (
                       <>
                         {(['nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w'] as const).map((h) => {
                           const posClass =
@@ -1184,500 +1173,1025 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
                           return (
                             <div
                               key={h}
-                              onPointerDown={(e) => handlePointerDown(e, 'options', h)}
-                              className={`absolute w-3 h-3 rounded-full bg-sky-400 border-2 border-slate-950 shadow-md ${posClass}`}
+                              onPointerDown={(e) => handlePointerDown(e, 'stem', h)}
+                              className={`absolute w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-950 shadow-md ${posClass}`}
                             />
                           );
                         })}
                       </>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* QUICK ALIGNMENT TOOLBAR */}
-            <div className="w-full max-w-[560px] mt-4 flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={handleCenterStem}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 border border-slate-700 cursor-pointer"
-                >
-                  <AlignCenter className="w-3 h-3 text-emerald-400" />
-                  <span>Center Stem</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCenterOptions}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 border border-slate-700 cursor-pointer"
-                >
-                  <AlignCenter className="w-3 h-3 text-sky-400" />
-                  <span>Center Options</span>
-                </button>
+                  {/* OVERLAY: OPTIONS ZONES (Combined OR 4 Separate) */}
+                  {optionsMode === 'separate' ? (
+                    <>
+                      {[
+                        { key: 'opt_a' as const, label: 'Opt A (ক)', zone: optAZone, optItem: currentQuestion.options[0] || { key: 'ক', text: 'হরমোন' }, optIdx: 0 },
+                        { key: 'opt_b' as const, label: 'Opt B (খ)', zone: optBZone, optItem: currentQuestion.options[1] || { key: 'খ', text: 'নিউরোট্রান্সমিটার' }, optIdx: 1 },
+                        { key: 'opt_c' as const, label: 'Opt C (গ)', zone: optCZone, optItem: currentQuestion.options[2] || { key: 'গ', text: 'এনজাইম' }, optIdx: 2 },
+                        { key: 'opt_d' as const, label: 'Opt D (ঘ)', zone: optDZone, optItem: currentQuestion.options[3] || { key: 'ঘ', text: 'অ্যান্টিবডি' }, optIdx: 3 },
+                      ].map(({ key, label, zone, optItem, optIdx }) => {
+                        const isSelected = activeZoneTab === key;
+                        const isCorrect = currentQuestion.answer === optItem.key || currentQuestion.answer === String.fromCharCode(65 + optIdx);
+                        const effectiveSize = calculateFittedFontSize(
+                          optItem.text,
+                          Math.max(40, zone.w - (zone.hideOptionBadges ? 0 : 36)),
+                          zone.h,
+                          zone.fontSize,
+                          12,
+                          zone.shape === 'card' ? 24 : 8,
+                          zone.shape === 'card' ? 16 : 4
+                        );
 
-                {optionsMode === 'separate' ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleDistribute2x2}
-                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 border border-slate-700 cursor-pointer"
-                      title="Arrange Option A, B, C, D into a 2x2 grid"
+                        return (
+                          <div
+                            key={key}
+                            className={`absolute rounded-xl transition-shadow cursor-move ${
+                              isSelected
+                                ? 'ring-2 ring-sky-400 shadow-xl shadow-sky-500/30 bg-sky-500/10 z-20'
+                                : 'border-2 border-sky-500/60 bg-sky-500/5 hover:border-sky-400 z-10'
+                            }`}
+                            style={{
+                              left: `${(zone.x / designW) * 100}%`,
+                              top: `${(zone.y / designH) * 100}%`,
+                              width: `${(zone.w / designW) * 100}%`,
+                              height: `${(zone.h / designH) * 100}%`,
+                            }}
+                            onPointerDown={(e) => handlePointerDown(e, key, 'move')}
+                          >
+                            {/* Zone Top Pill Badge */}
+                            <div className="absolute -top-6 left-1 px-2 py-0.5 rounded-md bg-sky-500 text-slate-950 font-black text-[10px] tracking-wider uppercase flex items-center gap-1 shadow-md pointer-events-none">
+                              <span>🔵 {label}</span>
+                              <span className="font-mono opacity-80">({zone.w}×{zone.h})</span>
+                              {isCorrect && <span className="bg-emerald-400 text-slate-950 px-1 rounded text-[9px] font-black">✓ Correct</span>}
+                            </div>
+
+                            {/* Content */}
+                            <div
+                              className={`w-full h-full flex items-center p-2.5 overflow-hidden ${
+                                zone.align === 'center' ? 'justify-center text-center' :
+                                zone.align === 'right' ? 'justify-end text-right' : 'justify-start text-left'
+                              } ${
+                                zone.shape === 'card' ? 'bg-slate-950/70 rounded-lg border border-white/10' :
+                                zone.shape === 'pill' ? 'bg-slate-950/70 rounded-full border border-white/10' : ''
+                              }`}
+                              style={{
+                                color: zone.color,
+                                fontFamily: zone.fontFamily || "'Hind Siliguri', sans-serif",
+                                fontSize: `${effectiveSize * scale}px`,
+                                fontWeight: zone.bold ? 800 : 600,
+                              }}
+                            >
+                              {!zone.hideOptionBadges && (
+                                <span className="font-black shrink-0 mr-1.5">{optItem.key}.</span>
+                              )}
+                              <span className="truncate min-w-0 font-bold">
+                                <MathText text={optItem.text} />
+                              </span>
+                            </div>
+
+                            {/* 8 Handles */}
+                            {isSelected && (
+                              <>
+                                {(['nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w'] as const).map((h) => {
+                                  const posClass =
+                                    h === 'nw' ? '-top-1.5 -left-1.5 cursor-nwse-resize' :
+                                    h === 'ne' ? '-top-1.5 -right-1.5 cursor-nesw-resize' :
+                                    h === 'se' ? '-bottom-1.5 -right-1.5 cursor-nwse-resize' :
+                                    h === 'sw' ? '-bottom-1.5 -left-1.5 cursor-nesw-resize' :
+                                    h === 'n' ? '-top-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize' :
+                                    h === 's' ? '-bottom-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize' :
+                                    h === 'e' ? 'top-1/2 -right-1.5 -translate-y-1/2 cursor-ew-resize' :
+                                    'top-1/2 -left-1.5 -translate-y-1/2 cursor-ew-resize';
+                                  return (
+                                    <div
+                                      key={h}
+                                      onPointerDown={(e) => handlePointerDown(e, key, h)}
+                                      className={`absolute w-3 h-3 rounded-full bg-sky-400 border-2 border-slate-950 shadow-md ${posClass}`}
+                                    />
+                                  );
+                                })}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div
+                      className={`absolute rounded-xl transition-shadow cursor-move ${
+                        activeZoneTab === 'options'
+                          ? 'ring-2 ring-sky-400 shadow-xl shadow-sky-500/20 bg-sky-500/10'
+                          : 'border-2 border-sky-500/60 bg-sky-500/5 hover:border-sky-400'
+                      }`}
+                      style={{
+                        left: `${(optionsZone.x / designW) * 100}%`,
+                        top: `${(optionsZone.y / designH) * 100}%`,
+                        width: `${(optionsZone.w / designW) * 100}%`,
+                        height: `${(optionsZone.h / designH) * 100}%`,
+                      }}
+                      onPointerDown={(e) => handlePointerDown(e, 'options', 'move')}
                     >
-                      <Grid className="w-3 h-3 text-amber-400" />
-                      <span>2×2 Grid</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDistribute1Col}
-                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 border border-slate-700 cursor-pointer"
-                      title="Arrange Option A, B, C, D into a vertical stack"
-                    >
-                      <Columns className="w-3 h-3 text-amber-400" />
-                      <span>1-Col Stack</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleMatchAllOptionSizes}
-                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 border border-slate-700 cursor-pointer"
-                      title="Make all 4 option boxes match active option width and height"
-                    >
-                      <Maximize2 className="w-3 h-3 text-sky-400" />
-                      <span>Match Sizes</span>
-                    </button>
-                  </>
-                ) : null}
-              </div>
+                      {/* Zone Top Pill Badge */}
+                      <div className="absolute -top-6 left-1 px-2 py-0.5 rounded-md bg-sky-500 text-slate-950 font-black text-[10px] tracking-wider uppercase flex items-center gap-1 shadow-md pointer-events-none">
+                        <span>🔵 Options Grid</span>
+                        <span className="font-mono opacity-80">({optionsZone.w}×{optionsZone.h})</span>
+                      </div>
 
-              <button
-                type="button"
-                onClick={handleResetZones}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 transition-all flex items-center gap-1 cursor-pointer"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Reset</span>
-              </button>
-            </div>
-          </div>
-
-          {/* RIGHT: CONTROL PANEL & ZONE SETTINGS (5 COLS on lg, 4 COLS on xl) */}
-          <div className="lg:col-span-5 xl:col-span-4 p-5 sm:p-6 border-t lg:border-t-0 lg:border-l border-slate-800/80 overflow-y-auto space-y-5 bg-slate-950/30 min-h-0">
-            {/* Template Name */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Type className="w-3.5 h-3.5 text-amber-400" />
-                <span>Template Name</span>
-              </label>
-              <input
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="e.g. Comic Quiz Time (4:5)"
-                className={`w-full px-3 py-2 text-xs font-bold rounded-xl border focus:outline-none focus:border-amber-400 ${
-                  isAppLight
-                    ? 'bg-slate-50 border-slate-300 text-slate-900'
-                    : 'bg-slate-950 border-slate-800 text-white'
-                }`}
-              />
-            </div>
-
-            {/* OPTIONS MODE SWITCHER: COMBINED VS SEPARATE */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                <span>Options Arrangement Mode</span>
-                <span className="text-[10px] text-amber-400 font-bold">
-                  {optionsMode === 'separate' ? 'Independent Positioning' : 'Single Grid Box'}
-                </span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleSwitchToCombined}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    optionsMode === 'combined'
-                      ? 'bg-sky-500/20 border-sky-400 text-white font-bold ring-1 ring-sky-400/50'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-black">
-                    <Grid className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Combined Grid</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">1 single box with 2x2 or 1-col options</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSwitchToSeparate}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    optionsMode === 'separate'
-                      ? 'bg-sky-500/20 border-sky-400 text-white font-bold ring-1 ring-sky-400/50'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-black">
-                    <Split className="w-3.5 h-3.5 text-amber-400" />
-                    <span>4 Separate Boxes</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">Position A, B, C, D anywhere on graphic</div>
-                </button>
-              </div>
-            </div>
-
-            {/* ZONE SELECTOR TABS */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-400">
-                Active Zone Editor
-              </label>
-              <div className="flex rounded-xl bg-slate-950/40 p-1 border border-slate-800/80 gap-1 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setActiveZoneTab('stem')}
-                  className={`flex-1 min-w-[100px] py-1.5 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    activeZoneTab === 'stem'
-                      ? 'bg-emerald-500 text-slate-950 shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span>Question</span>
-                </button>
-
-                {optionsMode === 'combined' ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveZoneTab('options')}
-                    className={`flex-1 min-w-[100px] py-1.5 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      activeZoneTab === 'options'
-                        ? 'bg-sky-500 text-slate-950 shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-sky-400" />
-                    <span>Options Grid</span>
-                  </button>
-                ) : (
-                  (['opt_a', 'opt_b', 'opt_c', 'opt_d'] as const).map((optKey, idx) => {
-                    const letters = ['A (ক)', 'B (খ)', 'C (গ)', 'D (ঘ)'];
-                    const isTabActive = activeZoneTab === optKey;
-                    return (
-                      <button
-                        key={optKey}
-                        type="button"
-                        onClick={() => setActiveZoneTab(optKey)}
-                        className={`flex-1 min-w-[64px] py-1.5 px-1 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                          isTabActive
-                            ? 'bg-sky-500 text-slate-950 shadow-md'
-                            : 'text-slate-400 hover:text-white'
+                      {/* Auto-fit Options Content */}
+                      <div
+                        className={`w-full h-full p-2 overflow-hidden ${
+                          optionsZone.optionsLayout === '1col'
+                            ? 'flex flex-col justify-between'
+                            : 'grid grid-cols-2 gap-2 content-between'
                         }`}
+                        style={{
+                          color: optionsZone.color,
+                          fontFamily: optionsZone.fontFamily || "'Hind Siliguri', sans-serif",
+                          fontSize: `${liveOptionsMetrics.fontSize * scale}px`,
+                        }}
                       >
-                        <span>{letters[idx]}</span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+                        {currentQuestion.options.map((opt) => (
+                          <div
+                            key={opt.key}
+                            className={`flex items-center gap-2 overflow-hidden px-2 rounded-lg pointer-events-none ${
+                              optionsZone.shape === 'card'
+                                ? 'bg-slate-950/60 border border-white/10 shadow-sm'
+                                : optionsZone.shape === 'pill'
+                                ? 'bg-slate-950/60 border border-white/10 rounded-full'
+                                : ''
+                            }`}
+                            style={{
+                              height: `${liveOptionsMetrics.rowHeight * scale}px`,
+                            }}
+                          >
+                            {!optionsZone.hideOptionBadges && (
+                              <span className="rounded-full font-black flex items-center justify-center shrink-0 w-6 h-6 text-xs bg-sky-500 text-slate-950">
+                                {opt.key}
+                              </span>
+                            )}
+                            <span className="truncate font-bold">
+                              <MathText text={opt.text} />
+                            </span>
+                          </div>
+                        ))}
+                      </div>
 
-            {/* TAB 1: QUESTION ZONE SETTINGS */}
-            {activeZoneTab === 'stem' && (
-              <div className="space-y-4 animate-fadeIn">
-                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
-                  <span>
-                    Text auto-scales down dynamically to fit inside <strong>{stemZone.w} × {stemZone.h}px</strong>.
-                  </span>
+                      {/* 8 Handles for Combined Options */}
+                      {activeZoneTab === 'options' && (
+                        <>
+                          {(['nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w'] as const).map((h) => {
+                            const posClass =
+                              h === 'nw' ? '-top-1.5 -left-1.5 cursor-nwse-resize' :
+                              h === 'ne' ? '-top-1.5 -right-1.5 cursor-nesw-resize' :
+                              h === 'se' ? '-bottom-1.5 -right-1.5 cursor-nwse-resize' :
+                              h === 'sw' ? '-bottom-1.5 -left-1.5 cursor-nesw-resize' :
+                              h === 'n' ? '-top-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize' :
+                              h === 's' ? '-bottom-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize' :
+                              h === 'e' ? 'top-1/2 -right-1.5 -translate-y-1/2 cursor-ew-resize' :
+                              'top-1/2 -left-1.5 -translate-y-1/2 cursor-ew-resize';
+                            return (
+                              <div
+                                key={h}
+                                onPointerDown={(e) => handlePointerDown(e, 'options', h)}
+                                className={`absolute w-3 h-3 rounded-full bg-sky-400 border-2 border-slate-950 shadow-md ${posClass}`}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                {/* Text Color */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 flex items-center gap-1.5">
-                    <Palette className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Question Text Color</span>
-                  </label>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {[
-                      { label: 'Dark Slate', val: '#0f172a', bg: 'bg-slate-900 border-white/20' },
-                      { label: 'Pure White', val: '#ffffff', bg: 'bg-white border-slate-300' },
-                      { label: 'Amber', val: '#fbbf24', bg: 'bg-amber-400 border-amber-500' },
-                      { label: 'Sky Blue', val: '#38bdf8', bg: 'bg-sky-400 border-sky-500' },
-                    ].map((c) => (
-                      <button
-                        key={c.val}
-                        type="button"
-                        onClick={() => setStemZone((prev) => ({ ...prev, color: c.val }))}
-                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
-                          stemZone.color === c.val
-                            ? 'ring-2 ring-emerald-400 border-transparent bg-emerald-500/15 text-white'
-                            : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:border-slate-600'
-                        }`}
-                      >
-                        <span className={`w-3 h-3 rounded-full border ${c.bg}`} />
-                        <span>{c.label}</span>
-                      </button>
-                    ))}
+              ) : (
+                /* INITIAL DROPZONE VIEW WHEN NO GRAPHIC IS LOADED */
+                <div className="w-full max-w-xl p-8 rounded-3xl border-2 border-dashed border-amber-500/40 bg-slate-900/60 flex flex-col items-center justify-center text-center space-y-5 shadow-2xl backdrop-blur-sm animate-fadeIn">
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                    <Upload className="w-10 h-10 stroke-[2.5] animate-bounce" />
                   </div>
-                </div>
 
-                {/* Alignment & Weight */}
-                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-400">Alignment</label>
-                    <div className="flex rounded-xl bg-slate-950 border border-slate-800 p-0.5">
+                    <h4 className="text-xl font-black text-white">
+                      Drop Your Template Graphic Here
+                    </h4>
+                    <p className="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+                      Drag and drop any custom quiz flyer, comic background, or template image. The studio automatically catches its exact size!
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <label className="px-6 py-3 rounded-2xl text-sm font-black bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 text-slate-950 shadow-lg shadow-amber-500/25 cursor-pointer flex items-center gap-2 transition-all">
+                      <FolderOpen className="w-4 h-4 stroke-[2.5]" />
+                      <span>Browse Files on Computer</span>
+                      <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                    </label>
+                  </div>
+
+                  {/* Starter Samples */}
+                  <div className="pt-4 border-t border-slate-800 w-full space-y-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      Or Try a Quick Starter Graphic
+                    </span>
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
                       <button
                         type="button"
-                        onClick={() => setStemZone((prev) => ({ ...prev, align: 'left' }))}
-                        className={`flex-1 py-1 rounded-lg text-xs font-bold ${
-                          stemZone.align === 'left' ? 'bg-slate-800 text-white' : 'text-slate-400'
-                        }`}
+                        onClick={() => setImageUrl('/templates/comic_quiz_time.jpg')}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 cursor-pointer transition-all"
                       >
-                        Left
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStemZone((prev) => ({ ...prev, align: 'center' }))}
-                        className={`flex-1 py-1 rounded-lg text-xs font-bold ${
-                          stemZone.align === 'center' ? 'bg-slate-800 text-white' : 'text-slate-400'
-                        }`}
-                      >
-                        Center
+                        <Crop className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Comic Quiz Time (864×1080)</span>
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-400">Card Background</label>
+            {/* Quick Alignment Toolbar at Stage Bottom */}
+            {imageUrl && (
+              <div className="w-full pt-2 flex items-center justify-between text-xs text-slate-400 px-2 shrink-0 border-t border-slate-800/60 mt-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase text-slate-500 mr-1">Align:</span>
+                  {optionsMode === 'separate' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleAlign2x2}
+                        className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                        title="Align 4 options into a clean 2x2 grid"
+                      >
+                        <Grid className="w-3 h-3 text-sky-400" />
+                        <span>2×2 Grid</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAlign1Col}
+                        className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                        title="Align 4 options in a single vertical stack"
+                      >
+                        <Columns className="w-3 h-3 text-sky-400" />
+                        <span>1-Col Stack</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleMatchOptionSizes}
+                        className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                        title="Match width and height of B, C, D to Option A"
+                      >
+                        <Maximize2 className="w-3 h-3 text-amber-400" />
+                        <span>Match Sizes</span>
+                      </button>
+                    </>
+                  ) : (
                     <button
                       type="button"
                       onClick={() =>
-                        setStemZone((prev) => ({
-                          ...prev,
-                          shape: prev.shape === 'card' ? 'plain' : 'card',
+                        setOptionsZone((p) => ({
+                          ...p,
+                          optionsLayout: p.optionsLayout === '1col' ? '2col' : '1col',
                         }))
                       }
-                      className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        stemZone.shape === 'card'
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                          : 'bg-slate-800/80 text-slate-300 border-slate-700'
-                      }`}
+                      className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                     >
-                      {stemZone.shape === 'card' ? 'Card Glass' : 'Transparent (None)'}
+                      <LayoutGrid className="w-3 h-3 text-sky-400" />
+                      <span>Layout: {optionsZone.optionsLayout === '1col' ? '1-Column' : '2×2 Grid'}</span>
                     </button>
-                  </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleCenterOptions}
+                    className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                  >
+                    <AlignCenter className="w-3 h-3 text-emerald-400" />
+                    <span>Center Options</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCenterStem}
+                    className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                  >
+                    <AlignCenter className="w-3 h-3 text-emerald-400" />
+                    <span>Center Stem</span>
+                  </button>
                 </div>
 
-                {/* Max Font Size Slider */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="font-bold">Max Font Size</span>
-                    <span className="font-mono text-emerald-400 font-bold">{stemZone.fontSize}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={24}
-                    max={64}
-                    value={stemZone.fontSize}
-                    onChange={(e) =>
-                      setStemZone((prev) => ({ ...prev, fontSize: Number(e.target.value) }))
-                    }
-                    className="w-full accent-emerald-500 cursor-pointer"
-                  />
+                <div className="text-[11px] text-slate-500 font-mono hidden md:inline">
+                  Drag box to move · Pull corners to resize
                 </div>
               </div>
             )}
+          </div>
 
-            {/* TAB 2: OPTIONS ZONE SETTINGS (Combined Grid OR Individual A/B/C/D) */}
-            {activeZoneTab !== 'stem' && (
-              <div className="space-y-4 animate-fadeIn">
-                <div className="p-3 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-xs text-sky-300 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 shrink-0 text-sky-400" />
-                    <span>
-                      {optionsMode === 'separate' ? (
-                        <>
-                          <strong className="uppercase">{activeZoneTab.replace('_', ' ')}</strong> auto-fits inside <strong>{activeOptionZone.w} × {activeOptionZone.h}px</strong>.
-                        </>
-                      ) : (
-                        <>
-                          Options scale automatically inside <strong>{optionsZone.w} × {optionsZone.h}px</strong>.
-                        </>
-                      )}
-                    </span>
-                  </div>
-                  {optionsMode === 'separate' && (
+          {/* RIGHT: FULL-FLEDGED CONTROL PANEL (4-5 COLS) */}
+          <div className="lg:col-span-5 xl:col-span-4 p-5 sm:p-6 flex flex-col justify-between overflow-y-auto border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-900/90 space-y-4">
+            <div className="space-y-4">
+              {/* PRIMARY 3-TAB SELECTOR */}
+              <div className="flex rounded-2xl bg-slate-950 p-1 border border-slate-800 shadow-inner">
+                {[
+                  { id: 'content' as const, label: 'Content', icon: FileText, desc: 'Question & Options' },
+                  { id: 'style' as const, label: 'Style & Fonts', icon: Palette, desc: 'Fonts, Color, Cards' },
+                  { id: 'layout' as const, label: 'Zones', icon: Layers, desc: 'Position & Bounds' },
+                ].map((t) => {
+                  const Icon = t.icon;
+                  const isActive = activeTab === t.id;
+                  return (
                     <button
+                      key={t.id}
                       type="button"
-                      onClick={() => handleApplyStyleToAllOptions(activeOptionZone)}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-black bg-sky-500 text-slate-950 hover:brightness-110 cursor-pointer shrink-0"
-                      title="Copy this option's color, size, and styling to all 4 options"
-                    >
-                      Apply to All 4
-                    </button>
-                  )}
-                </div>
-
-                {/* Option Container Style */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Container Style / Rendering</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'plain', label: 'Transparent', hint: 'Text over artwork' },
-                      { id: 'card', label: 'Glass Cards', hint: 'Backdrop cards' },
-                      { id: 'pill', label: 'Pill Buttons', hint: 'Curved pills' },
-                    ].map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => {
-                          const shape = s.id as SlideBoxShape;
-                          if (optionsMode === 'separate') {
-                            setZoneByTarget(activeZoneTab, (p) => ({ ...p, shape }));
-                          } else {
-                            setOptionsZone((prev) => ({ ...prev, shape }));
-                          }
-                        }}
-                        className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
-                          activeOptionZone.shape === s.id
-                            ? 'bg-sky-500/20 border-sky-500/50 text-white font-bold'
-                            : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        <div className="text-xs font-black">{s.label}</div>
-                        <div className="text-[10px] text-slate-400 truncate">{s.hint}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Options Numbering / Key Badges Toggle */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-400">Option Numbering</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextHide = !activeOptionZone.hideOptionBadges;
-                        if (optionsMode === 'separate') {
-                          setZoneByTarget(activeZoneTab, (p) => ({ ...p, hideOptionBadges: nextHide }));
-                        } else {
-                          setOptionsZone((prev) => ({ ...prev, hideOptionBadges: nextHide }));
-                        }
-                      }}
-                      className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        activeOptionZone.hideOptionBadges
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                          : 'bg-slate-800/80 text-slate-300 border-slate-700'
+                      onClick={() => setActiveTab(t.id)}
+                      className={`flex-1 py-2 px-1.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-400/40'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}
                     >
-                      {activeOptionZone.hideOptionBadges ? 'Hidden (Text Only)' : 'Shown (A/B/C/D)'}
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{t.label}</span>
                     </button>
-                  </div>
+                  );
+                })}
+              </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-400">Text Alignment</label>
-                    <div className="flex rounded-xl bg-slate-950 border border-slate-800 p-0.5">
-                      {(['left', 'center', 'right'] as const).map((a) => (
+              {/* ------------------------------------------------------------- */}
+              {/* TAB 1: QUESTION STEM & OPTIONS LIVE CONTENT EDITING            */}
+              {/* ------------------------------------------------------------- */}
+              {activeTab === 'content' && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Deck Question Switcher */}
+                  {allQuestions && allQuestions.length > 1 && (
+                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                          <HelpCircle className="w-3.5 h-3.5" />
+                          <span>Question Selector</span>
+                        </span>
+                        <span className="font-mono text-slate-400 text-[11px]">
+                          {(currentQuestionIndex || 0) + 1} / {allQuestions.length}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         <button
-                          key={a}
                           type="button"
                           onClick={() => {
-                            if (optionsMode === 'separate') {
-                              setZoneByTarget(activeZoneTab, (p) => ({ ...p, align: a }));
-                            } else {
-                              setOptionsZone((p) => ({ ...p, align: a }));
+                            if (currentQuestionIndex !== undefined && currentQuestionIndex > 0 && onSelectQuestionIndex) {
+                              onSelectQuestionIndex(currentQuestionIndex - 1);
                             }
                           }}
-                          className={`flex-1 py-1 rounded-lg text-xs font-bold capitalize cursor-pointer ${
-                            activeOptionZone.align === a ? 'bg-slate-800 text-white' : 'text-slate-400'
-                          }`}
+                          disabled={!currentQuestionIndex || currentQuestionIndex <= 0}
+                          className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white disabled:opacity-40 border border-slate-700 cursor-pointer"
+                          title="Previous Question"
                         >
-                          {a}
+                          <ChevronLeft className="w-4 h-4" />
                         </button>
-                      ))}
+
+                        <select
+                          value={currentQuestionIndex || 0}
+                          onChange={(e) => {
+                            const idx = Number(e.target.value);
+                            if (onSelectQuestionIndex) onSelectQuestionIndex(idx);
+                          }}
+                          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-amber-400 cursor-pointer"
+                        >
+                          {allQuestions.map((q, i) => (
+                            <option key={q.id || i} value={i}>
+                              Q{i + 1}: {q.stem.slice(0, 36)}...
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              currentQuestionIndex !== undefined &&
+                              currentQuestionIndex < allQuestions.length - 1 &&
+                              onSelectQuestionIndex
+                            ) {
+                              onSelectQuestionIndex(currentQuestionIndex + 1);
+                            }
+                          }}
+                          disabled={currentQuestionIndex === undefined || currentQuestionIndex >= allQuestions.length - 1}
+                          className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white disabled:opacity-40 border border-slate-700 cursor-pointer"
+                          title="Next Question"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Question Stem Textarea */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                        <span>Question Stem</span>
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-500 font-normal">Supports Bengali & Math</span>
+                    </label>
+                    <textarea
+                      value={currentQuestion.stem}
+                      onChange={(e) => handleStemChange(e.target.value)}
+                      rows={3}
+                      placeholder="Type question stem..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs leading-relaxed text-white focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 resize-none font-medium"
+                    />
+                  </div>
+
+                  {/* Options A, B, C, D Editor */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-black uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-sky-400 inline-block" />
+                        <span>Options A, B, C, D</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500">Click circle to set correct answer</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {currentQuestion.options.map((opt, idx) => {
+                        const letter = String.fromCharCode(65 + idx);
+                        const isCorrect = currentQuestion.answer === opt.key || currentQuestion.answer === letter;
+                        return (
+                          <div
+                            key={idx}
+                            className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all ${
+                              isCorrect
+                                ? 'bg-emerald-500/10 border-emerald-500/40'
+                                : 'bg-slate-950/60 border-slate-800'
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleSetCorrectAnswer(opt.key)}
+                              className={`w-7 h-7 rounded-lg text-xs font-black flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+                                isCorrect
+                                  ? 'bg-emerald-500 text-slate-950 shadow-md ring-2 ring-emerald-400'
+                                  : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                              }`}
+                              title={`Mark Option ${opt.key} (${letter}) as Correct Answer`}
+                            >
+                              {opt.key}
+                            </button>
+                            <input
+                              type="text"
+                              value={opt.text}
+                              onChange={(e) => handleOptionTextChange(idx, e.target.value)}
+                              placeholder={`Option ${letter} text...`}
+                              className="flex-1 bg-transparent border-0 text-xs text-white focus:outline-none font-medium px-1"
+                            />
+                            {isCorrect && (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mr-1" />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Text Color for Options */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 flex items-center gap-1.5">
-                    <Palette className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Text Color</span>
-                  </label>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {[
-                      { label: 'Dark Slate', val: '#0f172a', bg: 'bg-slate-900 border-white/20' },
-                      { label: 'Pure White', val: '#ffffff', bg: 'bg-white border-slate-300' },
-                      { label: 'Amber', val: '#fbbf24', bg: 'bg-amber-400 border-amber-500' },
-                      { label: 'Sky Blue', val: '#38bdf8', bg: 'bg-sky-400 border-sky-500' },
-                    ].map((c) => (
+              {/* ------------------------------------------------------------- */}
+              {/* TAB 2: STYLE, FONTS, AND COLOR EDITING                        */}
+              {/* ------------------------------------------------------------- */}
+              {activeTab === 'style' && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Comprehensive Font Selector */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <Type className="w-3.5 h-3.5" />
+                        <span>Select Font Family</span>
+                      </label>
                       <button
-                        key={c.val}
+                        type="button"
+                        onClick={() => handleApplyFontToAll(activeOptionZone.fontFamily || "'Hind Siliguri', sans-serif")}
+                        className="text-[10px] font-black text-amber-400 hover:underline cursor-pointer"
+                        title="Apply current font to stem and all options"
+                      >
+                        Apply Font to All
+                      </button>
+                    </div>
+
+                    {/* Font Category Filter Tabs */}
+                    <div className="flex rounded-xl bg-slate-950 border border-slate-800 p-0.5 gap-1">
+                      {[
+                        { id: 'all' as const, label: 'All' },
+                        { id: 'bangla' as const, label: 'Bangla' },
+                        { id: 'english' as const, label: 'English' },
+                        { id: 'imported' as const, label: 'Imported' },
+                      ].map((f) => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setFontFilter(f.id)}
+                          className={`flex-1 py-1 rounded-lg text-[10px] font-bold capitalize transition-all cursor-pointer ${
+                            fontFilter === f.id
+                              ? 'bg-amber-500 text-slate-950 font-black'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Search fonts */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={fontSearchQuery}
+                        onChange={(e) => setFontSearchQuery(e.target.value)}
+                        placeholder="Search fonts by name..."
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    {/* Font Dropdown / List */}
+                    <div className="max-h-36 overflow-y-auto space-y-1 rounded-xl bg-slate-950 border border-slate-800 p-1.5">
+                      {filteredFonts.length === 0 ? (
+                        <div className="text-center py-3 text-xs text-slate-500">
+                          No matching fonts found.
+                        </div>
+                      ) : (
+                        filteredFonts.map((f) => {
+                          const isCurrent =
+                            (activeZoneTab === 'stem' ? stemZone.fontFamily : activeOptionZone.fontFamily) ===
+                            f.family;
+                          return (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => handleSetZoneFont(f.family)}
+                              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all cursor-pointer ${
+                                isCurrent
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
+                                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                              }`}
+                            >
+                              <span style={{ fontFamily: f.family }} className="truncate font-semibold">
+                                {f.name}
+                              </span>
+                              <span className="text-[9px] uppercase tracking-wider text-slate-500 px-1 py-0.5 rounded bg-slate-900 border border-slate-800 shrink-0 ml-1">
+                                {f.category.replace('bangla_', '').replace('english_', '')}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Font Import Options: File & Google Fonts */}
+                    <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <label className="flex-1 py-2 px-3 rounded-xl text-xs font-black bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer transition-all">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{isFontLoading ? 'Loading Font...' : 'Import Font File (.ttf/.woff)'}</span>
+                          <input
+                            ref={fontFileInputRef}
+                            type="file"
+                            accept=".ttf,.otf,.woff,.woff2"
+                            onChange={handleFontFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {/* Google Font Quick Loader */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={googleFontInput}
+                          onChange={(e) => setGoogleFontInput(e.target.value)}
+                          placeholder="Or Google Font name (e.g. Baloo Da 2)"
+                          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddGoogleFont}
+                          disabled={!googleFontInput.trim()}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 hover:brightness-110 disabled:opacity-40 cursor-pointer"
+                        >
+                          Load
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Colors: Text Color Palette & Native Picker */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <Palette className="w-3.5 h-3.5" />
+                        <span>Text Color</span>
+                      </label>
+                      <button
                         type="button"
                         onClick={() => {
-                          if (optionsMode === 'separate') {
-                            setZoneByTarget(activeZoneTab, (p) => ({ ...p, color: c.val }));
+                          const currentColor = activeZoneTab === 'stem' ? stemZone.color : activeOptionZone.color;
+                          setStemZone((p) => ({ ...p, color: currentColor }));
+                          setOptionsZone((p) => ({ ...p, color: currentColor }));
+                          setOptAZone((p) => ({ ...p, color: currentColor }));
+                          setOptBZone((p) => ({ ...p, color: currentColor }));
+                          setOptCZone((p) => ({ ...p, color: currentColor }));
+                          setOptDZone((p) => ({ ...p, color: currentColor }));
+                        }}
+                        className="text-[10px] font-black text-emerald-400 hover:underline cursor-pointer"
+                        title="Apply this color to question stem and all options"
+                      >
+                        Apply Color to All
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {COLOR_PALETTE.map((c) => {
+                        const currentColor = activeZoneTab === 'stem' ? stemZone.color : activeOptionZone.color;
+                        const isSelected = currentColor.toLowerCase() === c.val.toLowerCase();
+                        return (
+                          <button
+                            key={c.val}
+                            type="button"
+                            onClick={() => {
+                              if (activeZoneTab === 'stem') {
+                                setStemZone((p) => ({ ...p, color: c.val }));
+                              } else if (optionsMode === 'separate') {
+                                setZoneByTarget(activeZoneTab, (p) => ({ ...p, color: c.val }));
+                              } else {
+                                setOptionsZone((p) => ({ ...p, color: c.val }));
+                              }
+                            }}
+                            className={`p-1.5 rounded-xl border flex items-center gap-1 text-[11px] font-bold transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-slate-800 border-amber-400 text-white ring-1 ring-amber-400'
+                                : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <span className={`w-3.5 h-3.5 rounded-full border ${c.bg}`} />
+                            <span className="hidden sm:inline">{c.label}</span>
+                          </button>
+                        );
+                      })}
+
+                      {/* Custom Native Color Input */}
+                      <label
+                        className="p-1 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-1.5 cursor-pointer px-2 text-xs text-slate-300 hover:border-slate-700"
+                        title="Pick custom hex color"
+                      >
+                        <input
+                          type="color"
+                          value={activeZoneTab === 'stem' ? stemZone.color : activeOptionZone.color}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (activeZoneTab === 'stem') {
+                              setStemZone((p) => ({ ...p, color: val }));
+                            } else if (optionsMode === 'separate') {
+                              setZoneByTarget(activeZoneTab, (p) => ({ ...p, color: val }));
+                            } else {
+                              setOptionsZone((p) => ({ ...p, color: val }));
+                            }
+                          }}
+                          className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        />
+                        <span className="font-mono text-[11px]">
+                          {activeZoneTab === 'stem' ? stemZone.color : activeOptionZone.color}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Container Shape & Option Numbering */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <label className="text-xs font-black uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Card / Background Styling</span>
+                    </label>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'plain', label: 'Transparent', hint: 'Text over artwork' },
+                        { id: 'card', label: 'Glass Card', hint: 'Translucent back' },
+                        { id: 'pill', label: 'Pill Shape', hint: 'Curved buttons' },
+                      ].map((s) => {
+                        const targetZone = activeZoneTab === 'stem' ? stemZone : activeOptionZone;
+                        const isShape = targetZone.shape === s.id;
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => {
+                              const shape = s.id as SlideBoxShape;
+                              if (activeZoneTab === 'stem') {
+                                setStemZone((p) => ({ ...p, shape }));
+                              } else if (optionsMode === 'separate') {
+                                setZoneByTarget(activeZoneTab, (p) => ({ ...p, shape }));
+                              } else {
+                                setOptionsZone((p) => ({ ...p, shape }));
+                              }
+                            }}
+                            className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                              isShape
+                                ? 'bg-sky-500/20 border-sky-400 text-white font-bold'
+                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            <div className="text-xs font-black">{s.label}</div>
+                            <div className="text-[10px] text-slate-400 truncate">{s.hint}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Option Numbering Toggle (Shown vs Hidden) */}
+                    {activeZoneTab !== 'stem' && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800">
+                        <span className="text-xs font-bold text-slate-300">Option Numbering Badges:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextHide = !activeOptionZone.hideOptionBadges;
+                            if (optionsMode === 'separate') {
+                              setZoneByTarget(activeZoneTab, (p) => ({ ...p, hideOptionBadges: nextHide }));
+                            } else {
+                              setOptionsZone((p) => ({ ...p, hideOptionBadges: nextHide }));
+                            }
+                          }}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                            activeOptionZone.hideOptionBadges
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : 'bg-slate-800 text-slate-300 border-slate-700'
+                          }`}
+                        >
+                          {activeOptionZone.hideOptionBadges ? 'Hidden (Text Only)' : 'Shown (A/B/C/D)'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Font Size & Alignment */}
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span className="font-bold">Max Size</span>
+                        <span className="font-mono text-amber-400 font-bold">
+                          {activeZoneTab === 'stem' ? stemZone.fontSize : activeOptionZone.fontSize}px
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={18}
+                        max={64}
+                        value={activeZoneTab === 'stem' ? stemZone.fontSize : activeOptionZone.fontSize}
+                        onChange={(e) => {
+                          const size = Number(e.target.value);
+                          if (activeZoneTab === 'stem') {
+                            setStemZone((p) => ({ ...p, fontSize: size }));
+                          } else if (optionsMode === 'separate') {
+                            setZoneByTarget(activeZoneTab, (p) => ({ ...p, fontSize: size }));
                           } else {
-                            setOptionsZone((prev) => ({ ...prev, color: c.val }));
+                            setOptionsZone((p) => ({ ...p, fontSize: size }));
                           }
                         }}
-                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
-                          activeOptionZone.color === c.val
-                            ? 'ring-2 ring-sky-400 border-transparent bg-sky-500/15 text-white'
-                            : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:border-slate-600'
+                        className="w-full accent-amber-500 cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <span className="text-xs font-bold text-slate-400 block">Alignment</span>
+                      <div className="flex rounded-xl bg-slate-950 border border-slate-800 p-0.5">
+                        {(['left', 'center', 'right'] as const).map((a) => {
+                          const currentAlign =
+                            activeZoneTab === 'stem' ? stemZone.align : activeOptionZone.align;
+                          return (
+                            <button
+                              key={a}
+                              type="button"
+                              onClick={() => {
+                                if (activeZoneTab === 'stem') {
+                                  setStemZone((p) => ({ ...p, align: a }));
+                                } else if (optionsMode === 'separate') {
+                                  setZoneByTarget(activeZoneTab, (p) => ({ ...p, align: a }));
+                                } else {
+                                  setOptionsZone((p) => ({ ...p, align: a }));
+                                }
+                              }}
+                              className={`flex-1 py-1 rounded-lg text-xs font-bold capitalize cursor-pointer ${
+                                currentAlign === a ? 'bg-slate-800 text-white' : 'text-slate-400'
+                              }`}
+                            >
+                              {a}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleApplyStyleToAllZones(activeZoneTab === 'stem' ? stemZone : activeOptionZone)}
+                    className="w-full py-2 rounded-xl text-xs font-black bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Paintbrush className="w-3.5 h-3.5" />
+                    <span>Apply Style, Font & Color to All Zones</span>
+                  </button>
+                </div>
+              )}
+
+              {/* ------------------------------------------------------------- */}
+              {/* TAB 3: ZONES & BOUNDED LAYOUT POSITIONING                     */}
+              {/* ------------------------------------------------------------- */}
+              {activeTab === 'layout' && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Mode switcher: Separate vs Combined */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                      Options Layout Mode
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSwitchToSeparate}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          optionsMode === 'separate'
+                            ? 'bg-sky-500/20 border-sky-400 text-white font-bold ring-1 ring-sky-400/50'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
                         }`}
                       >
-                        <span className={`w-3 h-3 rounded-full border ${c.bg}`} />
-                        <span>{c.label}</span>
+                        <div className="flex items-center gap-1.5 text-xs font-black">
+                          <Split className="w-3.5 h-3.5 text-amber-400" />
+                          <span>4 Separate Boxes</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">Position A, B, C, D anywhere</div>
                       </button>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Font Size Slider */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="font-bold">Max Font Size</span>
-                    <span className="font-mono text-sky-400 font-bold">{activeOptionZone.fontSize}px</span>
+                      <button
+                        type="button"
+                        onClick={handleSwitchToCombined}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          optionsMode === 'combined'
+                            ? 'bg-sky-500/20 border-sky-400 text-white font-bold ring-1 ring-sky-400/50'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 text-xs font-black">
+                          <Grid className="w-3.5 h-3.5 text-sky-400" />
+                          <span>Combined Grid</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">1 single box with 2x2 grid</div>
+                      </button>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min={18}
-                    max={48}
-                    value={activeOptionZone.fontSize}
-                    onChange={(e) => {
-                      const fontSize = Number(e.target.value);
-                      if (optionsMode === 'separate') {
-                        setZoneByTarget(activeZoneTab, (p) => ({ ...p, fontSize }));
-                      } else {
-                        setOptionsZone((prev) => ({ ...prev, fontSize }));
-                      }
-                    }}
-                    className="w-full accent-sky-500 cursor-pointer"
-                  />
+
+                  {/* Active Zone Selector */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                      Select Zone to Move / Resize
+                    </label>
+                    <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 gap-1 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setActiveZoneTab('stem')}
+                        className={`flex-1 min-w-[90px] py-1.5 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          activeZoneTab === 'stem'
+                            ? 'bg-emerald-500 text-slate-950 shadow-md'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span>Question</span>
+                      </button>
+
+                      {optionsMode === 'combined' ? (
+                        <button
+                          type="button"
+                          onClick={() => setActiveZoneTab('options')}
+                          className={`flex-1 min-w-[90px] py-1.5 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            activeZoneTab === 'options'
+                              ? 'bg-sky-500 text-slate-950 shadow-md'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-sky-400" />
+                          <span>Options Grid</span>
+                        </button>
+                      ) : (
+                        (['opt_a', 'opt_b', 'opt_c', 'opt_d'] as const).map((optKey, idx) => {
+                          const letters = ['A (ক)', 'B (খ)', 'C (গ)', 'D (ঘ)'];
+                          const isTabActive = activeZoneTab === optKey;
+                          return (
+                            <button
+                              key={optKey}
+                              type="button"
+                              onClick={() => setActiveZoneTab(optKey)}
+                              className={`flex-1 min-w-[60px] py-1.5 px-1 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                                isTabActive
+                                  ? 'bg-sky-500 text-slate-950 shadow-md'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <span>{letters[idx]}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Coordinate Fine-Tuning */}
+                  <div className="space-y-2 p-3 rounded-2xl bg-slate-950 border border-slate-800">
+                    <span className="text-xs font-bold text-slate-300 block">
+                      Fine-Tune Coordinates ({activeZoneTab.replace('_', ' ').toUpperCase()}):
+                    </span>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">X Position (px)</span>
+                        <input
+                          type="number"
+                          value={activeZoneTab === 'stem' ? stemZone.x : activeOptionZone.x}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            if (activeZoneTab === 'stem') setStemZone((p) => ({ ...p, x: val }));
+                            else setZoneByTarget(activeZoneTab, (p) => ({ ...p, x: val }));
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Y Position (px)</span>
+                        <input
+                          type="number"
+                          value={activeZoneTab === 'stem' ? stemZone.y : activeOptionZone.y}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            if (activeZoneTab === 'stem') setStemZone((p) => ({ ...p, y: val }));
+                            else setZoneByTarget(activeZoneTab, (p) => ({ ...p, y: val }));
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Width (px)</span>
+                        <input
+                          type="number"
+                          value={activeZoneTab === 'stem' ? stemZone.w : activeOptionZone.w}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            if (activeZoneTab === 'stem') setStemZone((p) => ({ ...p, w: val }));
+                            else setZoneByTarget(activeZoneTab, (p) => ({ ...p, w: val }));
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Height (px)</span>
+                        <input
+                          type="number"
+                          value={activeZoneTab === 'stem' ? stemZone.h : activeOptionZone.h}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            if (activeZoneTab === 'stem') setStemZone((p) => ({ ...p, h: val }));
+                            else setZoneByTarget(activeZoneTab, (p) => ({ ...p, h: val }));
+                          }}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-white font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* MODAL FOOTER ACTIONS */}
+            <div className="pt-4 border-t border-slate-800 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="Template Name..."
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
+                />
               </div>
-            )}
 
-            {/* FOOTER ACTIONS */}
-            <div className="pt-4 border-t border-slate-800 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveAndApply}
-                className="flex-[2] py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Save & Apply Template</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAndApply}
+                  className="flex-[2] py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 shadow-lg shadow-amber-500/25 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Save & Apply Template</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
