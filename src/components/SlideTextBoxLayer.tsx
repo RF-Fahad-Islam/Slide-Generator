@@ -15,7 +15,7 @@ import {
 import { hasAnswerDisplayStyle, resolveSlideAnswerFlags } from '../utils/answerSlides';
 import { MathText } from './MathText';
 import { calculateFittedFontSize, calculateFittedOptionsLayout } from '../utils/textHeightEstimate';
-import { Check, User, Sparkles, BookOpen, Award } from 'lucide-react';
+import { Check, User, Sparkles, BookOpen, Award, QrCode } from 'lucide-react';
 
 interface SlideTextBoxLayerProps {
   boxes: SlideTextBox[];
@@ -117,7 +117,10 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         if (isTargetOptions && cardMetrics) boxTop = cardMetrics.optionsY;
         else if (isTargetRoman && cardMetrics?.romanY !== undefined) boxTop = cardMetrics.romanY;
         else if (isTargetPrompt && cardMetrics?.promptY !== undefined) boxTop = cardMetrics.promptY;
-        const boxHeight = isTargetCard && cardMetrics ? cardMetrics.cardH : box.h;
+        // Explicit box.h always takes precedence so resizing down never leaves a lingering empty card
+        const boxHeight = (typeof box.h === 'number' && box.h > 0)
+          ? box.h
+          : (isTargetCard && cardMetrics ? cardMetrics.cardH : box.h);
 
         const base: React.CSSProperties = {
           left: box.x,
@@ -149,35 +152,52 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           );
         }
 
-        // IMAGE ELEMENT (banner / uploaded picture)
+        // IMAGE / LOGO / QR ELEMENT (banner, brand logo or QR graphic)
         if (box.bind === 'image') {
-          return box.imageUrl ? (
+          const activeSrc = box.imageUrl || config.logoUrl;
+          const imgH = box.h || 135;
+          return (
             <div
               key={box.id}
-              className="absolute rounded-3xl overflow-hidden"
+              className="absolute rounded-2xl overflow-hidden flex items-center justify-center transition-all select-none"
               style={{
                 ...base,
-                height: box.h || 380,
-                backgroundColor: box.bg,
-                border: '1px solid rgba(255,255,255,0.15)',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.2)',
+                height: imgH,
+                backgroundColor: box.bg || 'rgba(15,23,42,0.85)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
               }}
             >
-              <img
-                src={box.imageUrl}
-                alt="Slide Banner"
-                className="w-full h-full object-cover img-crisp"
-                draggable={false}
-              />
+              {activeSrc ? (
+                <img
+                  src={activeSrc}
+                  alt="Logo / QR / Graphic"
+                  className="w-full h-full object-contain p-2 img-crisp pointer-events-none"
+                  draggable={false}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-1.5 p-3 text-center select-none w-full h-full">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow">
+                    <QrCode className="w-6 h-6 stroke-[2]" />
+                  </div>
+                  <span className="text-[11px] font-black tracking-wider text-amber-300 uppercase leading-none">
+                    LOGO / QR
+                  </span>
+                  <span className="text-[9px] font-mono text-slate-400">
+                    {box.w} × {imgH}px
+                  </span>
+                </div>
+              )}
             </div>
-          ) : null;
+          );
         }
 
         // CUSTOM BINDINGS RENDERING (questionNumber, source, explanation, watermark)
         if (box.bind === 'source') {
           const sources = getSourceTags(item);
+          const sourceJustify = box.align === 'left' ? 'justify-start' : box.align === 'center' ? 'justify-center' : 'justify-end';
           return (
-            <div key={box.id} className="absolute flex items-center justify-end flex-wrap gap-2" style={{ left: box.x, top: box.y, width: box.w }}>
+            <div key={box.id} className={`absolute flex items-center ${sourceJustify} flex-wrap gap-2`} style={{ left: box.x, top: box.y, width: box.w }}>
               {sources.map((srcTag) => (
                 <div
                   key={srcTag}
@@ -483,7 +503,11 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
 
         if (box.bind === 'watermark') {
           return (
-            <div key={box.id} className="absolute flex items-center gap-4" style={{ left: box.x, top: box.y }}>
+            <div
+              key={box.id}
+              className="absolute flex items-center gap-4"
+              style={{ left: box.x, top: box.y, width: box.w, height: box.h || undefined }}
+            >
               {config.watermarkAvatar ? (
                 <img
                   src={config.watermarkAvatar}
@@ -495,11 +519,11 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                   <User className="w-6 h-6" />
                 </div>
               )}
-              <div>
-                <p className="text-xl font-extrabold text-white tracking-wide leading-tight">
+              <div className="min-w-0">
+                <p className="text-xl font-extrabold text-white tracking-wide leading-tight truncate">
                   {content}
                 </p>
-                <p className="text-sm font-bold text-amber-300/90 mt-0.5">
+                <p className="text-sm font-bold text-amber-300/90 mt-0.5 truncate">
                   Senior Instructor & Mentor
                 </p>
               </div>
@@ -520,8 +544,9 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         }
 
         if (box.shape === 'pill') {
+          const pillJustify = box.align === 'left' ? 'justify-start' : box.align === 'right' ? 'justify-end' : 'justify-center';
           return (
-            <div key={box.id} className="absolute flex justify-end" style={{ left: box.x, top: box.y, width: box.w }}>
+            <div key={box.id} className={`absolute flex ${pillJustify}`} style={{ left: box.x, top: box.y, width: box.w }}>
               <div
                 className="inline-flex items-center px-6 py-2.5 rounded-full whitespace-pre-wrap leading-snug border border-amber-500/40 text-amber-300 font-extrabold shadow-lg backdrop-blur-md slide-box-card-bg"
                 style={{ ...textBase, textAlign: box.align || 'center', boxShadow: '0 12px 28px rgba(0,0,0,0.12)' }}

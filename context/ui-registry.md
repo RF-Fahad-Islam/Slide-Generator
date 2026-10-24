@@ -34,6 +34,12 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
 | Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
 
+> **2026-10-24 — Live Social Canvas: Snug Dynamic Card Containers & Synchronized LOGO/QR Elements.** 
+> 1. Stem and question card containers dynamically wrap explicitly resized text dimensions (`box.h`) using `dynamicWrappingH = Math.max(60, currentY - cardBox.y + CARD_BOTTOM_PAD)` in `computeTemplateCardMetrics` and `SlideTextBoxLayer`, eliminating empty dead vertical areas under shrunk titles.
+> 2. `image` and `logo_qr` elements always render a visible branded placeholder card (`QrCode` icon, `LOGO / QR` label, dimension tag, dashed amber border) when no image source is provided.
+> 3. `SlideTextBoxOverlay` interactive container height strictly binds to `boxH` (never collapsing to 0px), with dynamic overflow detection displaying amber `AUTO-FIT` or pulsing rose `OVERFLOW` indicators.
+> 4. `SlideTextBoxPanel` Design Elements includes dedicated `Logo / QR Container` preview mockup with live badge indicators.
+
 > **2026-08-12 — Mandatory Layout Elements & Controls.** Added `showQuestionNumber`, `showInstructorInfo`, `showBrandLogo`, `showPagingCounter` visibility toggles to `DeckConfig` and `GlobalDefaults`. Enforced all 4 elements across slide canvas layouts (Standard, Classroom, Banner modes), all preset definitions in `SLIDE_LAYOUTS` and `templateToTextBoxes.ts`, and social post cards (`ClassicQuizCard.tsx`, `QuizTimeCard.tsx`). Added translucent floating overlay badges for custom Header/Footer banners and visibility checkboxes in `LayoutBannerControls.tsx`.
 
 > **2026-08-12 — Global KaTeX Cursor Tooltip & In-Place Math Toolbar.** Added `KaTeXCursorTooltip.tsx` and `equationAtCursor.ts`. Automatically tracks text cursor (`selectionStart`) in inputs & textareas across the full application. Displays a floating dark glassmorphism tooltip near the cursor previewing ONLY KaTeX math equations (stripping out surrounding plain Bengali/English text). Added an interactive `"Math Toolbar"` button in the tooltip header that expands category tabs and math snippet grids directly at the text cursor position with zero-loss focus management. Updated `MathHelperButton.tsx` live preview panel to render equations only.

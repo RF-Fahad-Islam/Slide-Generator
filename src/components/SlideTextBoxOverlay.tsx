@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { MCQItem, DeckConfig, SlideTextBox } from '../types';
+import { MCQItem, DeckConfig, SlideTextBox, SlideTextBoxBind } from '../types';
 import { getSlideBoxContent, clamp, SLIDE_W, SLIDE_H } from '../utils/slideTextBoxes';
+import { estimateWrappedLines, calculateFittedOptionsLayout } from '../utils/textHeightEstimate';
 import {
   TPL_CARD_ID,
   TPL_STEM_ID,
@@ -198,7 +199,7 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
     }
 
     const origBoxes = boxes.filter(b => currentSelected.includes(b.id)).map(b => ({ ...b }));
-    const origH = box.h || Math.max(48, Math.round(box.fontSize * 2.2));
+    const origH = box.h || (box.bind === 'image' ? 135 : Math.max(48, Math.round(box.fontSize * 2.2)));
 
     dragRef.current = {
       type,
@@ -290,7 +291,7 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
 
         // Fixed aspect ratio elements (icons & images)
         if (isElement && (h === 'se' || h === 'sw' || h === 'ne' || h === 'nw')) {
-          const ratio = d.orig.h && d.orig.h > 0 ? d.orig.w / d.orig.h : 16 / 9;
+          const ratio = d.orig.h && d.orig.h > 0 ? d.orig.w / d.orig.h : (d.orig.bind === 'image' ? d.orig.w / 135 : 16 / 9);
           newH = clamp(Math.round(newW / ratio), 24, designH - newY);
         }
 
@@ -319,7 +320,30 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
     window.addEventListener('pointerup', handleUp);
   };
 
-  const renderInvisible = (box: SlideTextBox) => {
+  const getBoxDisplayLabel = (bind: SlideTextBoxBind): string => {
+    switch (bind) {
+      case 'stem': return 'TITLE';
+      case 'image': return 'LOGO/QR';
+      case 'icon': return 'ICON';
+      case 'brand': return 'BRAND';
+      case 'headerTitle': return 'HEADER';
+      case 'options': return 'OPTIONS';
+      case 'answer': return 'ANSWER';
+      case 'explanation': return 'EXPLANATION';
+      case 'watermark': return 'WATERMARK';
+      case 'footerTag': return 'FOOTER';
+      case 'questionNumber': return 'QUESTION #';
+      case 'slideCounter': return 'PAGE #';
+      case 'badgeTag': return 'BADGE';
+      case 'roman': return 'ROMAN';
+      case 'prompt': return 'PROMPT';
+      case 'source': return 'SOURCE';
+      case 'free': return 'CUSTOM TEXT';
+      default: return String(bind).toUpperCase();
+    }
+  };
+
+  const renderInvisible = (box: SlideTextBox, boxH: number) => {
     if (box.bind === 'options') {
       return (
         <div className="space-y-2.5">
@@ -338,8 +362,9 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
         </div>
       );
     }
-    if (box.bind === 'icon') return ' ';
-    if (box.bind === 'image') return ' ';
+    if (box.bind === 'icon' || box.bind === 'image') {
+      return <div style={{ height: boxH, width: '100%' }} />;
+    }
     return getSlideBoxContent(box, item, config, currentIndex);
   };
 
@@ -395,11 +420,51 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
           if (box.id.startsWith(TPL_OPTIONS_ID)) displayY = cardMetrics.optionsY;
           else if (box.id.startsWith(TPL_ROMAN_ID) && cardMetrics.romanY !== undefined) displayY = cardMetrics.romanY;
           else if (box.id.startsWith(TPL_PROMPT_ID) && cardMetrics.promptY !== undefined) displayY = cardMetrics.promptY;
-          else if (box.id.startsWith(TPL_CARD_ID)) displayH = cardMetrics.cardH;
+          else if (box.id.startsWith(TPL_CARD_ID) && !box.h) displayH = cardMetrics.cardH;
         }
 
-        const boxH = displayH || Math.max(48, Math.round(box.fontSize * 2.2));
+        const boxH = (typeof box.h === 'number' && box.h > 0)
+          ? box.h
+          : (displayH || (box.bind === 'image' ? 135 : Math.max(48, Math.round(box.fontSize * 2.2))));
         const chipBelow = displayY < 56 || displayY + boxH + 28 <= designH;
+
+        // Dynamic auto-fit overflow detection for bounded zones
+        let isOverflowing = false;
+        if (isBounded && box.autoFit !== false) {
+          if (box.bind === 'options') {
+            const is2Col = (box.optionsLayout || config.optionsLayout || '2col') === '2col';
+            const fitted = calculateFittedOptionsLayout(
+              item.options,
+              box.w,
+              boxH,
+              box.fontSize,
+              is2Col,
+              box.minFontSize || 12
+            );
+            if (fitted.rowHeight < 34) {
+              isOverflowing = true;
+            } else {
+              const longest = item.options.reduce((m, o) => (o.text.length > m.length ? o.text : m), '');
+              const colW = (box.w - 32) / (is2Col ? 2 : 1);
+              const lines = estimateWrappedLines(longest, fitted.fontSize, Math.max(40, colW - 60));
+              if (lines * (fitted.fontSize * 1.3) > (fitted.rowHeight - 6)) {
+                isOverflowing = true;
+              }
+            }
+          } else if (box.bind !== 'icon' && box.bind !== 'image') {
+            const content = getSlideBoxContent(box, item, config, currentIndex);
+            const padX = box.shape === 'card' || box.shape === 'banner' ? 56 : 0;
+            const padY = box.shape === 'card' || box.shape === 'banner' ? 40 : 0;
+            const innerW = Math.max(40, box.w - padX);
+            const innerH = Math.max(20, boxH - padY);
+            const minFont = box.minFontSize || (box.bind === 'stem' ? 14 : 12);
+            const linesAtMin = estimateWrappedLines(content, minFont, innerW);
+            const neededH = linesAtMin * (minFont * 1.35);
+            if (neededH > innerH) {
+              isOverflowing = true;
+            }
+          }
+        }
 
         return (
           <div
@@ -408,7 +473,7 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
             onPointerEnter={() => setHoveredId(box.id)}
             onPointerLeave={() => setHoveredId((prev) => (prev === box.id ? null : prev))}
             className="absolute cursor-move group"
-            style={{ left: box.x, top: displayY, width: box.w, height: displayH || undefined }}
+            style={{ left: box.x, top: displayY, width: box.w, height: boxH }}
           >
             {/* Box Frame & Outline */}
             <div
@@ -427,7 +492,7 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
             >
               {/* Invisible Ghost Content to match size */}
               <div className={`${isElement ? 'invisible h-full' : 'invisible whitespace-pre-wrap leading-snug font-bold'}`}>
-                {isElement ? <div className="h-full w-full" /> : renderInvisible(box)}
+                {isElement ? <div className="h-full w-full" /> : renderInvisible(box, boxH)}
               </div>
 
               {/* Floating Header Chip: Bind Type + Dimensions */}
@@ -442,7 +507,7 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
                       selected ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-amber-300 border border-white/20'
                     }`}
                   >
-                    <span>{box.bind}</span>
+                    <span>{getBoxDisplayLabel(box.bind)}</span>
                     {activeSelectedIds.length > 1 && selected && (
                       <span className="opacity-75">#{activeSelectedIds.indexOf(box.id) + 1}</span>
                     )}
@@ -450,13 +515,21 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
 
                   {/* Dimension pill: e.g. 840×240px */}
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-950/90 text-amber-200 border border-amber-500/30 backdrop-blur-sm">
-                    {box.w}×{box.h ? `${box.h}px` : 'auto'}
+                    {box.w}×{boxH ? `${boxH}px` : 'auto'}
                   </span>
 
                   {isBounded && (
-                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                      Bounded Zone (Auto-Fit)
-                    </span>
+                    isOverflowing ? (
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-rose-500/25 text-rose-300 border border-rose-500/50 shadow-sm flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+                        OVERFLOW
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        AUTO-FIT
+                      </span>
+                    )
                   )}
                 </div>
               )}

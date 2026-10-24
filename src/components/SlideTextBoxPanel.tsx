@@ -54,6 +54,7 @@ import {
   Sparkles,
   Star,
   Zap,
+  QrCode,
 } from 'lucide-react';
 
 const BIND_ICONS: Record<SlideTextBoxBind, typeof Layers> = {
@@ -304,6 +305,13 @@ const ElementMockupPreview: React.FC<{ elId: string; isAppLight: boolean }> = ({
         <div className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-sky-500/20 border border-white/20 p-2 flex items-center justify-center gap-1.5 shadow-inner">
           <LayoutTemplate className="w-4 h-4 text-purple-300" />
           <span className="text-[9px] font-bold text-purple-200">Banner Image</span>
+        </div>
+      );
+    case 'logo_qr':
+      return (
+        <div className="w-full h-12 rounded-xl bg-slate-950 border border-amber-500/40 p-2 flex items-center justify-center gap-1.5 shadow-inner">
+          <QrCode className="w-5 h-5 text-amber-400 stroke-[2]" />
+          <span className="text-[9px] font-bold text-amber-200">LOGO / QR</span>
         </div>
       );
     case 'icon':

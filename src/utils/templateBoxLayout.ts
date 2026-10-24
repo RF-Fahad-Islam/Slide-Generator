@@ -55,7 +55,9 @@ export function computeTemplateCardMetrics(
   const stemFontSize = stemBox?.fontSize || 30;
   const stemW = stemBox?.w || cardBox.w - 72;
   const stemLines = estimateWrappedLines(item.stem, stemFontSize, stemW);
-  const stemH = Math.max(1, stemLines) * (stemFontSize * 1.3);
+  const stemH = (typeof stemBox?.h === 'number' && stemBox.h > 0)
+    ? stemBox.h
+    : Math.max(1, stemLines) * (stemFontSize * 1.3);
 
   let currentY = stemY + stemH;
   let romanTop: number | undefined;
@@ -68,7 +70,9 @@ export function computeTemplateCardMetrics(
       (sum, stmt) => sum + estimateWrappedLines(stmt, romanFontSize, romanW),
       0
     );
-    const romanH = ROMAN_PAD_Y + romanLines * ROMAN_LINE_H;
+    const romanH = (typeof romanBox?.h === 'number' && romanBox.h > 0)
+      ? romanBox.h
+      : ROMAN_PAD_Y + romanLines * ROMAN_LINE_H;
     currentY = romanTop + romanH;
   }
 
@@ -78,10 +82,16 @@ export function computeTemplateCardMetrics(
     currentY = promptY + PROMPT_LINE_H;
   }
 
-  const defaultMinH = cardBox.h || BASE_CARD_H;
-  const cardH = (!hasRoman && !hasPrompt)
+  // If cardBox itself has an explicit height or is dynamically wrapping stem,
+  // ensure the outer card container wraps or matches without leaving empty space.
+  const hasExplicitCardH = typeof cardBox.h === 'number' && cardBox.h > 0;
+  const defaultMinH = hasExplicitCardH ? cardBox.h : BASE_CARD_H;
+  const dynamicWrappingH = Math.max(60, currentY - cardBox.y + CARD_BOTTOM_PAD);
+  const cardH = hasExplicitCardH
+    ? cardBox.h
+    : (!hasRoman && !hasPrompt)
     ? Math.max(140, Math.min(COMPACT_CARD_H, currentY - cardBox.y + 28))
-    : Math.max(defaultMinH, currentY - cardBox.y + CARD_BOTTOM_PAD);
+    : Math.max(defaultMinH, dynamicWrappingH);
 
   const dynamicOptionsY = cardBox.y + cardH + COMPACT_CARD_GAP;
   const optionsY = (hasRoman || hasPrompt)

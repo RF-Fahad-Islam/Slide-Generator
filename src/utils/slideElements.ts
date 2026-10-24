@@ -33,6 +33,7 @@ import {
   LayoutTemplate,
   SquareStack,
   PanelTop,
+  QrCode,
 } from 'lucide-react';
 import { SlideTextBox } from '../types';
 
@@ -276,6 +277,22 @@ export const makeBannerImageBox = (imageUrl: string): SlideTextBox => ({
   imageUrl,
 });
 
+export const makeLogoQrBox = (imageUrl?: string): SlideTextBox => ({
+  id: eid('el_logo_qr'),
+  bind: 'image',
+  x: 1600,
+  y: 60,
+  w: 225,
+  h: 135,
+  fontSize: 0,
+  color: '#ffffff',
+  align: 'center',
+  bold: false,
+  imageUrl: imageUrl || '',
+  shape: 'card',
+  bg: 'rgba(15,23,42,0.85)',
+});
+
 export const makeIconBox = (iconName: string): SlideTextBox => ({
   id: eid('el_icon'),
   bind: 'icon',
@@ -305,6 +322,7 @@ export const SLIDE_ELEMENT_DEFS: SlideElementDef[] = [
   { id: 'rounded_options', label: 'Rounded Options', desc: 'Soft cards for choices', category: 'content', icon: SquareStack, accentColor: '#94a3b8', build: () => makeRoundedOptionsBox() },
   { id: 'option_pills', label: 'Option Pills', desc: 'Chip-style answer choices', category: 'content', icon: Shapes, accentColor: '#94a3b8', build: () => makeOptionPillsBox() },
   { id: 'banner_image', label: 'Banner Image', desc: 'Full-width picture bar', category: 'media', icon: LayoutTemplate, accentColor: '#a78bfa', build: extra => (extra?.imageUrl ? makeBannerImageBox(extra.imageUrl) : makeBannerImageBox('')) },
+  { id: 'logo_qr', label: 'Logo / QR Container', desc: 'Draggable brand logo or scan QR container', category: 'media', icon: QrCode, accentColor: '#fbbf24', previewBg: 'rgba(251,191,36,0.15)', build: extra => makeLogoQrBox(extra?.imageUrl) },
   { id: 'icon', label: 'Icon Badge', desc: 'Decorative lucide icon', category: 'media', icon: Star, accentColor: '#fbbf24', build: extra => makeIconBox(extra?.iconName || 'GraduationCap') },
 ];
 

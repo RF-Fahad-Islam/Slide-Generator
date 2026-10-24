@@ -269,17 +269,27 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
 
   const addBox = (bind: SlideTextBoxBind) => {
     const id = `b_${bind}_${Date.now()}`;
+    const isImage = bind === 'image';
+    const isStem = bind === 'stem';
+    const isOptions = bind === 'options';
+
     const newBox: SlideTextBox = {
       id,
       bind,
       text: bind === 'free' ? 'Type your text here...' : undefined,
-      x: pct(8, postDesignW),
-      y: pct(40, postDesignH) + (customDesign.boxes.length % 4) * pct(12, postDesignH),
-      w: pct(84, postDesignW),
-      fontSize: bind === 'stem' ? pct(4.2, postDesignW) : bind === 'options' ? pct(3, postDesignW) : pct(3, postDesignW),
+      x: isImage ? pct(68, postDesignW) : pct(8, postDesignW),
+      y: isImage ? pct(6, postDesignH) : pct(40, postDesignH) + (customDesign.boxes.length % 4) * pct(12, postDesignH),
+      w: isImage ? pct(24, postDesignW) : pct(84, postDesignW),
+      h: isImage ? pct(14, postDesignH) : isStem ? pct(28, postDesignH) : isOptions ? pct(40, postDesignH) : undefined,
+      fontSize: isStem ? pct(4.2, postDesignW) : isOptions ? pct(3, postDesignW) : pct(3, postDesignW),
       color: '#ffffff',
-      align: 'left',
-      bold: bind === 'stem' || bind === 'brand',
+      align: isImage ? 'center' : 'left',
+      bold: isStem || bind === 'brand',
+      autoFit: isStem || isOptions,
+      isBoundedZone: isStem || isOptions || isImage,
+      shape: isStem || isOptions || isImage ? 'card' : 'plain',
+      bg: isStem ? 'rgba(15,23,42,0.7)' : isImage ? 'rgba(15,23,42,0.85)' : undefined,
+      imageUrl: isImage ? (customLogoUrl || '') : undefined,
     };
     setCustomDesign(prev => ({ ...prev, boxes: [...prev.boxes, newBox] }));
     setSelectedBoxId(id);
