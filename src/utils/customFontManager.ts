@@ -122,6 +122,45 @@ export function injectGoogleFont(fontName: string): string {
 }
 
 /**
+ * Automatically inject Google Font stylesheet if an external Google Font is referenced
+ */
+export function maybeInjectExternalFont(fontFamilyOrName: string): void {
+  if (typeof document === 'undefined' || !fontFamilyOrName) return;
+  const lower = fontFamilyOrName.toLowerCase();
+
+  if (lower.includes('inter')) {
+    injectGoogleFont('Inter');
+  } else if (lower.includes('outfit')) {
+    injectGoogleFont('Outfit');
+  } else if (lower.includes('montserrat')) {
+    injectGoogleFont('Montserrat');
+  } else if (lower.includes('roboto')) {
+    injectGoogleFont('Roboto');
+  } else if (
+    !lower.includes('kalpurush') &&
+    !lower.includes('hind') &&
+    !lower.includes('noto') &&
+    !lower.includes('anek') &&
+    !lower.includes('tiro') &&
+    !lower.includes('atma') &&
+    !lower.includes('mina') &&
+    !lower.includes('plus jakarta') &&
+    !lower.includes('poppins') &&
+    !lower.includes('playfair') &&
+    !lower.includes('fira code') &&
+    !lower.includes('sans-serif') &&
+    !lower.includes('serif') &&
+    !lower.includes('monospace') &&
+    !lower.includes('system-ui')
+  ) {
+    const cleanName = fontFamilyOrName.replace(/['"]/g, '').split(',')[0].trim();
+    if (cleanName) {
+      injectGoogleFont(cleanName);
+    }
+  }
+}
+
+/**
  * Import a custom font from a user-uploaded File (.ttf, .otf, .woff, .woff2)
  */
 export async function importCustomFontFromFile(file: File): Promise<CustomFontItem> {

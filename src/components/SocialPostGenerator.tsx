@@ -901,6 +901,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   currentAspectRatio={aspectRatio}
                   currentDesignW={postDesignW}
                   currentDesignH={postDesignH}
+                  defaultFontFamily={config.fontFamily || "'Kalpurush', serif"}
                   isAppLight={isAppLight}
                   sampleQuestion={effectiveItem}
                   allQuestions={items}
@@ -1800,6 +1801,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       {/* Upload & Interactive Bounded Zone Calibrator Modal */}
       <TemplateZoneCalibratorModal
         open={isStudioCalibratorOpen}
+        defaultFontFamily={config.fontFamily || "'Kalpurush', serif"}
         initialImageUrl={calibratorUploadImage || customDesign.bgImageUrl || ''}
         initialBoxes={customDesign.boxes}
         sampleQuestion={effectiveItem}

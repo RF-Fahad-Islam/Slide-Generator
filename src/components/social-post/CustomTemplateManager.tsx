@@ -29,6 +29,7 @@ interface CustomTemplateManagerProps {
   currentAspectRatio: SocialAspectRatio;
   currentDesignW: number;
   currentDesignH: number;
+  defaultFontFamily?: string;
   isAppLight: boolean;
   sampleQuestion?: MCQItem;
   allQuestions?: MCQItem[];
@@ -292,6 +293,7 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
   currentAspectRatio,
   currentDesignW,
   currentDesignH,
+  defaultFontFamily,
   isAppLight,
   sampleQuestion,
   allQuestions,
@@ -637,6 +639,7 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
       {/* Interactive Zone Calibrator Modal */}
       <TemplateZoneCalibratorModal
         open={isCalibratorOpen}
+        defaultFontFamily={defaultFontFamily}
         initialImageUrl={calibratorImage || currentBgImageUrl || ''}
         initialBoxes={calibratorBoxes || currentBoxes}
         sampleQuestion={sampleQuestion}

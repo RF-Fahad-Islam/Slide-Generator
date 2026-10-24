@@ -9,6 +9,7 @@ import {
   getAllAvailableFonts,
   importCustomFontFromFile,
   injectGoogleFont,
+  maybeInjectExternalFont,
   CustomFontItem,
 } from '../../utils/customFontManager';
 import {
@@ -49,6 +50,7 @@ import {
 
 interface TemplateZoneCalibratorModalProps {
   open: boolean;
+  defaultFontFamily?: string;
   initialImageUrl?: string;
   initialBoxes?: SlideTextBox[];
   sampleQuestion?: MCQItem;
@@ -109,6 +111,7 @@ const COLOR_PALETTE = [
 
 export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalProps> = ({
   open,
+  defaultFontFamily,
   initialImageUrl,
   initialBoxes,
   sampleQuestion = DEFAULT_SAMPLE_ITEM,
@@ -120,6 +123,8 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
   onClose,
   onSaveAndApply,
 }) => {
+  const fallbackFont = defaultFontFamily || "'Hind Siliguri', sans-serif";
+
   // Image & canvas dimensions state
   const [imageUrl, setImageUrl] = useState<string>(initialImageUrl || '');
   const [imageNatW, setImageNatW] = useState<number>(864);
@@ -160,7 +165,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: true,
     shape: 'plain',
     bg: 'transparent',
-    fontFamily: "'Hind Siliguri', sans-serif",
+    fontFamily: fallbackFont,
   });
 
   // Combined Options Zone (Grid)
@@ -175,7 +180,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
-    fontFamily: "'Hind Siliguri', sans-serif",
+    fontFamily: fallbackFont,
     hideOptionBadges: true,
     optionsLayout: '2col',
   });
@@ -192,7 +197,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
-    fontFamily: "'Hind Siliguri', sans-serif",
+    fontFamily: fallbackFont,
     hideOptionBadges: true,
   });
 
@@ -207,7 +212,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
-    fontFamily: "'Hind Siliguri', sans-serif",
+    fontFamily: fallbackFont,
     hideOptionBadges: true,
   });
 
@@ -222,7 +227,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
-    fontFamily: "'Hind Siliguri', sans-serif",
+    fontFamily: fallbackFont,
     hideOptionBadges: true,
   });
 
@@ -237,17 +242,30 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     bold: false,
     shape: 'plain',
     bg: 'transparent',
-    fontFamily: "'Hind Siliguri', sans-serif",
+    fontFamily: fallbackFont,
     hideOptionBadges: true,
   });
 
   // Fonts state & management
   const [availableFonts, setAvailableFonts] = useState<CustomFontItem[]>([]);
   const [fontFilter, setFontFilter] = useState<FontCategoryFilter>('all');
+  const [fontTargetScope, setFontTargetScope] = useState<'all' | 'stem' | 'options'>('all');
   const [fontSearchQuery, setFontSearchQuery] = useState<string>('');
   const [googleFontInput, setGoogleFontInput] = useState<string>('');
   const [isFontLoading, setIsFontLoading] = useState<boolean>(false);
   const fontFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync default font if changed from parent config
+  useEffect(() => {
+    if (defaultFontFamily && (!initialBoxes || initialBoxes.length === 0)) {
+      setStemZone((p) => ({ ...p, fontFamily: defaultFontFamily }));
+      setOptionsZone((p) => ({ ...p, fontFamily: defaultFontFamily }));
+      setOptAZone((p) => ({ ...p, fontFamily: defaultFontFamily }));
+      setOptBZone((p) => ({ ...p, fontFamily: defaultFontFamily }));
+      setOptCZone((p) => ({ ...p, fontFamily: defaultFontFamily }));
+      setOptDZone((p) => ({ ...p, fontFamily: defaultFontFamily }));
+    }
+  }, [defaultFontFamily, initialBoxes, open]);
 
   // Interaction dragging / resizing state
   const [dragTarget, setDragTarget] = useState<ZoneTarget | null>(null);
@@ -346,7 +364,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
             bold: foundStem.bold !== undefined ? foundStem.bold : prev.bold,
             shape: foundStem.shape || prev.shape,
             bg: foundStem.bg || prev.bg,
-            fontFamily: foundStem.fontFamily || prev.fontFamily,
+            fontFamily: foundStem.fontFamily || defaultFontFamily || prev.fontFamily,
           }));
         }
 
@@ -357,10 +375,10 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
         if (bA || bB || bC || bD) {
           setOptionsMode('separate');
-          if (bA) setOptAZone((p) => ({ ...p, ...bA, h: bA.h || p.h, shape: bA.shape || 'plain', hideOptionBadges: bA.hideOptionBadges ?? true, fontFamily: bA.fontFamily || p.fontFamily }));
-          if (bB) setOptBZone((p) => ({ ...p, ...bB, h: bB.h || p.h, shape: bB.shape || 'plain', hideOptionBadges: bB.hideOptionBadges ?? true, fontFamily: bB.fontFamily || p.fontFamily }));
-          if (bC) setOptCZone((p) => ({ ...p, ...bC, h: bC.h || p.h, shape: bC.shape || 'plain', hideOptionBadges: bC.hideOptionBadges ?? true, fontFamily: bC.fontFamily || p.fontFamily }));
-          if (bD) setOptDZone((p) => ({ ...p, ...bD, h: bD.h || p.h, shape: bD.shape || 'plain', hideOptionBadges: bD.hideOptionBadges ?? true, fontFamily: bD.fontFamily || p.fontFamily }));
+          if (bA) setOptAZone((p) => ({ ...p, ...bA, h: bA.h || p.h, shape: bA.shape || 'plain', hideOptionBadges: bA.hideOptionBadges ?? true, fontFamily: bA.fontFamily || defaultFontFamily || p.fontFamily }));
+          if (bB) setOptBZone((p) => ({ ...p, ...bB, h: bB.h || p.h, shape: bB.shape || 'plain', hideOptionBadges: bB.hideOptionBadges ?? true, fontFamily: bB.fontFamily || defaultFontFamily || p.fontFamily }));
+          if (bC) setOptCZone((p) => ({ ...p, ...bC, h: bC.h || p.h, shape: bC.shape || 'plain', hideOptionBadges: bC.hideOptionBadges ?? true, fontFamily: bC.fontFamily || defaultFontFamily || p.fontFamily }));
+          if (bD) setOptDZone((p) => ({ ...p, ...bD, h: bD.h || p.h, shape: bD.shape || 'plain', hideOptionBadges: bD.hideOptionBadges ?? true, fontFamily: bD.fontFamily || defaultFontFamily || p.fontFamily }));
         } else {
           const foundOptions = initialBoxes.find((b) => b.bind === 'options');
           if (foundOptions) {
@@ -377,7 +395,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
               bold: foundOptions.bold !== undefined ? foundOptions.bold : prev.bold,
               shape: foundOptions.shape || prev.shape,
               bg: foundOptions.bg || prev.bg,
-              fontFamily: foundOptions.fontFamily || prev.fontFamily,
+              fontFamily: foundOptions.fontFamily || defaultFontFamily || prev.fontFamily,
               hideOptionBadges: foundOptions.hideOptionBadges ?? true,
               optionsLayout: foundOptions.optionsLayout || prev.optionsLayout,
             }));
@@ -710,16 +728,24 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
   // Font application
   const handleSetZoneFont = (family: string) => {
-    if (activeZoneTab === 'stem') {
+    maybeInjectExternalFont(family);
+
+    if (fontTargetScope === 'all') {
+      handleApplyFontToAll(family);
+    } else if (fontTargetScope === 'stem') {
       setStemZone((p) => ({ ...p, fontFamily: family }));
-    } else if (optionsMode === 'separate') {
-      setZoneByTarget(activeZoneTab, (p) => ({ ...p, fontFamily: family }));
     } else {
+      // options
       setOptionsZone((p) => ({ ...p, fontFamily: family }));
+      setOptAZone((p) => ({ ...p, fontFamily: family }));
+      setOptBZone((p) => ({ ...p, fontFamily: family }));
+      setOptCZone((p) => ({ ...p, fontFamily: family }));
+      setOptDZone((p) => ({ ...p, fontFamily: family }));
     }
   };
 
   const handleApplyFontToAll = (family: string) => {
+    maybeInjectExternalFont(family);
     setStemZone((p) => ({ ...p, fontFamily: family }));
     setOptionsZone((p) => ({ ...p, fontFamily: family }));
     setOptAZone((p) => ({ ...p, fontFamily: family }));
@@ -938,9 +964,9 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
   });
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-md animate-fadeIn select-none">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-md animate-fadeIn select-none font-sans">
       <div
-        className={`w-[98vw] max-w-[1680px] h-[94vh] max-h-[96vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden transition-all ${
+        className={`w-[98vw] max-w-[1680px] h-[94vh] max-h-[96vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden font-sans transition-all ${
           isAppLight
             ? 'bg-white border-slate-200 text-slate-900'
             : 'bg-slate-900 border-slate-800 text-slate-100'
@@ -1698,7 +1724,8 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
               {activeTab === 'style' && (
                 <div className="space-y-4 animate-fadeIn">
                   {/* Comprehensive Font Selector */}
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
+                    {/* Header & Apply to All Button */}
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                         <Type className="w-3.5 h-3.5" />
@@ -1706,12 +1733,39 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
                       </label>
                       <button
                         type="button"
-                        onClick={() => handleApplyFontToAll(activeOptionZone.fontFamily || "'Hind Siliguri', sans-serif")}
-                        className="text-[10px] font-black text-amber-400 hover:underline cursor-pointer"
-                        title="Apply current font to stem and all options"
+                        onClick={() => {
+                          const fontToApply =
+                            (fontTargetScope === 'stem' ? stemZone.fontFamily : activeOptionZone.fontFamily) ||
+                            stemZone.fontFamily ||
+                            fallbackFont;
+                          handleApplyFontToAll(fontToApply);
+                        }}
+                        className="text-[10px] font-black text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
+                        title="Apply current font to both Question Stem and all Options"
                       >
-                        Apply Font to All
+                        <Check className="w-3 h-3 stroke-[3]" />
+                        <span>Apply to All (Q + Opts)</span>
                       </button>
+                    </div>
+
+                    {/* Font Target Scope Pill Selector */}
+                    <div className="flex rounded-xl bg-slate-950 border border-slate-800 p-0.5 gap-1">
+                      {[
+                        { id: 'all' as const, label: 'Entire Post (All)', activeStyle: 'bg-amber-500 text-slate-950 font-black shadow-sm' },
+                        { id: 'stem' as const, label: 'Question Stem', activeStyle: 'bg-emerald-500 text-slate-950 font-black shadow-sm' },
+                        { id: 'options' as const, label: 'Options', activeStyle: 'bg-sky-500 text-slate-950 font-black shadow-sm' },
+                      ].map((scope) => (
+                        <button
+                          key={scope.id}
+                          type="button"
+                          onClick={() => setFontTargetScope(scope.id)}
+                          className={`flex-1 py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                            fontTargetScope === scope.id ? scope.activeStyle : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {scope.label}
+                        </button>
+                      ))}
                     </div>
 
                     {/* Font Category Filter Tabs */}
@@ -1750,7 +1804,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
                     </div>
 
                     {/* Font Dropdown / List */}
-                    <div className="max-h-36 overflow-y-auto space-y-1 rounded-xl bg-slate-950 border border-slate-800 p-1.5">
+                    <div className="max-h-44 overflow-y-auto space-y-1 rounded-xl bg-slate-950 border border-slate-800 p-1.5">
                       {filteredFonts.length === 0 ? (
                         <div className="text-center py-3 text-xs text-slate-500">
                           No matching fonts found.
@@ -1758,25 +1812,41 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
                       ) : (
                         filteredFonts.map((f) => {
                           const isCurrent =
-                            (activeZoneTab === 'stem' ? stemZone.fontFamily : activeOptionZone.fontFamily) ===
-                            f.family;
+                            fontTargetScope === 'all'
+                              ? stemZone.fontFamily === f.family && activeOptionZone.fontFamily === f.family
+                              : fontTargetScope === 'stem'
+                              ? stemZone.fontFamily === f.family
+                              : activeOptionZone.fontFamily === f.family;
                           return (
                             <button
                               key={f.id}
                               type="button"
                               onClick={() => handleSetZoneFont(f.family)}
-                              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all cursor-pointer ${
+                              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex flex-col gap-0.5 transition-all cursor-pointer ${
                                 isCurrent
-                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-sm'
+                                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent'
                               }`}
                             >
-                              <span style={{ fontFamily: f.family }} className="truncate font-semibold">
-                                {f.name}
-                              </span>
-                              <span className="text-[9px] uppercase tracking-wider text-slate-500 px-1 py-0.5 rounded bg-slate-900 border border-slate-800 shrink-0 ml-1">
-                                {f.category.replace('bangla_', '').replace('english_', '')}
-                              </span>
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span style={{ fontFamily: f.family }} className="truncate font-bold text-xs text-white">
+                                    {f.name}
+                                  </span>
+                                  {isCurrent && (
+                                    <span className="text-[9px] font-black bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded-full flex items-center gap-0.5 shrink-0">
+                                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                      <span>Active</span>
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[9px] uppercase tracking-wider text-slate-500 px-1 py-0.5 rounded bg-slate-900 border border-slate-800 shrink-0 ml-1">
+                                  {f.category.replace('bangla_', '').replace('english_', '')}
+                                </span>
+                              </div>
+                              <div style={{ fontFamily: f.family }} className="text-[11px] text-slate-400 line-clamp-1">
+                                {f.sampleBangla || '১. মানবদেহের রক্তের স্বাভাবিক pH কত? (A) 7.4'}
+                              </div>
                             </button>
                           );
                         })
