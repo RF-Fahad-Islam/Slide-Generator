@@ -1,3 +1,5 @@
+import { SlideTextBox, BgImageFit } from '../../types';
+
 export type PostTemplateId = 'classic' | 'quiz_time';
 
 export interface ReactionEmojiSet {
@@ -22,3 +24,21 @@ export const REACTION_BADGE_COLORS: Record<keyof ReactionEmojiSet, string> = {
   C: '#f97316',
   D: '#facc15',
 };
+
+export type SocialAspectRatio = '1:1' | '4:5' | '9:16' | '16:9' | 'custom';
+
+export interface SavedCustomTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  aspectRatio: SocialAspectRatio;
+  designW: number;
+  designH: number;
+  bgImageUrl?: string;
+  bgImageFit?: BgImageFit;
+  bgColorPreset?: string;
+  boxes: SlideTextBox[];
+  createdAt: number;
+  updatedAt: number;
+  isPreset?: boolean;
+}

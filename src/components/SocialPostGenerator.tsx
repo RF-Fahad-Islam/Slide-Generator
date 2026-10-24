@@ -35,7 +35,9 @@ import { PostTemplateSelector } from './social-post/PostTemplateSelector';
 import { ClassicQuizCard } from './social-post/ClassicQuizCard';
 import { QuizTimeCard } from './social-post/QuizTimeCard';
 import { PostModeSelector, SocialPostMode } from './social-post/PostModeSelector';
-import { PostTemplateId, ReactionEmojiSet, DEFAULT_REACTION_EMOJIS, REACTION_ORDER } from './social-post/types';
+import { PostTemplateId, ReactionEmojiSet, DEFAULT_REACTION_EMOJIS, REACTION_ORDER, SocialAspectRatio, SavedCustomTemplate } from './social-post/types';
+import { CustomTemplateManager } from './social-post/CustomTemplateManager';
+import { Maximize2, Crop } from 'lucide-react';
 
 interface SocialPostGeneratorProps {
   items: MCQItem[];
@@ -51,10 +53,11 @@ interface CustomPostDesign {
 }
 
 const POST_DESIGN_HEIGHT = 1080;
-const POST_DESIGN_WIDTH: Record<'1:1' | '4:5' | '9:16', number> = {
+const POST_DESIGN_WIDTH: Record<'1:1' | '4:5' | '9:16' | '16:9', number> = {
   '1:1': 1080,
   '4:5': 864,
   '9:16': 608,
+  '16:9': 1920,
 };
 
 const CUSTOM_DESIGN_STORAGE_KEY = 'social_post_custom_design_v1';
@@ -62,11 +65,11 @@ const CUSTOM_DESIGN_STORAGE_KEY = 'social_post_custom_design_v1';
 const pct = (v: number, size: number) => Math.max(0, Math.round((v / 100) * size));
 
 const defaultCustomBoxes = (w: number, h: number): SlideTextBox[] => [
-  { id: 'b_brand', bind: 'brand', x: pct(8, w), y: pct(6, h), w: pct(70, w), fontSize: pct(3.4, w), color: '#fbbf24', align: 'left', bold: true },
-  { id: 'b_header', bind: 'headerTitle', x: pct(8, w), y: pct(12, h), w: pct(84, w), fontSize: pct(2.8, w), color: '#ffffff', align: 'left', bold: false },
-  { id: 'b_stem', bind: 'stem', x: pct(8, w), y: pct(26, h), w: pct(84, w), fontSize: pct(4.2, w), color: '#ffffff', align: 'left', bold: true },
-  { id: 'b_options', bind: 'options', x: pct(8, w), y: pct(56, h), w: pct(84, w), fontSize: pct(3, w), color: '#ffffff', align: 'left', bold: false },
-  { id: 'b_footer', bind: 'footerTag', x: pct(8, w), y: pct(90, h), w: pct(60, w), fontSize: pct(2.4, w), color: '#fbbf24', align: 'left', bold: true },
+  { id: 'b_brand', bind: 'brand', x: pct(8, w), y: pct(6, h), w: pct(70, w), h: pct(6, h), fontSize: pct(3.4, w), color: '#fbbf24', align: 'left', bold: true },
+  { id: 'b_header', bind: 'headerTitle', x: pct(8, w), y: pct(13, h), w: pct(84, w), h: pct(5, h), fontSize: pct(2.8, w), color: '#ffffff', align: 'left', bold: false },
+  { id: 'b_stem', bind: 'stem', x: pct(8, w), y: pct(20, h), w: pct(84, w), h: pct(28, h), fontSize: pct(4.2, w), color: '#ffffff', align: 'left', bold: true, autoFit: true, isBoundedZone: true, shape: 'card', bg: 'rgba(15,23,42,0.7)' },
+  { id: 'b_options', bind: 'options', x: pct(8, w), y: pct(51, h), w: pct(84, w), h: pct(41, h), fontSize: pct(3, w), color: '#ffffff', align: 'left', bold: false, autoFit: true, isBoundedZone: true, shape: 'card' },
+  { id: 'b_footer', bind: 'footerTag', x: pct(8, w), y: pct(94, h), w: pct(84, w), h: pct(4, h), fontSize: pct(2.4, w), color: '#fbbf24', align: 'center', bold: true },
 ];
 
 interface StoredPostDesign {
@@ -137,7 +140,9 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     }
   }, [preselectedItemId, items]);
 
-  const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:5' | '9:16'>('1:1');
+  const [aspectRatio, setAspectRatio] = useState<SocialAspectRatio>('1:1');
+  const [customCanvasW, setCustomCanvasW] = useState<number>(1080);
+  const [customCanvasH, setCustomCanvasH] = useState<number>(1080);
   const [postTemplate, setPostTemplate] = useState<PostTemplateId>('classic');
   const [postBgColor, setPostBgColor] = useState<string>('gradient_amber');
   const [customHeaderTitle, setCustomHeaderTitle] = useState<string>('আজকের কুইজ');
@@ -158,8 +163,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   // Custom Design Editor State
   const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
   const [isBoxEditMode, setIsBoxEditMode] = useState<boolean>(false);
-  const postDesignW = POST_DESIGN_WIDTH[aspectRatio];
-  const postDesignH = POST_DESIGN_HEIGHT;
+  const postDesignW = aspectRatio === 'custom' ? customCanvasW : (POST_DESIGN_WIDTH[aspectRatio as keyof typeof POST_DESIGN_WIDTH] || 1080);
+  const postDesignH = aspectRatio === 'custom' ? customCanvasH : POST_DESIGN_HEIGHT;
   const [customDesign, setCustomDesign] = useState<CustomPostDesign>(() =>
     loadSavedDesign(POST_DESIGN_WIDTH[aspectRatio], POST_DESIGN_HEIGHT)
   );
@@ -458,9 +463,73 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
         return 'aspect-[4/5] max-w-[600px]';
       case '9:16':
         return 'aspect-[9/16] max-w-[480px]';
+      case '16:9':
+        return 'aspect-[16/9] max-w-[720px]';
+      case 'custom':
+        return 'max-w-[640px]';
       default:
         return 'aspect-square max-w-[640px]';
     }
+  };
+
+  const handleAspectRatioChange = (newRatio: SocialAspectRatio, customW?: number, customH?: number) => {
+    const prevW = postDesignW;
+    const nextW = newRatio === 'custom'
+      ? (customW || customCanvasW)
+      : (POST_DESIGN_WIDTH[newRatio as keyof typeof POST_DESIGN_WIDTH] || 1080);
+
+    if (prevW > 0 && nextW > 0 && prevW !== nextW) {
+      const factor = nextW / prevW;
+      setCustomDesign(prev => ({
+        ...prev,
+        boxes: prev.boxes.map(b => ({
+          ...b,
+          x: Math.max(0, Math.min(nextW - 60, Math.round(b.x * factor))),
+          w: Math.max(60, Math.min(nextW, Math.round(b.w * factor))),
+        })),
+      }));
+    }
+
+    if (newRatio === 'custom' && customW && customH) {
+      setCustomCanvasW(customW);
+      setCustomCanvasH(customH);
+    }
+    setAspectRatio(newRatio);
+  };
+
+  const handleApplyCustomTemplate = (tpl: SavedCustomTemplate) => {
+    setIsCustomMode(true);
+    setIsBoxEditMode(true);
+    if (tpl.aspectRatio === 'custom') {
+      setCustomCanvasW(tpl.designW);
+      setCustomCanvasH(tpl.designH);
+      setAspectRatio('custom');
+    } else {
+      setAspectRatio(tpl.aspectRatio);
+    }
+    if (tpl.bgColorPreset) {
+      setPostBgColor(tpl.bgColorPreset);
+    }
+    setCustomDesign({
+      bgImageUrl: tpl.bgImageUrl || '',
+      bgImageFit: tpl.bgImageFit || 'cover',
+      boxes: tpl.boxes.map(b => ({ ...b })),
+    });
+    setSelectedBoxId(null);
+  };
+
+  const handleFitCanvasToImage = () => {
+    if (!customDesign.bgImageUrl) return;
+    const img = new Image();
+    img.onload = () => {
+      const natW = img.naturalWidth || 1080;
+      const natH = img.naturalHeight || 1080;
+      const ratio = natW / natH;
+      const targetH = 1080;
+      const targetW = Math.round(targetH * ratio);
+      handleAspectRatioChange('custom', targetW, targetH);
+    };
+    img.src = customDesign.bgImageUrl;
   };
 
   // Dynamic drawer tabs based on active mode
@@ -517,12 +586,13 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
               { id: '1:1', label: '1:1 Square' },
               { id: '4:5', label: '4:5 Feed' },
               { id: '9:16', label: '9:16 Story' },
+              { id: '16:9', label: '16:9 Slide' },
             ].map(r => (
               <button
                 key={r.id}
                 type="button"
-                onClick={() => setAspectRatio(r.id as any)}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                onClick={() => handleAspectRatioChange(r.id as any)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                   aspectRatio === r.id
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
                     : isAppLight
@@ -533,6 +603,11 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                 {r.label}
               </button>
             ))}
+            {aspectRatio === 'custom' && (
+              <span className="px-3 py-1.5 rounded-xl text-xs font-black bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                Fit to Image ({postDesignW}×{postDesignH})
+              </span>
+            )}
           </div>
 
           <button
@@ -629,47 +704,56 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {/* --------------------------------------------------------------------- */}
             {activeTab === 'templates' && (
               <div className="space-y-5 animate-fadeIn">
-                <div className="space-y-1">
-                  <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isAppLight ? 'text-amber-600' : 'text-amber-400'}`}>
-                    <LayoutTemplate className="w-4 h-4" />
-                    1. Post Template Preset & Aspect Ratio
-                  </h4>
-                  <p className={`text-xs ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Choose a template layout preset or adjust post dimensions.
-                  </p>
-                </div>
+                {/* Custom Template Manager with Save, My Templates, and Bounded Presets */}
+                <CustomTemplateManager
+                  currentBoxes={customDesign.boxes}
+                  currentBgImageUrl={customDesign.bgImageUrl}
+                  currentBgImageFit={customDesign.bgImageFit}
+                  currentBgColorPreset={postBgColor}
+                  currentAspectRatio={aspectRatio}
+                  currentDesignW={postDesignW}
+                  currentDesignH={postDesignH}
+                  isAppLight={isAppLight}
+                  onApplyTemplate={handleApplyCustomTemplate}
+                />
 
-                {!isCustomMode ? (
-                  <PostTemplateSelector selected={postTemplate} onSelect={setPostTemplate} isAppLight={isAppLight} />
-                ) : (
-                  <div className={`p-4 rounded-2xl border space-y-2 ${
-                    isAppLight ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                  }`}>
-                    <p className="text-xs font-bold flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-500" />
-                      <span>Custom Canvas Drag & Drop Mode Active</span>
-                    </p>
-                    <p className={`text-[11px] leading-relaxed ${isAppLight ? 'text-amber-800' : 'text-slate-300'}`}>
-                      You are in free-form canvas mode. Add text boxes, custom images, and resize layers freely. Switch off Custom Mode in the mode strip to return to preset cards.
-                    </p>
+                {!isCustomMode && (
+                  <div className={`pt-4 border-t space-y-3 ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
+                    <h5 className={`text-xs font-black uppercase tracking-wider ${isAppLight ? 'text-amber-700' : 'text-amber-400'}`}>
+                      Preset Card Themes
+                    </h5>
+                    <PostTemplateSelector selected={postTemplate} onSelect={setPostTemplate} isAppLight={isAppLight} />
                   </div>
                 )}
 
                 {/* Aspect Ratio Selector */}
                 <div className={`space-y-2 pt-3 border-t ${isAppLight ? 'border-slate-200' : 'border-slate-800'}`}>
-                  <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Aspect Ratio (Post Dimension):
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className={`block text-xs font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      Aspect Ratio & Dimensions:
+                    </label>
+                    {customDesign.bgImageUrl && (
+                      <button
+                        type="button"
+                        onClick={handleFitCanvasToImage}
+                        className="text-[10px] font-black text-amber-500 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Crop className="w-3 h-3" />
+                        <span>Fit Canvas to Image Format</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
-                      { id: '1:1', name: '1:1 Square', desc: 'Instagram / FB Feed' },
-                      { id: '4:5', name: '4:5 Portrait', desc: 'Vertical Mobile Feed' },
-                      { id: '9:16', name: '9:16 Story', desc: 'Reels & Stories' },
+                      { id: '1:1', name: '1:1 Square', desc: '1080×1080 Feed' },
+                      { id: '4:5', name: '4:5 Portrait', desc: '864×1080 Mobile' },
+                      { id: '9:16', name: '9:16 Story', desc: '608×1080 Reels' },
+                      { id: '16:9', name: '16:9 Slide', desc: '1920×1080 Banner' },
                     ].map((ratio) => (
                       <button
                         key={ratio.id}
                         type="button"
-                        onClick={() => setAspectRatio(ratio.id as any)}
+                        onClick={() => handleAspectRatioChange(ratio.id as any)}
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           aspectRatio === ratio.id
                             ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md ring-2 ring-amber-400/50 font-bold'
@@ -1137,33 +1221,73 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   </div>
 
                   {customDesign.bgImageUrl ? (
-                    <div className={`p-3 rounded-2xl border flex items-center justify-between gap-3 ${
-                      isAppLight ? 'bg-amber-50 border-amber-300' : 'bg-slate-950 border-amber-500/40'
+                    <div className={`p-3.5 rounded-2xl border space-y-3 ${
+                      isAppLight ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-950 border-amber-500/40'
                     }`}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img src={customDesign.bgImageUrl} alt="Custom Background" className="w-12 h-12 rounded-xl object-cover border border-amber-400 shrink-0" />
-                        <div className="min-w-0">
-                          <p className={`text-xs font-bold truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Custom BG Graphic</p>
-                          <p className={`text-[10px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                            Applied live to card · <span className="font-mono font-bold text-amber-500">{customDesign.bgImageFit || 'cover'}</span>
-                          </p>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img src={customDesign.bgImageUrl} alt="Custom Background" className="w-12 h-12 rounded-xl object-cover border border-amber-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className={`text-xs font-bold truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>Custom BG Graphic</p>
+                            <p className={`text-[10px] ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                              Current fit: <span className="font-mono font-bold text-amber-500 uppercase">{customDesign.bgImageFit || 'cover'}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setBgEditorImage(customDesign.bgImageUrl)}
+                            className="px-2.5 py-1.5 rounded-xl text-xs font-black text-amber-500 border border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 cursor-pointer"
+                          >
+                            Crop Tool
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '', bgImageFit: 'cover' }))}
+                            className="px-2.5 py-1.5 rounded-xl text-xs font-black text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer"
+                          >
+                            Clear
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+
+                      {/* Image Fit Options */}
+                      <div className="pt-2 border-t border-amber-500/20 space-y-1.5">
+                        <label className={`block text-[11px] font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                          Fit Graphic to Template:
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[
+                            { id: 'cover' as const, label: 'Cover', desc: 'Fill & Crop' },
+                            { id: 'contain' as const, label: 'Contain', desc: 'Full image' },
+                            { id: 'stretch' as const, label: 'Stretch', desc: '100% 100%' },
+                          ].map(f => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => setCustomDesign(prev => ({ ...prev, bgImageFit: f.id }))}
+                              className={`px-2 py-1.5 rounded-xl text-center border text-xs font-black cursor-pointer transition-all ${
+                                (customDesign.bgImageFit || 'cover') === f.id
+                                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm'
+                                  : isAppLight
+                                  ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <span>{f.label}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Fit Canvas to Image */}
                         <button
                           type="button"
-                          onClick={() => setBgEditorImage(customDesign.bgImageUrl)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-black text-amber-500 border border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 cursor-pointer shrink-0"
-                          title="Re-open the crop / resize / fit editor"
+                          onClick={handleFitCanvasToImage}
+                          className="w-full mt-1.5 py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 cursor-pointer transition-all"
                         >
-                          Re-edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '', bgImageFit: 'cover' }))}
-                          className="px-3 py-1.5 rounded-xl text-xs font-black text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer shrink-0"
-                        >
-                          Clear Image
+                          <Crop className="w-3.5 h-3.5" />
+                          <span>Fit Canvas Format to This Image's Dimensions</span>
                         </button>
                       </div>
                     </div>
@@ -1357,7 +1481,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                         showAnswerHighlight={showAnswerKey}
                       />
 
-                      {isBoxEditMode && (
+                      {isBoxEditMode && !isExporting && (
                         <SlideTextBoxOverlay
                           boxes={customDesign.boxes}
                           selectedId={selectedBoxId}
@@ -1368,6 +1492,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                           onSelect={setSelectedBoxId}
                           onMove={(id, x, y) => updateBox(id, { x, y })}
                           onResize={(id, patch) => updateBox(id, patch)}
+                          onDeleteBox={deleteBox}
                           designW={postDesignW}
                           designH={postDesignH}
                         />
@@ -1390,6 +1515,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           { id: '1:1', label: '1:1', value: 1, hint: 'Square' },
           { id: '4:5', label: '4:5', value: 4 / 5, hint: 'Feed' },
           { id: '9:16', label: '9:16', value: 9 / 16, hint: 'Story' },
+          { id: '16:9', label: '16:9', value: 16 / 9, hint: 'Slide / Banner' },
         ]}
         defaultRatioId={aspectRatio}
         onClose={() => setBgEditorImage(null)}

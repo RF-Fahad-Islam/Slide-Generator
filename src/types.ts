@@ -249,6 +249,11 @@ export interface SlideTextBox {
   bg?: string; // container fill color for pill/card/banner shapes
   iconName?: string; // lucide icon key (bind === 'icon')
   imageUrl?: string; // image / banner data URL or http(s) (bind === 'image')
+  // Canva-style Bounded Zone & Auto-Fit Extensions
+  autoFit?: boolean;
+  minFontSize?: number;
+  maxFontSize?: number;
+  isBoundedZone?: boolean;
 }
 
 export interface TemplateDefinition {

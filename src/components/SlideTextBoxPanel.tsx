@@ -1173,22 +1173,91 @@ export const SlideTextBoxPanel: React.FC<SlideTextBoxPanelProps> = ({
                 />
               </div>
 
-              {(selectedBox.bind === 'icon' || selectedBox.bind === 'image') && (
-                <div>
-                  <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Box Height: {selectedBox.h || 'auto'}px
-                  </label>
-                  <input
-                    type="range"
-                    min={60}
-                    max={900}
-                    step={10}
-                    value={selectedBox.h || 200}
-                    onChange={(e) => onUpdateBox(selectedBox.id, { h: parseInt(e.target.value) })}
-                    className="w-full accent-amber-500 cursor-pointer"
-                  />
+              {/* Box Width */}
+              <div>
+                <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Box Width: {selectedBox.w}px
+                </label>
+                <input
+                  type="range"
+                  min={100}
+                  max={1920}
+                  step={10}
+                  value={selectedBox.w}
+                  onChange={(e) => onUpdateBox(selectedBox.id, { w: parseInt(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Bounded Box Height & Canva Auto-Fit Controls for ALL boxes */}
+              <div className={`p-3 rounded-2xl border space-y-2.5 ${
+                selectedBox.h
+                  ? isAppLight ? 'bg-amber-50/80 border-amber-300' : 'bg-amber-500/10 border-amber-500/30'
+                  : isAppLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs font-black uppercase tracking-wider ${
+                      selectedBox.h ? 'text-amber-500' : isAppLight ? 'text-slate-700' : 'text-slate-300'
+                    }`}>
+                      Bounded Area: {selectedBox.h ? `${selectedBox.h}px` : 'Auto-Height'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateBox(selectedBox.id, {
+                      h: selectedBox.h ? undefined : Math.max(80, Math.round(selectedBox.fontSize * 3)),
+                      autoFit: selectedBox.h ? undefined : true,
+                    })}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
+                      selectedBox.h
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm'
+                        : isAppLight
+                        ? 'bg-white text-slate-600 border-slate-300 hover:text-slate-900'
+                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+                    }`}
+                  >
+                    {selectedBox.h ? 'Clear Bound' : 'Set Bounded Area'}
+                  </button>
                 </div>
-              )}
+
+                {selectedBox.h ? (
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min={40}
+                      max={900}
+                      step={10}
+                      value={selectedBox.h}
+                      onChange={(e) => onUpdateBox(selectedBox.id, { h: parseInt(e.target.value) })}
+                      className="w-full accent-amber-500 cursor-pointer"
+                    />
+                    <div className="flex items-center justify-between pt-1">
+                      <label className={`text-[11px] font-bold ${isAppLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                        Auto-Fit Text Inside Bounded Area:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => onUpdateBox(selectedBox.id, { autoFit: selectedBox.autoFit === false ? true : false })}
+                        className={`px-2 py-0.5 rounded text-[10px] font-black border transition-all cursor-pointer ${
+                          selectedBox.autoFit !== false
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                            : 'bg-slate-700 text-slate-300 border-slate-600'
+                        }`}
+                      >
+                        {selectedBox.autoFit !== false ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+                    <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                      ✨ Texts automatically scale down to stay strictly inside this ${selectedBox.w}×${selectedBox.h}px zone whenever you pick a quiz.
+                    </p>
+                  </div>
+                ) : (
+                  <p className={`text-[10px] leading-relaxed ${isAppLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                    Box height currently auto-expands. Click "Set Bounded Area" or drag the top/bottom handles to lock the height and enable Canva-style auto-fit text.
+                  </p>
+                )}
+              </div>
 
               <div>
                 <label className={`block text-xs font-bold mb-1.5 ${isAppLight ? 'text-slate-600' : 'text-slate-400'}`}>

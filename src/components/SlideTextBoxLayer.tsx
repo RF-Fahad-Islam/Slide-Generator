@@ -14,6 +14,7 @@ import {
 } from '../utils/templateBoxLayout';
 import { hasAnswerDisplayStyle, resolveSlideAnswerFlags } from '../utils/answerSlides';
 import { MathText } from './MathText';
+import { calculateFittedFontSize, calculateFittedOptionsLayout } from '../utils/textHeightEstimate';
 import { Check, User, Sparkles, BookOpen, Award } from 'lucide-react';
 
 interface SlideTextBoxLayerProps {
@@ -207,15 +208,43 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         // OPTIONS with pre-designed shapes & 2-column card grid support
         if (box.bind === 'options') {
           const is2Col = (config.optionsLayout || '2col') === '2col';
+          const isBounded = typeof box.h === 'number' && box.h > 0;
+          const fittedMetrics = isBounded
+            ? calculateFittedOptionsLayout(
+                item.options,
+                box.w,
+                box.h!,
+                box.fontSize,
+                is2Col,
+                box.minFontSize || 12
+              )
+            : null;
+
+          const optFontSize = fittedMetrics ? fittedMetrics.fontSize : box.fontSize;
+          const cardH = fittedMetrics ? fittedMetrics.rowHeight : undefined;
+          const badgePx = fittedMetrics ? fittedMetrics.badgeSize : (box.shape === 'card' ? 48 : 36);
+          const badgeTextClass = fittedMetrics ? fittedMetrics.badgeTextSize : 'text-2xl';
+          const padClass = fittedMetrics ? fittedMetrics.paddingClass : (box.shape === 'card' ? 'px-6 py-5 min-h-[82px]' : 'px-6 py-3.5');
+
           const gridClass = box.shape === 'pill'
             ? 'flex flex-wrap gap-3.5'
             : is2Col
-            ? 'grid grid-cols-2 gap-5'
+            ? 'grid grid-cols-2 gap-4'
             : 'space-y-3';
 
           return (
-            <div key={box.id} className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`} style={{ ...base, top: boxTop }}>
-              <div className={gridClass}>
+            <div
+              key={box.id}
+              className={`absolute ${box.bold ? 'font-black' : 'font-bold'}`}
+              style={{
+                ...base,
+                top: boxTop,
+                height: box.h || undefined,
+                maxHeight: box.h || undefined,
+                overflow: isBounded ? 'hidden' : undefined,
+              }}
+            >
+              <div className={`${gridClass} ${isBounded ? 'h-full' : ''}`}>
                 {item.options.map((opt, oIdx) => {
                   const isCorrectOption = checkIsOptionCorrect(opt, item.answer, oIdx);
                   const highlight = showOptionHighlight && isCorrectOption;
@@ -225,13 +254,17 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         border: `2px solid ${theme.colors.optionSelectedBorder}`,
                         color: theme.colors.optionSelectedText,
                         boxShadow: '0 10px 25px rgba(245,158,11,0.2)',
-                        fontSize: box.fontSize ? `${box.fontSize}px` : undefined,
+                        fontSize: optFontSize ? `${optFontSize}px` : undefined,
+                        height: cardH,
+                        minHeight: cardH,
                       }
                     : {
                         backgroundColor: box.bg,
                         border: isLight ? '2px solid rgba(226,232,240,0.9)' : '1px solid rgba(255,255,255,0.15)',
                         color: isLight ? '#0f172a' : '#f8fafc',
-                        fontSize: box.fontSize ? `${box.fontSize}px` : undefined,
+                        fontSize: optFontSize ? `${optFontSize}px` : undefined,
+                        height: cardH,
+                        minHeight: cardH,
                       };
                   if (box.shape === 'pill') {
                     return (
@@ -240,12 +273,15 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         className="inline-flex items-center gap-3 px-6 py-3.5 rounded-full shadow-lg"
                         style={containerStyle}
                       >
-                        <span className={`w-9 h-9 rounded-full font-black text-xl flex items-center justify-center shrink-0 ${
-                          highlight ? 'bg-amber-400 text-slate-950' : isLight ? 'bg-slate-900 text-white' : 'bg-white/10 text-white'
-                        }`}>
+                        <span
+                          className={`rounded-full font-black flex items-center justify-center shrink-0 ${badgeTextClass} ${
+                            highlight ? 'bg-amber-400 text-slate-950' : isLight ? 'bg-slate-900 text-white' : 'bg-white/10 text-white'
+                          }`}
+                          style={{ width: badgePx, height: badgePx }}
+                        >
                           {opt.key}
                         </span>
-                        <span className="flex-1 min-w-0 font-bold" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
+                        <span className="flex-1 min-w-0 font-bold" style={{ fontSize: optFontSize ? `${optFontSize}px` : undefined }}><MathText text={opt.text} /></span>
                         {highlight && (
                           <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
                             <Check className="w-5 h-5 stroke-[3.5]" />
@@ -258,21 +294,24 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     return (
                       <div
                         key={opt.key}
-                        className="flex items-center gap-4 px-6 py-5 min-h-[82px] rounded-2xl shadow-xl backdrop-blur-md slide-box-option-bg"
+                        className={`flex items-center gap-3.5 ${padClass} rounded-2xl shadow-xl backdrop-blur-md slide-box-option-bg overflow-hidden`}
                         style={containerStyle}
                       >
-                        <div className={`w-12 h-12 rounded-2xl font-black text-2xl flex items-center justify-center shrink-0 shadow-md ${
-                          highlight
-                            ? 'bg-amber-400 text-slate-950'
-                            : isLight
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-white/10 text-white border border-white/15'
-                        }`}>
+                        <div
+                          className={`rounded-2xl font-black flex items-center justify-center shrink-0 shadow-md ${badgeTextClass} ${
+                            highlight
+                              ? 'bg-amber-400 text-slate-950'
+                              : isLight
+                              ? 'bg-slate-900 text-white'
+                              : 'bg-white/10 text-white border border-white/15'
+                          }`}
+                          style={{ width: badgePx, height: badgePx }}
+                        >
                           {opt.key}
                         </div>
-                        <span className="flex-1 min-w-0 font-extrabold leading-snug" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
+                        <span className="flex-1 min-w-0 font-extrabold leading-snug" style={{ fontSize: optFontSize ? `${optFontSize}px` : undefined }}><MathText text={opt.text} /></span>
                         {highlight && (
-                          <div className="w-10 h-10 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-lg animate-pulse">
+                          <div className="w-9 h-9 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-lg animate-pulse">
                             <Check className="w-6 h-6 stroke-[3.5]" />
                           </div>
                         )}
@@ -280,9 +319,9 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                     );
                   }
                   return (
-                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: theme.colors.optionSelectedText, fontSize: box.fontSize ? `${box.fontSize}px` : undefined } : { fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}>
+                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: theme.colors.optionSelectedText, fontSize: optFontSize ? `${optFontSize}px` : undefined } : { fontSize: optFontSize ? `${optFontSize}px` : undefined }}>
                       <span className="font-black shrink-0">{opt.key}.</span>
-                      <span className="flex-1 min-w-0" style={{ fontSize: box.fontSize ? `${box.fontSize}px` : undefined }}><MathText text={opt.text} /></span>
+                      <span className="flex-1 min-w-0" style={{ fontSize: optFontSize ? `${optFontSize}px` : undefined }}><MathText text={opt.text} /></span>
                       {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
                     </div>
                   );
@@ -339,10 +378,27 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
           );
         }
 
-        // TEXT BINDS WITH PRE-DESIGNED SHAPES
+        // TEXT BINDS WITH PRE-DESIGNED SHAPES & AUTO-FIT
         const content = getSlideBoxContent(box, item, config, currentIndex, totalCount);
+        const isBounded = typeof box.h === 'number' && box.h > 0;
+        const padX = box.shape === 'card' || box.shape === 'banner' ? 56 : 0;
+        const padY = box.shape === 'card' || box.shape === 'banner' ? 40 : 0;
+        const shouldAutoFit = box.autoFit !== false && isBounded;
+
+        const effectiveFontSize = shouldAutoFit
+          ? calculateFittedFontSize(
+              content,
+              box.w,
+              box.h!,
+              box.fontSize,
+              box.minFontSize || (box.bind === 'stem' ? 14 : 12),
+              padX,
+              padY
+            )
+          : box.fontSize;
+
         const textBase = {
-          fontSize: box.fontSize,
+          fontSize: effectiveFontSize,
           color: box.color,
           textAlign: box.align,
           fontFamily: getBoxFontFamily(box, config),
@@ -463,7 +519,14 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
               className={`absolute px-7 py-5 whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'} ${
                 box.shape === 'card' ? 'rounded-2xl' : 'rounded-3xl'
               } slide-box-card-bg`}
-              style={{ ...base, ...textBase, height: boxHeight || undefined, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
+              style={{
+                ...base,
+                ...textBase,
+                height: boxHeight || undefined,
+                maxHeight: boxHeight || undefined,
+                overflow: isBounded ? 'hidden' : undefined,
+                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              }}
             >
               <MathText text={content} />
             </div>
@@ -471,7 +534,17 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
         }
 
         return (
-          <div key={box.id} className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`} style={{ ...base, height: box.h || undefined }}>
+          <div
+            key={box.id}
+            className={`absolute whitespace-pre-wrap leading-snug ${box.bold ? 'font-black' : 'font-bold'}`}
+            style={{
+              ...base,
+              fontSize: effectiveFontSize,
+              height: box.h || undefined,
+              maxHeight: box.h || undefined,
+              overflow: isBounded ? 'hidden' : undefined,
+            }}
+          >
             <MathText text={content} />
           </div>
         );

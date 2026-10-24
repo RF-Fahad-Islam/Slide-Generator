@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { MCQItem, DeckConfig, SlideTextBox } from '../types';
 import { getSlideBoxContent, clamp, SLIDE_W, SLIDE_H } from '../utils/slideTextBoxes';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../utils/templateBoxLayout';
 
 type ResizePatch = Partial<Pick<SlideTextBox, 'w' | 'h'>>;
+type ResizeHandle = 'nw' | 'ne' | 'se' | 'sw' | 'n' | 's' | 'e' | 'w';
 
 interface SlideTextBoxOverlayProps {
   boxes: SlideTextBox[];
@@ -19,16 +20,26 @@ interface SlideTextBoxOverlayProps {
   item: MCQItem;
   config: DeckConfig;
   currentIndex: number;
-  scale: number; // slideScale — converts client px deltas into 1920x1080 canvas px
+  scale: number; // slideScale — converts client px deltas into canvas px
   onSelect: (id: string | null, isMulti?: boolean) => void;
   onSelectIds?: (ids: string[]) => void;
   onMove: (id: string, x: number, y: number) => void;
   onMoveBoxes?: (updates: { id: string; x: number; y: number }[]) => void;
   onResize: (id: string, patch: ResizePatch) => void;
-  // Optional design-space bounds for canvases that are NOT 1920x1080
-  // (e.g. the social post generator uses a square/portrait canvas).
+  onDeleteBox?: (id: string) => void;
   designW?: number;
   designH?: number;
+}
+
+interface DragState {
+  type: 'move' | 'resize';
+  handle?: ResizeHandle;
+  boxId: string;
+  startX: number;
+  startY: number;
+  orig: SlideTextBox;
+  origBoxes: SlideTextBox[];
+  origH: number;
 }
 
 export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
@@ -44,22 +55,71 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
   onMove,
   onMoveBoxes,
   onResize,
+  onDeleteBox,
   designW = SLIDE_W,
   designH = SLIDE_H,
 }) => {
   const activeSelectedIds = selectedIds ?? (selectedId ? [selectedId] : []);
-  const dragRef = useRef<{
-    type: 'move' | 'resize';
-    boxId: string;
-    startX: number;
-    startY: number;
-    orig: SlideTextBox;
-    origBoxes: SlideTextBox[];
-  } | null>(null);
+  const dragRef = useRef<DragState | null>(null);
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [activeDragging, setActiveDragging] = useState<boolean>(false);
+  const [activeGuides, setActiveGuides] = useState<{ x?: number; y?: number } | null>(null);
   const [marquee, setMarquee] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
 
+  // Keyboard nudge & delete support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      if (activeSelectedIds.length === 0) return;
+
+      const step = e.shiftKey ? 10 : 1;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        activeSelectedIds.forEach(id => {
+          const b = boxes.find(x => x.id === id);
+          if (b) onMove(id, clamp(b.x - step, 0, designW - b.w), b.y);
+        });
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        activeSelectedIds.forEach(id => {
+          const b = boxes.find(x => x.id === id);
+          if (b) onMove(id, clamp(b.x + step, 0, designW - b.w), b.y);
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeSelectedIds.forEach(id => {
+          const b = boxes.find(x => x.id === id);
+          if (b) onMove(id, b.x, clamp(b.y - step, 0, designH - (b.h || 40)));
+        });
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeSelectedIds.forEach(id => {
+          const b = boxes.find(x => x.id === id);
+          if (b) onMove(id, b.x, clamp(b.y + step, 0, designH - (b.h || 40)));
+        });
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (onDeleteBox) {
+          e.preventDefault();
+          activeSelectedIds.forEach(id => onDeleteBox(id));
+        }
+      } else if (e.key === 'Escape') {
+        if (onSelectIds) onSelectIds([]);
+        else onSelect(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSelectedIds, boxes, designW, designH, onMove, onDeleteBox, onSelect, onSelectIds]);
+
+  // Marquee multi-select
   const startCanvasPointerDown = (e: React.PointerEvent) => {
     if (e.target !== e.currentTarget) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -110,7 +170,8 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
     window.addEventListener('pointerup', handlePointerUp);
   };
 
-  const startDrag = (e: React.PointerEvent, boxId: string, type: 'move' | 'resize') => {
+  // Canva-style 8-handle Drag & Resize Gesture
+  const startDrag = (e: React.PointerEvent, boxId: string, type: 'move' | 'resize', handle?: ResizeHandle) => {
     e.stopPropagation();
     const targetEl = e.currentTarget as HTMLElement;
     if (targetEl.setPointerCapture && e.pointerId !== undefined) {
@@ -120,7 +181,7 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
     if (!box) return;
 
     let currentSelected = [...activeSelectedIds];
-    if (e.shiftKey) {
+    if (e.shiftKey && type === 'move') {
       if (currentSelected.includes(boxId)) {
         currentSelected = currentSelected.filter(id => id !== boxId);
       } else {
@@ -137,7 +198,19 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
     }
 
     const origBoxes = boxes.filter(b => currentSelected.includes(b.id)).map(b => ({ ...b }));
-    dragRef.current = { type, boxId, startX: e.clientX, startY: e.clientY, orig: { ...box }, origBoxes };
+    const origH = box.h || Math.max(48, Math.round(box.fontSize * 2.2));
+
+    dragRef.current = {
+      type,
+      handle,
+      boxId,
+      startX: e.clientX,
+      startY: e.clientY,
+      orig: { ...box },
+      origBoxes,
+      origH,
+    };
+    setActiveDragging(true);
 
     const handleMove = (ev: PointerEvent) => {
       const d = dragRef.current;
@@ -145,12 +218,15 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
       const dx = (ev.clientX - d.startX) / scale;
       const dy = (ev.clientY - d.startY) / scale;
 
+      const guides: { x?: number; y?: number } = {};
+      const SNAP_THRESHOLD = 7;
+
       if (d.type === 'move') {
         if (d.origBoxes.length > 1) {
           const updates = d.origBoxes.map(b => ({
             id: b.id,
             x: clamp(Math.round(b.x + dx), 0, designW - b.w),
-            y: clamp(Math.round(b.y + dy), 0, designH - 40),
+            y: clamp(Math.round(b.y + dy), 0, designH - (b.h || 40)),
           }));
           if (onMoveBoxes) {
             onMoveBoxes(updates);
@@ -158,18 +234,73 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
             updates.forEach(u => onMove(u.id, u.x, u.y));
           }
         } else {
-          onMove(d.boxId, clamp(Math.round(d.orig.x + dx), 0, designW - d.orig.w), clamp(Math.round(d.orig.y + dy), 0, designH - 40));
+          let newX = Math.round(d.orig.x + dx);
+          let newY = Math.round(d.orig.y + dy);
+
+          // Snapping to Canvas Center & Margins
+          const boxCenterOffsetX = d.orig.w / 2;
+          const boxCenterOffsetY = (d.orig.h || 40) / 2;
+          const canvasCenterX = designW / 2;
+          const canvasCenterY = designH / 2;
+
+          // Snap to Canvas Center X
+          if (Math.abs(newX + boxCenterOffsetX - canvasCenterX) <= SNAP_THRESHOLD) {
+            newX = Math.round(canvasCenterX - boxCenterOffsetX);
+            guides.x = canvasCenterX;
+          }
+          // Snap to Canvas Center Y
+          if (Math.abs(newY + boxCenterOffsetY - canvasCenterY) <= SNAP_THRESHOLD) {
+            newY = Math.round(canvasCenterY - boxCenterOffsetY);
+            guides.y = canvasCenterY;
+          }
+
+          setActiveGuides(Object.keys(guides).length > 0 ? guides : null);
+          onMove(d.boxId, clamp(newX, 0, designW - d.orig.w), clamp(newY, 0, designH - (d.orig.h || 40)));
         }
       } else {
+        // RESIZE GESTURE (8 Canva Handles)
+        const h = d.handle || 'se';
         const isElement = d.orig.bind === 'icon' || d.orig.bind === 'image';
-        const newW = clamp(Math.round(d.orig.w + dx), 60, designW - d.orig.x);
-        if (isElement) {
-          const ratio = d.orig.h && d.orig.h > 0 ? d.orig.w / d.orig.h : 16 / 9;
-          const newH = clamp(Math.round(newW / ratio), 40, designH - d.orig.y);
-          onResize(d.boxId, { w: newW, h: newH });
-        } else {
-          onResize(d.boxId, { w: newW });
+        const baseH = d.origH;
+
+        let newW = d.orig.w;
+        let newH = baseH;
+        let newX = d.orig.x;
+        let newY = d.orig.y;
+
+        // East / West Width Calculations
+        if (h.includes('e')) {
+          newW = clamp(Math.round(d.orig.w + dx), 60, designW - d.orig.x);
+        } else if (h.includes('w')) {
+          const maxDx = d.orig.w - 60;
+          const actualDx = Math.min(dx, maxDx);
+          newX = clamp(Math.round(d.orig.x + actualDx), 0, designW - 60);
+          newW = Math.round(d.orig.w - (newX - d.orig.x));
         }
+
+        // North / South Height Calculations
+        if (h.includes('s')) {
+          newH = clamp(Math.round(baseH + dy), 24, designH - d.orig.y);
+        } else if (h.includes('n')) {
+          const maxDy = baseH - 24;
+          const actualDy = Math.min(dy, maxDy);
+          newY = clamp(Math.round(d.orig.y + actualDy), 0, designH - 24);
+          newH = Math.round(baseH - (newY - d.orig.y));
+        }
+
+        // Fixed aspect ratio elements (icons & images)
+        if (isElement && (h === 'se' || h === 'sw' || h === 'ne' || h === 'nw')) {
+          const ratio = d.orig.h && d.orig.h > 0 ? d.orig.w / d.orig.h : 16 / 9;
+          newH = clamp(Math.round(newW / ratio), 24, designH - newY);
+        }
+
+        // Apply coordinate movement if NW/NE/SW/W/N handles were dragged
+        if (newX !== d.orig.x || newY !== d.orig.y) {
+          onMove(d.boxId, newX, newY);
+        }
+
+        // Apply width and bounded height
+        onResize(d.boxId, { w: newW, h: newH });
       }
     };
 
@@ -178,6 +309,8 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
         try { targetEl.releasePointerCapture(ev.pointerId); } catch {}
       }
       dragRef.current = null;
+      setActiveDragging(false);
+      setActiveGuides(null);
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
     };
@@ -221,6 +354,21 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
 
   return (
     <div className="absolute inset-0 z-30" onPointerDown={startCanvasPointerDown}>
+      {/* Smart Snapping Guide Lines */}
+      {activeGuides?.x !== undefined && (
+        <div
+          className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] z-50 pointer-events-none"
+          style={{ left: activeGuides.x }}
+        />
+      )}
+      {activeGuides?.y !== undefined && (
+        <div
+          className="absolute left-0 right-0 h-[2px] bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] z-50 pointer-events-none"
+          style={{ top: activeGuides.y }}
+        />
+      )}
+
+      {/* Marquee Multi-Select Rect */}
       {marquee && (() => {
         const left = Math.min(marquee.startX, marquee.currentX);
         const top = Math.min(marquee.startY, marquee.currentY);
@@ -234,10 +382,12 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
         );
       })()}
 
+      {/* Box Drag & Resize Overlays */}
       {boxes.map(box => {
         const selected = activeSelectedIds.includes(box.id);
         const active = selected || box.id === hoveredId;
         const isElement = box.bind === 'icon' || box.bind === 'image';
+        const isBounded = typeof box.h === 'number' && box.h > 0;
 
         let displayY = box.y;
         let displayH = box.h;
@@ -248,47 +398,129 @@ export const SlideTextBoxOverlay: React.FC<SlideTextBoxOverlayProps> = ({
           else if (box.id.startsWith(TPL_CARD_ID)) displayH = cardMetrics.cardH;
         }
 
-        const boxH = displayH || 40;
+        const boxH = displayH || Math.max(48, Math.round(box.fontSize * 2.2));
         const chipBelow = displayY < 56 || displayY + boxH + 28 <= designH;
+
         return (
           <div
             key={box.id}
             onPointerDown={(e) => startDrag(e, box.id, 'move')}
             onPointerEnter={() => setHoveredId(box.id)}
             onPointerLeave={() => setHoveredId((prev) => (prev === box.id ? null : prev))}
-            className="absolute cursor-move"
+            className="absolute cursor-move group"
             style={{ left: box.x, top: displayY, width: box.w, height: displayH || undefined }}
           >
+            {/* Box Frame & Outline */}
             <div
-              className={`relative w-full h-full border rounded-lg pointer-events-none transition-colors ${
-                selected ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-400/5' : active ? 'border-amber-400/70' : 'border-white/25'
+              className={`relative w-full h-full border rounded-lg transition-colors ${
+                selected
+                  ? isBounded
+                    ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-400/10'
+                    : 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-400/5'
+                  : active
+                  ? 'border-amber-400/80 bg-amber-400/5'
+                  : isBounded
+                  ? 'border-dashed border-amber-400/50 bg-amber-500/[0.02]'
+                  : 'border-white/20'
               }`}
               style={{ fontSize: box.fontSize }}
             >
+              {/* Invisible Ghost Content to match size */}
               <div className={`${isElement ? 'invisible h-full' : 'invisible whitespace-pre-wrap leading-snug font-bold'}`}>
-                {isElement ? (
-                  <div className="h-full w-full" />
-                ) : (
-                  renderInvisible(box)
-                )}
+                {isElement ? <div className="h-full w-full" /> : renderInvisible(box)}
               </div>
+
+              {/* Floating Header Chip: Bind Type + Dimensions */}
               {active && (
-                <span className={`absolute left-0 text-xs font-black uppercase px-2 py-1 rounded leading-none z-10 ${
-                  chipBelow ? 'top-full mt-1' : '-top-7'
-                } ${
-                  selected ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-slate-900 text-amber-300 border border-white/20'
-                }`}>
-                  {box.bind} {activeSelectedIds.length > 1 && selected ? `(#${activeSelectedIds.indexOf(box.id) + 1})` : ''}
-                </span>
+                <div
+                  className={`absolute left-0 flex items-center gap-1.5 z-20 pointer-events-none ${
+                    chipBelow ? 'top-full mt-1.5' : '-top-7'
+                  }`}
+                >
+                  <span
+                    className={`text-[11px] font-black uppercase px-2.5 py-1 rounded-md leading-none shadow-md flex items-center gap-1.5 ${
+                      selected ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-amber-300 border border-white/20'
+                    }`}
+                  >
+                    <span>{box.bind}</span>
+                    {activeSelectedIds.length > 1 && selected && (
+                      <span className="opacity-75">#{activeSelectedIds.indexOf(box.id) + 1}</span>
+                    )}
+                  </span>
+
+                  {/* Dimension pill: e.g. 840×240px */}
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-950/90 text-amber-200 border border-amber-500/30 backdrop-blur-sm">
+                    {box.w}×{box.h ? `${box.h}px` : 'auto'}
+                  </span>
+
+                  {isBounded && (
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      Bounded Zone (Auto-Fit)
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-            {active && (
-              <span
-                onPointerDown={(e) => startDrag(e, box.id, 'resize')}
-                className={`absolute -bottom-3 -right-3 w-6 h-6 rounded-md cursor-nwse-resize border-2 border-slate-950 shadow z-10 ${
-                  selected ? 'bg-amber-400' : 'bg-amber-500'
-                }`}
-              />
+
+            {/* Canva-style 8-Handle Resize System (Visible when Selected) */}
+            {selected && (
+              <>
+                {/* 1. North-West (Top-Left) Corner */}
+                <div
+                  onPointerDown={(e) => startDrag(e, box.id, 'resize', 'nw')}
+                  className="absolute -top-2.5 -left-2.5 w-5 h-5 rounded-md bg-white border-2 border-amber-500 shadow-md cursor-nwse-resize z-30 hover:scale-125 transition-transform"
+                  title="Resize Corner"
+                />
+
+                {/* 2. North-East (Top-Right) Corner */}
+                <div
+                  onPointerDown={(e) => startDrag(e, box.id, 'resize', 'ne')}
+                  className="absolute -top-2.5 -right-2.5 w-5 h-5 rounded-md bg-white border-2 border-amber-500 shadow-md cursor-nesw-resize z-30 hover:scale-125 transition-transform"
+                  title="Resize Corner"
+                />
+
+                {/* 3. South-East (Bottom-Right) Corner */}
+                <div
+                  onPointerDown={(e) => startDrag(e, box.id, 'resize', 'se')}
+                  className="absolute -bottom-2.5 -right-2.5 w-5 h-5 rounded-md bg-white border-2 border-amber-500 shadow-md cursor-nwse-resize z-30 hover:scale-125 transition-transform"
+                  title="Resize Corner"
+                />
+
+                {/* 4. South-West (Bottom-Left) Corner */}
+                <div
+                  onPointerDown={(e) => startDrag(e, box.id, 'resize', 'sw')}
+                  className="absolute -bottom-2.5 -left-2.5 w-5 h-5 rounded-md bg-white border-2 border-amber-500 shadow-md cursor-nesw-resize z-30 hover:scale-125 transition-transform"
+                  title="Resize Corner"
+                />
+
+                {/* 5. North (Top Edge) Handle */}
+                <div
+                  onPointerDown={(e) => startDrag(e, box.id, 'resize', 'n')}
+                  className="absolute -top-2 left-1/2 -translate-x-1/2 w-6 h-3 rounded-full bg-white border-2 border-amber-500 shadow cursor-ns-resize z-30 hover:scale-125 transition-transform"
+                  title="Resize Height (Top)"
+                />
+
+                {/* 6. South (Bottom Edge) Handle */}
+                <div
+                  onPointerDown={(e) => startDrag(e, box.id, 'resize', 's')}
+                  className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-3 rounded-full bg-white border-2 border-amber-500 shadow cursor-ns-resize z-30 hover:scale-125 transition-transform"
+                  title="Resize Height (Bottom)"
+                />
+
+                {/* 7. East (Right Edge) Handle */}
+                <div
+                  onPointerDown={(e) => startDrag(e, box.id, 'resize', 'e')}
+                  className="absolute top-1/2 -translate-y-1/2 -right-2 w-3 h-6 rounded-full bg-white border-2 border-amber-500 shadow cursor-ew-resize z-30 hover:scale-125 transition-transform"
+                  title="Resize Width (Right)"
+                />
+
+                {/* 8. West (Left Edge) Handle */}
+                <div
+                  onPointerDown={(e) => startDrag(e, box.id, 'resize', 'w')}
+                  className="absolute top-1/2 -translate-y-1/2 -left-2 w-3 h-6 rounded-full bg-white border-2 border-amber-500 shadow cursor-ew-resize z-30 hover:scale-125 transition-transform"
+                  title="Resize Width (Left)"
+                />
+              </>
             )}
           </div>
         );

@@ -229,3 +229,10 @@
 - Priorities remaining:
   1. Bundle self-hosted Bengali woff2 fonts
   2. Refactor to declarative `Element[]` renderer (if pursuing architecture parity)
+
+- [x] 2026-10-24 — **Social Post Studio: Canva-grade Drag & Resize, Bounded Quiz Areas & Custom Template Manager**
+  - **8-Point Canva Drag & Resize Overlay (`SlideTextBoxOverlay.tsx`)**: Upgraded single bottom-right handle to 8-point handles (NW, NE, SE, SW corner handles + N, S, E, W edge handles), smart snapping guides with pink/amber center/edge alignment lines, floating dimension badge (`w × h px`), visual bounded zone chips, and keyboard nudging (Arrow keys, Shift+Arrow 10px, Delete/Backspace).
+  - **Dynamic Bounded Text Auto-Fit Engine (`SlideTextBoxLayer.tsx`, `utils/textHeightEstimate.ts`)**: Implemented binary-search font size auto-fitting (`calculateFittedFontSize` & `calculateFittedOptionsLayout`) so that question stems and 2x2/1x4 options automatically scale down to stay strictly within their bounded area (`box.w` and `box.h`) whenever a user selects any question from the deck or Question Bank.
+  - **Universal Format & Image Fitting (`SocialPostGenerator.tsx`)**: Added `16:9` widescreen banner format alongside `1:1`, `4:5`, `9:16`, and dynamic "Fit Canvas to Image Format" (`custom`). Added direct one-click image fit controls (`cover`, `contain`, `stretch`) in the Theme tab, and proportional coordinate rescaling so text boxes never get lost offscreen when aspect ratio changes.
+  - **Custom Template Manager (`CustomTemplateManager.tsx`)**: Added persistent multi-template storage (`localStorage`), "Save Current as Custom Template" modal, "My Custom Templates" library with duplication/deletion, built-in starter bounded presets (Canva Modern Quiz 1:1, Feed Portrait 4:5, Story Quiz Time 9:16, Banner Slide 16:9), and JSON export/import.
+  - **Text Box Panel Bounded Controls (`SlideTextBoxPanel.tsx`)**: Added explicit width and bounded height controls for any text box, along with "Auto-Fit Text Inside Bounded Area" toggle and "Designate as Bounded Zone".

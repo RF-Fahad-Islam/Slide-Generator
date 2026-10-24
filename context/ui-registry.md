@@ -564,3 +564,15 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 - **DeckConfig.chapterName?** (types.ts) — optional chapter name; getEffectiveBadgeTag(config) returns the slide badge = base \adgeTag\ (class|subject) with the chapter auto-appended, skipping duplication if already a segment.
 - **Deck Settings → Subject Header & Badge:** Chapter Name (optional) input first — typing it auto-fills Header Chapter Title via \handleChapterNameChange\ (one \handlePatch\ writes \chapterName\ + \headerTitle\); the badge field shows the live composed badge hint. Slide renderers all use the effective badge (\SlideCanvas\, \SlideTextBoxLayer\/\getSlideBoxContent\, \pptxExport\, question-paper PDFs, \ClassicQuizCard\).
 - **Standard-MCQ gap (boxed design):** \SlideTextBoxLayer\ skips empty roman/prompt/explanation/source boxes (no stray empty roman sub-card on plain MCQs) and collapses the preset \mdl_card\ container to 205px with \mdl_options\ pulled to card bottom + 26px when the current question has no roman statements. Roman/prompt questions keep the 280px card. Detection is by template id prefix (\mdl_card\/\mdl_options\) so user-added boxes are unaffected.
+
+### `CustomTemplateManager` — `src/components/social-post/CustomTemplateManager.tsx`
+- **Purpose:** Full custom template management system for Social Post Studio. Allows saving, naming, duplicating, deleting, and loading custom templates with bounded quiz text zones, background graphics, and aspect ratios.
+- **Features:**
+  - "Save Current Template" modal: input name and description, saves snapshot of current boxes (with bounded areas), aspect ratio, and background configuration.
+  - "My Custom Templates" tab: list of user-created templates stored in localStorage (`social_post_custom_templates_v2`).
+  - "Bounded Presets" tab: 4 built-in starter templates (Canva Modern Quiz 1:1, Feed Portrait 4:5, Story Quiz Time 9:16, Banner Slide 16:9) with pre-configured bounded question stem and options zones.
+  - Export / Import templates as JSON.
+
+### Canva-style Drag & Auto-Fit Engine
+- **`SlideTextBoxOverlay.tsx`**: 8-point resize handles (corners + edges), dimension tooltips (`w × h px`), smart snapping guides (canvas center X/Y, margins, elements), keyboard nudging, and bounded zone badges.
+- **`SlideTextBoxLayer.tsx`**: Dynamic auto-fit calculation using `calculateFittedFontSize` and `calculateFittedOptionsLayout` from `utils/textHeightEstimate.ts`. Bounded stem and options dynamically adjust font size and card padding to fit strictly inside their designated width and height without overflowing.
