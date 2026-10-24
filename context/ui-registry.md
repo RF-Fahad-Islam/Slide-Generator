@@ -34,6 +34,11 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 | Error | `bg-rose-500/10 border-rose-500/30 text-rose-400` | `bg-rose-50 border-rose-300 text-rose-700` |
 | Warning | `bg-amber-500/10 border-amber-500/30 text-amber-300` | `bg-amber-50 border-amber-300 text-amber-800` |
 
+> **2026-10-24 — Template Zone Calibrator Modal Screen Spanning & Custom Templates Cleaner UI.**
+> 1. `TemplateZoneCalibratorModal` uses `createPortal(..., document.body)` with `z-[99999]` and `w-[98vw] max-w-[1680px] h-[94vh] max-h-[96vh]`, escaping drawer containing blocks (e.g. `backdrop-blur-xl`) to center over the entire screen.
+> 2. Calibrator modal visual stage adopts an 8-column layout (`lg:col-span-7 xl:col-span-8`) with dual-axis responsive containment (`maxHeight: calc(94vh - 200px)`, `width: min(100%, 860px)` for wide images, `height: min(calc(94vh - 200px), 740px)` for tall images) paired with a 4-column zone control drawer.
+> 3. `CustomTemplateManager` removed `BUILTIN_BOUNDED_PRESETS` tabs and list rendering, presenting an uncluttered interface focused solely on user-saved custom templates with clean empty-state actions (`Import & Calibrate Graphic`, `Save Canvas`).
+
 > **2026-10-24 — Live Social Canvas: Snug Dynamic Card Containers & Synchronized LOGO/QR Elements.** 
 > 1. Stem and question card containers dynamically wrap explicitly resized text dimensions (`box.h`) using `dynamicWrappingH = Math.max(60, currentY - cardBox.y + CARD_BOTTOM_PAD)` in `computeTemplateCardMetrics` and `SlideTextBoxLayer`, eliminating empty dead vertical areas under shrunk titles.
 > 2. `image` and `logo_qr` elements always render a visible branded placeholder card (`QrCode` icon, `LOGO / QR` label, dimension tag, dashed amber border) when no image source is provided.

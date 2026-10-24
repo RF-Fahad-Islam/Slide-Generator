@@ -720,7 +720,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
             {/* --------------------------------------------------------------------- */}
             {activeTab === 'templates' && (
               <div className="space-y-5 animate-fadeIn">
-                {/* Custom Template Manager with Save, My Templates, and Bounded Presets */}
+                {/* Custom Template Manager with Save, My Templates, and Bounded Zones */}
                 <CustomTemplateManager
                   currentBoxes={customDesign.boxes}
                   currentBgImageUrl={customDesign.bgImageUrl}
@@ -732,6 +732,10 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   isAppLight={isAppLight}
                   sampleQuestion={effectiveItem}
                   onApplyTemplate={handleApplyCustomTemplate}
+                  onOpenCalibrator={(image, boxes) => {
+                    setCalibratorUploadImage(image || customDesign.bgImageUrl || '');
+                    setIsStudioCalibratorOpen(true);
+                  }}
                 />
 
                 {!isCustomMode && (
@@ -1537,7 +1541,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
       {/* Upload & Interactive Bounded Zone Calibrator Modal */}
       <TemplateZoneCalibratorModal
         open={isStudioCalibratorOpen}
-        initialImageUrl={calibratorUploadImage || customDesign.bgImageUrl || '/templates/comic_quiz_time.jpg'}
+        initialImageUrl={calibratorUploadImage || customDesign.bgImageUrl || ''}
         initialBoxes={customDesign.boxes}
         sampleQuestion={effectiveItem}
         isAppLight={isAppLight}

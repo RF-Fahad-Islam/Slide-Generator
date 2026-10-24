@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { SlideTextBox, BgImageFit, MCQItem } from '../../types';
 import { TemplateZoneCalibratorModal } from './TemplateZoneCalibratorModal';
 import { SavedCustomTemplate, SocialAspectRatio } from './types';
@@ -31,6 +32,7 @@ interface CustomTemplateManagerProps {
   isAppLight: boolean;
   sampleQuestion?: MCQItem;
   onApplyTemplate: (template: SavedCustomTemplate) => void;
+  onOpenCalibrator?: (image?: string, boxes?: SlideTextBox[]) => void;
 }
 
 const TEMPLATES_STORAGE_KEY = 'social_post_custom_templates_v2';
@@ -289,6 +291,7 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
   isAppLight,
   sampleQuestion,
   onApplyTemplate,
+  onOpenCalibrator,
 }) => {
   const [isCalibratorOpen, setIsCalibratorOpen] = useState(false);
   const [calibratorImage, setCalibratorImage] = useState<string>('');
@@ -297,17 +300,21 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateDesc, setTemplateDesc] = useState('');
-  const [viewTab, setViewTab] = useState<'my_templates' | 'presets'>('my_templates');
   const [appliedId, setAppliedId] = useState<string | null>(null);
 
-  // Load saved templates from localStorage
+  // Load saved templates from localStorage (with fallback migration from v1)
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(TEMPLATES_STORAGE_KEY);
+      let raw = localStorage.getItem(TEMPLATES_STORAGE_KEY);
+      if (!raw) {
+        raw = localStorage.getItem('social_post_custom_templates_v1');
+      }
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setSavedTemplates(parsed);
+          // Filter out any canned presets so only user custom templates are loaded
+          const userTemplates = parsed.filter((t: any) => !t.isPreset);
+          setSavedTemplates(userTemplates);
         }
       }
     } catch {
@@ -316,11 +323,24 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
   }, []);
 
   const saveTemplatesToStorage = (list: SavedCustomTemplate[]) => {
-    setSavedTemplates(list);
+    const cleanList = list.filter(t => !t.isPreset);
+    setSavedTemplates(cleanList);
     try {
-      localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(list));
+      localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(cleanList));
     } catch {
       // ignore
+    }
+  };
+
+  const handleOpenCalibrator = (img?: string, boxes?: SlideTextBox[]) => {
+    const targetImg = img || currentBgImageUrl || '';
+    const targetBoxes = boxes || currentBoxes;
+    if (onOpenCalibrator) {
+      onOpenCalibrator(targetImg, targetBoxes);
+    } else {
+      setCalibratorImage(targetImg);
+      setCalibratorBoxes(targetBoxes);
+      setIsCalibratorOpen(true);
     }
   };
 
@@ -348,7 +368,6 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
     setTemplateName('');
     setTemplateDesc('');
     setIsSaveModalOpen(false);
-    setViewTab('my_templates');
   };
 
   const handleDeleteTemplate = (id: string) => {
@@ -427,11 +446,7 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => {
-              setCalibratorImage(currentBgImageUrl || '/templates/comic_quiz_time.jpg');
-              setCalibratorBoxes(currentBoxes);
-              setIsCalibratorOpen(true);
-            }}
+            onClick={() => handleOpenCalibrator()}
             className="px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:brightness-110 text-slate-950 shadow-md shadow-emerald-500/20 cursor-pointer transition-all"
           >
             <Crop className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -448,38 +463,18 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
         </div>
       </div>
 
-      {/* Sub Tabs: My Templates vs Built-in Bounded Presets */}
+      {/* Templates Header & Import/Export Actions */}
       <div className="flex items-center justify-between pt-1">
-        <div className={`flex items-center p-1 rounded-xl border ${isAppLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800'}`}>
-          <button
-            type="button"
-            onClick={() => setViewTab('my_templates')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-              viewTab === 'my_templates'
-                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                : isAppLight
-                ? 'text-slate-600 hover:text-slate-900'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            My Custom Templates ({savedTemplates.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewTab('presets')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-              viewTab === 'presets'
-                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                : isAppLight
-                ? 'text-slate-600 hover:text-slate-900'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Bounded Presets ({BUILTIN_BOUNDED_PRESETS.length})
-          </button>
-        </div>
+        <span className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
+          isAppLight ? 'text-slate-800' : 'text-slate-200'
+        }`}>
+          <span>Saved Custom Templates</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            {savedTemplates.length}
+          </span>
+        </span>
 
-        {viewTab === 'my_templates' && savedTemplates.length > 0 && (
+        {savedTemplates.length > 0 && (
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -506,26 +501,41 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
 
       {/* Template List */}
       <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-        {viewTab === 'my_templates' ? (
-          savedTemplates.length === 0 ? (
-            <div className={`p-6 rounded-2xl border text-center space-y-2 ${
-              isAppLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-950/60 border-slate-800 text-slate-400'
-            }`}>
-              <Box className="w-8 h-8 mx-auto text-amber-500/50" />
-              <p className="text-xs font-bold">No saved custom templates yet.</p>
-              <p className="text-[11px] leading-relaxed">
-                Design your custom post with bounded question zones and background graphic, then click "Save Current Template" above.
+        {savedTemplates.length === 0 ? (
+          <div className={`p-6 rounded-2xl border text-center space-y-3 ${
+            isAppLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-950/60 border-slate-800 text-slate-400'
+          }`}>
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+              <LayoutTemplate className="w-6 h-6 stroke-[1.75]" />
+            </div>
+            <div className="space-y-1">
+              <p className={`text-xs font-black uppercase tracking-wider ${isAppLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                No Saved Custom Templates
               </p>
+              <p className={`text-[11px] leading-relaxed max-w-xs mx-auto ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Upload any template graphic to calibrate bounded question & options zones, or design directly on canvas and save your template.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
               <button
                 type="button"
-                onClick={() => setViewTab('presets')}
-                className="mt-2 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 cursor-pointer inline-flex items-center gap-1.5"
+                onClick={() => handleOpenCalibrator()}
+                className="px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-400 hover:brightness-110 text-slate-950 shadow-md cursor-pointer inline-flex items-center gap-1.5"
               >
-                <span>Browse Bounded Presets</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <Crop className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Import & Calibrate Graphic</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(true)}
+                className="px-3 py-2 rounded-xl text-xs font-black bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Canvas</span>
               </button>
             </div>
-          ) : (
+          </div>
+        ) : (
             savedTemplates.map((tpl) => {
               const isApplied = appliedId === tpl.id;
               const boundedBoxes = tpl.boxes.filter(b => b.h && b.h > 0);
@@ -591,21 +601,15 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
                       {tpl.boxes.length} elements · {tpl.designW}×{tpl.designH}px
                     </span>
                     <div className="flex items-center gap-2">
-                      {tpl.bgImageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCalibratorImage(tpl.bgImageUrl!);
-                            setCalibratorBoxes(tpl.boxes);
-                            setIsCalibratorOpen(true);
-                          }}
-                          title="Calibrate Bounded Zones"
-                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 flex items-center gap-1 border border-slate-700 transition-all cursor-pointer"
-                        >
-                          <Sliders className="w-3 h-3 text-amber-400" />
-                          <span>Calibrate</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCalibrator(tpl.bgImageUrl, tpl.boxes)}
+                        title="Calibrate Bounded Zones"
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 flex items-center gap-1 border border-slate-700 transition-all cursor-pointer"
+                      >
+                        <Crop className="w-3 h-3 text-amber-400" />
+                        <span>Calibrate</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleSelectTemplate(tpl)}
@@ -619,83 +623,13 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
                 </div>
               );
             })
-          )
-        ) : (
-          BUILTIN_BOUNDED_PRESETS.map((tpl) => {
-            const isApplied = appliedId === tpl.id;
-            const boundedBoxes = tpl.boxes.filter(b => b.h && b.h > 0);
-            return (
-              <div
-                key={tpl.id}
-                className={`p-4 rounded-2xl border transition-all space-y-3 ${
-                  isApplied
-                    ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-500/10'
-                    : isAppLight
-                    ? 'bg-slate-50 hover:bg-slate-100/80 border-slate-200'
-                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-xs font-black truncate ${isAppLight ? 'text-slate-900' : 'text-white'}`}>
-                        {tpl.name}
-                      </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                        {tpl.aspectRatio}
-                      </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        {boundedBoxes.length} Bounded Zones (Auto-Fit)
-                      </span>
-                    </div>
-                    {tpl.description && (
-                      <p className={`text-[11px] leading-snug ${isAppLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {tpl.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-1 border-t border-white/5">
-                  <span className={`text-[10px] font-mono ${isAppLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {tpl.boxes.length} elements · {tpl.designW}×{tpl.designH}px
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {tpl.bgImageUrl && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalibratorImage(tpl.bgImageUrl!);
-                          setCalibratorBoxes(tpl.boxes);
-                          setIsCalibratorOpen(true);
-                        }}
-                        title="Calibrate Bounded Zones"
-                        className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 flex items-center gap-1 border border-slate-700 transition-all cursor-pointer"
-                      >
-                        <Sliders className="w-3 h-3 text-amber-400" />
-                        <span>Calibrate</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTemplate(tpl)}
-                      className="px-4 py-1.5 rounded-xl text-xs font-black bg-amber-500 hover:brightness-110 text-slate-950 shadow cursor-pointer flex items-center gap-1.5 transition-all"
-                    >
-                      {isApplied ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Sparkles className="w-3.5 h-3.5" />}
-                      <span>{isApplied ? 'Applied!' : 'Apply Preset'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
+          )}
       </div>
 
       {/* Interactive Zone Calibrator Modal */}
       <TemplateZoneCalibratorModal
         open={isCalibratorOpen}
-        initialImageUrl={calibratorImage || currentBgImageUrl || '/templates/comic_quiz_time.jpg'}
+        initialImageUrl={calibratorImage || currentBgImageUrl || ''}
         initialBoxes={calibratorBoxes || currentBoxes}
         sampleQuestion={sampleQuestion}
         isAppLight={isAppLight}
@@ -707,8 +641,8 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
       />
 
       {/* Save Modal */}
-      {isSaveModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+      {isSaveModalOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
           <div className={`w-full max-w-md rounded-3xl border p-6 space-y-4 shadow-2xl ${
             isAppLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
           }`}>
@@ -790,7 +724,8 @@ export const CustomTemplateManager: React.FC<CustomTemplateManagerProps> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

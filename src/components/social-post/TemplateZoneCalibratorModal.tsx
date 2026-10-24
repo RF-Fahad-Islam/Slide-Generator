@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { SlideTextBox, MCQItem, SlideBoxShape } from '../../types';
 import { SavedCustomTemplate, SocialAspectRatio } from './types';
 import { calculateFittedFontSize, calculateFittedOptionsLayout } from '../../utils/textHeightEstimate';
@@ -445,6 +446,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
   };
 
   if (!open) return null;
+  if (typeof document === 'undefined') return null;
 
   // Live auto-fit calculations for preview inside the modal
   const liveStemFontSize = calculateFittedFontSize(
@@ -466,17 +468,17 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
     12
   );
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/90 backdrop-blur-md animate-fadeIn select-none">
       <div
-        className={`w-full max-w-6xl max-h-[94vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden transition-all ${
+        className={`w-[98vw] max-w-[1680px] h-[94vh] max-h-[96vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden transition-all ${
           isAppLight
             ? 'bg-white border-slate-200 text-slate-900'
             : 'bg-slate-900 border-slate-800 text-slate-100'
         }`}
       >
         {/* HEADER BAR */}
-        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0 gap-4 bg-slate-950/20">
+        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0 gap-4 bg-slate-950/30">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2.5 rounded-2xl bg-amber-500 text-slate-950 shadow-md">
               <Crop className="w-5 h-5 stroke-[2.5]" />
@@ -500,7 +502,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <label className="px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all">
+            <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all">
               <Upload className="w-3.5 h-3.5" />
               <span>Change Image</span>
               <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
@@ -509,6 +511,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
               type="button"
               onClick={onClose}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              title="Close Calibrator"
             >
               <X className="w-5 h-5" />
             </button>
@@ -517,32 +520,37 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
 
         {/* MAIN BODY: 2-COLUMN LAYOUT */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0">
-          {/* LEFT: VISUAL INTERACTIVE STAGE (7 COLS) */}
-          <div className="lg:col-span-7 p-4 sm:p-6 flex flex-col items-center justify-center bg-slate-950/60 overflow-y-auto relative">
-            <div className="w-full flex items-center justify-between mb-3 text-xs text-slate-400 px-1">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1 font-bold text-emerald-400">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
+          {/* LEFT: VISUAL INTERACTIVE STAGE (8 COLS on xl, 7 on lg) */}
+          <div className="lg:col-span-7 xl:col-span-8 p-4 sm:p-6 flex flex-col items-center justify-between bg-slate-950/70 overflow-hidden relative min-h-0">
+            <div className="w-full flex items-center justify-between mb-2 text-xs text-slate-400 px-2 shrink-0">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block shadow-sm shadow-emerald-400/50" />
                   Question Stem Zone
                 </span>
-                <span className="flex items-center gap-1 font-bold text-sky-400">
-                  <span className="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block" />
+                <span className="flex items-center gap-1.5 font-bold text-sky-400">
+                  <span className="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block shadow-sm shadow-sky-400/50" />
                   Options Zone
                 </span>
               </div>
               <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
-                Design: {designW} × {designH}
+                Design Coordinates: {designW} × {designH} px
               </span>
             </div>
 
-            {/* CANVAS VIEWPORT CONTAINER */}
-            <div
-              ref={previewViewportRef}
-              className="w-full max-w-[480px] shadow-2xl rounded-2xl border border-slate-700/80 relative overflow-hidden select-none bg-slate-900"
-              style={{
-                aspectRatio: `${designW} / ${designH}`,
-              }}
-            >
+            {/* Stage Center Area */}
+            <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0 overflow-hidden">
+              <div
+                ref={previewViewportRef}
+                className="shadow-2xl rounded-2xl border border-slate-700/80 relative overflow-hidden select-none bg-slate-900 mx-auto"
+                style={{
+                  aspectRatio: `${designW} / ${designH}`,
+                  maxHeight: 'calc(94vh - 200px)',
+                  maxWidth: '100%',
+                  width: designW > designH ? 'min(100%, 860px)' : 'auto',
+                  height: designH >= designW ? 'min(calc(94vh - 200px), 740px)' : 'auto',
+                }}
+              >
               {/* Template Graphic Background */}
               {imageUrl ? (
                 <img
@@ -716,8 +724,9 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
                 )}
               </div>
             </div>
+          </div>
 
-            {/* QUICK ALIGNMENT TOOLBAR */}
+          {/* QUICK ALIGNMENT TOOLBAR */}
             <div className="w-full max-w-[480px] mt-4 flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <button
@@ -756,8 +765,8 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
             </div>
           </div>
 
-          {/* RIGHT: CONTROL PANEL & ZONE SETTINGS (5 COLS) */}
-          <div className="lg:col-span-5 p-5 border-t lg:border-t-0 lg:border-l overflow-y-auto space-y-5 bg-slate-950/20">
+          {/* RIGHT: CONTROL PANEL & ZONE SETTINGS (5 COLS on lg, 4 COLS on xl) */}
+          <div className="lg:col-span-5 xl:col-span-4 p-5 sm:p-6 border-t lg:border-t-0 lg:border-l border-slate-800/80 overflow-y-auto space-y-5 bg-slate-950/30 min-h-0">
             {/* Template Name */}
             <div className="space-y-1.5">
               <label className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -1056,6 +1065,7 @@ export const TemplateZoneCalibratorModal: React.FC<TemplateZoneCalibratorModalPr
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
