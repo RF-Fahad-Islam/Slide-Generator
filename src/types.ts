@@ -254,6 +254,8 @@ export interface SlideTextBox {
   minFontSize?: number;
   maxFontSize?: number;
   isBoundedZone?: boolean;
+  hideOptionBadges?: boolean;
+  optionsLayout?: '1col' | '2col';
 }
 
 export interface TemplateDefinition {

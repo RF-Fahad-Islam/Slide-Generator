@@ -568,11 +568,22 @@ Conditional classes use ternary: `isAppLight ? '[light-class]' : '[dark-class]'`
 ### `CustomTemplateManager` — `src/components/social-post/CustomTemplateManager.tsx`
 - **Purpose:** Full custom template management system for Social Post Studio. Allows saving, naming, duplicating, deleting, and loading custom templates with bounded quiz text zones, background graphics, and aspect ratios.
 - **Features:**
+  - "Import & Calibrate Graphic" modal launcher: opens `TemplateZoneCalibratorModal` for any graphic file or existing template.
   - "Save Current Template" modal: input name and description, saves snapshot of current boxes (with bounded areas), aspect ratio, and background configuration.
   - "My Custom Templates" tab: list of user-created templates stored in localStorage (`social_post_custom_templates_v2`).
-  - "Bounded Presets" tab: 4 built-in starter templates (Canva Modern Quiz 1:1, Feed Portrait 4:5, Story Quiz Time 9:16, Banner Slide 16:9) with pre-configured bounded question stem and options zones.
+  - "Bounded Presets" tab: 5 built-in starter templates (Canva Modern Quiz 1:1, Feed Portrait 4:5, Story Quiz Time 9:16, Banner Slide 16:9, and Comic Quiz Time 4:5 with static graphic) with pre-configured bounded question stem and options zones.
   - Export / Import templates as JSON.
+
+### `TemplateZoneCalibratorModal` — `src/components/social-post/TemplateZoneCalibratorModal.tsx`
+- **Purpose:** Interactive upload & calibration studio for custom template graphics of any arbitrary dimension or aspect ratio.
+- **Features:**
+  - **Dimension & Ratio Auto-Catching**: Detects image `naturalWidth` and `naturalHeight`, automatically catches aspect ratio and normalizes design canvas to `targetH = 1080` and `targetW = Math.round(1080 * (imgW / imgH))` so the studio canvas matches the image format edge-to-edge.
+  - **Interactive Bounded Zones**: Green Question Stem Zone & Blue Options Zone overlayed directly on the template graphic with 8 draggable resize handles each.
+  - **Live Auto-Fit Real Quiz Preview**: Renders sample Bengali / Math questions inside the zones with real-time binary-search auto-fit font scaling.
+  - **Styling Controls**: Question text color swatches, alignment (left/center), font size slider, card vs plain background toggle; Options styling (plain transparent text over pre-drawn artwork vs glass cards vs pills), 2×2 grid vs 1-column layouts, and an option to hide key badges (A/B/C/D) when the background graphic already contains pre-drawn circles/letters.
+  - **Quick Align Tools**: Center Question Zone, Center Options Zone, Match Widths, and Reset Default Zones.
+  - **Save & Apply**: Persists template to `localStorage` and immediately activates it on the Social Post Studio canvas.
 
 ### Canva-style Drag & Auto-Fit Engine
 - **`SlideTextBoxOverlay.tsx`**: 8-point resize handles (corners + edges), dimension tooltips (`w × h px`), smart snapping guides (canvas center X/Y, margins, elements), keyboard nudging, and bounded zone badges.
-- **`SlideTextBoxLayer.tsx`**: Dynamic auto-fit calculation using `calculateFittedFontSize` and `calculateFittedOptionsLayout` from `utils/textHeightEstimate.ts`. Bounded stem and options dynamically adjust font size and card padding to fit strictly inside their designated width and height without overflowing.
+- **`SlideTextBoxLayer.tsx`**: Dynamic auto-fit calculation using `calculateFittedFontSize` and `calculateFittedOptionsLayout` from `utils/textHeightEstimate.ts`. Bounded stem and options dynamically adjust font size and card padding to fit strictly inside their designated width and height without overflowing. Option key badges can be conditionally hidden (`hideOptionBadges`), and plain transparent options render vertically centered within available quadrant rows to align with underlying graphics.

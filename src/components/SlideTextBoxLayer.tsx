@@ -207,7 +207,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
 
         // OPTIONS with pre-designed shapes & 2-column card grid support
         if (box.bind === 'options') {
-          const is2Col = (config.optionsLayout || '2col') === '2col';
+          const is2Col = (box.optionsLayout || config.optionsLayout || '2col') === '2col';
           const isBounded = typeof box.h === 'number' && box.h > 0;
           const fittedMetrics = isBounded
             ? calculateFittedOptionsLayout(
@@ -273,6 +273,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         className="inline-flex items-center gap-3 px-6 py-3.5 rounded-full shadow-lg"
                         style={containerStyle}
                       >
+                        {!box.hideOptionBadges && (
                         <span
                           className={`rounded-full font-black flex items-center justify-center shrink-0 ${badgeTextClass} ${
                             highlight ? 'bg-amber-400 text-slate-950' : isLight ? 'bg-slate-900 text-white' : 'bg-white/10 text-white'
@@ -281,6 +282,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         >
                           {opt.key}
                         </span>
+                      )}
                         <span className="flex-1 min-w-0 font-bold" style={{ fontSize: optFontSize ? `${optFontSize}px` : undefined }}><MathText text={opt.text} /></span>
                         {highlight && (
                           <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
@@ -297,6 +299,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         className={`flex items-center gap-3.5 ${padClass} rounded-2xl shadow-xl backdrop-blur-md slide-box-option-bg overflow-hidden`}
                         style={containerStyle}
                       >
+                        {!box.hideOptionBadges && (
                         <div
                           className={`rounded-2xl font-black flex items-center justify-center shrink-0 shadow-md ${badgeTextClass} ${
                             highlight
@@ -309,6 +312,7 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                         >
                           {opt.key}
                         </div>
+                      )}
                         <span className="flex-1 min-w-0 font-extrabold leading-snug" style={{ fontSize: optFontSize ? `${optFontSize}px` : undefined }}><MathText text={opt.text} /></span>
                         {highlight && (
                           <div className="w-9 h-9 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-lg animate-pulse">
@@ -318,11 +322,27 @@ export const SlideTextBoxLayer: React.FC<SlideTextBoxLayerProps> = ({
                       </div>
                     );
                   }
+                  const plainColor = highlight
+                    ? theme.colors.optionSelectedText
+                    : (box.color || (isLight ? '#0f172a' : '#f8fafc'));
                   return (
-                    <div key={opt.key} className="flex items-center gap-3" style={highlight ? { color: theme.colors.optionSelectedText, fontSize: optFontSize ? `${optFontSize}px` : undefined } : { fontSize: optFontSize ? `${optFontSize}px` : undefined }}>
-                      <span className="font-black shrink-0">{opt.key}.</span>
-                      <span className="flex-1 min-w-0" style={{ fontSize: optFontSize ? `${optFontSize}px` : undefined }}><MathText text={opt.text} /></span>
-                      {highlight && <Check className="w-6 h-6 stroke-[3.5] shrink-0 ml-auto" />}
+                    <div
+                      key={opt.key}
+                      className="flex items-center gap-2.5 overflow-hidden"
+                      style={{
+                        height: cardH,
+                        minHeight: cardH,
+                        color: plainColor,
+                        fontSize: optFontSize ? `${optFontSize}px` : undefined,
+                      }}
+                    >
+                      {!box.hideOptionBadges && (
+                        <span className="font-black shrink-0">{opt.key}.</span>
+                      )}
+                      <span className="flex-1 min-w-0 font-bold leading-snug" style={{ fontSize: optFontSize ? `${optFontSize}px` : undefined }}>
+                        <MathText text={opt.text} />
+                      </span>
+                      {highlight && <Check className="w-5 h-5 stroke-[3.5] shrink-0 ml-auto text-amber-400" />}
                     </div>
                   );
                 })}

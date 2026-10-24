@@ -37,6 +37,7 @@ import { QuizTimeCard } from './social-post/QuizTimeCard';
 import { PostModeSelector, SocialPostMode } from './social-post/PostModeSelector';
 import { PostTemplateId, ReactionEmojiSet, DEFAULT_REACTION_EMOJIS, REACTION_ORDER, SocialAspectRatio, SavedCustomTemplate } from './social-post/types';
 import { CustomTemplateManager } from './social-post/CustomTemplateManager';
+import { TemplateZoneCalibratorModal } from './social-post/TemplateZoneCalibratorModal';
 import { Maximize2, Crop } from 'lucide-react';
 
 interface SocialPostGeneratorProps {
@@ -172,6 +173,8 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
   const [canvasWidth, setCanvasWidth] = useState<number>(500);
   // Background image crop/resize/fit editor state (custom canvas mode).
   const [bgEditorImage, setBgEditorImage] = useState<string | null>(null);
+  const [isStudioCalibratorOpen, setIsStudioCalibratorOpen] = useState<boolean>(false);
+  const [calibratorUploadImage, setCalibratorUploadImage] = useState<string | null>(null);
 
   // Studio Drawer Active Tab State (Full Left Drawer)
   const [activeTab, setActiveTab] = useState<StudioDrawerTab>('templates');
@@ -349,10 +352,13 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
     const reader = new FileReader();
     reader.onload = (evt) => {
       if (evt.target?.result) {
-        setBgEditorImage(evt.target.result as string);
+        const dataUrl = evt.target.result as string;
+        setCalibratorUploadImage(dataUrl);
+        setIsStudioCalibratorOpen(true);
       }
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleBgEditorApply = (result: BgImageEditorResult) => {
@@ -714,6 +720,7 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                   currentDesignW={postDesignW}
                   currentDesignH={postDesignH}
                   isAppLight={isAppLight}
+                  sampleQuestion={effectiveItem}
                   onApplyTemplate={handleApplyCustomTemplate}
                 />
 
@@ -1244,6 +1251,17 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
                           </button>
                           <button
                             type="button"
+                            onClick={() => {
+                              setCalibratorUploadImage(customDesign.bgImageUrl);
+                              setIsStudioCalibratorOpen(true);
+                            }}
+                            className="px-2.5 py-1.5 rounded-xl text-xs font-black text-emerald-500 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 cursor-pointer flex items-center gap-1"
+                          >
+                            <Crop className="w-3.5 h-3.5" />
+                            <span>Calibrate Zones</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setCustomDesign(prev => ({ ...prev, bgImageUrl: '', bgImageFit: 'cover' }))}
                             className="px-2.5 py-1.5 rounded-xl text-xs font-black text-rose-500 border border-rose-300 bg-rose-50 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400 cursor-pointer"
                           >
@@ -1505,6 +1523,20 @@ export const SocialPostGenerator: React.FC<SocialPostGeneratorProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Upload & Interactive Bounded Zone Calibrator Modal */}
+      <TemplateZoneCalibratorModal
+        open={isStudioCalibratorOpen}
+        initialImageUrl={calibratorUploadImage || customDesign.bgImageUrl || '/templates/comic_quiz_time.jpg'}
+        initialBoxes={customDesign.boxes}
+        sampleQuestion={effectiveItem}
+        isAppLight={isAppLight}
+        onClose={() => {
+          setIsStudioCalibratorOpen(false);
+          setCalibratorUploadImage(null);
+        }}
+        onSaveAndApply={handleApplyCustomTemplate}
+      />
 
       {/* Background image crop / resize / fit editor (custom canvas) */}
       <BackgroundImageEditor
